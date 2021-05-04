@@ -1,0 +1,17 @@
+name: azu_cli
+version: 0.1.0
+
+authors:
+  - Elias J. Perez <eliasjpr@gmail.com>
+
+crystal: 1.0.0
+
+license: MIT
+
+targets:
+  azu: 
+    main: ./src/azu_cli.cr
+
+dependencies:
+  topia:
+    github: azutoolkit/topia
