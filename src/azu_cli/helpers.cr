@@ -1,6 +1,7 @@
 module AzuCLI
   module Helpers
     CLEAR_TYPE_MAPPING = {
+      "varchar":     "String",
       "text":        "String",
       "uuid":        "UUID",
       "boolean":     "Bool",

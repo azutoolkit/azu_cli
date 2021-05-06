@@ -7,14 +7,14 @@ module AzuCLI
     ::Clear::SQL.init(DATABASE_URL)
 
     def run(input, params)
-      if params.size >= 2
+      if params.size >= 1
         command = params[0]
         num = (params[1]? || 0).to_i64
         direction = params[2]? || "both"
 
-        migrate(command, num, direction)
+        puts "\n", migrate(command, num, direction), "\n"
       else 
-        migrate
+        puts "\n", migrate, "\n"
       end
 
       true

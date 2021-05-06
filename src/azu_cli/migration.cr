@@ -46,8 +46,14 @@ module AzuCLI
       class #{params.first}
         include Clear::Migration
 
-        def change(dir)
+        def change(direction)
+          direction.up do
           # TODO: Fill migration
+          end
+
+          # direction.down do
+          # # TODO: Fill migration
+          # end
         end
       end
       CONTENT
@@ -67,11 +73,16 @@ module AzuCLI
       class Create#{name.camelcase}
         include Clear::Migration
       
-        def change(dir)
-          create_table :#{table} do |t|
-            #{render_columns(columns)}
-            t.timestamps
+        def change(direction.up do)
+          direction.up do
+            create_table :#{table} do |t|
+              #{render_columns(columns)}
+              t.timestamps
+            end
           end
+
+          # direction.down do
+          # end
         end
       end
       CONTENT
