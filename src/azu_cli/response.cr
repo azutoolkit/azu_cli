@@ -5,8 +5,8 @@ module AzuCLI
     include Helpers
     include Base
 
-    ARGS = "[name] [property:type] [property:type]"
-    PATH = "./src/responses"
+    ARGS        = "[name] [property:type] [property:type]"
+    PATH        = "./src/responses"
     DESCRIPTION = <<-DESC
     Azu - Response
     
@@ -15,7 +15,7 @@ module AzuCLI
 
     Docs - https://azutopia.gitbook.io/azu/endpoints/response
     DESC
-    
+
     def run
       name, fields = args[0], args[1..-1]
       class_name = "#{name.camelcase}#{PROGRAM}"

@@ -3,6 +3,9 @@
 /bin/
 /.shards/
 *.dwarf
+/playground/lib/
+/playground/example/
+/playground/azu/
 
 # Libraries don't need dependency lock
 # Dependencies will be locked in applications that use them

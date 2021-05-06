@@ -3,8 +3,8 @@ module AzuCLI
     include Helpers
     include Base
 
-    ARGS = "[name] [path] [request] [response]"
-    PATH = "./src/endpoints"
+    ARGS        = "[name] [path] [request] [response]"
+    PATH        = "./src/endpoints"
     DESCRIPTION = <<-DESC
     Azu - Endpoints
 
@@ -16,7 +16,7 @@ module AzuCLI
     
     Docs - https://azutopia.gitbook.io/azu/endpoints
     DESC
-    
+
     @@class_name : String = self.name.split("::").last
 
     def run

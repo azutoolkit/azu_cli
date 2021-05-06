@@ -17,7 +17,7 @@ module AzuCLI
           main: ./src/azu_cli.cr
 
     DESC
-    
+
     option rim : Bool, "-r", "Show this help", false
 
     def run

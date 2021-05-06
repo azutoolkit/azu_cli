@@ -2,8 +2,8 @@ module AzuCLI
   class Component
     include Helpers
     include Base
-    PATH = "./src/components"
-    ARGS = "[name] [firld:type] [field:type]"
+    PATH        = "./src/components"
+    ARGS        = "[name] [firld:type] [field:type]"
     DESCRIPTION = <<-DESC
     Azu - Spark Components
     
@@ -14,7 +14,7 @@ module AzuCLI
 
     Docs - https://azutopia.gitbook.io/azu/spark-1#spark-components-overview
     DESC
-    
+
     def run
       name, fields = args[0], args[1..-1]
       announce "Generating #{name.camelcase}#{PROGRAM}"

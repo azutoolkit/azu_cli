@@ -2,6 +2,7 @@ module AzuCLI
   class Migrator
     include Topia::Plugin
     include Helpers
+
     # DATABASE_URL = ENV.fetch "DATABASE_URL" { "" }
 
     # ::Clear::SQL.init(DATABASE_URL)

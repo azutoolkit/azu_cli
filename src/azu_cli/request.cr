@@ -3,8 +3,8 @@ module AzuCLI
     include Helpers
     include Base
 
-    ARGS = "[name] [query,form,path:property:type] [query,form,path:property:type]"
-    PATH = "./src/requests"
+    ARGS        = "[name] [query,form,path:property:type] [query,form,path:property:type]"
+    PATH        = "./src/requests"
     DESCRIPTION = <<-DESC
     Azu - Requests
     
@@ -13,7 +13,7 @@ module AzuCLI
 
     Docs - https://azutopia.gitbook.io/azu/endpoints/requests
     DESC
-    
+
     @@class_name : String = self.name.split("::").last
 
     def run

@@ -35,7 +35,7 @@ module AzuCLI
           str << "@#{field.downcase} : #{type.camelcase}"
           str << ", " if i < size
         end
-        
+
         str << ")"
       end
     end

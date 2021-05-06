@@ -3,17 +3,17 @@ module AzuCLI
     include Topia::Plugin
     include Opts
 
-    USAGE   = <<-EOF
+    USAGE = <<-EOF
 
-    {{description}}
-    
-    Usage: azu {{program}} {{args}}
+  {{description}}
+  
+  Usage: azu {{program}} {{args}}
 
-    Options:
-    {{options}}
+  Options:
+  {{options}}
 
-    {{version}}
-    EOF
+  {{version}}
+  EOF
 
     macro included
       PROGRAM = self.name.split("::").last
