@@ -1,4 +1,25 @@
-# azu_cli
+# Azu - Command Line Interface 
+
+AZU is a toolkit for artisans with expressive, elegant syntax that 
+offers great performance to build rich, interactive type safe, applications 
+quickly, with less code and conhesive parts that adapts to your prefer style.
+
+## Clear ORM Support
+
+Clear is an ORM (Object Relation Mapping) built for Crystal language.
+
+Clear is built especially for PostgreSQL, meaning it's not compatible with
+MariaDB or SQLite for example. Therefore, it achieves to delivers a
+tremendous amount of PostgreSQL advanced features out of the box.
+
+> **Note** - Must define DATABSE_URL environment variable for Clear ORM commands 
+> to work
+
+## Documentation: 
+
+  - Azu       - https://azutopia.gitbook.io/azu/
+  - Clear ORM - https://clear.gitbook.io/
+
 
 ## Installation
 
@@ -21,29 +42,19 @@ require "azu_cli"
 ## Commands
 
 ```crystal 
-Azu 0.1.0 [a519b94] (2021-05-05)
-
-Command Line tool for Azu. 
-
-AZU is a toolkit for artisans with expressive, elegant syntax that 
-offers great performance to build rich, interactive type safe, applications 
-quickly, with less code and conhesive parts that adapts to your prefer style.
-
-Documentation: https://azutoolkit.github.io/azu/
-
-Commands:
-  dev       - Watches for file changes and recompiles your project in the 
-              background
-  component - Generates an Azu::Component to the ./src/components directory
+  project   - Generates a new Azu project
+  dev       - Starts server, watches for file changes and recompiles 
+              your project in the background
+  component - Generates an Azu::Component
   endpoint  - Generate an Azu::Endpoint
   request   - Generate an Azu::Request
   response  - Generate an Azu::Response
   template  - Generate a Crinja Template
   channel   - Generate a Crinja Template
 
-  clear.migrator [up|down|set|seed|status|rollback] default: apply_all
-  clear.migration
-  clear.model
+  clear.migrator  - Performs database maintenance tasks
+  clear.migration - Generates a Clear ORM Migration
+  clear.model     - Generates a Clear ORM Model and Migration
 ```
 
 ## Contributing
