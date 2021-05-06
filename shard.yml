@@ -15,3 +15,8 @@ targets:
 dependencies:
   topia:
     github: azutoolkit/topia
+    branch: master
+
+  opts:
+    github: maiha/opts.cr
+    version: 0.6.0

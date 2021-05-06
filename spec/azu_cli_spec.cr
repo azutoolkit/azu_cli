@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-describe AzuCli do
+describe AzuCLI do
   # TODO: Write tests
 
   it "works" do

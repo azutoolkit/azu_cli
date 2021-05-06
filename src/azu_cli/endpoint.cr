@@ -1,13 +1,26 @@
 module AzuCLI
   class Endpoint
-    include Topia::Plugin
     include Helpers
+    include Base
 
+    ARGS = "[name] [path] [request] [response]"
     PATH = "./src/endpoints"
+    DESCRIPTION = <<-DESC
+    Azu - Endpoints
+
+    Generates an Endpoint
+
+    The endpoint is the final stage of the request process. Each endpoint is the 
+    location from which APIs can access the resources of your application to 
+    carry out their function.
+    
+    Docs - https://azutopia.gitbook.io/azu/endpoints
+    DESC
+    
     @@class_name : String = self.name.split("::").last
 
-    def run(input, params)
-      name, route, request, response = params
+    def run
+      name, route, request, response = args[0], args[1], args[2], args[3]
       method, path = route.split(":/")
 
       announce "Generating #{name.camelcase}#{@@class_name}"
@@ -15,9 +28,8 @@ module AzuCLI
       announce "Generating #{name.camelcase}#{@@class_name}"
 
       true
-    end
-
-    def on(event : String)
+    rescue e
+      error "Endpoint generation failed! #{e.message}"
     end
 
     private def template(name, method, path, request, response)

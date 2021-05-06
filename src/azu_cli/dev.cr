@@ -1,20 +1,32 @@
 module AzuCLI
   class Dev
-    include Topia::Plugin
     include Helpers
+    include Base
+    DESCRIPTION = <<-DESC
+    Azu - Dev
+    
+    Runs your application locally, watches for files changes and recompiles in
+    the background using `shards build` command. 
 
-    getter spinner : Topia::Spinner = Topia::Spinner.new("Waiting...")
+    Note:
+      - Must have targets define in your `shard.yml`
 
-    def run(input, params)
-      spinner.start("Building...")
+    Eg.
+      targets:
+        azu: 
+          main: ./src/azu_cli.cr
+
+    DESC
+    
+    option rim : Bool, "-r", "Show this help", false
+
+    def run
+      announce "Building..."
       `shards build`
-      spinner.success("Build complete!")
+      announce "Build complete!"
       true
     rescue
-      spinner.error("Build failed!")
-    end
-
-    def on(event : String)
+      error("Build failed!")
     end
   end
 end

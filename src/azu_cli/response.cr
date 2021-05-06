@@ -2,30 +2,37 @@ require "topia"
 
 module AzuCLI
   class Response
-    include Topia::Plugin
     include Helpers
+    include Base
 
+    ARGS = "[name] [property:type] [property:type]"
     PATH = "./src/responses"
-    @@class_name : String = self.name.split("::").last
+    DESCRIPTION = <<-DESC
+    Azu - Response
+    
+    Responses is mostly an Azu implementation detail to enable more type-safe 
+    definition
 
-    def run(input, params)
-      name, fields = params
-      class_name = "#{name.camelcase}#{@@class_name}"
+    Docs - https://azutopia.gitbook.io/azu/endpoints/response
+    DESC
+    
+    def run
+      name, fields = args[0], args[1..-1]
+      class_name = "#{name.camelcase}#{PROGRAM}"
       announce "Generating #{class_name}"
       template(name, fields)
       announce "Done: Generating #{class_name}"
       true
-    end
-
-    def on(event : String)
+    rescue e
+      error "Response generation failed! #{e.message}"
     end
 
     private def template(name, fields)
-      File.open("#{PATH}/#{name}_#{@@class_name}.cr".downcase, "w") do |file|
+      File.open("#{PATH}/#{name}_#{PROGRAM}.cr".downcase, "w") do |file|
         file.puts <<-CONTENT
-        class #{name.camelcase}#{@@class_name}
-          include Azu::#{@@class_name}
-          #{render_initialize(fields.split(/\s/))}
+        class #{name.camelcase}#{PROGRAM}
+          include Azu::#{PROGRAM}
+          #{render_initialize(fields)}
         end
         CONTENT
       end

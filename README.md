@@ -1,27 +1,5 @@
 # azu_cli
 
-azu endpoint :path :request :response
-azu request :name [query:name:string ...]
-azu response :name [name:string ...]
-azu component :name
-azu template :name
-azu channel :name
-azu dev - runs watcher and recompiles project
-azu run - shards build and runs project
-azu routes
-
-azu i.clear - installs clear shard and generates config
-azu clear.migrate
-azu clear.undo
-azu clear.redo
-azu clear.migration
-azu clear.model
-
-i.joobq -- installs JoobQ shard and generates config
-joobq.job :name field:type 
-
-
-
 ## Installation
 
 1. Add the dependency to your `shard.yml`:
@@ -29,7 +7,7 @@ joobq.job :name field:type
    ```yaml
    dependencies:
      azu_cli:
-       github: your-github-user/azu_cli
+       github: azutoolkit/azu_cli
    ```
 
 2. Run `shards install`
@@ -40,15 +18,37 @@ joobq.job :name field:type
 require "azu_cli"
 ```
 
-TODO: Write usage instructions here
+## Commands
 
-## Development
+```crystal 
+Azu 0.1.0 [a519b94] (2021-05-05)
 
-TODO: Write development instructions here
+Command Line tool for Azu. 
+
+AZU is a toolkit for artisans with expressive, elegant syntax that 
+offers great performance to build rich, interactive type safe, applications 
+quickly, with less code and conhesive parts that adapts to your prefer style.
+
+Documentation: https://azutoolkit.github.io/azu/
+
+Commands:
+  dev       - Watches for file changes and recompiles your project in the 
+              background
+  component - Generates an Azu::Component to the ./src/components directory
+  endpoint  - Generate an Azu::Endpoint
+  request   - Generate an Azu::Request
+  response  - Generate an Azu::Response
+  template  - Generate a Crinja Template
+  channel   - Generate a Crinja Template
+
+  clear.migrator [up|down|set|seed|status|rollback] default: apply_all
+  clear.migration
+  clear.model
+```
 
 ## Contributing
 
-1. Fork it (<https://github.com/your-github-user/azu_cli/fork>)
+1. Fork it (<https://github.com/azutoolkit/azu_cli/fork>)
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
@@ -56,4 +56,4 @@ TODO: Write development instructions here
 
 ## Contributors
 
-- [Elias J. Perez](https://github.com/your-github-user) - creator and maintainer
+- [Elias J. Perez](https://github.com/eliasjpr) - creator and maintainer
