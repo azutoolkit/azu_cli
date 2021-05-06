@@ -7,11 +7,11 @@ module AzuCLI
 
     def run(input, params)
       model_name = params.first
-      file_name = "#{model_name}.cr".underscore.downcase
+      path = "#{PATH}/#{model_name}.cr".underscore.downcase
 
-      return false if exists? model_name
+      return false if exists? path
 
-      File.open("#{PATH}/#{file_name}", "w") do |file|
+      File.open(path, "w") do |file|
         file.puts content(params)
       end
 
@@ -19,13 +19,6 @@ module AzuCLI
     end
 
     def on(event : String)
-    end
-
-    private def exists?(model_name)
-      msg = "A model file `xxxx__#{model_name.underscore}` already exists"
-      target = "#{PATH}/*__#{model_name}.cr".underscore.downcase
-
-      raise Topia::Error.new msg if Dir[target.underscore.downcase].any?
     end
 
     private def content(params : Array(String))

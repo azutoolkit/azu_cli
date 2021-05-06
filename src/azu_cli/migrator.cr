@@ -1,3 +1,5 @@
+require "clear"
+
 module AzuCLI
   class Migrator
     include Topia::Plugin
@@ -13,7 +15,7 @@ module AzuCLI
         direction = params[2]? || "both"
 
         puts "\n", migrate(command, num, direction), "\n"
-      else 
+      else
         puts "\n", migrate, "\n"
       end
 

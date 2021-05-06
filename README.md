@@ -12,14 +12,12 @@ Clear is built especially for PostgreSQL, meaning it's not compatible with
 MariaDB or SQLite for example. Therefore, it achieves to delivers a
 tremendous amount of PostgreSQL advanced features out of the box.
 
-> **Note** - Must define DATABSE_URL environment variable for Clear ORM commands 
-> to work
+> **Note** - Must define DATABSE_URL environment variable for Clear ORM commands to work
 
-## Documentation: 
+## Documentation
 
-  - Azu       - https://azutopia.gitbook.io/azu/
-  - Clear ORM - https://clear.gitbook.io/
-
+- Azu       - https://azutopia.gitbook.io/azu/
+- Clear ORM - https://clear.gitbook.io/
 
 ## Installation
 

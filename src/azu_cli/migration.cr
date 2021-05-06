@@ -9,11 +9,13 @@ module AzuCLI
     def run(input, params)
       migration_name = params.first
       migration_uid = Time.local.to_unix.to_s.rjust(10, '0')
-      file_name = "#{migration_uid}__#{migration_name}.cr".underscore.downcase
+      file_name = "#{migration_uid}__#{migration_name}.cr"
+      check_path = "#{PATH}/*__#{migration_name}.cr".underscore.downcase
+      path = "#{PATH}/#{file_name}.cr".underscore.downcase
 
-      return false if exists? migration_name
+      return false if exists? check_path
 
-      File.open("#{PATH}/#{file_name}", "w") do |file|
+      File.open(path, "w") do |file|
         file.puts content(params)
       end
 
@@ -24,13 +26,6 @@ module AzuCLI
     end
 
     def on(event : String)
-    end
-
-    private def exists?(migration_name)
-      msg = "A migration file `xxxx__#{migration_name.underscore}` already exists"
-      target = "#{PATH}/*__#{migration_name}.cr".underscore.downcase
-
-      raise Topia::Error.new msg if Dir[target.underscore.downcase].any?
     end
 
     private def content(params)

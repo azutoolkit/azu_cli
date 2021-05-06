@@ -62,6 +62,7 @@ module AzuCLI
 
     def create_tasks_file(project, clear)
       `mkdir -p ./tasks`
+
       File.open("./tasks/azu.cr".downcase, "w") do |file|
         file.puts <<-CONTENT
         #{%Q(require "clear") if clear}
