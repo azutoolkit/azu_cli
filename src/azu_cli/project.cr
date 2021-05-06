@@ -70,6 +70,14 @@ module AzuCLI
 
         module Tasks
           include AzuCLI
+          #{
+          if clear
+          %q[
+          DATABASE_URL = ENV["DATABASE_URL"]
+          Clear::SQL.init(DATABASE_URL)
+          ]
+          end
+          }
           # #{project.capitalize} Task Runner and Azu CLI
           #
           # This file allows you register custom tasks for your project

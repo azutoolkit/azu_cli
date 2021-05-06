@@ -3,26 +3,30 @@ module AzuCLI
     include Topia::Plugin
     include Helpers
 
-    # DATABASE_URL = ENV.fetch "DATABASE_URL" { "" }
-
-    # ::Clear::SQL.init(DATABASE_URL)
+    DATABASE_URL = ENV["DATABASE_URL"]
+    ::Clear::SQL.init(DATABASE_URL)
 
     def run(input, params)
-      command = params[0]
-      num = (params[1]? || 0).to_i64
-      direction = params[2]? || "both"
+      if params.size >= 2
+        command = params[0]
+        num = (params[1]? || 0).to_i64
+        direction = params[2]? || "both"
 
-      migrate(command, num, direction)
+        migrate(command, num, direction)
+      else 
+        migrate
+      end
 
       true
     rescue e
-      error "migrator failed! #{e.message}"
+      error "Clear migrator failed! #{e.message}"
+      false
     end
 
     def on(event : String)
     end
 
-    def migrate(command : String, num : Int64, direction = "both")
+    def migrate(command : String = "", num : Int64 = 0, direction = "both")
       case command
       when "seed"     then ::Clear.apply_seeds
       when "status"   then migrator.print_status
