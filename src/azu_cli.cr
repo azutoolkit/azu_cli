@@ -40,8 +40,7 @@ module AzuCLI
     .command("mkdir -p #{Migration::PATH}")
     .command("mkdir -p #{Model::PATH}")
 
-  Topia.task("clear.migrate")
-    .pipe(Migrator.new)
+  Topia.task("db").pipe(Migrator.new)
 
   def self.run
     if ARGV.size > 0
