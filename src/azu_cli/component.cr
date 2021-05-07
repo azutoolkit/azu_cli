@@ -3,7 +3,7 @@ module AzuCLI
     include Helpers
     include Base
     PATH        = "./src/components"
-    ARGS        = "[name] [firld:type] [field:type]"
+    ARGS        = "name property:crystal-type property:crystal-type"
     DESCRIPTION = <<-DESC
     Azu - Spark Components
     
@@ -13,6 +13,12 @@ module AzuCLI
     that can be lazily loaded.
 
     Docs - https://azutopia.gitbook.io/azu/spark-1#spark-components-overview
+
+    Command Arguments Definition
+      - *name: corresponds to the crystal class_name
+      - property: crystal class instance var name
+
+      * - Required fields
     DESC
 
     def run

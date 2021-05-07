@@ -3,7 +3,7 @@ module AzuCLI
     include Helpers
     include Base
 
-    ARGS        = "[name] [path] [request] [response]"
+    ARGS        = "name path request response"
     PATH        = "./src/endpoints"
     DESCRIPTION = <<-DESC
     Azu - Endpoints
@@ -15,6 +15,14 @@ module AzuCLI
     carry out their function.
     
     Docs - https://azutopia.gitbook.io/azu/endpoints
+
+    Command Arguments Definition:
+      - *name: corresponds to the crystal class_name for the endpoint
+      - *path: url path for the endpoint eg. `/users/:id`
+      - *request: name of the request object eq. `UserDetailsRequest`
+      - *response: name of the response object eq. `UsersShowPage`
+
+      * - Required fields
     DESC
 
     @@class_name : String = self.name.split("::").last

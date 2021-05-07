@@ -1,24 +1,52 @@
 module AzuCLI
   class Model
-    include Topia::Plugin
+    include Base
     include Helpers
+
     PATH = "./src/models"
-    getter spinner : Topia::Spinner = Topia::Spinner.new("Waiting...")
+    ARGS = "model_name property:psqltype property:psqltype ..."
+    DESCRIPTION = <<-DESC
+    Azu - Clear Model Generator
+
+    Generates a Clear model and migration. If only the `model_name` is provided 
+    will generate an empty model and migration.
+
+    Docs: https://clear.gitbook.io/project/model/column-types
+
+    Command Arguments Definition
+
+      - *model_name: name for the migration eg. `UpdatePrimaryKeyType`
+      - property: name of the model fields to create and the postgres type eg.
+        first_name:varchar
+
+      * - Required fields
+    
+    Associations
+
+      Models associations can be define using the following syntax. 
+
+      Eg.
+        - belongs_to:user
+        - has_one:user
+        - has_many:users
+        - has_many_through:posts:user_posts
+
+    DESC
 
     def run(input, params)
       model_name = params.first
       path = "#{PATH}/#{model_name}.cr".underscore.downcase
 
-      return false if exists? path
+      return false if Dir[path].any?
 
       File.open(path, "w") do |file|
         file.puts content(params)
       end
 
       true
-    end
-
-    def on(event : String)
+    rescue e
+      error e.message
+      false
     end
 
     private def content(params : Array(String))

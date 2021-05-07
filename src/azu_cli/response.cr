@@ -8,7 +8,7 @@ module AzuCLI
     ARGS        = "[name] [property:type] [property:type]"
     PATH        = "./src/responses"
     DESCRIPTION = <<-DESC
-    Azu - Response
+    Azu - Response Generator
     
     Responses is mostly an Azu implementation detail to enable more type-safe 
     definition

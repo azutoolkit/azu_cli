@@ -6,7 +6,7 @@ module AzuCLI
     ARGS        = "[name] [query,form,path:property:type] [query,form,path:property:type]"
     PATH        = "./src/requests"
     DESCRIPTION = <<-DESC
-    Azu - Requests
+    Azu - Request Generator
     
     Requests are designed by contract in order to enforce correctness and type 
     safe definitions

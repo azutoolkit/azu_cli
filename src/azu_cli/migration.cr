@@ -1,10 +1,30 @@
 module AzuCLI
   class Migration
-    include Topia::Plugin
+    include Base
     include Helpers
 
     PATH = "./db/migrations"
-    getter spinner : Topia::Spinner = Topia::Spinner.new("Waiting...")
+    ARGS = "name table_name column:psqltype column:psqltype ..."
+    DESCRIPTION = <<-DESC
+    Azu - Clear Migration Generator
+
+    Generates a clear migration. If only the `name` is provided will generate 
+    an empty migration.
+
+    Clear offers a migration system. Migration allow you to handle state update 
+    of your database. Migration is a list of change going through a direction, 
+    up (commit changes) or down (rollback changes).
+
+    Docs: https://clear.gitbook.io/project/migrations/call-migration-script
+
+    Command Arguments Definition:
+      - *name: name for the migration eg. `UpdatePrimaryKeyType`
+      - table_name: name of the database table to create eq. `users`
+      - column: name of the database columns to create and the postgres type eg.
+        `first_name:varchar`
+
+      * - Required fields
+    DESC
 
     def run(input, params)
       migration_name = params.first
@@ -13,7 +33,7 @@ module AzuCLI
       check_path = "#{PATH}/*__#{migration_name}.cr".underscore.downcase
       path = "#{PATH}/#{file_name}.cr".underscore.downcase
 
-      return false if exists? check_path
+      return false if Dir[check_path].any?
 
       File.open(path, "w") do |file|
         file.puts content(params)
@@ -22,10 +42,7 @@ module AzuCLI
       true
     rescue e
       error e.message.to_s
-      e
-    end
-
-    def on(event : String)
+      false
     end
 
     private def content(params)

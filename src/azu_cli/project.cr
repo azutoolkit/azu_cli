@@ -5,7 +5,7 @@ module AzuCLI
 
     ARGS        = "[name]"
     DESCRIPTION = <<-DESC
-    Azu - Project
+    Azu - Project Generator
 
     The `azu project` command generates a new Crystal application with Azu 
     installed and Clear ORM.
@@ -69,44 +69,40 @@ module AzuCLI
         #{%Q(require ".#{Migration::PATH}/**") if clear}
         #{%q(require "azu_cli")}
 
-        module Tasks
-          include AzuCLI
-          # #{project.capitalize} Task Runner and Azu CLI
-          #
-          # This file allows you register custom tasks for your project
-          # and run those tasks from Azu CLI.
-          #
-          # Plugins
-          #
-          # Create plugins build your custom workflows
-          # 
-          # Example Pipe:
-          #
-          # class ExampePipe
-          #   include AzuCLI::Base
-          #
-          #   def run
-          #     announce "Building..."
-          #     # ... do somethong ...
-          #     announce "Build complete!"
-          #     true
-          #   rescue
-          #     error("Build failed!")
-          #   end
-          # end
-          #
-          #
-          # Wrire your tasks here
-          #
-          # Example:
-          #
-          # task("customtask")
-          #   .command("mkdir -p ./hello_world")
-          #   .pipe(ExampePipe.new) 
+        # #{project.capitalize} Task Runner and Azu CLI
+        #
+        # This file allows you register custom tasks for your project
+        # and run those tasks from Azu CLI.
+        #
+        # Plugins
+        #
+        # Create plugins build your custom workflows
+        # 
+        # Example Pipe:
+        #
+        # class ExampePipe
+        #   include AzuCLI::Base
+        #
+        #   def run
+        #     announce "Building..."
+        #     # ... do somethong ...
+        #     announce "Build complete!"
+        #     true
+        #   rescue
+        #     error("Build failed!")
+        #   end
+        # end
+        #
+        #
+        # Wrire your tasks here
+        #
+        # Example:
+        #
+        # task("customtask")
+        #   .command("mkdir -p ./hello_world")
+        #   .pipe(ExampePipe.new) 
 
-        end
-
-        Tasks.run
+        AzuCLI.run
         CONTENT
       end
     end

@@ -25,8 +25,8 @@ module AzuCLI
 
     Usage:
 
-      - azu project [name] [--clear]
-      - azu clear.model [name] [firld:psqltype] [field:psqltype] 
+      - azu project name --clear
+      - azu clear.model name -column:psqltype column:psqltype
 
     Sub-commands:
     
