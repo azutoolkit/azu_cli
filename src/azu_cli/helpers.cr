@@ -49,11 +49,5 @@ module AzuCLI
         end
       end
     end
-
-    private def exists?(path)
-      msg = "File `#{path.underscore}` already exists"
-      target = "#{path}".underscore.downcase
-      raise Topia::Error.new msg if Dir[target].any?
-    end
   end
 end
