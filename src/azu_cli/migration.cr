@@ -2,9 +2,8 @@ module AzuCLI
   class Migration
     include Base
     include Helpers
-
-    PATH = "./db/migrations"
-    ARGS = "name table_name column:psqltype column:psqltype ..."
+    PATH        = "./db/migrations"
+    ARGS        = "name table_name column:psqltype column:psqltype ..."
     DESCRIPTION = <<-DESC
     Azu - Clear Migration Generator
 
@@ -27,16 +26,16 @@ module AzuCLI
     DESC
 
     def run
-      migration_name = params.first
+      migration_name = args.first
       migration_uid = Time.local.to_unix.to_s.rjust(10, '0')
       file_name = "#{migration_uid}__#{migration_name}.cr"
       check_path = "#{PATH}/*__#{migration_name}.cr".underscore.downcase
-      path = "#{PATH}/#{file_name}.cr".underscore.downcase
+      path = "#{PATH}/#{file_name}".underscore.downcase
 
       return false if Dir[check_path].any?
 
       File.open(path, "w") do |file|
-        file.puts content(params)
+        file.puts content(args)
       end
 
       true
@@ -52,7 +51,7 @@ module AzuCLI
 
     private def empty_template(params : Array(String))
       migration_name = params.first
-      class_name = "#{migration_name.camelcase}Migration"
+      class_name = "#{migration_name.camelcase}"
 
       <<-CONTENT
       class #{params.first}
@@ -85,16 +84,16 @@ module AzuCLI
       class Create#{name.camelcase}
         include Clear::Migration
       
-        def change(direction.up do)
+        def change(direction)
           direction.up do
             create_table :#{table} do |t|
-              #{render_columns(columns)}
+              \t#{render_columns(columns)}
               t.timestamps
             end
           end
 
-          # direction.down do
-          # end
+          direction.down do
+          end
         end
       end
       CONTENT

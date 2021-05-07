@@ -1,15 +1,15 @@
 module AzuCLI
   class Tasks
-    include Helpers
     include Base
+    include Helpers
     PATH        = "./tasks/taskfile.cr"
     DESCRIPTION = <<-DESC
     Azu - Topia Taskfile Generator
     
-    Creates a tasks taskfile is placed in /tasks/taskfile.cr
+    Creates a tasks taskfile is placed in ./tasks/taskfile.cr
     
     Leverage tasks to automate mundane, repetitive tasks and compose them into 
-    efficient automated build pipelines and workflows.
+    efficient automated bui/tasks/taskfile.crld pipelines and workflows.
 
     Docs: https://github.com/azutoolkit/topia
 
@@ -43,22 +43,25 @@ module AzuCLI
       if task.size > 0
         `crystal #{PATH} -- -r #{task}`
       else
-        if Dir[target].any?
-          announce "File `#{PATH.underscore}` already exists"
+        if File.exists? PATH
+          error "File `#{PATH.underscore}` already exists"
         else
-          create_tasks_file PATH
+          announce "Creating task file!"
+          `mkdir -p ./tasks`
+          create_tasks_file!
+          announce "Done generating ./tasks/taskfile.cr!"
         end
       end
-      true
+      exit 1
     rescue e
       error("Failed: #{e.message}")
-      false
     end
 
-    def create_tasks_file(path)
-      File.open(path, "w") do |file|
+    private def create_tasks_file!
+      File.open(PATH, "w") do |file|
         file.puts <<-CONTENT
         require "topia"
+
         # This file allows you register custom tasks for your project
         # and run those tasks from Azu CLI.
         #
@@ -89,8 +92,16 @@ module AzuCLI
         #   .command("mkdir -p ./hello_world")
         #   .pipe(ExampePipe.new) 
 
+        def run
+          if ARGV.size > 0
+            task, command = ARGV.first, ARGV[1..-1]
+            Topia.run(task, command)
+          else
+            Topia.run("azu", ["--help"])
+          end
+        end
 
-        Topia.run
+        run
         CONTENT
       end
     end

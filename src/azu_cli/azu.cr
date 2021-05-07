@@ -31,6 +31,7 @@ module AzuCLI
     Sub-commands:
     
       project   - Generates a new Azu project
+      db        - Manages database versions
       dev       - Starts server, watches for file changes and recompiles 
                   your project in the background
       component - Generates an Azu::Component

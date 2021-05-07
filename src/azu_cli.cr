@@ -10,7 +10,6 @@ module AzuCLI
 
   Topia.task("azu").pipe(Azu.new)
   Topia.task("tasks").pipe(Tasks.new)
-    .command("mkdir -p #{Tasks::PATH}")
   Topia.task("project").pipe(Project.new)
   Topia.task("dev").pipe(Dev.new).watch("./**.cr")
 

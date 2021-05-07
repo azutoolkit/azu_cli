@@ -3,8 +3,8 @@ module AzuCLI
     include Base
     include Helpers
 
-    PATH = "./src/models"
-    ARGS = "model_name property:psqltype property:psqltype ..."
+    PATH        = "./src/models"
+    ARGS        = "model_name property:psqltype property:psqltype ..."
     DESCRIPTION = <<-DESC
     Azu - Clear Model Generator
 
@@ -33,19 +33,19 @@ module AzuCLI
 
     DESC
 
-    def run(input, params)
-      model_name = params.first
+    def run
+      model_name = args.first
       path = "#{PATH}/#{model_name}.cr".underscore.downcase
 
       return false if Dir[path].any?
 
       File.open(path, "w") do |file|
-        file.puts content(params)
+        file.puts content(args)
       end
 
       true
     rescue e
-      error e.message
+      error e.message.to_s
       false
     end
 
