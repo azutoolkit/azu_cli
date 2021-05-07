@@ -44,7 +44,7 @@ module AzuCLI
         `crystal #{PATH} -- -r #{task}`
       else
         if Dir[target].any?
-          announce File "`#{path.underscore}` already exists"
+          announce "File `#{PATH.underscore}` already exists"
         else
           create_tasks_file PATH
         end
