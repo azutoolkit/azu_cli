@@ -26,7 +26,7 @@ module AzuCLI
       * - Required fields
     DESC
 
-    def run(input, params)
+    def run
       migration_name = params.first
       migration_uid = Time.local.to_unix.to_s.rjust(10, '0')
       file_name = "#{migration_uid}__#{migration_name}.cr"
