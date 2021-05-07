@@ -1,6 +1,5 @@
 module AzuCLI
   class Project
-    include Helpers
     include Base
 
     ARGS        = "[name]"
@@ -55,9 +54,10 @@ module AzuCLI
       announce "Installing shards and building CLI!"
       `shards build --ignore-crystal-version`
 
-      true
+      exit 1
     rescue e
       error("Initializing project failed! #{e.message}")
+      exit 1
     end
 
     def create_tasks_file(project, clear)

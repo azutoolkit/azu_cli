@@ -1,6 +1,5 @@
 module AzuCLI
   class Endpoint
-    include Helpers
     include Base
 
     ARGS        = "name path request response"
@@ -25,25 +24,23 @@ module AzuCLI
       * - Required fields
     DESC
 
-    @@class_name : String = self.name.split("::").last
-
     def run
       name, route, request, response = args[0], args[1], args[2], args[3]
       method, path = route.split(":/")
+      file_path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
 
-      announce "Generating #{name.camelcase}#{@@class_name}"
-      template(name, method, path, request, response)
-      announce "Generating #{name.camelcase}#{@@class_name}"
+      not_exists?(file_path) do
+        template(file_path, name, method, path, request, response)
+      end
 
-      true
-    rescue e
-      error "Endpoint generation failed! #{e.message}"
+      announce "Created #{PROGRAM}: #{file_path}"
+      exit 1
     end
 
-    private def template(name, method, path, request, response)
-      File.open("#{PATH}/#{name}_#{@@class_name}.cr".downcase, "w") do |file|
+    private def template(file_path, name, method, path, request, response)
+      File.open(file_path, "w") do |file|
         file.puts <<-CONTENT
-        class #{name.camelcase}#{@@class_name}
+        class #{name.camelcase}#{PROGRAM}
           include Azu::Endpoint(#{request.camelcase}, #{response.camelcase})
           
           #{method.downcase} "/#{path.downcase}"

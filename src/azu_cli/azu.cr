@@ -1,8 +1,7 @@
 module AzuCLI
   class Azu
-    include Topia::Plugin
-    include Helpers
     include Base
+
     DESCRIPTION = <<-EOF
     Azu - Command Line Interface 
 
@@ -28,33 +27,34 @@ module AzuCLI
       - azu project name --clear
       - azu clear.model name -column:psqltype column:psqltype
 
-    Sub-commands:
+    Subcommands:
     
       project   - Generates a new Azu project
       db        - Manages database versions
       dev       - Starts server, watches for file changes and recompiles 
                   your project in the background
+
+      Generators 
+
       component - Generates an Azu::Component
       endpoint  - Generate an Azu::Endpoint
       request   - Generate an Azu::Request
       response  - Generate an Azu::Response
       template  - Generate a Crinja Template
       channel   - Generate a Crinja Template
-
-      clear.migrator  - Performs database maintenance tasks
-      clear.migration - Generates a Clear ORM Migration
-      clear.model     - Generates a Clear ORM Model and Migration
+      migration - Generates a Clear ORM Migration
+      model     - Generates a Clear ORM Model and Migration
     
       Note: Must define DATABSE_URL env variable for Clear ORM commands to work
     EOF
 
     def run
-      puts "hello"
-    rescue
-      error("Build failed!")
-    end
-
-    def on(event : String)
+      if ARGV.size > 0
+        task, command = ARGV.first, ARGV[1..-1]
+        Topia.run(task, command)
+      else
+        Topia.run("azu", ["--help"])
+      end
     end
   end
 end

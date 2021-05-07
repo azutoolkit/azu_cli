@@ -1,7 +1,7 @@
 module AzuCLI
   class Component
-    include Helpers
     include Base
+
     PATH        = "./src/components"
     ARGS        = "name property:crystal-type property:crystal-type"
     DESCRIPTION = <<-DESC
@@ -23,16 +23,16 @@ module AzuCLI
 
     def run
       name, fields = args[0], args[1..-1]
-      announce "Generating #{name.camelcase}#{PROGRAM}"
-      template(name, fields)
-      announce "Done: Generating #{name.camelcase}#{PROGRAM}"
-      true
-    rescue e
-      error "Component generation failed! #{e.message}"
+      path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+
+      not_exists?(path) { template path, name, fields }
+
+      announce "Created #{PROGRAM} #{name.camelcase}"
+      exit 1
     end
 
-    private def template(name, fields)
-      File.open("#{PATH}/#{name}_#{PROGRAM}.cr".downcase, "w") do |file|
+    private def template(path, name, fields)
+      File.open(path, "w") do |file|
         file.puts <<-CONTENT
         class #{name.camelcase}#{PROGRAM}
           include Azu::Component

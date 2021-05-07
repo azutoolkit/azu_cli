@@ -1,7 +1,7 @@
 module AzuCLI
   class Tasks
     include Base
-    include Helpers
+
     PATH        = "./tasks/taskfile.cr"
     DESCRIPTION = <<-DESC
     Azu - Topia Taskfile Generator
@@ -13,28 +13,26 @@ module AzuCLI
 
     Docs: https://github.com/azutoolkit/topia
 
-    Creating Tasks
-
-      Example Task:
+    Example Task:
+    
+      task("customtask")
+        .command("mkdir -p ./hello_world")
+        .pipe(ExampePipe.new) 
+    
+    Example Pipe:
+    
+      class ExampePipe
+        include AzuCLI::Base
       
-        task("customtask")
-          .command("mkdir -p ./hello_world")
-          .pipe(ExampePipe.new) 
-      
-      Example Pipe:
-      
-        class ExampePipe
-          include AzuCLI::Base
-        
-          def run
-            announce "Building..."
-            # ... do somethong ...
-            announce "Build complete!"
-            true
-          rescue
-            error("Build failed!")
-          end
+        def run
+          announce "Building..."
+          # ... do somethong ...
+          announce "Build complete!"
+          true
+        rescue
+          error("Build failed!")
         end
+      end
     DESC
 
     option task : String, "--t task", "Runs a specific task", ""
@@ -43,18 +41,14 @@ module AzuCLI
       if task.size > 0
         `crystal #{PATH} -- -r #{task}`
       else
-        if File.exists? PATH
-          error "File `#{PATH.underscore}` already exists"
-        else
+        not_exists? PATH do
           announce "Creating task file!"
           `mkdir -p ./tasks`
           create_tasks_file!
-          announce "Done generating ./tasks/taskfile.cr!"
+          announce "Created taskfile #{PATH}!"
         end
       end
       exit 1
-    rescue e
-      error("Failed: #{e.message}")
     end
 
     private def create_tasks_file!

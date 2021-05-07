@@ -1,7 +1,7 @@
 module AzuCLI
   class Migration
     include Base
-    include Helpers
+
     PATH        = "./db/migrations"
     ARGS        = "name table_name column:psqltype column:psqltype ..."
     DESCRIPTION = <<-DESC
@@ -32,16 +32,14 @@ module AzuCLI
       check_path = "#{PATH}/*__#{migration_name}.cr".underscore.downcase
       path = "#{PATH}/#{file_name}".underscore.downcase
 
-      return false if Dir[check_path].any?
-
-      File.open(path, "w") do |file|
-        file.puts content(args)
+      not_exists?(check_path) do
+        File.open(path, "w") do |file|
+          file.puts content(args)
+        end
       end
 
-      true
-    rescue e
-      error e.message.to_s
-      false
+      announce "Created #{PROGRAM}: #{path}"
+      exit 1
     end
 
     private def content(params)

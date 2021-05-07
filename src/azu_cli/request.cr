@@ -1,6 +1,5 @@
 module AzuCLI
   class Request
-    include Helpers
     include Base
 
     ARGS        = "[name] [query,form,path:property:type] [query,form,path:property:type]"
@@ -14,23 +13,19 @@ module AzuCLI
     Docs - https://azutopia.gitbook.io/azu/endpoints/requests
     DESC
 
-    @@class_name : String = self.name.split("::").last
-
     def run
       name, fields = args[0], args[1..-1]
-      announce "Generating #{name.camelcase}#{@@class_name}"
-      template(name, fields)
-      announce "Done: Generating #{name.camelcase}#{@@class_name}"
-      true
-    rescue e
-      error "Request generation failed! #{e.message}"
+      path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+      not_exists?(path) { template(path, name, fields) }
+      announce "Created #{PROGRAM} #{name.camelcase}#{PROGRAM}"
+      exit 1
     end
 
-    private def template(name, fields)
-      File.open("#{PATH}/#{name}_#{@@class_name}.cr".downcase, "w") do |file|
+    private def template(path, name, fields)
+      File.open(path, "w") do |file|
         file.puts <<-CONTENT
-        class #{name.camelcase}#{@@class_name}
-          include Azu::#{@@class_name}
+        class #{name.camelcase}#{PROGRAM}
+          include Azu::#{PROGRAM}
 
           #{render_field(fields)}
         end

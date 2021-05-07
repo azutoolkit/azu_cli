@@ -2,18 +2,19 @@ module AzuCLI
   module Base
     include Topia::Plugin
     include Opts
+    include Helpers
 
     USAGE = <<-EOF
 
-  {{description}}
-  
-  Usage: azu {{program}} {{args}}
+    {{description}}
+    
+    Usage: azu {{program}} {{args}}
 
-  Options:
-  {{options}}
+    Options:
+    {{options}}
 
-  {{version}}
-  EOF
+    {{version}}
+    EOF
 
     macro included
       PROGRAM = self.name.split("::").last
@@ -26,6 +27,10 @@ module AzuCLI
         die "Invalid number of arguments" if params.empty? && !ARGS.empty?
         run(params)
         run
+        true
+      rescue e
+        error "#{PROGRAM} command failed! - #{e.message}"
+        exit 1
       end
 
       def show_usage

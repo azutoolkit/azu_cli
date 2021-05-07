@@ -1,7 +1,6 @@
 module AzuCLI
   class Model
     include Base
-    include Helpers
 
     PATH        = "./src/models"
     ARGS        = "model_name property:psqltype property:psqltype ..."
@@ -36,17 +35,11 @@ module AzuCLI
     def run
       model_name = args.first
       path = "#{PATH}/#{model_name}.cr".underscore.downcase
-
-      return false if Dir[path].any?
-
       File.open(path, "w") do |file|
         file.puts content(args)
       end
 
-      true
-    rescue e
-      error e.message.to_s
-      false
+      announce "Created #{PROGRAM}: #{path}"
     end
 
     private def content(params : Array(String))

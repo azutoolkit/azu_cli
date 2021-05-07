@@ -3,7 +3,7 @@ require "clear"
 module AzuCLI
   class Migrator
     include Base
-    include Helpers
+
     PATH        = Migration::PATH
     ARGS        = "subcommand version"
     DESCRIPTION = <<-DESC
@@ -38,20 +38,21 @@ module AzuCLI
       azu db migrate
       azu db [down or up] version
       azu db rollback
-      
     DESC
 
-    DATABASE_URL = ENV["DATABASE_URL"]
-
-    enum Type
-      Seed
-      Redo
-      Status
-      Migrate
-      Rollback
-      Up
-      Down
+    struct Format < Log::StaticFormatter
+      def run
+        string " clear ".colorize.back(:black).fore(:white).mode(:bold)
+        severity
+        string ": "
+        message
+      end
     end
+
+    backend = Log::IOBackend.new(formatter: Format)
+    Log.setup(sources: "clear.migration", backend: backend)
+
+    DATABASE_URL = ENV["DATABASE_URL"]
 
     private getter migrator : Clear::Migration::Manager
     private getter migrations : Array(Int64)
@@ -65,10 +66,8 @@ module AzuCLI
     def run
       command, version = args.first, args.last?
       validate! command
-      puts "\n", migrate(command, version), "\n"
-      exit 1
-    rescue e
-      error "Clear migrator failed! #{e.message}"
+      puts "\n"
+      puts migrate(command, version)
       exit 1
     end
 
@@ -93,7 +92,7 @@ module AzuCLI
       when "status"   then migrator.print_status
       when "up"       then migrator.up version.not_nil!.to_i64
       when "down"     then migrator.down version.not_nil!.to_i64
-      else error "Unsupported database command"
+      else                 error "Unsupported database command"
       end
     end
 

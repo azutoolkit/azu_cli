@@ -1,7 +1,7 @@
 module AzuCLI
   class Dev
-    include Helpers
     include Base
+
     DESCRIPTION = <<-DESC
     Azu - Dev
     
@@ -18,15 +18,10 @@ module AzuCLI
 
     DESC
 
-    option rim : Bool, "-r", "Show this help", false
-
     def run
       announce "Building..."
       `shards build`
       announce "Build complete!"
-      true
-    rescue
-      error("Build failed!")
     end
   end
 end

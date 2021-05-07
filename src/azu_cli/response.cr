@@ -2,7 +2,6 @@ require "topia"
 
 module AzuCLI
   class Response
-    include Helpers
     include Base
 
     ARGS        = "[name] [property:type] [property:type]"
@@ -19,18 +18,17 @@ module AzuCLI
     def run
       name, fields = args[0], args[1..-1]
       class_name = "#{name.camelcase}#{PROGRAM}"
-      announce "Generating #{class_name}"
-      template(name, fields)
-      announce "Done: Generating #{class_name}"
-      true
-    rescue e
-      error "Response generation failed! #{e.message}"
+      path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+
+      not_exists?(path) { template(path, name, fields) }
+      announce "Created #{PROGRAM} #{class_name}"
+      exit 1
     end
 
-    private def template(name, fields)
-      File.open("#{PATH}/#{name}_#{PROGRAM}.cr".downcase, "w") do |file|
+    private def template(path, name, fields)
+      File.open(path, "w") do |file|
         file.puts <<-CONTENT
-        class #{name.camelcase}#{PROGRAM}
+        class #{name.camelcase}
           include Azu::#{PROGRAM}
           #{render_initialize(fields)}
         end

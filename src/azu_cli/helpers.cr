@@ -49,5 +49,14 @@ module AzuCLI
         end
       end
     end
+
+    def not_exists?(path)
+      if File.exists? path
+        error "File `#{path.underscore}` already exists"
+        exit 1
+      else
+        yield 
+      end
+    end
   end
 end
