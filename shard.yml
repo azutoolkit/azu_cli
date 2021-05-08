@@ -13,7 +13,7 @@ targets:
     main: ./src/azu_cli.cr
 
 scripts:
-  postinstall: make install
+  postinstall: sudo make install
 
 dependencies:
   topia:
