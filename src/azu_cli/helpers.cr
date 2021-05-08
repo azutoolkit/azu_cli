@@ -38,6 +38,7 @@ module AzuCLI
         end
 
         str << ")"
+        str << "end"
       end
     end
 

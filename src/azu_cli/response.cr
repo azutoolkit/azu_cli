@@ -28,9 +28,18 @@ module AzuCLI
     private def template(path, name, fields)
       File.open(path, "w") do |file|
         file.puts <<-CONTENT
-        class #{name.camelcase}
-          include Azu::#{PROGRAM}
-          #{render_initialize(fields)}
+        module #{Shard.name.camelcase}
+          class #{name.camelcase}Response
+            include #{PROGRAM}
+        
+            #{render_initialize(fields)}
+        
+            def render
+              # Add your code here
+              # You can render html, json, xml etc
+              # Docs https://azutopia.gitbook.io/azu/endpoints/response
+            end
+          end
         end
         CONTENT
       end
