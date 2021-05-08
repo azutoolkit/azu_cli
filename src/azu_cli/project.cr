@@ -46,7 +46,9 @@ module AzuCLI
       add_shard(project, clear)
 
       Dir.cd("./#{project}")
+
       `mkdir -p #{Migration::PATH}` if clear
+      `mkdir -p ./src/#{project.underscore}` if clear
 
       announce "Adding Azu to main file!"
       main_cr_file(project, clear)
@@ -73,11 +75,13 @@ module AzuCLI
           include Azu
           VERSION = "0.1.0"
           
-          #{if clear
-          %Q(# Clear Orm Docs - https://clear.gitbook.io/project/introduction/installation)
-          %Q(DATABASE_URL = ENV["DATABASE_URL"] )
+          #{
+          if clear
+          "# Clear Orm Docs - https://clear.gitbook.io/project/introduction/installation"
+          %q(DATABASE_URL = ENV["DATABASE_URL"])
           %Q(Clear::SQL.init(DATABASE_URL))
-          end}
+          end
+          }
 
           configure do |c|
             # Default HTML templates path
@@ -92,10 +96,10 @@ module AzuCLI
           end
         end
 
-        require "./src/#{project.underscore}/**"
+        require "./#{project.underscore}/**"
 
         # Add Handlers to your App Server
-        #{project}.start [
+        #{project.camelcase}.start [
           Azu::Handler::Rescuer.new,
           Azu::Handler::Logger.new,
         ]
