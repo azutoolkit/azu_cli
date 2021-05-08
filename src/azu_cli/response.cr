@@ -29,7 +29,7 @@ module AzuCLI
       File.open(path, "w") do |file|
         file.puts <<-CONTENT
         # Response Docs https://azutopia.gitbook.io/azu/endpoints/response
-        module #{Shard.name.camelcase}
+        module #{project_name.camelcase}
           class #{name.camelcase}Response
             include #{PROGRAM}
         

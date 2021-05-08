@@ -70,5 +70,14 @@ module AzuCLI
         yield 
       end
     end
+
+    def shard(path = "./shard.yml")
+      contents = File.read(path)
+      YAML.parse contents
+    end
+
+    def project_name
+      shard.as_h["name"].as_s
+    end
   end
 end

@@ -40,7 +40,7 @@ module AzuCLI
     private def template(file_path, name, method, path, request, response)
       File.open(file_path, "w") do |file|
         file.puts <<-CONTENT
-        module #{Shard.name.camelcase}
+        module #{project_name.camelcase}
           class #{name.camelcase}#{PROGRAM}
             include Endpoint(#{request.camelcase}Request, #{response.camelcase}Response)
         

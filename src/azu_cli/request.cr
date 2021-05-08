@@ -25,7 +25,7 @@ module AzuCLI
       File.open(path, "w") do |file|
         file.puts <<-CONTENT
         # Request Docs https://azutopia.gitbook.io/azu/endpoints/requests
-        module #{Shard.name.camelcase}
+        module #{project_name.camelcase}
           struct #{name.camelcase}#{PROGRAM}
             include #{PROGRAM}
 

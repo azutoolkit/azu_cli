@@ -71,7 +71,7 @@ module AzuCLI
 
       <<-CONTENT
       # Model Docs - https://clear.gitbook.io/project/model/column-types
-      module #{Shard.name.camelcase}
+      module #{project_name.camelcase}
         class #{class_name}
           include Clear::Model
           self.table = "#{model_name.underscore}s"
