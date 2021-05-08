@@ -48,16 +48,60 @@ module AzuCLI
       Dir.cd("./#{project}")
       `mkdir -p #{Migration::PATH}` if clear
 
+      announce "Adding Azu to main file!"
+      main_cr_file(project, clear)
+
+      # Create directories 
+      # plublic/templates
       announce "Adding tasks runner!"
       create_tasks_file(project, clear)
 
       announce "Installing shards and building CLI!"
       `shards build --ignore-crystal-version`
 
+      success "Project #{project.camelcase} created!"
       exit 1
-    rescue e
-      error("Initializing project failed! #{e.message}")
-      exit 1
+    end
+
+    def main_cr_file(project, clear)
+      File.open("./src/#{project}.cr".downcase, "w") do |file|
+        file.puts <<-CONTENT
+        require "azu"
+        #{%Q(require "clear") if clear}
+
+        module #{project.camelcase}
+          include Azu
+          VERSION = "0.1.0"
+          
+          #{if clear
+          %Q(# Clear Orm Docs - https://clear.gitbook.io/project/introduction/installation)
+          %Q(DATABASE_URL = ENV["DATABASE_URL"] )
+          %Q(Clear::SQL.init(DATABASE_URL))
+          end}
+
+          configure do |c|
+            # Default HTML templates path
+            c.templates.path = "public/templates"
+
+            # Uncomment to enable Spark real time apps
+            # Docs: https://azutopia.gitbook.io/azu/spark-1
+            # c.router.ws "/live-view", Spark 
+
+            # To Server static content
+            c.router.get "/*", Handler::Static.new
+          end
+        end
+
+        require "./src/#{project.underscore}/**"
+
+        # Add Handlers to your App Server
+        #{project}.start [
+          Azu::Handler::Rescuer.new,
+          Azu::Handler::Logger.new,
+        ]
+
+        CONTENT
+      end
     end
 
     def create_tasks_file(project, clear)

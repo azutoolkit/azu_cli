@@ -38,8 +38,7 @@ module AzuCLI
       File.open(path, "w") do |file|
         file.puts content(args)
       end
-
-      announce "Created #{PROGRAM}: #{path}"
+      success "Created #{PROGRAM}: #{path}"
     end
 
     private def content(params : Array(String))

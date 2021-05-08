@@ -45,7 +45,7 @@ module AzuCLI
           announce "Creating task file!"
           `mkdir -p ./tasks`
           create_tasks_file!
-          announce "Created taskfile #{PATH}!"
+          success "Created taskfile #{PATH}!"
         end
       end
       exit 1

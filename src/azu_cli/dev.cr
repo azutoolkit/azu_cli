@@ -21,7 +21,7 @@ module AzuCLI
     def run
       announce "Building..."
       `shards build`
-      announce "Build complete!"
+      success "Build complete!"
     end
   end
 end

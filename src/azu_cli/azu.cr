@@ -30,19 +30,19 @@ module AzuCLI
     Subcommands:
     
       project   - Generates a new Azu project
-      db        - Manages database versions
+      db        - Manages database versions and schema
       dev       - Starts server, watches for file changes and recompiles 
                   your project in the background
 
       Generators 
 
-      component - Generates an Azu::Component
-      endpoint  - Generate an Azu::Endpoint
-      request   - Generate an Azu::Request
-      response  - Generate an Azu::Response
-      template  - Generate a Crinja Template
-      channel   - Generate a Crinja Template
-      migration - Generates a Clear ORM Migration
+      channel   - Generates an Azu::Channel to handle websocket connections
+      component - Generates an Azu::Component for building real time apps
+      endpoint  - Generates an Azu::Endpoint for handling http resources
+      request   - Generates an Azu::Request for validating and parsing http requests
+      response  - Generates an Azu::Response that renders html response body 
+      template  - Generates a Crinja Template for building and rendering HTML
+      migration - Generates a Clear ORM Migration to change Postgres databases
       model     - Generates a Clear ORM Model and Migration
     
       Note: Must define DATABSE_URL env variable for Clear ORM commands to work

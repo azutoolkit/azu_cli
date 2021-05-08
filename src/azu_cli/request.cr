@@ -17,7 +17,7 @@ module AzuCLI
       name, fields = args[0], args[1..-1]
       path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
       not_exists?(path) { template(path, name, fields) }
-      announce "Created #{PROGRAM} #{name.camelcase}#{PROGRAM}"
+      success "Created #{PROGRAM} #{name.camelcase}#{PROGRAM}"
       exit 1
     end
 

@@ -33,7 +33,7 @@ module AzuCLI
         template(file_path, name, method, path, request, response)
       end
 
-      announce "Created #{PROGRAM}: #{file_path}"
+      success "Created #{PROGRAM}: #{file_path}"
       exit 1
     end
 

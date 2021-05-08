@@ -38,7 +38,7 @@ module AzuCLI
         end
       end
 
-      announce "Created #{PROGRAM}: #{path}"
+      success "Created #{PROGRAM}: #{path}"
       exit 1
     end
 

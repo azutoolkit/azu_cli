@@ -12,6 +12,9 @@ targets:
   azu: 
     main: ./src/azu_cli.cr
 
+scripts:
+  postinstall: make install
+
 dependencies:
   topia:
     github: azutoolkit/topia

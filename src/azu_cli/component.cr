@@ -27,7 +27,7 @@ module AzuCLI
 
       not_exists?(path) { template path, name, fields }
 
-      announce "Created #{PROGRAM} #{name.camelcase}"
+      success "Created #{PROGRAM} #{name.camelcase}"
       exit 1
     end
 
