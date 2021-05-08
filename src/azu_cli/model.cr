@@ -51,6 +51,13 @@ module AzuCLI
       class_name = "#{name.camelcase}"
 
       <<-CONTENT
+      # Model Docs - https://clear.gitbook.io/project/model/column-types
+      module #{Shard.name.camelcase}
+        class #{class_name}
+          include Clear::Model
+        end
+      end
+      
       class #{class_name}
         include Clear::Model
         primary_key
@@ -63,14 +70,17 @@ module AzuCLI
       class_name = model_name.camelcase
 
       <<-CONTENT
-      class #{model_name.camelcase}
-        include Clear::Model
-        self.table = "#{model_name.underscore}s"
+      # Model Docs - https://clear.gitbook.io/project/model/column-types
+      module #{Shard.name.camelcase}
+        class #{class_name}
+          include Clear::Model
+          self.table = "#{model_name.underscore}s"
 
-        with_serial_pkey
-                
-        #{render_columns(columns)}
-        timestamps
+          primary_key
+                  
+          #{render_columns(columns)}
+          timestamps
+        end
       end
       CONTENT
     end

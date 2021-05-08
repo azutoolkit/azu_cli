@@ -24,10 +24,14 @@ module AzuCLI
     private def template(path, name, fields)
       File.open(path, "w") do |file|
         file.puts <<-CONTENT
-        class #{name.camelcase}#{PROGRAM}
-          include Azu::#{PROGRAM}
+        # Request Docs https://azutopia.gitbook.io/azu/endpoints/requests
+        module #{Shard.name.camelcase}
+          struct #{name.camelcase}#{PROGRAM}
+            include #{PROGRAM}
 
-          #{render_field(fields)}
+            #{render_field(fields)}
+            #{render_validate(fields)}
+          end
         end
         CONTENT
       end

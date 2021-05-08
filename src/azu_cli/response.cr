@@ -28,6 +28,7 @@ module AzuCLI
     private def template(path, name, fields)
       File.open(path, "w") do |file|
         file.puts <<-CONTENT
+        # Response Docs https://azutopia.gitbook.io/azu/endpoints/response
         module #{Shard.name.camelcase}
           class #{name.camelcase}Response
             include #{PROGRAM}
@@ -37,7 +38,6 @@ module AzuCLI
             def render
               # Add your code here
               # You can render html, json, xml etc
-              # Docs https://azutopia.gitbook.io/azu/endpoints/response
             end
           end
         end

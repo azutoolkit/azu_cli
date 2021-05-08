@@ -45,8 +45,19 @@ module AzuCLI
     private def render_field(params : Array(String))
       String.build do |str|
         params.each do |param|
-          method, field, type = param.split(":")
-          str << "#{method.downcase} #{field.downcase} : #{type.camelcase}"
+          field, type = param.split(":")
+          str << "getter #{field.downcase} : #{type.camelcase}"
+        end
+      end
+    end
+
+    private def render_validate(params : Array(String))
+      String.build do |str|
+        params.each do |param|
+          field, type = param.split(":")
+          str << %Q(validate #{field.downcase}, 
+              message: "Param #{field.downcase} must be present.", 
+              presence: true)
         end
       end
     end
