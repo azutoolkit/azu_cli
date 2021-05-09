@@ -47,6 +47,7 @@ module AzuCLI
 
       Dir.cd("./#{project}")
 
+      announce "Defining project structure"
       `mkdir -p #{Migration::PATH}` if clear
       `mkdir -p ./src/requests`
       `mkdir -p ./src/responses`
@@ -64,6 +65,10 @@ module AzuCLI
 
       announce "Installing shards and building CLI!"
       `shards build --ignore-crystal-version`
+
+
+      announce "Formatting code"
+      `crystal tool format`
 
       success "Project #{project.camelcase} created!"
       exit 1
