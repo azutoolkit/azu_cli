@@ -30,7 +30,7 @@ module AzuCLI
         file.puts <<-CONTENT
         # Response Docs https://azutopia.gitbook.io/azu/endpoints/response
         module #{project_name.camelcase}
-          class #{name.camelcase}Response
+          struct #{name.camelcase}Response
             include #{PROGRAM}
         
             #{render_initialize(fields)}
