@@ -1,5 +1,6 @@
 require "topia"
 require "opts"
+require "cadmium_inflector"
 
 require "./azu_cli/helpers"
 require "./azu_cli/builder"
@@ -7,7 +8,6 @@ require "./azu_cli/**"
 
 module AzuCLI
   VERSION = Shard.version
-
   Topia.task("azu").pipe(Runner.new)
   Topia.task("tasks").pipe(Tasks.new)
   Topia.task("project").pipe(Project.new)

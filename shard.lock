@@ -4,6 +4,10 @@ shards:
     git: https://github.com/jwaldrip/admiral.cr.git
     version: 1.11.4
 
+  cadmium_inflector:
+    git: https://github.com/cadmiumcr/inflector.git
+    version: 0.1.0+git.commit.139b4d9628cf0a663f85f5e3727d5c97c1b6c4aa
+
   clear:
     git: https://github.com/anykeyh/clear.git
     version: 0.9+git.commit.775e877c4f961da01fa621ae7ca302cb735198df

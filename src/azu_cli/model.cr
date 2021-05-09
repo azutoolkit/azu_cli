@@ -74,7 +74,7 @@ module AzuCLI
       module #{project_name.camelcase}
         class #{class_name}
           include Clear::Model
-          self.table = "#{model_name.underscore}s"
+          self.table = "#{model_name.underscore.pluralize}"
 
           primary_key
                   
@@ -94,10 +94,10 @@ module AzuCLI
           str << case name
           when "belongs_to" then %Q(belongs_to #{type.underscore} : #{type.camelcase})
           when "has_one"    then %Q(has_one #{type.underscore} : #{type.camelcase})
-          when "has_many"   then %Q(has_many #{type.underscore}s : #{type.camelcase})
+          when "has_many"   then %Q(has_many #{type.underscore.pluralize} : #{type.camelcase})
           when "has_many_through"
             model, through = type.split(":")
-            %Q(has_many #{model.underscore}s : #{model.camelcase}, through: #{model.underscore}s)
+            %Q(has_many #{model.underscore.pluralize} : #{model.camelcase}, through: #{model.underscore.pluralize})
           else
             %Q(column #{name} : #{type.camelcase})
           end

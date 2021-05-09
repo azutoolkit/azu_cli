@@ -52,18 +52,21 @@ module AzuCLI
     backend = Log::IOBackend.new(formatter: Format)
     Log.setup(sources: "clear.migration", backend: backend)
 
-    DATABASE_URL = ENV["DATABASE_URL"]
+    private getter migrator : Clear::Migration::Manager do 
+      Clear::Migration::Manager.instance
+    end
+    
+    private getter migrations : Array(Int64) do 
+      migrator.migrations_up.to_a.sort
+    end
 
-    private getter migrator : Clear::Migration::Manager
-    private getter migrations : Array(Int64)
-
-    def initialize
-      Clear::SQL.init(DATABASE_URL)
-      @migrator = Clear::Migration::Manager.instance
-      @migrations = @migrator.migrations_up.to_a.sort
+    def connect_to_db
+      database_url = ENV["DATABASE_URL"]
+      Clear::SQL.init(database_url)
     end
 
     def run
+      connect_to_db
       command, version = args.first, args.last?
       validate! command
       puts "\n"

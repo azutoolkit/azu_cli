@@ -84,8 +84,8 @@ module AzuCLI
       
         def change(direction)
           direction.up do
-            create_table :#{table} do |t|
-              \t#{render_columns(columns)}
+            create_table :#{table.pluralize.downcase} do |t|
+              #{render_columns(columns)}
               t.timestamps
             end
           end
