@@ -48,7 +48,11 @@ module AzuCLI
       Dir.cd("./#{project}")
 
       `mkdir -p #{Migration::PATH}` if clear
-      `mkdir -p ./src/#{project.underscore}` if clear
+      `mkdir -p ./src/requests`
+      `mkdir -p ./src/responses`
+      `mkdir -p ./src/models`
+      `mkdir -p ./src/templates`
+      `mkdir -p ./src/endpoints`
 
       announce "Adding Azu to main file!"
       main_cr_file(project, clear)
@@ -71,6 +75,7 @@ module AzuCLI
         require "azu"
         #{%Q(require "clear") if clear}
 
+        # Docs - https://azutopia.gitbook.io/azu/defining-your-app
         module #{project.camelcase}
           include Azu
           VERSION = "0.1.0"
@@ -96,8 +101,14 @@ module AzuCLI
           end
         end
 
-        require "./**"
+        # Require files after initializing project module
+        require "./requests/**"
+        require "./responses/**"
+        require "./models/**"
+        require "./templates/**"
+        require "./endpoints/**"
 
+        # Start your server
         # Add Handlers to your App Server
         #{project.camelcase}.start [
           Azu::Handler::Rescuer.new,
