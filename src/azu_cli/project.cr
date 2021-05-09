@@ -84,14 +84,10 @@ module AzuCLI
         module #{project.camelcase}
           include Azu
           VERSION = "0.1.0"
+          #{"# Clear Orm Docs - https://clear.gitbook.io/project/introduction/installation" if clear }
+          #{%q(DATABASE_URL = ENV["DATABASE_URL"]) if clear }
           
-          #{
-          if clear
-          "# Clear Orm Docs - https://clear.gitbook.io/project/introduction/installation"
-          %q(DATABASE_URL = ENV["DATABASE_URL"])
-          %Q(Clear::SQL.init(DATABASE_URL))
-          end
-          }
+          #{ %Q(Clear::SQL.init(DATABASE_URL)) if clear }
 
           configure do |c|
             # Default HTML templates path
