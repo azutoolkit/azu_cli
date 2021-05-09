@@ -52,7 +52,7 @@ module AzuCLI
       class_name = "#{migration_name.camelcase}"
 
       <<-CONTENT
-      class #{params.first}
+      class #{class_name}
         include Clear::Migration
 
         def change(direction)
@@ -60,9 +60,9 @@ module AzuCLI
           # TODO: Fill migration
           end
 
-          # direction.down do
-          # # TODO: Fill migration
-          # end
+          direction.down do
+          # TODO: Fill migration
+          end
         end
       end
       CONTENT
