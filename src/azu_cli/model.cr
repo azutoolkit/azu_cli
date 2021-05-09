@@ -1,6 +1,6 @@
 module AzuCLI
   class Model
-    include Base
+    include Builder
 
     PATH        = "./src/models"
     ARGS        = "model_name property:psqltype property:psqltype ..."

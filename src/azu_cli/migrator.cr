@@ -2,7 +2,7 @@ require "clear"
 
 module AzuCLI
   class Migrator
-    include Base
+    include Builder
 
     PATH        = Migration::PATH
     ARGS        = "subcommand version"

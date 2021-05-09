@@ -1,6 +1,6 @@
 module AzuCLI
   class Migration
-    include Base
+    include Builder
 
     PATH        = "./db/migrations"
     ARGS        = "name table_name column:psqltype column:psqltype ..."

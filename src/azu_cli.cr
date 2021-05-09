@@ -2,13 +2,13 @@ require "topia"
 require "opts"
 
 require "./azu_cli/helpers"
-require "./azu_cli/base"
+require "./azu_cli/builder"
 require "./azu_cli/**"
 
 module AzuCLI
   VERSION = Shard.version
 
-  Topia.task("azu").pipe(Azu.new)
+  Topia.task("azu").pipe(Runner.new)
   Topia.task("tasks").pipe(Tasks.new)
   Topia.task("project").pipe(Project.new)
   Topia.task("dev").pipe(Dev.new).watch("./**.cr")
@@ -50,7 +50,7 @@ module AzuCLI
     .command("mkdir -p #{Model::PATH}")
 
   def self.run
-    Azu.new.run
+    Runner.run
   end
 end
 

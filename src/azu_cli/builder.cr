@@ -1,5 +1,5 @@
 module AzuCLI
-  module Base
+  module Builder
     include Topia::Plugin
     include Opts
     include Helpers

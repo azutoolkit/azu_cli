@@ -1,6 +1,6 @@
 module AzuCLI
   class Tasks
-    include Base
+    include Builder
 
     PATH        = "./tasks/taskfile.cr"
     DESCRIPTION = <<-DESC

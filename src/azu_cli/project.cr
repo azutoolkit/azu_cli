@@ -1,6 +1,6 @@
 module AzuCLI
   class Project
-    include Base
+    include Builder
 
     ARGS        = "[name]"
     DESCRIPTION = <<-DESC
@@ -58,14 +58,13 @@ module AzuCLI
       announce "Adding Azu to main file!"
       main_cr_file(project, clear)
 
-      # Create directories 
+      # Create directories
       # plublic/templates
       announce "Adding tasks runner!"
       create_tasks_file(project, clear)
 
       announce "Installing shards and building CLI!"
       `shards build --ignore-crystal-version`
-
 
       announce "Formatting code"
       `crystal tool format`
@@ -84,10 +83,10 @@ module AzuCLI
         module #{project.camelcase}
           include Azu
           VERSION = "0.1.0"
-          #{"# Clear Orm Docs - https://clear.gitbook.io/project/introduction/installation" if clear }
-          #{%q(DATABASE_URL = ENV["DATABASE_URL"]) if clear }
+          #{"# Clear Orm Docs - https://clear.gitbook.io/project/introduction/installation" if clear}
+          #{%q(DATABASE_URL = ENV["DATABASE_URL"]) if clear}
           
-          #{ %Q(Clear::SQL.init(DATABASE_URL)) if clear }
+          #{%Q(Clear::SQL.init(DATABASE_URL)) if clear}
 
           configure do |c|
             # Default HTML templates path

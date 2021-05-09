@@ -1,6 +1,6 @@
 module AzuCLI
   class Request
-    include Base
+    include Builder
 
     ARGS        = "[name] [query,form,path:property:type] [query,form,path:property:type]"
     PATH        = "./src/requests"

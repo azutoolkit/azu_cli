@@ -2,7 +2,7 @@ require "topia"
 
 module AzuCLI
   class Response
-    include Base
+    include Builder
 
     ARGS        = "[name] [property:type] [property:type]"
     PATH        = "./src/responses"

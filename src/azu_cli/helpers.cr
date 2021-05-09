@@ -55,8 +55,8 @@ module AzuCLI
       String.build do |str|
         params.each do |param|
           field, type = param.split(":")
-          str << %Q(validate #{field.downcase}, 
-              message: "Param #{field.downcase} must be present.", 
+          str << %Q(validate #{field.downcase},
+              message: "Param #{field.downcase} must be present.",
               presence: true)
         end
       end
@@ -67,7 +67,7 @@ module AzuCLI
         error "File `#{path.underscore}` already exists"
         exit 1
       else
-        yield 
+        yield
       end
     end
 

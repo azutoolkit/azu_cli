@@ -1,6 +1,6 @@
 module AzuCLI
   class Endpoint
-    include Base
+    include Builder
 
     ARGS        = "name path request response"
     PATH        = "./src/endpoints"

@@ -1,6 +1,6 @@
 module AzuCLI
   class Dev
-    include Base
+    include Builder
 
     DESCRIPTION = <<-DESC
     Azu - Dev

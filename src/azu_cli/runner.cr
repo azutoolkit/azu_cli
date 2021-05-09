@@ -1,6 +1,6 @@
 module AzuCLI
-  class Azu
-    include Base
+  class Runner
+    include Builder
 
     DESCRIPTION = <<-EOF
     Azu - Command Line Interface 
@@ -48,13 +48,15 @@ module AzuCLI
       Note: Must define DATABSE_URL env variable for Clear ORM commands to work
     EOF
 
+    def self.run
+      new.run
+    end
+
     def run
-      if ARGV.size > 0
-        task, command = ARGV.first, ARGV[1..-1]
-        Topia.run(task, command)
-      else
-        Topia.run("azu", ["--help"])
-      end
+      return Topia.run("azu", ["--help"]) if ARGV.empty?
+      return Topia.run("azu", ARGV) if ["--help", "--version"].includes?(ARGV.first)
+      task, command = ARGV.first, ARGV[1..-1]
+      Topia.run(task, command)
     end
   end
 end

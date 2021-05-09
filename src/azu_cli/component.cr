@@ -1,6 +1,6 @@
 module AzuCLI
   class Component
-    include Base
+    include Builder
 
     PATH        = "./src/components"
     ARGS        = "name property:crystal-type property:crystal-type"
