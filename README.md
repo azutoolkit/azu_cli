@@ -12,12 +12,10 @@ Clear is built especially for PostgreSQL, meaning it's not compatible with
 MariaDB or SQLite for example. Therefore, it achieves to delivers a
 tremendous amount of PostgreSQL advanced features out of the box.
 
-> **Note** - Must define DATABSE_URL environment variable for Clear ORM commands to work
-
 ## Documentation
 
-- Azu       - https://azutopia.gitbook.io/azu/
-- Clear ORM - https://clear.gitbook.io/
+  - Azu       - https://azutopia.gitbook.io/azu/
+  - Clear ORM - https://clear.gitbook.io/project/
 
 ## Installation
 
@@ -31,29 +29,36 @@ tremendous amount of PostgreSQL advanced features out of the box.
 
 2. Run `shards install`
 
+3. `azu` command should be installed and ready to use
+
 ## Usage
 
-```crystal
-require "azu_cli"
+```bash
+azu project name --clear
+azu clear.model name -column:psqltype column:psqltype
 ```
 
 ## Commands
 
-```crystal 
+```bash
   project   - Generates a new Azu project
+  db        - Manages database versions and schema
   dev       - Starts server, watches for file changes and recompiles 
               your project in the background
-  component - Generates an Azu::Component
-  endpoint  - Generate an Azu::Endpoint
-  request   - Generate an Azu::Request
-  response  - Generate an Azu::Response
-  template  - Generate a Crinja Template
-  channel   - Generate a Crinja Template
 
-  clear.migrator  - Performs database maintenance tasks
-  clear.migration - Generates a Clear ORM Migration
-  clear.model     - Generates a Clear ORM Model and Migration
+  Generators 
+
+  channel   - Generates an Azu::Channel to handle websocket connections
+  component - Generates an Azu::Component for building real time apps
+  endpoint  - Generates an Azu::Endpoint for handling http resources
+  request   - Generates an Azu::Request for validating and parsing http requests
+  response  - Generates an Azu::Response that renders html response body 
+  template  - Generates a Crinja Template for building and rendering HTML
+  migration - Generates a Clear ORM Migration to change Postgres databases
+  model     - Generates a Clear ORM Model and Migration
 ```
+
+> Note: Must define DATABSE_URL env variable for Clear ORM commands to work
 
 ## Contributing
 
