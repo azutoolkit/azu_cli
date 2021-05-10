@@ -15,7 +15,6 @@ module AzuCLI
       targets:
         azu: 
           main: ./src/azu_cli.cr
-
     DESC
 
     def run

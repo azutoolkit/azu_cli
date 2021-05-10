@@ -12,14 +12,9 @@ module AzuCLI
     Generates a clear migration. If only the `name` is provided will generate 
     an empty migration.
 
-    Clear offers a migration system. Migration allow you to handle state update 
-    of your database. Migration is a list of change going through a direction, 
-    up (commit changes) or down (rollback changes).
-
     Docs: https://clear.gitbook.io/project/migrations/call-migration-script
 
     Subcommands:
-
       seed     - Call the seeds data
       redo     -  re-run the latest database migration 
       status   - Return the current state of the database
@@ -31,7 +26,6 @@ module AzuCLI
       Note: if no subcommand provided it applies all pending migrations.
 
     Examples:
-
       azu db seed
       azu db redo
       azu db status

@@ -29,7 +29,6 @@ module AzuCLI
         - has_one:user
         - has_many:users
         - has_many_through:posts:user_posts
-
     DESC
 
     def run

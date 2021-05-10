@@ -72,8 +72,8 @@ module AzuCLI
       name, table_name, columns = params.first, params[1], params[2..-1]
 
       if table_name.includes?(":")
-        table = name
         columns = params[1..-1]
+        table =  name
       else
         table = table_name
       end
@@ -91,6 +91,7 @@ module AzuCLI
           end
 
           direction.down do
+            execute "DROP TABLE IF EXISTS #{table.pluralize.downcase};"
           end
         end
       end

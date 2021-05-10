@@ -35,7 +35,7 @@ module AzuCLI
       end
     DESC
 
-    option task : String, "--t task", "Runs a specific task", ""
+    option task : String, "--t TASK", "Runs a specific task", ""
 
     def run
       if task.size > 0
