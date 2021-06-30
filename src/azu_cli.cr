@@ -11,7 +11,7 @@ module AzuCLI
   Topia.task("azu").pipe(Runner.new)
   Topia.task("tasks").pipe(Tasks.new)
   Topia.task("project").pipe(Project.new)
-  Topia.task("dev").pipe(Dev.new).watch("./**.cr")
+  Topia.task("dev").pipe(Dev.new).watch("./**/*.cr")
 
   Topia
     .task("db")

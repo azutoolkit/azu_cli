@@ -1,6 +1,7 @@
 module AzuCLI
   class Dev
     include Builder
+    SHARD_FILE = "./shard.yml"
 
     DESCRIPTION = <<-DESC
     Azu - Dev
@@ -17,10 +18,58 @@ module AzuCLI
           main: ./src/azu_cli.cr
     DESC
 
+    option s : Bool, "-s", "Automatically restarts the server", true
+
+    getter server : Process? = nil
+
     def run
-      announce "Building..."
-      `shards build`
-      success "Build complete!"
+      if s
+        run_dev server
+      else
+        announce "Building..."
+        `shard build`
+        success "Build complete!"
+      end
+    end
+
+    def run_dev(server)
+      name, target = params
+
+      if server.is_a? Process
+        unless server.terminated?
+          announce "🤖 Starting #{name}... \n\n"
+          server.signal(:kill)
+          server.wait
+        end
+      end
+
+      announce "🤖 Starting erver #{name}... \n\n"
+      @server = create_process target
+    rescue ex
+      error "Error starting server."
+      error ex.message.to_s
+      error ex.cause.to_s
+      exit 1
+    end
+
+    def params
+      error "No ./shards.yml in path" unless File.exists?(SHARD_FILE)
+
+      file_contents = File.read(SHARD_FILE)
+      shard = YAML.parse file_contents
+
+      name = shard["name"]
+      target = shard["targets"][name]["main"]
+
+      {name, target}
+    end
+
+    def create_process(target)
+      Process.new(
+        command: "crystal #{target}",
+        shell: true,
+        output: Process::Redirect::Inherit,
+        error: Process::Redirect::Inherit)
     end
   end
 end

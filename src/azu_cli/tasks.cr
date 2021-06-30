@@ -48,7 +48,6 @@ module AzuCLI
           success "Created taskfile #{PATH}!"
         end
       end
-      exit 1
     end
 
     private def create_tasks_file!
