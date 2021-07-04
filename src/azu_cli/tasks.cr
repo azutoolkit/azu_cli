@@ -4,38 +4,36 @@ module AzuCLI
 
     PATH        = "./tasks/taskfile.cr"
     DESCRIPTION = <<-DESC
-    Azu - Topia Taskfile Generator
+    #{bold "Azu - Topia Taskfile"} - Generates a Taskfile
     
-    Creates a tasks taskfile is placed in ./tasks/taskfile.cr
-    
-    Leverage tasks to automate mundane, repetitive tasks and compose them into 
-    efficient automated bui/tasks/taskfile.crld pipelines and workflows.
-
-    Docs: https://github.com/azutoolkit/topia
-
-    Example Task:
-    
-      task("customtask")
-        .command("mkdir -p ./hello_world")
-        .pipe(ExampePipe.new) 
-    
-    Example Pipe:
-    
-      class ExampePipe
-        include AzuCLI::Base
+      Creates a tasks taskfile is placed in ./tasks/taskfile.cr
       
-        def run
-          announce "Building..."
-          # ... do somethong ...
-          announce "Build complete!"
-          true
-        rescue
-          error("Build failed!")
+      Leverage tasks to automate mundane, repetitive tasks and compose them into 
+      efficient automated pipelines and workflows using `pipes`.
+
+      Docs: https://github.com/azutoolkit/topia
+
+      #{underline :Example}
+      
+        Topia.task("customtask")
+          .command("mkdir -p ./hello_world")
+          .pipe(ExampePipe.new) 
+    
+        class ExampePipe
+          include AzuCLI::Base
+        
+          def run
+            announce "Building..."
+            # ... do somethong ...
+            announce "Build complete!"
+            true
+          rescue
+            error("Build failed!")
+          end
         end
-      end
     DESC
 
-    option task : String, "--t TASK", "Runs a specific task", ""
+    option task : String, "--task Task", "-t Task", "Runs a specific task", ""
 
     def run
       if task.size > 0
@@ -81,7 +79,7 @@ module AzuCLI
         #
         # Example:
         #
-        # task("customtask")
+        # Topia.task("customtask")
         #   .command("mkdir -p ./hello_world")
         #   .pipe(ExampePipe.new) 
 

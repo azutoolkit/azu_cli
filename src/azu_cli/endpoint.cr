@@ -2,39 +2,49 @@ module AzuCLI
   class Endpoint
     include Builder
 
-    ARGS        = "name path request response"
+    ARGS        = "-n Users -m Post -p users"
     PATH        = "./src/endpoints"
     DESCRIPTION = <<-DESC
-    Azu - Endpoints
+    #{bold "Azu - Endpoints"} - Generates an Endpoint
 
-    Generates an Endpoint
-
-    The endpoint is the final stage of the request process. Each endpoint is the 
-    location from which APIs can access the resources of your application to 
-    carry out their function.
+      The endpoint is the final stage of the request process. Each endpoint is 
+      the location from which APIs can access the resources of your application 
+      to carry out their function.
     
-    Docs - https://azutopia.gitbook.io/azu/endpoints
-
-    Command Arguments Definition:
-      - *name: corresponds to the crystal class_name for the endpoint
-      - *path: url path for the endpoint eg. `/users/:id`
-      - *request: name of the request object eq. `UserDetailsRequest`
-      - *response: name of the response object eq. `UsersShowPage`
-
-      * - Required fields
+      Docs - https://azutopia.gitbook.io/azu/endpoints
     DESC
 
+    option name : String, "--name=Name", "-n Name", "Endpoint name", ""
+    option method : String, "--method=Post", "-m Post", "Http method", ""
+    option route : String, "--route=some/example", "-r some/path", "Route path", ""
+
     def run
-      name, route, request, response = args[0], args[1], args[2], args[3]
-      method, path = route.split(":/")
-      file_path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+      validate
+      file_path = path(name)
 
       not_exists?(file_path) do
-        template(file_path, name, method, path, request, response)
+        template(file_path, name, method, route, name, name)
       end
 
-      success "Created #{PROGRAM}: #{file_path}"
+      success "Created #{PROGRAM} for #{name.colorize.underline} in #{file_path.colorize.underline}"
       exit 1
+    end
+
+    private def validate
+      errors = [] of String
+
+      errors << "Missing option: name" if name.empty?
+      errors << "Missing option: method" if method.empty?
+      errors << "Missing option: route" if route.empty?
+
+      return if errors.empty?
+
+      error errors.join("\n")
+      exit 1
+    end
+
+    private def path(name)
+      "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
     end
 
     private def template(file_path, name, method, path, request, response)

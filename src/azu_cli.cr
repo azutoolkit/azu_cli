@@ -6,16 +6,29 @@ require "./azu_cli/helpers"
 require "./azu_cli/builder"
 require "./azu_cli/**"
 
+def light_blue(v)
+  "#{v}".colorize.light_blue
+end
+
+def underline(v)
+  "#{v}".colorize.underline
+end
+
+def bold(v)
+  "#{v}".colorize.bold
+end
+
 module AzuCLI
   VERSION = Shard.version
-  Topia.task("azu").pipe(Runner.new)
+
+  Topia.task("azu").pipe(Help.new)
   Topia.task("tasks").pipe(Tasks.new)
   Topia.task("project").pipe(Project.new)
   Topia.task("dev").pipe(Dev.new).watch("./**/*.cr")
 
   Topia
     .task("db")
-    .pipe(Migrator.new)
+    .pipe(DB.new)
 
   Topia
     .task("endpoint")
@@ -50,7 +63,7 @@ module AzuCLI
     .command("mkdir -p #{Model::PATH}")
 
   def self.run
-    Runner.run
+    Help.run
   end
 end
 

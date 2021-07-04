@@ -6,11 +6,15 @@ module AzuCLI
 
     USAGE = <<-EOF
 
+    
     {{description}}
     
-    Usage: azu {{program}} {{args}}
+    #{bold :Usage}
+    
+      #{light_blue :azu} {{program}} {{args}}
 
-    Options:
+    #{bold :Options}
+    
     {{options}}
 
     {{version}}
@@ -20,8 +24,10 @@ module AzuCLI
       PROGRAM = self.name.split("::").last
       VERSION = Shard.git_description.split(/\s+/, 2).last
       
-      option help    : Bool  , "--help"   , "Show this help", false
-      option version : Bool  , "--version", "Print the version and exit", false
+      macro finished
+        option help    : Bool  , "--help"   , "Show this help", false
+        option version : Bool  , "--version", "Print the version and exit", false
+      end
 
       def run(input, params)
         die "Invalid number of arguments" if params.empty? && !ARGS.empty?
@@ -35,7 +41,7 @@ module AzuCLI
 
       def show_usage
         USAGE.gsub(/\{{version}}/, show_version)
-          .gsub(/\{{program}}/, PROGRAM)
+          .gsub(/\{{program}}/, PROGRAM.downcase)
           .gsub(/\{{description}}/, DESCRIPTION)
           .gsub(/\{{args}}/, ARGS)
           .gsub(/\{{options}}/, new_option_parser.to_s)

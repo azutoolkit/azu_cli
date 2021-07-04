@@ -4,31 +4,32 @@ module AzuCLI
     SHARD_FILE = "./shard.yml"
 
     DESCRIPTION = <<-DESC
-    Azu - Dev
+    #{bold "Azu - Dev"} - Runs and recompiles project
     
-    Runs your application locally, watches for files changes and recompiles in
-    the background using `shards build` command. 
+      Runs your application locally, watches for files changes and runs your 
+      app in the background 
 
-    Note:
-      - Must have targets define in your `shard.yml`
+      #{underline "Note"}
+      
+      Must have targets define in your `shard.yml`
 
-    Eg.
-      targets:
-        azu: 
-          main: ./src/azu_cli.cr
+      Eg.
+        targets:
+          azu: 
+            main: ./src/azu_cli.cr
     DESC
 
-    option s : Bool, "-s", "Automatically restarts the server", true
+    option build : Bool, "--build-only", "-b", "Builds project", false
 
     getter server : Process? = nil
 
     def run
-      if s
-        run_dev server
-      else
+      if build
         announce "Building..."
         `shard build`
         success "Build complete!"
+      else
+        run_dev server
       end
     end
 

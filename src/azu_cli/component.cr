@@ -3,35 +3,40 @@ module AzuCLI
     include Builder
 
     PATH        = "./src/components"
-    ARGS        = "name property:crystal-type property:crystal-type"
+    ARGS        = "-n User -p first_name:String"
     DESCRIPTION = <<-DESC
-    Azu - Spark Components
-    
-    Generates a Spark Component
+    #{bold "Azu - Spark Components"} - Generates a Spark component
 
-    Spark Components decompose response content into small independent contexts 
-    that can be lazily loaded.
+      Spark Components decompose response content into small independent 
+      contexts that can be lazily loaded.
 
-    Docs - https://azutopia.gitbook.io/azu/spark-1#spark-components-overview
-
-    Command Arguments Definition
-      - *name: corresponds to the crystal class_name
-      - property: crystal class instance var name
-
-      * - Required fields
+      Docs - https://azutopia.gitbook.io/azu/spark-1#spark-components-overview
     DESC
 
+    option name : String, "--name=Name", "-n Name", "Component name", ""
+    option props : String, "--props=Name:Type", "-p Name:Type", "Component properties", ""
+
     def run
-      name, fields = args[0], args[1..-1]
-      path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+      validate
 
-      not_exists?(path) { template path, name, fields }
+      not_exists?(path) do
+        generate path, name, props.split(" ")
+        success "Created #{PROGRAM} for #{name.colorize.underline} in #{path.colorize.underline}"
+        exit 1
+      end
+    end
 
-      success "Created #{PROGRAM} #{name.camelcase}"
+    private def path
+      "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+    end
+
+    private def validate
+      return unless name.nil? || name.empty?
+      error "Missing option: name"
       exit 1
     end
 
-    private def template(path, name, fields)
+    private def generate(path : String, name : String, fields : Array(String))
       File.open(path, "w") do |file|
         file.puts <<-CONTENT
         class #{name.camelcase}#{PROGRAM}

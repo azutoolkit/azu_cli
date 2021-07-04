@@ -5,54 +5,64 @@ module AzuCLI
     PATH        = "./db/migrations"
     ARGS        = "name table_name column:psqltype column:psqltype ..."
     DESCRIPTION = <<-DESC
-    Azu - Clear Migration Generator
+    #{bold "Azu - Clear"} - Migration Generator
 
-    Generates a clear migration. If only the `name` is provided will generate 
-    an empty migration.
+      Generates a clear migration. If only the `name` is provided will generate 
+      an empty migration.
 
-    Clear offers a migration system. Migration allow you to handle state update 
-    of your database. Migration is a list of change going through a direction, 
-    up (commit changes) or down (rollback changes).
+      Clear offers a migration system. Migration allow you to handle state update 
+      of your database. Migration is a list of change going through a direction, 
+      up (commit changes) or down (rollback changes).
 
-    Docs: https://clear.gitbook.io/project/migrations/call-migration-script
-
-    Command Arguments Definition:
-      - *name: name for the migration eg. `UpdatePrimaryKeyType`
-      - table_name: name of the database table to create eq. `users`
-      - column: name of the database columns to create and the postgres type eg.
-        `first_name:varchar`
-
-      * - Required fields
+      Docs - https://clear.gitbook.io/project/migrations/call-migration-script
     DESC
 
+    option name : String, "--name=Name", "-n Name", "Name for the migrarion", ""
+    option table : String, "--table=Table", "-t Table", "Database table", ""
+    option columns : String, "--columns=Name:Type", "-c Name:Type", "Table Columns [Name:Type ...]", ""
+
     def run
-      migration_name = args.first
-      migration_uid = Time.local.to_unix.to_s.rjust(10, '0')
-      file_name = "#{migration_uid}__#{migration_name}.cr"
-      check_path = "#{PATH}/*__#{migration_name}.cr".underscore.downcase
+      validate
+
+      file_name = "#{migration_id}__#{name}.cr"
+      check_path = "#{PATH}/*__#{name}.cr".underscore.downcase
       path = "#{PATH}/#{file_name}".underscore.downcase
 
       not_exists?(check_path) do
         File.open(path, "w") do |file|
-          file.puts content(args)
+          file.puts content
         end
       end
 
-      success "Created #{PROGRAM}: #{path}"
+      success "Created #{PROGRAM} for #{name} in #{path}"
       exit 1
     end
 
-    private def content(params)
-      return empty_template(params) if params.size == 1
-      filled_template(params)
+    private def content
+      return empty_template unless table && columns
+      filled_template
     end
 
-    private def empty_template(params : Array(String))
-      migration_name = params.first
-      class_name = "#{migration_name.camelcase}"
+    private def migration_id
+      Time.local.to_unix.to_s.rjust(10, '0')
+    end
 
+    private def validate
+      errors = [] of String
+
+      errors << "Missing option: name" if name.empty?
+      errors << "Missing option: table" if table.empty?
+      errors << "Missing option: columsn" if columns.empty?
+
+      return if errors.empty?
+
+      error errors.join("\n")
+      exit 1
+    end
+
+    private def empty_template
       <<-CONTENT
-      class #{class_name}
+      class #{name.camelcase}
         include Clear::Migration
 
         def change(direction)
@@ -68,16 +78,7 @@ module AzuCLI
       CONTENT
     end
 
-    private def filled_template(params : Array(String))
-      name, table_name, columns = params.first, params[1], params[2..-1]
-
-      if table_name.includes?(":")
-        columns = params[1..-1]
-        table =  name
-      else
-        table = table_name
-      end
-
+    private def filled_template
       <<-CONTENT
       class Create#{name.camelcase}
         include Clear::Migration
@@ -85,7 +86,7 @@ module AzuCLI
         def change(direction)
           direction.up do
             create_table :#{table.pluralize.downcase} do |t|
-              #{render_columns(columns)}
+              #{render_columns(columns.split(" "))}
               t.timestamps
             end
           end

@@ -4,12 +4,12 @@ module AzuCLI
 
     ARGS        = "[name]"
     DESCRIPTION = <<-DESC
-    Azu - Project Generator
+    #{bold "Azu - Project Generator"}
 
-    The `azu project` command generates a new Crystal application with Azu 
-    installed and Clear ORM.
-    
-    Docs - https://azutopia.gitbook.io/azu/installation
+      The `azu project` command generates a new Crystal application with Azu 
+      installed and Clear ORM.
+      
+      Docs - https://azutopia.gitbook.io/azu/installation
     DESC
 
     @deps = {

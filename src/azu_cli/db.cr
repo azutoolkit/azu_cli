@@ -1,22 +1,19 @@
 require "clear"
 
 module AzuCLI
-  class Migrator
+  class DB
     include Builder
 
     PATH        = Migration::PATH
-    ARGS        = "subcommand version"
+    ARGS        = "migrate"
     DESCRIPTION = <<-DESC
-    Azu - Clear Migration
+    #{bold "Azu - Clear Migration"} - Database Commands
 
-    Generates a clear migration. If only the `name` is provided will generate 
-    an empty migration.
+      Allows you to evolve your database schema and perform changes to 
+      your database 
 
-    Docs: https://clear.gitbook.io/project/migrations/call-migration-script
-
-    Subcommands:
       seed     - Call the seeds data
-      redo     -  re-run the latest database migration 
+      redo     - Redo latest database migration 
       status   - Return the current state of the database
       migrate  - Applies all pending database migrations
       rollback - Rollback the last up migration or number of steps
@@ -24,14 +21,6 @@ module AzuCLI
       down     - Downgrade your database to a specific migration version  
 
       Note: if no subcommand provided it applies all pending migrations.
-
-    Examples:
-      azu db seed
-      azu db redo
-      azu db status
-      azu db migrate
-      azu db [down or up] version
-      azu db rollback
     DESC
 
     struct Format < Log::StaticFormatter

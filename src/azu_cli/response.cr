@@ -7,25 +7,25 @@ module AzuCLI
     ARGS        = "[name] [property:type] [property:type]"
     PATH        = "./src/responses"
     DESCRIPTION = <<-DESC
-    Azu - Response Generator
+    #{bold "Azu - Response Generator"} - Generates a Request
     
-    Responses is mostly an Azu implementation detail to enable more type-safe 
-    definition
+      Responses is mostly an Azu implementation detail to enable more type-safe 
+      definition
 
-    Docs - https://azutopia.gitbook.io/azu/endpoints/response
+      Docs - https://azutopia.gitbook.io/azu/endpoints/response
     DESC
 
-    def run
-      name, fields = args[0], args[1..-1]
-      class_name = "#{name.camelcase}#{PROGRAM}"
-      path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+    option name : String, "--name=Name", "-n Name", "Request name", ""
+    option props : String, "--props=Name:Type", "-p Name:Type", "Request properties", ""
 
-      not_exists?(path) { template(path, name, fields) }
-      success "Created #{PROGRAM} #{class_name}"
+    def run
+      path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+      not_exists?(path) { template(path) }
+      success "Created #{PROGRAM} #{name.camelcase}#{PROGRAM} in #{path}"
       exit 1
     end
 
-    private def template(path, name, fields)
+    private def template(path)
       File.open(path, "w") do |file|
         file.puts <<-CONTENT
         # Response Docs https://azutopia.gitbook.io/azu/endpoints/response
@@ -33,7 +33,7 @@ module AzuCLI
           struct #{name.camelcase}Response
             include #{PROGRAM}
         
-            #{render_initialize(fields)}
+            #{render_initialize(props.split(" "))}
         
             def render
               # Add your code here

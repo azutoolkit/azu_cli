@@ -37,7 +37,7 @@ module AzuCLI
           str << ", " if i < size
         end
 
-        str << ")"
+        str << ")\n\t\t"
         str << "end"
       end
     end
@@ -46,7 +46,7 @@ module AzuCLI
       String.build do |str|
         params.each do |param|
           field, type = param.split(":")
-          str << "getter #{field.downcase} : #{type.camelcase}"
+          str << "getter #{field.downcase} : #{type.capitalize}"
         end
       end
     end
@@ -55,9 +55,9 @@ module AzuCLI
       String.build do |str|
         params.each do |param|
           field, type = param.split(":")
-          str << %Q(validate #{field.downcase},
-              message: "Param #{field.downcase} must be present.",
-              presence: true)
+          str << %Q(validate #{field.downcase}, )
+          str << %Q(message: "Param #{field.downcase} must be present.", )
+          str << %Q(presence: true)
         end
       end
     end

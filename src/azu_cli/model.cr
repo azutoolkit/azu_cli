@@ -3,104 +3,110 @@ module AzuCLI
     include Builder
 
     PATH        = "./src/models"
-    ARGS        = "model_name property:psqltype property:psqltype ..."
+    ARGS        = "-m User -p first_name:varchar -r has_many:Post"
     DESCRIPTION = <<-DESC
-    Azu - Clear Model Generator
+    #{bold "Azu - Clear Model"} - Generates a Clear model and migration
+      
+      For a list of available field types for the type parameter, refer to the
+      api documentation below
 
-    Generates a Clear model and migration. If only the `model_name` is provided 
-    will generate an empty model and migration.
+      Docs: https://clear.gitbook.io/project/model/column-types
 
-    Docs: https://clear.gitbook.io/project/model/column-types
+      #{underline "Defining Relations"}
 
-    Command Arguments Definition
+      Relationships can be define using the following syntax. 
 
-      - *model_name: name for the migration eg. `UpdatePrimaryKeyType`
-      - property: name of the model fields to create and the postgres type eg.
-        first_name:varchar
-
-      * - Required fields
-    
-    Associations
-
-      Models associations can be define using the following syntax. 
-
-      Eg.
+      e.g.
         - belongs_to:user
         - has_one:user
         - has_many:users
         - has_many_through:posts:user_posts
     DESC
 
+    option model : String, "--model=Model", "-m Model", "Name for the migrarion", ""
+    option properties : String, "--props=Name:Type", "-p Name:Type", "Model properties [Name:Type ...]", ""
+    option relations : String, "--rel=Relation:Model", "-r Relation:Model", "Table Columns [Name:Type ...]", ""
+
     def run
-      model_name = args.first
-      path = "#{PATH}/#{model_name}.cr".underscore.downcase
+      path = "#{PATH}/#{model}.cr".underscore.downcase
       File.open(path, "w") do |file|
-        file.puts content(args)
+        file.puts content
       end
-      success "Created #{PROGRAM}: #{path}"
+      success "Created #{PROGRAM} for #{model} in #{path}"
+      exit 1
     end
 
-    private def content(params : Array(String))
-      return empty_template(params) if params.size == 1
-      filled_template(params)
+    private def content
+      props = properties.split(" ")
+      return empty_template if properties.empty?
+      filled_template
     end
 
-    private def empty_template(params : Array(String))
-      name = params.first
-      class_name = "#{name.camelcase}"
+    private def empty_template
+      class_name = "#{model.camelcase}"
 
       <<-CONTENT
       # Model Docs - https://clear.gitbook.io/project/model/column-types
       module #{Shard.name.camelcase}
         class #{class_name}
           include Clear::Model
+          primary_key
         end
-      end
-      
-      class #{class_name}
-        include Clear::Model
-        primary_key
       end
       CONTENT
     end
 
-    private def filled_template(params : Array(String))
-      model_name, columns = params.first, params[1..-1]
-      class_name = model_name.camelcase
+    private def filled_template
+      class_name = "#{model.camelcase}"
 
       <<-CONTENT
       # Model Docs - https://clear.gitbook.io/project/model/column-types
-      module #{project_name.camelcase}
+      module #{Shard.name.camelcase}
         class #{class_name}
           include Clear::Model
-          self.table = "#{model_name.underscore.pluralize}"
+          self.table = "#{model.underscore.pluralize}"
 
+          #{render_relationships}
+          
           primary_key
-                  
-          #{render_columns(columns)}
+          #{render_properties}
           timestamps
         end
       end
       CONTENT
     end
 
-    private def render_columns(columns : Array(String))
+    private def render_properties
+      props = properties.split(" ")
+
+      property_builder props do |name, type|
+        %Q(column #{name} : #{type.camelcase})
+      end
+    end
+
+    private def render_relationships
+      rels = relations.split(" ")
+      property_builder rels do |rel, type|
+        case rel
+        when "belongs_to" then %Q(belongs_to #{type.underscore} : #{type.camelcase})
+        when "has_one"    then %Q(has_one #{type.underscore} : #{type.camelcase})
+        when "has_many"   then %Q(has_many #{type.underscore.pluralize} : #{type.camelcase})
+        when "has_many_through"
+          model, through = type.split(":")
+          %Q(has_many #{model.underscore.pluralize} : #{model.camelcase}, through: #{model.underscore.pluralize})
+        else
+          error "Unsupported relationship"
+        end
+      end
+    end
+
+    private def property_builder(props : Array(String))
       String.build do |str|
-        columns.each do |col|
+        props.each do |col|
           name, type = col.split(":").map(&.underscore)
           type ||= "string"
           type = CLEAR_TYPE_MAPPING[type]? || type
-          str << case name
-          when "belongs_to" then %Q(belongs_to #{type.underscore} : #{type.camelcase})
-          when "has_one"    then %Q(has_one #{type.underscore} : #{type.camelcase})
-          when "has_many"   then %Q(has_many #{type.underscore.pluralize} : #{type.camelcase})
-          when "has_many_through"
-            model, through = type.split(":")
-            %Q(has_many #{model.underscore.pluralize} : #{model.camelcase}, through: #{model.underscore.pluralize})
-          else
-            %Q(column #{name} : #{type.camelcase})
-          end
-          str << "\n\t"
+          str << yield name, type
         end
       end
     end
