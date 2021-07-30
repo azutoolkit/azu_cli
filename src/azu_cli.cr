@@ -2,21 +2,10 @@ require "topia"
 require "opts"
 require "cadmium_inflector"
 
+require "./azu_cli/shared"
 require "./azu_cli/helpers"
 require "./azu_cli/builder"
 require "./azu_cli/**"
-
-def light_blue(v)
-  "#{v}".colorize.light_blue
-end
-
-def underline(v)
-  "#{v}".colorize.underline
-end
-
-def bold(v)
-  "#{v}".colorize.bold
-end
 
 module AzuCLI
   VERSION = Shard.version

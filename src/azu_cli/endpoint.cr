@@ -1,7 +1,6 @@
 module AzuCLI
   class Endpoint
     include Builder
-
     ARGS        = "-n Users -m Post -p users"
     PATH        = "./src/endpoints"
     DESCRIPTION = <<-DESC

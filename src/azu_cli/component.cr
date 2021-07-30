@@ -21,6 +21,7 @@ module AzuCLI
 
       not_exists?(path) do
         generate path, name, props.split(" ")
+
         success "Created #{PROGRAM} for #{name.colorize.underline} in #{path.colorize.underline}"
         exit 1
       end
