@@ -40,16 +40,15 @@ module AzuCLI
     .command("mkdir -p #{Response::PATH}")
 
   Topia
-    .task("clear.migration")
+    .task("migration")
     .pipe(Migration.new)
     .command("mkdir -p #{Migration::PATH}")
 
   Topia
-    .task("clear.model")
-    .pipe(Model.new)
-    .pipe(Migration.new)
+    .task("model")
     .command("mkdir -p #{Migration::PATH}")
     .command("mkdir -p #{Model::PATH}")
+    .pipe(Model.new)
 
   def self.run
     Help.run

@@ -24,20 +24,39 @@ module AzuCLI
     DESC
 
     option model : String, "--model=Model", "-m Model", "Name for the migrarion", ""
-    option properties : String, "--props=Name:Type", "-p Name:Type", "Model properties [Name:Type ...]", ""
-    option relations : String, "--rel=Relation:Model", "-r Relation:Model", "Table Columns [Name:Type ...]", ""
+    option properties : Array(String), "-p Name:Type", "Model properties [Name:Type ...]" { properties << v }
+    option relations : Array(String), "-r Relation:Model", "Table Columns [Name:Type ...]" { relations << v }
 
     def run
+      name = model.underscore.downcase
+      table = name.pluralize
       path = "#{PATH}/#{model}.cr".underscore.downcase
+      file_name = "#{migration_id}__#{name}.cr"
+      check_path = "#{Migration::PATH}/*__#{name}.cr"
+      migration_path = "#{Migration::PATH}/#{file_name}"
+
       File.open(path, "w") do |file|
         file.puts content
       end
+
+      not_exists?(check_path) do
+        File.open(migration_path, "w") do |file|
+          file.puts MigrationGenerator.content(name, table, properties)
+        end
+      end
+
+      `crystal tool format`
+
       success "Created #{PROGRAM} for #{model} in #{path}"
-      exit 1
+      success "Created Migration for #{name} in #{migration_path}"
+      exit
+    end
+
+    private def migration_id
+      Time.local.to_unix.to_s.rjust(10, '0')
     end
 
     private def content
-      props = properties.split(" ")
       return empty_template if properties.empty?
       filled_template
     end
@@ -77,16 +96,15 @@ module AzuCLI
     end
 
     private def render_properties
-      props = properties.split(" ")
-
-      property_builder props do |name, type|
+      return if properties.empty?
+      property_builder properties do |name, type|
         %Q(column #{name} : #{type.camelcase})
       end
     end
 
     private def render_relationships
-      rels = relations.split(" ")
-      property_builder rels do |rel, type|
+      return if relations.empty?
+      property_builder relations do |rel, type|
         case rel
         when "belongs_to" then %Q(belongs_to #{type.underscore} : #{type.camelcase})
         when "has_one"    then %Q(has_one #{type.underscore} : #{type.camelcase})
@@ -107,6 +125,7 @@ module AzuCLI
           type ||= "string"
           type = CLEAR_TYPE_MAPPING[type]? || type
           str << yield name, type
+          str << "\n"
         end
       end
     end

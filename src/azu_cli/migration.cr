@@ -17,34 +17,24 @@ module AzuCLI
       Docs - https://clear.gitbook.io/project/migrations/call-migration-script
     DESC
 
-    option name : String, "--name=Name", "-n Name", "Name for the migrarion", ""
-    option table : String, "--table=Table", "-t Table", "Database table", ""
-    option columns : String, "--columns=Name:Type", "-c Name:Type", "Table Columns [Name:Type ...]", ""
+    option name : String, "-n Name", "Name for the migrarion", ""
+    option table : String, "-t Table", "Database table", ""
+    option columns : Array(String), "-c Name:Type", "Table Columns [Name:Type ...]" { columns << v }
 
     def run
       validate
 
       file_name = "#{migration_id}__#{name}.cr"
-      check_path = "#{PATH}/*__#{name}.cr".underscore.downcase
-      path = "#{PATH}/#{file_name}".underscore.downcase
+      check_path = "#{Migration::PATH}/*__#{name}.cr".underscore.downcase
+      path = "#{Migration::PATH}/#{file_name}".underscore.downcase
 
       not_exists?(check_path) do
         File.open(path, "w") do |file|
-          file.puts content
+          file.puts MigrationGenerator.content(name, table, columns)
         end
       end
-
-      success "Created #{PROGRAM} for #{name} in #{path}"
+      success "Created #{Migration::PROGRAM} for #{name} in #{path}"
       exit 1
-    end
-
-    private def content
-      return empty_template unless table && columns
-      filled_template
-    end
-
-    private def migration_id
-      Time.local.to_unix.to_s.rjust(10, '0')
     end
 
     private def validate
@@ -58,6 +48,26 @@ module AzuCLI
 
       error errors.join("\n")
       exit 1
+    end
+
+    private def migration_id
+      Time.local.to_unix.to_s.rjust(10, '0')
+    end
+  end
+
+  class MigrationGenerator
+    getter name, table, columns
+
+    def self.content(name, table, columns)
+      new(name, table, columns).content
+    end
+
+    def initialize(@name : String, @table : String, @columns : Array(String))
+    end
+
+    def content
+      return empty_template unless table && columns
+      filled_template
     end
 
     private def empty_template
@@ -86,7 +96,7 @@ module AzuCLI
         def change(direction)
           direction.up do
             create_table :#{table.pluralize.downcase} do |t|
-              #{render_columns(columns.split(" "))}
+              #{render_columns(columns)}
               t.timestamps
             end
           end
