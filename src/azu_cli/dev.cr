@@ -29,6 +29,7 @@ module AzuCLI
         `shard build`
         success "Build complete!"
       else
+        `shard build`
         run_dev server
       end
     end
@@ -44,7 +45,7 @@ module AzuCLI
         end
       end
 
-      announce "🤖 Starting erver #{name}... \n\n"
+      announce "🤖 Starting server #{name}... \n\n"
       @server = create_process target
     rescue ex
       error "Error starting server."
