@@ -28,4 +28,4 @@ dependencies:
     
   clear:
     github: anykeyh/clear
-    version: ~> 0.9.0
+    branch: master
