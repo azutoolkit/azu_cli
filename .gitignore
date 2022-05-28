@@ -3,6 +3,7 @@
 /bin/
 /db/
 /.shards/
+/.vscode/
 *.dwarf
 /playground/lib/
 /playground/example/

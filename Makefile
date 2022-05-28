@@ -6,7 +6,7 @@ OUT_DIR=$(CURDIR)/bin
 AZU=$(OUT_DIR)/azu
 SOURCE_FILE=src/azu_cli.cr
 
-all: build
+all: build | link
 
 build: shard $(AZU)
 
