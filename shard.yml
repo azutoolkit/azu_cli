@@ -9,7 +9,7 @@ crystal: 1.0.0
 license: MIT
 
 targets:
-  azu: 
+  azu:
     main: ./src/azu_cli.cr
 
 scripts:
@@ -25,7 +25,7 @@ dependencies:
 
   opts:
     github: maiha/opts.cr
-    
+
   clear:
     github: anykeyh/clear
     branch: master

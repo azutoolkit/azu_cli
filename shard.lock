@@ -4,6 +4,10 @@ shards:
     git: https://github.com/jwaldrip/admiral.cr.git
     version: 1.11.4
 
+  ameba:
+    git: https://github.com/crystal-ameba/ameba.git
+    version: 1.0.0
+
   cadmium_inflector:
     git: https://github.com/cadmiumcr/inflector.git
     version: 0.1.0+git.commit.139b4d9628cf0a663f85f5e3727d5c97c1b6c4aa

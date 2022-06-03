@@ -1,0 +1,87 @@
+name: Crystal CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  codacy-analysis-cli:
+    name: Codacy Analysis CLI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@main
+
+      - name: Run Codacy Analysis CLI
+        uses: codacy/codacy-analysis-cli-action@master
+  test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: crystallang/crystal
+    services:
+      redis:
+        image: docker.io/redis:latest
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: shards install
+
+      - name: Check code style
+        run: crystal tool format --check
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    if: ${{ success()}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Compute Release Version
+        id: semver
+        uses: paulhatch/semantic-version@v4.0.2
+        with:
+          tag_prefix: "v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
+          # A string to determine the format of the version output
+          format: "${major}.${minor}.${patch}"
+          # If this is set to true, *every* commit will be treated as a new version.
+          bump_each_commit: false
+          search_commit_body: true
+
+      - name: Bump Shard Version
+        id: bump-shard
+        uses: fjogeleit/yaml-update-action@master
+        with:
+          valueFile: shard.yml
+          propertyPath: version
+          value: ${{steps.semver.outputs.version}}
+          commitChange: true
+          updateFile: true
+          targetBranch: master
+          masterBranchName: master
+          createPR: false
+          branch: master
+          message: Set shard version ${{ steps.semver.outputs.version }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{steps.semver.outputs.version_tag}}
+          release_name: Release v${{steps.semver.outputs.version}}
+          draft: false
+          prerelease: false
