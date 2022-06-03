@@ -1,31 +1,22 @@
 name: azu_cli
-version: 0.1.0
-
+version: 0.0.1
 authors:
   - Elias J. Perez <eliasjpr@gmail.com>
-
 crystal: 1.0.0
-
 license: MIT
-
 targets:
   azu:
     main: ./src/azu_cli.cr
-
 scripts:
   postinstall: make shard
-
 dependencies:
   topia:
     github: azutoolkit/topia
     branch: master
-
   cadmium_inflector:
     github: cadmiumcr/inflector
-
   opts:
     github: maiha/opts.cr
-
   clear:
     github: anykeyh/clear
     branch: master
