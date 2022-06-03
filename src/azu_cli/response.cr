@@ -19,7 +19,7 @@ module AzuCLI
     option props : String, "--props=Name:Type", "-p Name:Type", "Request properties", ""
 
     def run
-      path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+      path = "#{PATH}/#{name}_#{PROGRAM}.cr".underscore
       not_exists?(path) { template(path) }
       success "Created #{PROGRAM} #{name.camelcase}#{PROGRAM} in #{path}"
       exit 1

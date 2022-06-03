@@ -43,7 +43,7 @@ module AzuCLI
     end
 
     private def path(name)
-      "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+      "#{PATH}/#{name}_#{PROGRAM}.cr".underscore
     end
 
     private def template(file_path, name, method, path, request, response)

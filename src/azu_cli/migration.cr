@@ -25,8 +25,8 @@ module AzuCLI
       validate
 
       file_name = "#{migration_id}__#{name}.cr"
-      check_path = "#{Migration::PATH}/*__#{name}.cr".underscore.downcase
-      path = "#{Migration::PATH}/#{file_name}".underscore.downcase
+      check_path = "#{Migration::PATH}/*__#{name}.cr".underscore
+      path = "#{Migration::PATH}/#{file_name}".underscore
 
       not_exists?(check_path) do
         File.open(path, "w") do |file|

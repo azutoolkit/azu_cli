@@ -28,9 +28,9 @@ module AzuCLI
     option relations : Array(String), "-r Relation:Model", "Table Columns [Name:Type ...]" { relations << v }
 
     def run
-      name = model.underscore.downcase
+      name = model.underscore
       table = name.pluralize
-      path = "#{PATH}/#{model}.cr".underscore.downcase
+      path = "#{PATH}/#{model}.cr".underscore
       file_name = "#{migration_id}__#{name}.cr"
       check_path = "#{Migration::PATH}/*__#{name}.cr"
       migration_path = "#{Migration::PATH}/#{file_name}"

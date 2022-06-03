@@ -28,7 +28,7 @@ module AzuCLI
     end
 
     private def path
-      "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+      "#{PATH}/#{name}_#{PROGRAM}.cr".underscore
     end
 
     private def validate

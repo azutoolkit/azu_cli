@@ -14,12 +14,10 @@ module AzuCLI
     DESC
 
     option name : String, "--name=Name", "-n Name", "Request name", ""
-    option query : Array(String), "-q Name:Type", "Request query properties" { query << v }
-    option path : Array(String), "-p Name:Type", "Request path properties" { path << v }
-    option form : Array(String), "-f Name:Type", "Request form properties" { form << v }
+    option props : Array(String), "-p Name:Type", "Request properties" { props << v }
 
     def run
-      template_path = "#{PATH}/#{name}_#{PROGRAM}.cr".downcase
+      template_path = "#{PATH}/#{name}_#{PROGRAM}.cr".underscore
 
       not_exists?(template_path) do
         template(template_path)
@@ -37,9 +35,7 @@ module AzuCLI
           struct #{name.camelcase}#{PROGRAM}
             include #{PROGRAM}
 
-            #{render_params(path)}
-            #{render_params(query)}
-            #{render_params(form)}
+            #{render_params(props)}
           end
         end
         CONTENT
