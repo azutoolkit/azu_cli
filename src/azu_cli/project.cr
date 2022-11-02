@@ -169,6 +169,7 @@ module AzuCLI
     def add_shard(project, clear : Bool)
       project_path = "./#{project}/shard.yml"
       shard = shard(project_path).as_h
+      @deps["targets"] = {project => {main: "./src/#{project}.cr"}}
       @deps["dependencies"].delete("clear") unless clear
       result = shard.merge(@deps).to_yaml
       File.write(project_path, result)
