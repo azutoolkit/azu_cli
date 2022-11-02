@@ -29,9 +29,9 @@ module AzuCLI
         option version : Bool  , "--version", "Print the version and exit", false
       end
 
-      def run(input, params)
-        die "Invalid number of arguments" if params.empty? && !ARGS.empty?
-        run(params)
+      def run(input, args)
+        die "Invalid number of arguments" if args.empty? && !ARGS.empty?
+        run(args)
         run
         true
       rescue e

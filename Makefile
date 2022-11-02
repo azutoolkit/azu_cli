@@ -1,4 +1,4 @@
-PREFIX=$$HOME/.local
+PREFIX=/usr/local
 INSTALL_DIR=$(PREFIX)/bin
 AZU_SYSTEM=$(INSTALL_DIR)/azu
 
