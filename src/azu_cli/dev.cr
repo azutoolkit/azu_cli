@@ -26,10 +26,10 @@ module AzuCLI
     def run
       if build
         announce "Building..."
-        `shard build`
+        `shards build`
         success "Build complete!"
       else
-        `shard build`
+        `shardsß build`
         run_dev server
       end
     end
