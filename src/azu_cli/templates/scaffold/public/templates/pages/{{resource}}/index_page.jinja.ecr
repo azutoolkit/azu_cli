@@ -1,0 +1,58 @@
+{% extends "layout.jinja" %}
+
+{% block page_body %}
+
+<h2 class="text-start">
+  <%= @resource.capitalize.pluralize %>
+</h2>
+<hr />
+<ul class="nav nav-pills justify-content-end">
+  <li class="nav-item">
+    <a class="btn btn-light btn-sm" href="{{<%= @resource%>|<%= @resource%>_new_path}}"
+      role="button">New <%= @resource.capitalize %></a>
+  </li>
+</ul>
+
+<table class="table table-dark table-striped">
+  <thead>
+    <tr>
+      <th scope="col" class="text-center">id</th>
+      <%- fields.common_fields.each do |field| -%>
+      <th scope="col"> <%= field.field_name.capitalize %></th>
+      <%- end -%>
+      <%- fields.references.each do |field| -%>
+      <th scope="col"> <%= field.field_name.capitalize%></th>
+      <%- end -%>
+      <%- fields.timestamps.each do |field| -%>
+      <th scope="col"> <%= field.field_name.capitalize%></th>
+      <%- end -%>
+      <th scope="col" class="text-center">Delete</th>
+    </tr>
+  </thead>
+  <tbody class="text-white">
+    {% for <%= @resource.underscore %> in <%= @resource.pluralize.underscore %> %}
+        <tr>
+          <td scope="col">
+            <a class="btn btn-light btn-sm" href={{<%=@resource.underscore %>|<%= @resource.underscore %>_show_path(id=<%= @resource.underscore %>.id)}} role="button">
+                {{<%=@resource.underscore %>.id}}
+            </a>
+          </td>
+          <%- fields.common_fields.each do |field| -%>
+          <td scope="col">{{<%= @resource.underscore %>.<%= field.field_name %>}}</td>
+          <%- end -%>
+          <%- fields.references.each do |field| -%>
+          <td scope="col">{{<%= @resource.underscore %>.<%= field.field_name %>}}</td>
+          <%- end -%>
+          <%- fields.timestamps.each do |field| -%>
+          <td scope="col">{{<%= @resource.underscore %>.<%= field.field_name %>}}</td>
+          <%- end -%>
+          <td>
+          <form method="post"action="{{<%= @resource.underscore %>|<%= @resource.underscore %>_destroy_path(id=<%= @resource.underscore %>.id)}}?_method=delete">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+          </form>
+          </td>
+        </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

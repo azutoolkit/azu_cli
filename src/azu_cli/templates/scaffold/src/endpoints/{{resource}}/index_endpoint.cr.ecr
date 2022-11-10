@@ -1,0 +1,11 @@
+module <%= @project.camelcase %>
+  struct <%= @resource.camelcase %>::IndexEndpoint
+    include Endpoint(IndexContract, IndexPage)
+
+    get "<%= path :index %>"
+
+    def call : IndexPage
+      IndexPage.new <%= @resource.camelcase %>.all.to_a
+    end
+  end
+end

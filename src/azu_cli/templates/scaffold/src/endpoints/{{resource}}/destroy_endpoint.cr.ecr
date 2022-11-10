@@ -1,0 +1,16 @@
+module <%= @project.camelcase %>
+  struct <%= @resource.camelcase %>::DestroyEndpoint
+    include Endpoint(DestroyContract, Response)
+
+    delete "<%= path :destroy %>"
+
+    def call : Response
+      delete_<%= @resource.downcase %>
+      redirect to: IndexEndpoint.path
+    end
+
+    def delete_<%= @resource.downcase %>
+      <%= @resource.camelcase %>.delete(destroy_contract.id)
+    end
+  end
+end

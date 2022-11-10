@@ -1,6 +1,6 @@
 module AzuCLI
   class Help
-    include Builder
+    include Command
 
     DESCRIPTION = <<-EOF
     #{bold "AZU Toolkit"} - Command Line Interface
@@ -12,30 +12,20 @@ module AzuCLI
 
       #{underline :Documentation} 
 
-      - Azu       - https://azutopia.gitbook.io/azu/
-      - Clear ORM - https://clear.gitbook.io/project/
+      - Azu - https://azutopia.gitbook.io/azu/
+      - ORM - https://imdrasil.github.io/jennifer.cr/docs/
 
       #{underline :Examples}
 
-      #{light_blue :azu} project name --clear
-      #{light_blue :azu} model -n User -props first_name:varchar email:varchar
+      #{light_blue :azu} project name -db postgres
 
       #{underline "Subcommands"}
 
       #{light_blue :project}    - Generates a new Azu project
+      #{light_blue :task}       - Generates a task definition file
+      #{light_blue :scaffold}   - Generates a resource for your application
       #{light_blue :dev}        - Recompiles on crystal file changes
       #{light_blue :db}         - Manages database versions and schema
-      #{light_blue :model}      - Generates a Clear ORM Model and Migration
-      #{light_blue :endpoint}   - Generates an Azu::Endpoint for handling http resources
-      #{light_blue :component}  - Generates an Azu::Component for building real time apps
-      #{light_blue :channel}    - Generates an Azu::Channel to handle websocket connections
-      #{light_blue :response}   - Generates an Azu::Response that renders html response body 
-      #{light_blue :migration}  - Generates a Clear ORM Migration to change Postgres databases
-      #{light_blue :request}    - Generates an Azu::Request for validating and parsing http requests
-    
-      #{underline "Note"}
-    
-      - Must define DATABSE_URL env variable for Clear ORM commands to work
     EOF
 
     def self.run

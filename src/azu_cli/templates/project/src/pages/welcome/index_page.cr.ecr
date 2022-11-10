@@ -1,0 +1,13 @@
+module <%= @project.camelcase %>
+  struct Welcome::IndexPage
+    include Response
+    include Templates::Renderable
+
+    def initialize(@author : String, @email : String)
+    end
+
+    def render
+      view data: {"author" => @author, "email" => @email}
+    end
+  end
+end

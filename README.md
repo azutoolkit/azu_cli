@@ -4,25 +4,21 @@ AZU is a toolkit for artisans with expressive, elegant syntax that
 offers great performance to build rich, interactive type safe, applications
 quickly, with less code and conhesive parts that adapts to your prefer style.
 
-## Clear ORM Support
+## Jennifer ORM Support
 
-Clear is an ORM (Object Relation Mapping) built for Crystal language.
-
-Clear is built especially for PostgreSQL, meaning it's not compatible with
-MariaDB or SQLite for example. Therefore, it achieves to delivers a
-tremendous amount of PostgreSQL advanced features out of the box.
+Jennifer is an ORM (Object Relation Mapping) built for Crystal language.
 
 ## Documentation
 
 - Azu - <https://azutopia.gitbook.io/azu/>
-- Clear ORM - <https://clear.gitbook.io/project/>
+- Jennifer ORM - <https://imdrasil.github.io/jennifer.cr/docs/>
 
 ## Installation
 
 1. Run `make`:
 
-````shaell
-make
+````shell
+make install
 ```
 
 2. Run `make install` - It might required `sudo`
@@ -32,53 +28,47 @@ make
 ## Usage
 
 ```bash
-azu project name --clear
-azu clear.model name -column:psqltype column:psqltype
+azu project name
 ````
 
 ## Commands
 
 ```shell
-Azu - Command Line Interface
+AZU Toolkit - Command Line Interface
 
   AZU is a toolkit for artisans with expressive, elegant syntax that
-  offers great performance to build rich, interactive type safe, applications
-  quickly, with less code and conhesive parts that adapts to your prefer style.
+  offers great performance to build rich, interactive type safe,
+  applications quickly, with less code and conhesive parts that adapts
+  to your prefer style.
 
-Documentation:
-  - Azu       - https://azutopia.gitbook.io/azu/
-  - Clear ORM - https://clear.gitbook.io/project/
+  Documentation
 
-Usage:
-  - azu project name --clear
-  - azu clear.model name -column:psqltype column:psqltype
+  - Azu - https://azutopia.gitbook.io/azu/
+  - ORM - https://imdrasil.github.io/jennifer.cr/docs/
 
-Subcommands:
+  Examples
 
-  project   - Generates a new Azu project
-  db        - Manages database versions and schema
-  dev       - Recompiles on crystal file changes
-  channel   - Generates an Azu::Channel to handle websocket connections
-  component - Generates an Azu::Component for building real time apps
-  endpoint  - Generates an Azu::Endpoint for handling http resources
-  request   - Generates an Azu::Request for validating and parsing http requests
-  response  - Generates an Azu::Response that renders html response body
-  template  - Generates a Crinja Template for building and rendering HTML
-  migration - Generates a Clear ORM Migration to change Postgres databases
-  model     - Generates a Clear ORM Model and Migration
+  azu project name -db postgres
 
-  Note: Must define DATABSE_URL env variable for Clear ORM commands to work
+  Subcommands
 
-Usage: azu Runner
+  project    - Generates a new Azu project
+  task       - Generates a task definition file
+  scaffold   - Generates a resource for your application
+  dev        - Recompiles on crystal file changes
+  db         - Manages database versions and schema
 
-Options:
+Usage
+
+  azu builder
+
+Options
+
   --help     Show this help.
   --version  Print the version and exit.
 
-azu 0.1.0 [cf9f1fc] (2021-06-30)
+Builder 0.0.1+13 [547daf2] (2022-11-14)
 ```
-
-> Note: Must define DATABSE_URL env variable for Clear ORM commands to work
 
 ## Contributing
 

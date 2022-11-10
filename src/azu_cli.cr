@@ -1,10 +1,14 @@
 require "topia"
 require "opts"
 require "cadmium_inflector"
+require "teeplate"
+require "jennifer"
+require "inflector"
 
-require "./azu_cli/shared"
-require "./azu_cli/helpers"
-require "./azu_cli/builder"
+require "./azu_cli/templates/**"
+require "./azu_cli/generators/**"
+require "./azu_cli/utils"
+require "./azu_cli/command"
 require "./azu_cli/**"
 
 module AzuCLI
@@ -13,42 +17,11 @@ module AzuCLI
   Topia.task("azu").pipe(Help.new)
   Topia.task("tasks").pipe(Tasks.new)
   Topia.task("project").pipe(Project.new)
-  Topia.task("dev").pipe(Dev.new).watch("./**/*.cr")
-
-  Topia
-    .task("db")
-    .pipe(DB.new)
-
-  Topia
-    .task("endpoint")
-    .pipe(Endpoint.new)
-    .command("mkdir -p #{Endpoint::PATH}")
-
-  Topia
-    .task("component")
-    .pipe(Component.new)
-    .command("mkdir -p #{Component::PATH}")
-
-  Topia
-    .task("request")
-    .pipe(Request.new)
-    .command("mkdir -p #{Request::PATH}")
-
-  Topia
-    .task("response")
-    .pipe(Response.new)
-    .command("mkdir -p #{Response::PATH}")
-
-  Topia
-    .task("migration")
-    .pipe(Migration.new)
-    .command("mkdir -p #{Migration::PATH}")
-
-  Topia
-    .task("model")
-    .command("mkdir -p #{Migration::PATH}")
-    .command("mkdir -p #{Model::PATH}")
-    .pipe(Model.new)
+  Topia.task("dev").pipe(Dev.new)
+  Topia.task("db").pipe(Database.new)
+  Topia.task("scaffold").pipe(Scaffold.new)
+  Topia.task("migration").pipe(Migration.new)
+  Topia.task("model").pipe(Model.new)
 
   def self.run
     Help.run

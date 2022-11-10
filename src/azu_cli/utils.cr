@@ -1,11 +1,11 @@
-def light_blue(v)
+def self.light_blue(v)
   "#{v}".colorize.light_blue
 end
 
-def underline(v)
+def self.underline(v)
   "#{v}".colorize.underline
 end
 
-def bold(v)
+def self.bold(v)
   "#{v}".colorize.bold
 end

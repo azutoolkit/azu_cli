@@ -1,0 +1,23 @@
+module <%= @project.camelcase %>
+  struct <%= @resource.camelcase %>::EditPage
+    include Response
+    include Templates::Renderable
+
+    def initialize(@<%= @resource.downcase %> : <%= @resource.camelcase %>)
+    end
+
+    def render
+      view data: {
+        "<%= @resource.downcase %>" => {
+          "id"    => @<%= @resource.downcase %>.id,
+          <%- fields.common_fields.each do |field| -%>
+          "<%= field.field_name %>" => @<%= @resource.downcase %>.<%= field.field_name %>,
+          <%- end -%>
+          <%- fields.references.each do |field| -%>
+          "<%= field.field_name %>" => @<%= @resource.downcase %>.<%= field.field_name %>,
+          <%- end -%>
+        }
+      }
+    end
+  end
+end

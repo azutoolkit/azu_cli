@@ -1,0 +1,15 @@
+module <%= @project.camelcase %>
+  struct <%= @resource.camelcase %>::ShowEndpoint
+    include Endpoint(ShowContract, ShowPage)
+
+    get "<%= path :show %>"
+
+    def call : ShowPage
+      ShowPage.new <%= @resource.downcase%>
+    end
+
+    def <%= @resource.downcase%>
+      <%= @resource.camelcase %>.find! show_contract.id
+    end
+  end
+end

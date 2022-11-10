@@ -1,0 +1,10 @@
+module <%= @project.camelcase %>
+  struct <%= @resource.camelcase %>::ShowContract
+    include Request
+
+    getter id : <%= fields.id.cr_type == "Primary32" ? "Int32" : "Int64" %>
+
+    # Contract Validation https://azutopia.gitbook.io/azu/validations
+    validate id, message: "Param ID must be present.", required: true
+  end
+end

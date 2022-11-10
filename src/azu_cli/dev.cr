@@ -1,8 +1,6 @@
 module AzuCLI
   class Dev
-    include Builder
-    SHARD_FILE = "./shard.yml"
-
+    include Command
     DESCRIPTION = <<-DESC
     #{bold "Azu - Dev"} - Runs and recompiles project
     
@@ -19,34 +17,19 @@ module AzuCLI
             main: ./src/azu_cli.cr
     DESC
 
-    option build : Bool, "--build-only", "-b", "Builds project", false
-
-    getter server : Process? = nil
+    option prod : Bool, "--production", "-p", "Production release", true
+    option run_args : String, "--args arg1 arg2", "-a arg1 arg2", "A list of arguments", ""
 
     def run
-      if build
-        announce "Building..."
-        `shards build`
-        success "Build complete!"
-      else
-        `shards build`
-        run_dev server
-      end
-    end
+      puts "Starting server #{project_name}..."
 
-    def run_dev(server)
-      name, target = params
-
-      if server.is_a? Process
-        unless server.terminated?
-          announce "🤖 Starting #{name}... \n\n"
-          server.signal(:kill)
-          server.wait
-        end
-      end
-
-      announce "🤖 Starting server #{name}... \n\n"
-      @server = create_process target
+      ProcessRunner.new(
+        project_name,
+        "shards",
+        run_command,
+        ["build", "#{project_name}"],
+        [""],
+        files, install_shards: false).run
     rescue ex
       error "Error starting server."
       error ex.message.to_s
@@ -54,24 +37,12 @@ module AzuCLI
       exit 1
     end
 
-    def params
-      error "No ./shards.yml in path" unless File.exists?(SHARD_FILE)
-
-      file_contents = File.read(SHARD_FILE)
-      shard = YAML.parse file_contents
-
-      name = shard["name"]
-      target = shard["targets"][name]["main"]
-
-      {name, target}
+    def files
+      ["./src/**/*.cr", "./lib/**/*.cr"]
     end
 
-    def create_process(target)
-      Process.new(
-        command: "crystal #{target}",
-        shell: true,
-        output: Process::Redirect::Inherit,
-        error: Process::Redirect::Inherit)
+    def run_command
+      "./bin/#{project_name}"
     end
   end
 end
