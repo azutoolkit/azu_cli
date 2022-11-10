@@ -29,7 +29,7 @@ module AzuCLI
         `shards build`
         success "Build complete!"
       else
-        `shardsß build`
+        `shards build`
         run_dev server
       end
     end
