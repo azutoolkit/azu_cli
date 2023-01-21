@@ -7,26 +7,10 @@ on:
     branches: [master]
 
 jobs:
-  codacy-analysis-cli:
-    name: Codacy Analysis CLI
+  build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@main
-
-      - name: Run Codacy Analysis CLI
-        uses: codacy/codacy-analysis-cli-action@master
-  test:
-    runs-on: ubuntu-latest
-
     container:
       image: crystallang/crystal
-    services:
-      redis:
-        image: docker.io/redis:latest
-        ports:
-          - 6379:6379
-
     steps:
       - uses: actions/checkout@v2
 
@@ -36,11 +20,13 @@ jobs:
       - name: Check code style
         run: crystal tool format --check
 
+      - name: Run tests
+        run: crystal spec
   release:
     runs-on: ubuntu-latest
     needs:
-      - test
-    if: ${{ success()}}
+      - build
+    if: ${{ success() }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -58,7 +44,6 @@ jobs:
           format: "${major}.${minor}.${patch}"
           # If this is set to true, *every* commit will be treated as a new version.
           bump_each_commit: false
-          search_commit_body: true
 
       - name: Bump Shard Version
         id: bump-shard
