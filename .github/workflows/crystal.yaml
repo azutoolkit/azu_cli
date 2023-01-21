@@ -18,14 +18,8 @@ jobs:
         uses: codacy/codacy-analysis-cli-action@master
   test:
     runs-on: ubuntu-latest
-
     container:
       image: crystallang/crystal
-    services:
-      redis:
-        image: docker.io/redis:latest
-        ports:
-          - 6379:6379
 
     steps:
       - uses: actions/checkout@v2
@@ -35,6 +29,9 @@ jobs:
 
       - name: Check code style
         run: crystal tool format --check
+
+      - name: Run tests
+        run: crystal spec --error-trace
 
   release:
     runs-on: ubuntu-latest
@@ -84,4 +81,4 @@ jobs:
           tag_name: ${{steps.semver.outputs.version_tag}}
           release_name: Release v${{steps.semver.outputs.version}}
           draft: false
-          prerelease: false
+          prerelease: true
