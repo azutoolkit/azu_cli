@@ -1,0 +1,266 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Azu CLI - Cursor Rules
+
+You are an expert Crystal developer working on the Azu CLI project, a command-line interface for the Azu Toolkit framework.
+
+## Project Context
+
+- **Language**: Crystal
+- **Project Type**: CLI Tool / Code Generator
+- **Framework**: Azu Toolkit
+- **ORM**: CQL Orm
+- **Build System**: Makefile
+- **Version**: 0.0.1+13
+
+## Crystal Language Guidelines
+
+### Code Style
+- Use Crystal's built-in formatter (`crystal tool format`)
+- Follow Crystal naming conventions:
+  - Classes: PascalCase (`MyClass`)
+  - Methods/variables: snake_case (`my_method`)
+  - Constants: SCREAMING_SNAKE_CASE (`MY_CONSTANT`)
+  - Files: snake_case (`my_file.cr`)
+- Use 2 spaces for indentation
+- Prefer explicit type annotations for public APIs
+- Use meaningful variable names, avoid abbreviations
+
+### Crystal-Specific Patterns
+- Leverage Crystal's type system and compile-time checks
+- Use macros for code generation when appropriate
+- Prefer `String.build` for string concatenation
+- Use `case/when` instead of multiple `if/elsif`
+- Utilize Crystal's union types for flexible APIs
+- Use `#as` for type casting when necessary
+
+### Memory Management
+- Prefer stack allocation over heap when possible
+- Use `StaticArray` for fixed-size arrays
+- Be mindful of string interpolation performance
+- Use `IO` directly for file operations when performance matters
+
+## CLI Architecture Patterns
+
+### Command Structure
+- Each command should be in its own file under `src/commands/`
+- Commands should inherit from a base `Command` class if available
+- Use the Admiral.cr or similar for argument parsing
+- Structure commands as classes with `#call` or `#run` methods
+
+Example command structure:
+```crystal
+class Azu::Commands::Project < Azu::Commands::Base
+  def initialize(@name : String, @options : Hash(String, String))
+  end
+
+  def call
+    # Command implementation
+  end
+end
+```
+
+### File Generation
+- Use ECR (Embedded Crystal) templates for code generation
+- Templates should be in `src/templates/` directory
+- Separate template logic from command logic
+- Use `File.write` with proper error handling
+- Create directories with `Dir.mkdir_p`
+### Error Handling
+- Use Crystal's exception system appropriately
+- Provide meaningful error messages to users
+- Handle file system errors gracefully
+- Use `abort` for fatal CLI errors with descriptive messages
+- Log errors to STDERR, not STDOUT
+
+## Project-Specific Guidelines
+
+### Command Implementation
+- All commands should provide `--help` option
+- Validate user input before processing
+- Show progress for long-running operations
+- Use consistent exit codes (0 for success, 1+ for errors)
+- Support both long and short option formats
+
+### Code Generation Rules
+- Generated code should follow Azu framework and CQL Orm conventions
+- Use proper indentation and formatting in templates
+- Include necessary imports in generated files
+- Generate comprehensive directory structures
+- Add appropriate file headers and comments
+
+### Database Integration
+- Use CQL ORM patterns consistently (https://github.com/azutoolkit/cql)
+- Generate proper migration files
+- Handle database connection errors
+- Support multiple database adapters (PostgreSQL, MySQL, SQLite)
+- Use proper Jennifer model conventions
+
+### Development Server
+- Implement file watching for auto-recompilation
+- Handle process management cleanly
+- Provide clear startup/shutdown messages
+- Support configurable ports and hosts
+- Handle compilation errors gracefully
+
+## File Organization
+
+### Directory Structure
+```
+src/
+├── azu_cli.cr              # Main entry point
+├── commands/               # Command implementations
+│   ├── base.cr            # Base command class
+│   ├── project.cr         # Project generation
+│   ├── scaffold.cr        # Resource scaffolding
+│   ├── task.cr            # Task management
+│   ├── dev.cr             # Development server
+│   └── db.cr              # Database commands
+├── generators/             # Code generators
+├── templates/              # ECR templates
+│   ├── project/           # Project templates
+│   ├── scaffold/          # Scaffold templates
+│   └── migrations/        # Migration templates
+└── utils/                 # Utility modules
+```
+
+### File Naming
+- Command files: `{command_name}.cr`
+- Generator files: `{resource_type}_generator.cr`
+- Template files: `{template_name}.ecr`
+- Utility files: descriptive names ending in `.cr`
+
+## Testing Guidelines
+
+### Spec Structure
+- Mirror `src/` structure in `spec/`
+- Use descriptive `describe` and `it` blocks
+- Test both success and failure scenarios
+- Mock file system operations when appropriate
+- Test generated code compilation
+
+### Test Patterns
+```crystal
+describe Azu::Commands::Project do
+  describe "#call" do
+    it "generates project structure" do
+      # Test implementation
+    end
+
+    it "handles invalid project names" do
+      # Error case testing
+    end
+  end
+end
+```
+
+## Dependencies and Imports
+
+### Shard Management
+- Keep `shard.yml` dependencies minimal
+- Pin dependency versions for stability
+- Group dependencies logically (development, test, production)
+- Document why each dependency is needed
+
+### Import Guidelines
+- Import only what you need
+- Use qualified imports when possible
+- Group imports: standard library first, then shards, then local files
+- Avoid wildcard imports unless necessary
+
+## Performance Considerations
+
+### Compilation Performance
+- Keep macro usage reasonable
+- Avoid deep inheritance hierarchies
+- Use generic types judiciously
+- Profile compilation times for large changes
+
+### Runtime Performance
+- Use appropriate data structures (Array vs Set vs Hash)
+- Minimize string allocations in hot paths
+- Use `String::Builder` for complex string building
+- Cache expensive computations when possible
+
+## Documentation Standards
+
+### Code Documentation
+- Use Crystal's documentation format (`# Description`)
+- Document public methods and classes
+- Include usage examples for complex APIs
+- Document parameter types and return values
+
+### README and Guides
+- Keep README concise but complete
+- Include installation instructions
+- Provide usage examples
+- Link to related documentation
+
+## Error Messages and User Experience
+
+### User-Friendly Messages
+- Provide clear, actionable error messages
+- Use colors for different message types (if terminal supports it)
+- Include suggestions for fixing errors
+- Show progress for long operations
+
+### Logging
+- Use structured logging when available
+- Log to appropriate streams (STDOUT for output, STDERR for errors)
+- Provide verbose mode for debugging
+- Include timestamps for long-running operations
+
+## Build and Deployment
+
+### Makefile Usage
+- Keep Makefile simple and documented
+- Support common targets: build, install, clean, test
+- Handle cross-platform differences
+- Use variables for commonly changed values
+
+### Version Management
+- Use semantic versioning
+- Update version in `shard.yml` and code
+- Tag releases appropriately
+- Maintain changelog for user-facing changes
+
+## Security Considerations
+
+### Input Validation
+- Validate all user inputs
+- Sanitize file paths to prevent directory traversal
+- Validate database connection parameters
+- Check file permissions before operations
+
+### File Operations
+- Use secure temporary file creation
+- Set appropriate file permissions on generated files
+- Validate file extensions and types
+- Handle symbolic links safely
+
+## Common Patterns to Avoid
+
+- Don't use `eval` or similar dynamic code execution
+- Avoid global variables; use dependency injection
+- Don't ignore errors or exceptions
+- Avoid hardcoded paths; use configuration
+- Don't mix business logic with CLI presentation logic
+
+## Debugging and Development
+
+### Development Workflow
+- Use `crystal run` for development
+- Enable all compiler warnings
+- Use `crystal tool hierarchy` to understand type relationships
+- Profile memory usage for large operations
+
+### Debugging Tools
+- Use `pp` for debug output
+- Leverage Crystal's built-in debugging capabilities
+- Use proper logging instead of `puts` for debugging
+- Test with various Crystal versions if possible
+
+Remember: The Azu CLI should feel intuitive and powerful, following Crystal's philosophy of performance and expressiveness while maintaining the elegant simplicity that makes developers productive.

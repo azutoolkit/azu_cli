@@ -24,7 +24,7 @@ module AzuCLI
       announce "Generating Migration and Model for resource: #{resource.camelcase} "
       Jennifer::Generators::Model.new(model_args).render
 
-      exit 1
+      exit EXIT_SUCCESS
     end
 
     private def validate
@@ -34,7 +34,7 @@ module AzuCLI
 
       return if errors.empty?
       error errors.join("\n")
-      exit 1
+      exit EXIT_FAILURE
     end
   end
 end

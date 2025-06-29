@@ -5,7 +5,7 @@ module AzuCLI
     OUTPUT_DIR  = "./"
     DESCRIPTION = <<-DESC
     #{bold "Azu - Scaffold"} - Generates a migration for your application
-    
+
     DESC
 
     option resource : String, "--resource=Name", "-r Resource", "Resource name Eg. Articles", ""
@@ -24,7 +24,7 @@ module AzuCLI
       announce "Generating Migration for resource: #{resource.camelcase} "
       Jennifer::Generators::Migration.new(model_args).render
 
-      exit 1
+      exit EXIT_SUCCESS
     end
 
     private def validate
@@ -34,7 +34,7 @@ module AzuCLI
 
       return if errors.empty?
       error errors.join("\n")
-      exit 1
+      exit EXIT_FAILURE
     end
   end
 end

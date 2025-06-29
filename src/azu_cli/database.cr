@@ -7,8 +7,8 @@ module AzuCLI
     DESCRIPTION = <<-DESC
     #{bold "Azu"} - Jennifer Database Commands
 
-      Allows you to evolve your database schema and perform changes to 
-      your database 
+      Allows you to evolve your database schema and perform changes to
+      your database
 
       seed     - Seeds the database with data Eg. azu seed
       step     - Migrates one step
@@ -52,9 +52,11 @@ module AzuCLI
       when "setup"
         Jennifer::Migration::Runner.create
         Jennifer::Migration::Runner.migrate
-      else error "Unsupported database command"
+      else
+        error "Unsupported database command"
+        exit EXIT_FAILURE
       end
-      exit 1
+      exit EXIT_SUCCESS
     end
   end
 end

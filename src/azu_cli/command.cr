@@ -5,18 +5,22 @@ module AzuCLI
 
     abstract def run
 
+    # Exit code constants for consistent CLI behavior
+    EXIT_SUCCESS = 0
+    EXIT_FAILURE = 1
+
     PROGRAM = self.name.split("::").last
     VERSION = Shard.git_description.split(/\s+/, 2).last
     USAGE   = <<-EOF
 
     {description}
-    
+
     #{bold :Usage}
-    
+
       #{light_blue :azu} {{program}} {{args}}
 
     #{bold :Options}
-    
+
     {options}
 
     {version}
@@ -37,7 +41,7 @@ module AzuCLI
         true
       rescue e
         error "#{PROGRAM} command failed! - #{e.message}"
-        exit 1
+        exit EXIT_FAILURE
       end
 
       def show_usage
@@ -54,7 +58,7 @@ module AzuCLI
       def not_exists?(path)
         if File.exists? path
           error "File `#{path.underscore}` already exists"
-          exit 1
+          exit EXIT_FAILURE
         else
           yield
         end

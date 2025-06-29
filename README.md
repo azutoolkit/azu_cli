@@ -4,14 +4,52 @@ AZU is a toolkit for artisans with expressive, elegant syntax that
 offers great performance to build rich, interactive type safe, applications
 quickly, with less code and conhesive parts that adapts to your prefer style.
 
-## Jennifer ORM Support
+## Target Frameworks
 
-Jennifer is an ORM (Object Relation Mapping) built for Crystal language.
+The Azu CLI is specifically designed to work with two main frameworks from the Azu Toolkit ecosystem:
+
+### CQL ORM Framework
+
+**CQL** (Crystal Query Language) is a comprehensive Object-Relational Mapping (ORM) library designed to simplify and enhance the management and execution of SQL queries in Crystal.
+
+**Key Features:**
+
+- Type-safe ORM using Crystal's static type system
+- Macro-powered DSL for defining models and relationships
+- Active Record-style API with flexibility for Repository and Data Mapper patterns
+- Support for major relational databases through Crystal DB drivers (PostgreSQL, MySQL, SQLite)
+- Built for performance, leveraging compile-time optimizations
+- Comprehensive query builder with type safety
+- Migration system for database schema management
+
+**Repository:** https://github.com/azutoolkit/cql
+
+### Azu Web Framework
+
+**Azu** is a high-performance, type-safe web framework for Crystal that emphasizes developer productivity, compile-time safety, and real-time capabilities.
+
+**Key Features:**
+
+- **Type-Safe Architecture:** Compile-time type checking for requests, responses, and parameters
+- **Real-Time Capabilities:** WebSocket channels with automatic connection management
+- **Performance-Optimized:** High-performance routing with LRU cache and path optimization
+- **Developer Experience:** Comprehensive error handling and flexible middleware system
+- **Modern Web Patterns:** Live components, Spark system for reactive UI updates
+- **Content Negotiation:** Supporting JSON, HTML, XML, and plain text
+- **Template Engine:** Hot reloading in development with production caching
+
+**Repository:** https://github.com/azutoolkit/azu
+
+## Jennifer ORM Support (Legacy)
+
+Jennifer is an ORM (Object Relation Mapping) built for Crystal language that is supported for legacy projects.
 
 ## Documentation
 
-- Azu - <https://azutopia.gitbook.io/azu/>
-- Jennifer ORM - <https://imdrasil.github.io/jennifer.cr/docs/>
+- **Azu Toolkit** - <https://azutopia.gitbook.io/azu/>
+- **CQL ORM Framework** - <https://github.com/azutoolkit/cql>
+- **Azu Web Framework** - <https://github.com/azutoolkit/azu>
+- **Jennifer ORM (Legacy)** - <https://imdrasil.github.io/jennifer.cr/docs/>
 
 ## Installation
 
@@ -29,7 +67,7 @@ make install
 
 ```bash
 azu project name
-````
+```
 
 ## Commands
 
@@ -81,3 +119,4 @@ Builder 0.0.1+13 [547daf2] (2022-11-14)
 ## Contributors
 
 - [Elias J. Perez](https://github.com/eliasjpr) - creator and maintainer
+````

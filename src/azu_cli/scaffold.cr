@@ -6,10 +6,10 @@ module AzuCLI
     DESCRIPTION = <<-DESC
     #{bold "Azu - Scaffold"} - Generates resources your application
 
-    Scaffolding is a quick way to generate some of the major pieces of an application. 
-    If you want to create the models, pages, and endpoints for a new resource 
+    Scaffolding is a quick way to generate some of the major pieces of an application.
+    If you want to create the models, pages, and endpoints for a new resource
     in a single operation, scaffolding is the tool for the job.
-    
+
     DESC
 
     option resource : String, "--resource=Name", "-r Resource", "Resource name Eg. Articles", ""
@@ -27,7 +27,7 @@ module AzuCLI
       announce "Generating Migration and Model for resource: #{resource.camelcase} "
       Jennifer::Generators::Model.new(args).render
 
-      exit 1
+      exit EXIT_SUCCESS
     end
 
     private def validate
@@ -37,7 +37,7 @@ module AzuCLI
 
       return if errors.empty?
       error errors.join("\n")
-      exit 1
+      exit EXIT_FAILURE
     end
 
     private def scaffold(fields_list)

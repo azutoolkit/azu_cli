@@ -77,7 +77,7 @@ module AzuCLI
         create_app_process()
       elsif !@app_built # if build fails on first time compiling, then exit
         stdout "🤖 Compile time errors detected."
-        exit 1
+        exit EXIT_FAILURE
       end
     end
 
@@ -116,7 +116,7 @@ module AzuCLI
       install_result = Process.run("shards", ["install"], shell: true, output: Process::Redirect::Inherit, error: Process::Redirect::Inherit)
       if !install_result || !install_result.success?
         stdout "🤖  Error installing shards. SentryBot shutting down..."
-        exit 1
+        exit EXIT_FAILURE
       end
     end
 

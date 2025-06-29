@@ -8,9 +8,9 @@ module AzuCLI
     DESCRIPTION = <<-DESC
     #{bold "Azu - Project Generator"}
 
-      The `azu project` command generates a new Crystal application with Azu 
+      The `azu project` command generates a new Crystal application with Azu
       installed and ORM.
-      
+
       Docs - https://azutopia.gitbook.io/azu/installation
     DESC
 
@@ -39,7 +39,7 @@ module AzuCLI
         #{light_blue "→"} run #{"azu dev".colorize(:green)} to start the server
       TEXT
 
-      exit 1
+      exit EXIT_SUCCESS
     end
   end
 end
