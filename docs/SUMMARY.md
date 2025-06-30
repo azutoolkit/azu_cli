@@ -40,17 +40,6 @@
 - [Migration Generator](generators/migration.md)
 - [Scaffold Generator](generators/scaffold.md)
 
-## Development Workflows
-
-- [Development Guide](workflows/README.md)
-- [Creating a New Project](workflows/new-project.md)
-- [Building APIs](workflows/building-apis.md)
-- [Building Web Applications](workflows/building-web-apps.md)
-- [Working with Databases](workflows/database-workflow.md)
-- [Real-time Components](workflows/real-time-components.md)
-- [Testing Your Application](workflows/testing.md)
-- [Deployment](workflows/deployment.md)
-
 ## Architecture & Internals
 
 - [Architecture Overview](architecture/README.md)
@@ -69,15 +58,6 @@
 - [Development Server Configuration](configuration/dev-server-config.md)
 - [Generator Configuration](configuration/generator-config.md)
 - [Environment Variables](configuration/environment.md)
-
-## Examples & Tutorials
-
-- [Examples Overview](examples/README.md)
-- [Blog Application Tutorial](examples/blog-tutorial.md)
-- [API-Only Application](examples/api-tutorial.md)
-- [Real-time Chat Application](examples/chat-tutorial.md)
-- [E-commerce Application](examples/ecommerce-tutorial.md)
-- [Microservices with Azu](examples/microservices-tutorial.md)
 
 ## Integration
 
