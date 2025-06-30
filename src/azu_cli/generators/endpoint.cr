@@ -31,7 +31,7 @@ module AzuCLI
       private def generate_contracts
         actions.each do |action|
           template_vars = {
-            "action" => action,
+            "action"       => action,
             "action_class" => classify(action),
           }
 
@@ -46,7 +46,7 @@ module AzuCLI
       private def generate_pages
         actions.each do |action|
           template_vars = {
-            "action" => action,
+            "action"       => action,
             "action_class" => classify(action),
           }
 
@@ -61,10 +61,10 @@ module AzuCLI
       private def generate_endpoints
         actions.each do |action|
           template_vars = {
-            "action" => action,
+            "action"       => action,
             "action_class" => classify(action),
-            "http_method" => http_method_for_action(action),
-            "route_path" => route_path_for_action(action),
+            "http_method"  => http_method_for_action(action),
+            "route_path"   => route_path_for_action(action),
           }
 
           copy_template(
@@ -78,7 +78,7 @@ module AzuCLI
       private def generate_tests
         actions.each do |action|
           template_vars = {
-            "action" => action,
+            "action"       => action,
             "action_class" => classify(action),
           }
 

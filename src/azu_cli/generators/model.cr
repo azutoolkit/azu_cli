@@ -26,7 +26,7 @@ module AzuCLI
       private def generate_model
         template_vars = {
           "attributes_list" => generate_attributes_list,
-          "table_name" => plural_name,
+          "table_name"      => plural_name,
         }
 
         copy_template(

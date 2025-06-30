@@ -25,7 +25,7 @@ module AzuCLI
 
       private def generate_contract
         template_vars = {
-          "attributes_list" => generate_attributes_list,
+          "attributes_list"  => generate_attributes_list,
           "validations_list" => generate_validations_list,
         }
 

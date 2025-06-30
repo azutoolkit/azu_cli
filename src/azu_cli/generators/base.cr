@@ -52,9 +52,9 @@ module AzuCLI
 
       private def underscore(str : String) : String
         str.gsub(/::/, '/')
-           .gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
-           .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
-           .downcase
+          .gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
+          .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
+          .downcase
       end
 
       private def camelize(str : String) : String
@@ -126,16 +126,16 @@ module AzuCLI
 
       def default_template_variables : Hash(String, String)
         {
-          "name"               => name,
-          "class_name"         => class_name,
-          "snake_case_name"    => snake_case_name,
-          "kebab_case_name"    => kebab_case_name,
-          "plural_name"        => plural_name,
-          "plural_class_name"  => plural_class_name,
-          "module_name"        => module_name,
-          "camelcase_name"     => camelcase_name,
-          "project_name"       => project_name,
-          "project_module"     => module_name,
+          "name"              => name,
+          "class_name"        => class_name,
+          "snake_case_name"   => snake_case_name,
+          "kebab_case_name"   => kebab_case_name,
+          "plural_name"       => plural_name,
+          "plural_class_name" => plural_class_name,
+          "module_name"       => module_name,
+          "camelcase_name"    => camelcase_name,
+          "project_name"      => project_name,
+          "project_module"    => module_name,
         }
       end
 

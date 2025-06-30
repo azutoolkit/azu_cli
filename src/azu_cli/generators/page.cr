@@ -28,7 +28,7 @@ module AzuCLI
       private def generate_page
         template_variables = {
           "template_vars_list" => generate_template_vars_list,
-          "render_data" => generate_render_data,
+          "render_data"        => generate_render_data,
         }
 
         copy_template(
