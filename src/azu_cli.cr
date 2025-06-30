@@ -21,6 +21,7 @@ module AzuCLI
   Topia.task("new").pipe(TopiaAdapter.new(Commands::New.new))
   Topia.task("init").pipe(TopiaAdapter.new(Commands::Init.new))
   Topia.task("generate").pipe(TopiaAdapter.new(Commands::Generate.new))
+  Topia.task("db").pipe(TopiaAdapter.new(Commands::Db.new))
 
   def self.run
     # Initialize configuration

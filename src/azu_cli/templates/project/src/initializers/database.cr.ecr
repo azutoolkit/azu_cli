@@ -1,7 +1,66 @@
-require "jennifer"
-require "jennifer/adapter/<%= @database %>"
+require "cql"
+<% case @database when "postgresql", "postgres", "pg" -%>
+require "pg"
+<% when "mysql" -%>
+require "mysql"
+<% when "sqlite" -%>
+require "sqlite3"
+<% end -%>
 
-Jennifer::Config.configure do |conf|
-  conf.from_uri(ENV["DATABASE_URL"])
-  conf.logger = Log.for("Jennifer")
+# Configure CQL database connection
+# See: https://azutopia.gitbook.io/cql/getting-started/configuration
+<% case @database when "postgresql", "postgres", "pg" -%>
+AppDB = CQL::Schema.define(
+  :app_database,
+  adapter: CQL::Adapter::Postgres,
+  uri: ENV.fetch("DATABASE_URL", "postgresql://postgres@localhost:5432/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}")
+) do
+  # Define your database schema here
+  # Example:
+  # table :users do
+  #   primary :id, Int32
+  #   column :name, String
+  #   column :email, String
+  #   column :active, Bool, default: true
+  #   timestamps
+  # end
+end
+<% when "mysql" -%>
+AppDB = CQL::Schema.define(
+  :app_database,
+  adapter: CQL::Adapter::MySQL,
+  uri: ENV.fetch("DATABASE_URL", "mysql://root@localhost:3306/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}")
+) do
+  # Define your database schema here
+  # Example:
+  # table :users do
+  #   primary :id, Int32
+  #   column :name, String
+  #   column :email, String
+  #   column :active, Bool, default: true
+  #   timestamps
+  # end
+end
+<% when "sqlite" -%>
+AppDB = CQL::Schema.define(
+  :app_database,
+  adapter: CQL::Adapter::SQLite,
+  uri: ENV.fetch("DATABASE_URL", "sqlite3://db/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}.db")
+) do
+  # Define your database schema here
+  # Example:
+  # table :users do
+  #   primary :id, Int32
+  #   column :name, String
+  #   column :email, String
+  #   column :active, Bool, default: true
+  #   timestamps
+  # end
+end
+<% end -%>
+
+# Enable query logging in development
+if ENV.fetch("AZU_ENV", "development") == "development"
+  # CQL will automatically log queries in development mode
+  Log.setup("CQL", :debug)
 end

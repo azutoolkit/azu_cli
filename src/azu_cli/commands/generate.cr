@@ -5,6 +5,7 @@ require "../generators/service"
 require "../generators/middleware"
 require "../generators/contract"
 require "../generators/page"
+require "../generators/migration"
 
 module AzuCLI::Commands
   # Generate command - creates various Azu components using generators
@@ -20,6 +21,7 @@ module AzuCLI::Commands
       "middleware" => "HTTP middleware component",
       "contract"   => "Request/response contract",
       "page"       => "Page component (view)",
+      "migration"  => "Database migration file",
       "scaffold"   => "Complete resource with CRUD operations",
     }
 
@@ -31,6 +33,7 @@ module AzuCLI::Commands
       "mw"         => "middleware",
       "c"          => "contract",
       "p"          => "page",
+      "mig"        => "migration",
     }
 
     def execute(args : Hash(String, String | Array(String))) : String | Nil
@@ -92,6 +95,8 @@ module AzuCLI::Commands
         generate_contract(component_name, additional_args, force, skip_tests)
       when "page"
         generate_page(component_name, additional_args, force, skip_tests)
+      when "migration"
+        generate_migration(component_name, additional_args, force)
       when "scaffold"
         generate_scaffold(component_name, additional_args, force, skip_tests, skip_routes)
       end
@@ -121,6 +126,7 @@ module AzuCLI::Commands
       puts "Examples:".colorize(:yellow).bold
       puts "  azu generate endpoint users"
       puts "  azu generate model User name:string email:string"
+      puts "  azu generate migration create_users_table"
       puts "  azu generate service UserRegistration"
       puts "  azu generate scaffold Post title:string content:text"
       puts
@@ -231,6 +237,26 @@ module AzuCLI::Commands
       log.success("Page #{name} generated successfully!")
     end
 
+    private def generate_migration(name : String, args : Array(String), force : Bool)
+      log.info("Generating migration: #{name}")
+
+      # Parse attributes for migration content
+      attributes = args.select { |arg| arg.includes?(":") }
+
+      generator = Generator::Migration.new(
+        name: name,
+        project_name: get_project_name,
+        attributes: attributes,
+        force: force,
+        skip_tests: true # Migrations don't need tests
+      )
+
+      generator.generate!
+
+      log.success("Migration #{name} generated successfully!")
+      show_migration_next_steps(name)
+    end
+
     private def generate_scaffold(name : String, args : Array(String), force : Bool, skip_tests : Bool, skip_routes : Bool)
       log.info("Generating scaffold: #{name}")
 
@@ -310,7 +336,7 @@ module AzuCLI::Commands
     private def show_model_next_steps(name : String)
       puts
       puts "📋 Next Steps:".colorize(:yellow).bold
-      puts "  1. Run 'azu db:create_migration #{name.downcase}' to create the migration"
+      puts "  1. Run 'azu generate migration create_#{name.downcase}_table' to create the migration"
       puts "  2. Add validations and associations to your model"
       puts "  3. Run 'azu db:migrate' to apply the migration"
       puts "  4. Add model tests in spec/models/#{name.downcase}_spec.cr"
@@ -334,10 +360,24 @@ module AzuCLI::Commands
       puts "  4. Add middleware tests in spec/middleware/#{name.downcase}_spec.cr"
     end
 
+    private def show_migration_next_steps(name : String)
+      puts
+      puts "📋 Next Steps:".colorize(:yellow).bold
+      puts "  1. Edit the generated migration file to define your schema changes"
+      puts "  2. Run 'azu db:migrate' to apply the migration"
+      puts "  3. Run 'azu db:rollback' if you need to undo the changes"
+      puts "  4. Use 'azu db:status' to check migration status"
+      puts
+      puts "💡 Migration Examples:".colorize(:blue).bold
+      puts "  azu generate migration create_users_table"
+      puts "  azu generate migration add_email_to_users email:string"
+      puts "  azu generate migration remove_name_from_users"
+    end
+
     private def show_scaffold_next_steps(name : String)
       puts
       puts "📋 Next Steps:".colorize(:yellow).bold
-      puts "  1. Run 'azu db:create_migration #{name.downcase}' to create the migration"
+      puts "  1. Run 'azu generate migration create_#{name.downcase}_table' to create the migration"
       puts "  2. Run 'azu db:migrate' to apply the migration"
       puts "  3. Customize the generated templates and endpoints"
       puts "  4. Add authentication and authorization as needed"
@@ -357,12 +397,15 @@ module AzuCLI::Commands
       puts
       puts "Generator-specific syntax:"
       puts "  Model attributes:   name:string email:string age:integer"
+      puts "  Migration attrs:    email:string age:integer active:boolean"
       puts "  Endpoint actions:   index show create update destroy"
       puts "  Page variables:     title='My Page' layout=application"
       puts
       puts "Examples:"
       puts "  azu generate endpoint users"
       puts "  azu generate model User name:string email:string"
+      puts "  azu generate migration create_users_table"
+      puts "  azu generate migration add_email_to_users email:string"
       puts "  azu generate service UserRegistration"
       puts "  azu generate middleware Authentication"
       puts "  azu generate scaffold Post title:string content:text"
