@@ -1,31 +1,53 @@
 require "topia"
-require "opts"
+require "log"
 require "cadmium_inflector"
 require "teeplate"
-require "jennifer"
-require "inflector"
 
+require "./azu_cli/config"
+require "./azu_cli/logger"
+require "./azu_cli/command"
+require "./azu_cli/commands/topia_adapter"
+require "./azu_cli/commands/**"
 require "./azu_cli/templates/**"
 require "./azu_cli/generators/**"
 require "./azu_cli/utils"
-require "./azu_cli/command"
-require "./azu_cli/**"
 
 module AzuCLI
-  VERSION = Shard.version
+  VERSION = "0.0.1"
 
-  Topia.task("azu").pipe(Help.new)
-  Topia.task("tasks").pipe(Tasks.new)
-  Topia.task("project").pipe(Project.new)
-  Topia.task("dev").pipe(Dev.new)
-  Topia.task("db").pipe(Database.new)
-  Topia.task("scaffold").pipe(Scaffold.new)
-  Topia.task("migration").pipe(Migration.new)
-  Topia.task("model").pipe(Model.new)
+  # Register all commands with Topia
+  Topia.task("help").pipe(TopiaAdapter.new(Commands::Help.new))
+  Topia.task("version").pipe(TopiaAdapter.new(Commands::Version.new))
 
   def self.run
-    Help.run
+    # Initialize configuration
+    Config.load!
+
+    # Set up logging
+    Logger.setup
+
+    # Run Topia CLI with arguments
+    if ARGV.empty?
+      # Show help when no arguments provided
+      Topia.run("help")
+    else
+      command_name = ARGV[0]
+      command_args = ARGV[1..]
+
+      begin
+        Topia.run(command_name, command_args)
+      rescue
+                 Logger.error("Unknown command: #{command_name}")
+         Logger.info("Run 'azu help' to see available commands")
+         exit(Config::EXIT_INVALID_USAGE)
+      end
+    end
+  rescue ex : Exception
+    Logger.error("Unexpected error: #{ex.message}")
+    Logger.debug(ex.backtrace?.try(&.join("\n")) || "No backtrace available")
+    exit(1)
   end
 end
 
+# Start the CLI
 AzuCLI.run

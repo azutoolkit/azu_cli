@@ -11,8 +11,8 @@ You are an expert Crystal developer working on the Azu CLI project, a command-li
 
 - **Language**: Crystal
 - **Project Type**: CLI Tool / Code Generator
-- **Framework**: Azu Toolkit
-- **ORM**: CQL Orm
+- **Framework**: Azu Toolkit (https://github.com/azutoolkit/azu)
+- **ORM**: CQL Orm (https://github.com/azutoolkit/cql) (Remove Jennifer)
 - **Build System**: Makefile
 - **Version**: 0.0.1+13
 
@@ -48,7 +48,7 @@ You are an expert Crystal developer working on the Azu CLI project, a command-li
 ### Command Structure
 - Each command should be in its own file under `src/commands/`
 - Commands should inherit from a base `Command` class if available
-- Use the Admiral.cr or similar for argument parsing
+- Use the Topia (Topia.cli(ARGV))
 - Structure commands as classes with `#call` or `#run` methods
 
 Example command structure:
@@ -69,6 +69,7 @@ end
 - Separate template logic from command logic
 - Use `File.write` with proper error handling
 - Create directories with `Dir.mkdir_p`
+
 ### Error Handling
 - Use Crystal's exception system appropriately
 - Provide meaningful error messages to users
@@ -110,21 +111,121 @@ end
 
 ### Directory Structure
 ```
-src/
-├── azu_cli.cr              # Main entry point
-├── commands/               # Command implementations
-│   ├── base.cr            # Base command class
-│   ├── project.cr         # Project generation
-│   ├── scaffold.cr        # Resource scaffolding
-│   ├── task.cr            # Task management
-│   ├── dev.cr             # Development server
-│   └── db.cr              # Database commands
-├── generators/             # Code generators
-├── templates/              # ECR templates
-│   ├── project/           # Project templates
-│   ├── scaffold/          # Scaffold templates
-│   └── migrations/        # Migration templates
-└── utils/                 # Utility modules
+└── src
+    ├── azu_cli
+    │   ├── cli.cr
+    │   ├── command.cr
+    │   ├── commands
+    │   ├── database.cr
+    │   ├── dev.cr
+    │   ├── generators
+    │   │   ├── nav_scaffold.cr
+    │   │   ├── pages_scaffold.cr
+    │   │   ├── project.cr
+    │   │   └── src_scaffold.cr
+    │   ├── help.cr
+    │   ├── migration.cr
+    │   ├── model.cr
+    │   ├── process_runner.cr
+    │   ├── project.cr
+    │   ├── scaffold.cr
+    │   ├── tasks.cr
+    │   ├── templates
+    │   │   ├── cql
+    │   │   ├── jennifer
+    │   │   │   └── generators
+    │   │   │       ├── base.cr
+    │   │   │       ├── create_migration.cr
+    │   │   │       ├── create_migration.ecr
+    │   │   │       ├── field_set.cr
+    │   │   │       ├── field.cr
+    │   │   │       ├── migration.cr
+    │   │   │       ├── migration.ecr
+    │   │   │       ├── model.cr
+    │   │   │       └── model.ecr
+    │   │   ├── project
+    │   │   │   ├── LICENSE
+    │   │   │   ├── public
+    │   │   │   │   ├── assets
+    │   │   │   │   │   ├── css
+    │   │   │   │   │   │   ├── bootstrap.css.map
+    │   │   │   │   │   │   ├── bootstrap.min.css
+    │   │   │   │   │   │   └── cover.css
+    │   │   │   │   │   └── js
+    │   │   │   │   │       ├── bootstrap.min.js
+    │   │   │   │   │       └── bootstrap.min.js.map
+    │   │   │   │   └── templates
+    │   │   │   │       ├── helpers
+    │   │   │   │       │   └── _nav.jinja
+    │   │   │   │       ├── layout.jinja
+    │   │   │   │       └── welcome
+    │   │   │   │           └── index_page.jinja
+    │   │   │   ├── README.md.ecr
+    │   │   │   ├── shard.yml.ecr
+    │   │   │   ├── spec
+    │   │   │   │   ├── {{project}}_spec.cr.ecr
+    │   │   │   │   └── spec_helper.cr.ecr
+    │   │   │   ├── src
+    │   │   │   │   ├── {{project}}.cr.ecr
+    │   │   │   │   ├── contracts
+    │   │   │   │   │   └── welcome
+    │   │   │   │   │       └── index_contract.cr.ecr
+    │   │   │   │   ├── db
+    │   │   │   │   │   └── migrations
+    │   │   │   │   ├── endpoints
+    │   │   │   │   │   └── welcome
+    │   │   │   │   │       └── index_endpoint.cr.ecr
+    │   │   │   │   ├── initializers
+    │   │   │   │   │   ├── database.cr.ecr
+    │   │   │   │   │   └── logger.cr.ecr
+    │   │   │   │   ├── models
+    │   │   │   │   │   └── your_models_goes_here.txt
+    │   │   │   │   ├── pages
+    │   │   │   │   │   └── welcome
+    │   │   │   │   │       └── index_page.cr.ecr
+    │   │   │   │   └── server.cr.ecr
+    │   │   │   └── tasks
+    │   │   │       └── taskfile.cr.ecr
+    │   │   └── scaffold
+    │   │       ├── public
+    │   │       │   └── templates
+    │   │       │       ├── helpers
+    │   │       │       │   └── +_nav.jinja.ecr
+    │   │       │       └── pages
+    │   │       │           └── {{resource}}
+    │   │       │               ├── edit_page.jinja.ecr
+    │   │       │               ├── index_page.jinja.ecr
+    │   │       │               ├── new_page.jinja.ecr
+    │   │       │               └── show_page.jinja.ecr
+    │   │       └── src
+    │   │           ├── contracts
+    │   │           │   └── {{resource}}
+    │   │           │       ├── create_contract.cr.ecr
+    │   │           │       ├── destroy_contract.cr.ecr
+    │   │           │       ├── edit_contract.cr.ecr
+    │   │           │       ├── index_contract.cr.ecr
+    │   │           │       ├── new_contract.cr.ecr
+    │   │           │       ├── show_contract.cr.ecr
+    │   │           │       └── update_contract.cr.ecr
+    │   │           ├── endpoints
+    │   │           │   └── {{resource}}
+    │   │           │       ├── create_endpoint.cr.ecr
+    │   │           │       ├── destroy_endpoint.cr.ecr
+    │   │           │       ├── edit_endpoint.cr.ecr
+    │   │           │       ├── index_endpoint.cr.ecr
+    │   │           │       ├── new_endpoint.cr.ecr
+    │   │           │       ├── show_endpoint.cr.ecr
+    │   │           │       └── update_endpoint.cr.ecr
+    │   │           ├── models
+    │   │           │   └── your_models_goes_here.txt
+    │   │           └── pages
+    │   │               └── {{resource}}
+    │   │                   ├── edit_page.cr.ecr
+    │   │                   ├── index_page.cr.ecr
+    │   │                   ├── new_page.cr.ecr
+    │   │                   └── show_page.cr.ecr
+    │   └── utils.cr
+    └── azu_cli.cr
 ```
 
 ### File Naming
@@ -262,5 +363,502 @@ end
 - Leverage Crystal's built-in debugging capabilities
 - Use proper logging instead of `puts` for debugging
 - Test with various Crystal versions if possible
+
+ation errors gracefully
+
+## Features
+
+# Azu CLI - Project Development Plan
+
+:::info[Project Overview]
+**Project Name:** Azu CLI
+**Language:** Crystal
+**Dependencies:** azutoolkit/azu, azutoolkit/cql
+**Target:** Developer productivity and engagement enhancement
+**Priority:** High-impact developer experience
+:::
+
+## Phase 1: Foundation & Core Commands
+
+:::phase[Phase 1 - Foundation]
+**Priority:** Critical
+**Dependencies:** azutoolkit/azu, azutoolkit/cql
+**Deliverables:** Basic CLI structure, core commands, project scaffolding
+:::
+
+### 1.1 CLI Infrastructure
+
+:::task[CLI Framework Setup]
+**Priority:** P0
+**Dependencies:** Crystal CLI libraries
+
+- [ ] Set up Crystal CLI framework Topia (https://github.com/azutoolkit/topia/tree/master)
+- [ ] Implement command parsing and routing
+- [ ] Create base command structure
+- [ ] Add configuration management system
+- [ ] Implement logging and error handling
+- [ ] Set up testing framework for CLI commands
+
+**Acceptance Criteria:**
+- CLI can parse commands and subcommands
+- Configuration files are properly loaded
+- Error messages are user-friendly
+- Unit tests cover core functionality
+:::
+
+### 1.2 Project Management Core
+
+:::task[Project Initialization]
+**Priority:** P0
+**Dependencies:** Azu toolkit integration
+
+- [ ] `azu new <project-name>` command
+- [ ] `azu init` for existing projects
+- [ ] Template system architecture
+- [ ] Basic project templates (web, api, cli)
+- [ ] Interactive project setup wizard
+- [ ] Shard.yml generation and management
+
+**Acceptance Criteria:**
+- Can create new Azu projects from templates
+- Interactive setup guides user through configuration
+- Generated projects compile and run successfully
+- Templates are easily extensible
+:::
+
+:::task[Code Generation System]
+**Priority:** P0
+**Dependencies:** Project templates
+
+- [ ] `azu generate` command framework
+- [ ] Controller generation
+- [ ] Model generation
+- [ ] Service generation
+- [ ] Middleware generation
+- [ ] Custom component templates
+
+**Acceptance Criteria:**
+- Generated components follow Azu conventions
+- Files are created in correct directory structure
+- Generated code includes proper imports and boilerplate
+- Components integrate seamlessly with existing project
+:::
+
+### 1.3 Database Integration (CQL)
+
+:::task[Database Commands]
+**Priority:** P1
+**Dependencies:** CQL toolkit integration
+
+- [ ] `azu db:create` command
+- [ ] `azu db:migrate` command
+- [ ] `azu db:seed` command
+- [ ] `azu db:reset` command
+- [ ] Migration file generation
+- [ ] Database configuration management
+
+**Acceptance Criteria:**
+- Database operations work with multiple adapters
+- Migrations can be run and rolled back
+- Seed data can be loaded consistently
+- Database state is properly managed
+:::
+
+## Phase 2: Development Workflow Enhancement
+
+:::phase[Phase 2 - Development Tools]
+**Priority:** High
+**Dependencies:** Phase 1 completion
+**Deliverables:** Development server, testing tools, code quality
+:::
+
+### 2.1 Development Server
+
+:::task[Hot Reloading Server]
+**Priority:** P1
+**Dependencies:** File system watching
+
+- [ ] `azu serve` command
+- [ ] File system watcher implementation
+- [ ] Hot reloading mechanism
+- [ ] Multi-environment configuration
+- [ ] Development middleware integration
+- [ ] Error reporting and recovery
+
+**Acceptance Criteria:**
+- Changes trigger automatic rebuilds
+- Browser automatically refreshes on changes
+- Build errors are displayed clearly
+- Server can handle multiple environments
+:::
+
+### 2.2 Testing & Quality
+
+:::task[Testing Framework Integration]
+**Priority:** P1
+**Dependencies:** Crystal testing frameworks
+
+- [ ] `azu test` command
+- [ ] `azu test:watch` for continuous testing
+- [ ] Parallel test execution
+- [ ] Code coverage reporting
+- [ ] Test result formatting
+- [ ] Integration with CI/CD
+
+**Acceptance Criteria:**
+- Tests run efficiently with proper reporting
+- Coverage reports are accurate and detailed
+- Continuous testing provides immediate feedback
+- Integration tests work with database
+:::
+
+:::task[Code Quality Tools]
+**Priority:** P1
+**Dependencies:** Crystal linting tools
+
+- [ ] `azu lint` command
+- [ ] `azu format` command
+- [ ] Customizable linting rules
+- [ ] Pre-commit hook integration
+- [ ] Code complexity analysis
+- [ ] Security vulnerability scanning
+
+**Acceptance Criteria:**
+- Code style is consistently enforced
+- Linting rules are configurable
+- Format command preserves code semantics
+- Security issues are detected and reported
+:::
+
+### 2.3 Interactive Development
+
+:::task[REPL Integration]
+**Priority:** P2
+**Dependencies:** Crystal REPL capabilities
+
+- [ ] `azu console` command
+- [ ] Application context loading
+- [ ] Interactive query building
+- [ ] Component inspection
+- [ ] State debugging capabilities
+- [ ] History and session management
+
+**Acceptance Criteria:**
+- REPL loads full application context
+- Can interact with models and services
+- Database queries can be tested interactively
+- Session state is preserved between commands
+:::
+
+## Phase 3: Advanced Features & Integrations
+
+:::phase[Phase 3 - Advanced Tools]
+**Priority:** Medium
+**Dependencies:** Phase 2 completion
+**Deliverables:** Authentication, jobs, deployment, documentation
+:::
+
+### 3.1 Authentication Integration
+
+:::task[Authly Integration]
+**Priority:** P1
+**Dependencies:** Authly toolkit
+
+- [ ] `azu auth:setup` command
+- [ ] OAuth2 configuration
+- [ ] JWT token management
+- [ ] User model generation
+- [ ] Authentication middleware setup
+- [ ] Security audit tools
+
+**Acceptance Criteria:**
+- Authentication can be configured quickly
+- Multiple OAuth providers supported
+- JWT tokens are properly managed
+- Security best practices are enforced
+:::
+
+### 3.2 Job Queue Management
+
+:::task[JoobQ Integration]
+**Priority:** P1
+**Dependencies:** JoobQ toolkit
+
+- [ ] `azu jobs:create` command
+- [ ] `azu jobs:monitor` dashboard
+- [ ] `azu jobs:retry` failed jobs
+- [ ] Job scheduling interface
+- [ ] Performance metrics collection
+- [ ] Queue management tools
+
+**Acceptance Criteria:**
+- Background jobs can be created and managed
+- Queue monitoring provides real-time status
+- Failed jobs can be inspected and retried
+- Scheduling works reliably
+:::
+
+### 3.3 Deployment & Production
+
+:::task[Build & Deploy Tools]
+**Priority:** P2
+**Dependencies:** Platform-specific deployment tools
+
+- [ ] `azu build` command with optimization
+- [ ] `azu deploy` for multiple platforms
+- [ ] Docker integration
+- [ ] Environment variable management
+- [ ] Health check implementation
+- [ ] Log aggregation and analysis
+
+**Acceptance Criteria:**
+- Production builds are optimized
+- Deployment works for major platforms
+- Environment configuration is secure
+- Health checks provide meaningful status
+:::
+
+### 3.4 Documentation & API Tools
+
+:::task[Documentation Generation]
+**Priority:** P2
+**Dependencies:** Code analysis tools
+
+- [ ] `azu docs` command
+- [ ] API documentation generation
+- [ ] OpenAPI specification support
+- [ ] Interactive documentation server
+- [ ] Code example extraction
+- [ ] Documentation validation
+
+**Acceptance Criteria:**
+- Documentation is generated from code
+- API docs are interactive and comprehensive
+- Examples are validated and current
+- Documentation can be served locally
+:::
+
+## Phase 4: Enhanced Developer Experience
+
+:::phase[Phase 4 - UX Enhancement]
+**Priority:** Medium
+**Deliverables:** Visual improvements, productivity tools, team features
+:::
+
+### 4.1 Visual & Interactive Enhancements
+
+:::task[Rich Terminal UI]
+**Priority:** P2
+**Dependencies:** Terminal UI libraries
+
+- [ ] Interactive menus and forms
+- [ ] Progress bars and status indicators
+- [ ] Syntax highlighting
+- [ ] Color-coded output
+- [ ] Dashboard mode for monitoring
+- [ ] Responsive terminal layouts
+
+**Acceptance Criteria:**
+- Terminal interface is visually appealing
+- Interactive elements work reliably
+- Output is color-coded and readable
+- Dashboard provides useful overview
+:::
+
+### 4.2 Productivity Tools
+
+:::task[Code Analysis & Optimization]
+**Priority:** P2
+**Dependencies:** Static analysis tools
+
+- [ ] `azu analyze` command
+- [ ] Code complexity metrics
+- [ ] Performance bottleneck detection
+- [ ] Dependency analysis
+- [ ] Refactoring suggestions
+- [ ] Architecture visualization
+
+**Acceptance Criteria:**
+- Analysis provides actionable insights
+- Metrics track code quality over time
+- Performance issues are identified
+- Suggestions improve code quality
+:::
+
+### 4.3 Team Collaboration
+
+:::task[Collaboration Features]
+**Priority:** P2
+**Dependencies:** Git integration
+
+- [ ] `azu team:setup` command
+- [ ] Shared configuration management
+- [ ] Code review checklist generation
+- [ ] Development guideline enforcement
+- [ ] Progress tracking tools
+- [ ] Team metrics dashboard
+
+**Acceptance Criteria:**
+- Team setup is automated and consistent
+- Configurations are shared reliably
+- Code review process is streamlined
+- Team productivity is visible
+:::
+
+## Phase 5: Advanced & Enterprise Features
+
+:::phase[Phase 5 - Advanced Features
+**Priority:** Low
+**Dependencies:** Phase 4 completion
+**Deliverables:** AI assistance, monitoring, enterprise tools
+:::
+
+### 5.1 AI-Powered Assistance
+
+:::task[Smart Development Tools]
+**Priority:** P3
+**Dependencies:** AI/ML integration
+
+- [ ] Context-aware code suggestions
+- [ ] Intelligent error resolution
+- [ ] Code optimization recommendations
+- [ ] Pattern recognition and suggestions
+- [ ] Natural language query interface
+- [ ] Automated code review
+
+**Acceptance Criteria:**
+- Suggestions are contextually relevant
+- Error resolution is accurate
+- Optimization suggestions improve performance
+- Natural language interface is intuitive
+:::
+
+### 5.2 Monitoring & Observability
+
+:::task[Application Monitoring]
+**Priority:** P3
+**Dependencies:** Monitoring libraries
+
+- [ ] Real-time performance monitoring
+- [ ] Distributed tracing implementation
+- [ ] Custom metrics collection
+- [ ] Alerting system
+- [ ] Performance dashboard
+- [ ] Automated performance reports
+
+**Acceptance Criteria:**
+- Monitoring captures relevant metrics
+- Tracing provides insight into bottlenecks
+- Alerts are timely and actionable
+- Dashboard is informative and responsive
+:::
+
+## Cross-Cutting Concerns
+
+:::concern[Documentation & Learning]
+**Throughout all phases**
+
+- [ ] Comprehensive CLI help system
+- [ ] Interactive tutorials
+- [ ] Best practices documentation
+- [ ] Video tutorials and screencasts
+- [ ] Community examples and patterns
+- [ ] Migration guides from other tools
+:::
+
+:::concern[Testing & Quality Assurance]
+**Throughout all phases**
+
+- [ ] Unit tests for all commands
+- [ ] Integration tests for workflows
+- [ ] Performance benchmarks
+- [ ] User acceptance testing
+- [ ] Accessibility testing
+- [ ] Cross-platform compatibility
+:::
+
+:::concern[Configuration & Extensibility]
+**Throughout all phases**
+
+- [ ] Plugin system architecture (Topia::Plugin - https://github.com/azutoolkit/topia/blob/master/src/topia/plugin.cr)
+- [ ] Custom command development
+- [ ] Configuration schema validation
+- [ ] Theme and customization support
+- [ ] IDE and editor integrations
+- [ ] API for third-party tools
+:::
+
+## Success Metrics
+
+:::metrics[Key Performance Indicators]
+**Developer Adoption:**
+- CLI download and usage rates
+- Community contributions and plugins
+- Documentation engagement metrics
+- Support ticket volume and resolution time
+
+**Developer Productivity:**
+- Time to create new project (target: <2 minutes)
+- Build and deployment time improvements
+- Code quality metrics improvement
+- Developer satisfaction surveys
+
+**Technical Performance:**
+- CLI command response times (target: <500ms)
+- Memory usage optimization
+- Cross-platform compatibility score
+- Integration test coverage (target: >90%)
+:::
+
+## Risk Mitigation
+
+:::risk[Technical Risks]
+**Risk:** Crystal ecosystem limitations
+**Mitigation:** Early prototyping and community engagement
+
+**Risk:** CQL/Azu toolkit breaking changes
+**Mitigation:** Version pinning and automated compatibility testing
+
+**Risk:** Performance issues with large projects
+**Mitigation:** Performance testing and optimization from early phases
+
+**Risk:** Cross-platform compatibility problems
+**Mitigation:** Continuous testing on multiple platforms
+:::
+
+:::risk[Project Risks]
+**Risk:** Feature scope creep
+**Mitigation:** Strict phase gates and prioritization framework
+
+**Risk:** Developer adoption challenges
+**Mitigation:** Early user feedback and iterative development
+
+**Risk:** Maintenance burden
+**Mitigation:** Automated testing and modular architecture
+
+**Risk:** Competition from existing tools
+**Mitigation:** Unique value proposition focus and community building
+:::
+
+## Implementation Notes
+
+:::implementation[Architecture Decisions]
+**CLI Framework:** Topia (https://github.com/azutoolkit/topia) Crystal command-line parsing
+**Configuration:** YAML-based with schema validation (Topia Configuration)
+**Plugin System:** Crystal compilation-based plugins (Topia::Plugin - https://github.com/azutoolkit/topia/blob/master/src/topia/plugin.cr))
+**Testing:** Crystal's built-in testing with custom reporters
+**Documentation:** Crystal's doc generator with custom templates
+**Packaging:** Crystal's native compilation with cross-platform builds
+:::
+
+:::implementation[Development Workflow]
+**Version Control:** Git with conventional commits
+**CI/CD:** GitHub Actions with multi-platform testing
+**Code Quality:** Crystal's built-in formatter with custom linting
+**Documentation:** Inline documentation with generated guides
+**Release Management:** Semantic versioning with automated releases
+**Community:** Discord/Gitter for real-time support
+:::
+
 
 Remember: The Azu CLI should feel intuitive and powerful, following Crystal's philosophy of performance and expressiveness while maintaining the elegant simplicity that makes developers productive.
