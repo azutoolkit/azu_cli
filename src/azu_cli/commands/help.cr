@@ -45,6 +45,7 @@ module AzuCLI::Commands
         {name: "migration", desc: "Generate a new database migration", category: "Generation"},
         {name: "serve", desc: "Start development server with hot reloading", category: "Development"},
         {name: "dev", desc: "Alias for serve command", category: "Development"},
+        {name: "console", desc: "Start interactive console with full application context", category: "Development"},
         {name: "db:create", desc: "Create the database", category: "Database"},
         {name: "db:migrate", desc: "Run database migrations", category: "Database"},
         {name: "db:rollback", desc: "Rollback database migration", category: "Database"},

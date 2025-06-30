@@ -24,6 +24,10 @@ shards:
     git: https://github.com/ysbaddaden/pool.git
     version: 0.2.4
 
+  readline:
+    git: https://github.com/crystal-lang/crystal-readline.git
+    version: 0.1.1
+
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
     version: 2.9.1

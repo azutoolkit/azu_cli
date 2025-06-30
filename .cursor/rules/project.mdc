@@ -111,121 +111,162 @@ end
 
 ### Directory Structure
 ```
-└── src
-    ├── azu_cli
-    │   ├── cli.cr
-    │   ├── command.cr
-    │   ├── commands
-    │   ├── database.cr
-    │   ├── dev.cr
-    │   ├── generators
-    │   │   ├── nav_scaffold.cr
-    │   │   ├── pages_scaffold.cr
-    │   │   ├── project.cr
-    │   │   └── src_scaffold.cr
-    │   ├── help.cr
-    │   ├── migration.cr
-    │   ├── model.cr
-    │   ├── process_runner.cr
-    │   ├── project.cr
-    │   ├── scaffold.cr
-    │   ├── tasks.cr
-    │   ├── templates
-    │   │   ├── cql
-    │   │   ├── jennifer
-    │   │   │   └── generators
-    │   │   │       ├── base.cr
-    │   │   │       ├── create_migration.cr
-    │   │   │       ├── create_migration.ecr
-    │   │   │       ├── field_set.cr
-    │   │   │       ├── field.cr
-    │   │   │       ├── migration.cr
-    │   │   │       ├── migration.ecr
-    │   │   │       ├── model.cr
-    │   │   │       └── model.ecr
-    │   │   ├── project
-    │   │   │   ├── LICENSE
-    │   │   │   ├── public
-    │   │   │   │   ├── assets
-    │   │   │   │   │   ├── css
-    │   │   │   │   │   │   ├── bootstrap.css.map
-    │   │   │   │   │   │   ├── bootstrap.min.css
-    │   │   │   │   │   │   └── cover.css
-    │   │   │   │   │   └── js
-    │   │   │   │   │       ├── bootstrap.min.js
-    │   │   │   │   │       └── bootstrap.min.js.map
-    │   │   │   │   └── templates
-    │   │   │   │       ├── helpers
-    │   │   │   │       │   └── _nav.jinja
-    │   │   │   │       ├── layout.jinja
-    │   │   │   │       └── welcome
-    │   │   │   │           └── index_page.jinja
-    │   │   │   ├── README.md.ecr
-    │   │   │   ├── shard.yml.ecr
-    │   │   │   ├── spec
-    │   │   │   │   ├── {{project}}_spec.cr.ecr
-    │   │   │   │   └── spec_helper.cr.ecr
-    │   │   │   ├── src
-    │   │   │   │   ├── {{project}}.cr.ecr
-    │   │   │   │   ├── contracts
-    │   │   │   │   │   └── welcome
-    │   │   │   │   │       └── index_contract.cr.ecr
-    │   │   │   │   ├── db
-    │   │   │   │   │   └── migrations
-    │   │   │   │   ├── endpoints
-    │   │   │   │   │   └── welcome
-    │   │   │   │   │       └── index_endpoint.cr.ecr
-    │   │   │   │   ├── initializers
-    │   │   │   │   │   ├── database.cr.ecr
-    │   │   │   │   │   └── logger.cr.ecr
-    │   │   │   │   ├── models
-    │   │   │   │   │   └── your_models_goes_here.txt
-    │   │   │   │   ├── pages
-    │   │   │   │   │   └── welcome
-    │   │   │   │   │       └── index_page.cr.ecr
-    │   │   │   │   └── server.cr.ecr
-    │   │   │   └── tasks
-    │   │   │       └── taskfile.cr.ecr
-    │   │   └── scaffold
-    │   │       ├── public
-    │   │       │   └── templates
-    │   │       │       ├── helpers
-    │   │       │       │   └── +_nav.jinja.ecr
-    │   │       │       └── pages
-    │   │       │           └── {{resource}}
-    │   │       │               ├── edit_page.jinja.ecr
-    │   │       │               ├── index_page.jinja.ecr
-    │   │       │               ├── new_page.jinja.ecr
-    │   │       │               └── show_page.jinja.ecr
-    │   │       └── src
-    │   │           ├── contracts
-    │   │           │   └── {{resource}}
-    │   │           │       ├── create_contract.cr.ecr
-    │   │           │       ├── destroy_contract.cr.ecr
-    │   │           │       ├── edit_contract.cr.ecr
-    │   │           │       ├── index_contract.cr.ecr
-    │   │           │       ├── new_contract.cr.ecr
-    │   │           │       ├── show_contract.cr.ecr
-    │   │           │       └── update_contract.cr.ecr
-    │   │           ├── endpoints
-    │   │           │   └── {{resource}}
-    │   │           │       ├── create_endpoint.cr.ecr
-    │   │           │       ├── destroy_endpoint.cr.ecr
-    │   │           │       ├── edit_endpoint.cr.ecr
-    │   │           │       ├── index_endpoint.cr.ecr
-    │   │           │       ├── new_endpoint.cr.ecr
-    │   │           │       ├── show_endpoint.cr.ecr
-    │   │           │       └── update_endpoint.cr.ecr
-    │   │           ├── models
-    │   │           │   └── your_models_goes_here.txt
-    │   │           └── pages
-    │   │               └── {{resource}}
-    │   │                   ├── edit_page.cr.ecr
-    │   │                   ├── index_page.cr.ecr
-    │   │                   ├── new_page.cr.ecr
-    │   │                   └── show_page.cr.ecr
-    │   └── utils.cr
-    └── azu_cli.cr
+./src
+├── azu_cli
+│   ├── command.cr
+│   ├── commands
+│   │   ├── db.cr
+│   │   ├── dev.cr
+│   │   ├── generate.cr
+│   │   ├── help.cr
+│   │   ├── init.cr
+│   │   ├── new.cr
+│   │   ├── serve.cr
+│   │   ├── topia_adapter.cr
+│   │   └── version.cr
+│   ├── config.cr
+│   ├── generators
+│   │   ├── base.cr
+│   │   ├── contract.cr
+│   │   ├── endpoint.cr
+│   │   ├── middleware.cr
+│   │   ├── migration.cr
+│   │   ├── model.cr
+│   │   ├── page.cr
+│   │   ├── project.cr
+│   │   └── service.cr
+│   ├── logger.cr
+│   ├── templates
+│   │   ├── generators
+│   │   │   ├── contract
+│   │   │   │   ├── contract_spec.cr.ecr
+│   │   │   │   └── contract.cr.ecr
+│   │   │   ├── endpoint
+│   │   │   │   ├── create_contract.cr.ecr
+│   │   │   │   ├── create_endpoint.cr.ecr
+│   │   │   │   ├── create_page.cr.ecr
+│   │   │   │   ├── destroy_contract.cr.ecr
+│   │   │   │   ├── destroy_endpoint.cr.ecr
+│   │   │   │   ├── destroy_page.cr.ecr
+│   │   │   │   ├── edit_contract.cr.ecr
+│   │   │   │   ├── edit_endpoint.cr.ecr
+│   │   │   │   ├── edit_page.cr.ecr
+│   │   │   │   ├── endpoint_spec.cr.ecr
+│   │   │   │   ├── index_contract.cr.ecr
+│   │   │   │   ├── index_endpoint.cr.ecr
+│   │   │   │   ├── index_page.cr.ecr
+│   │   │   │   ├── new_contract.cr.ecr
+│   │   │   │   ├── new_endpoint.cr.ecr
+│   │   │   │   ├── new_page.cr.ecr
+│   │   │   │   ├── show_contract.cr.ecr
+│   │   │   │   ├── show_endpoint.cr.ecr
+│   │   │   │   ├── show_page.cr.ecr
+│   │   │   │   ├── update_contract.cr.ecr
+│   │   │   │   ├── update_endpoint.cr.ecr
+│   │   │   │   └── update_page.cr.ecr
+│   │   │   ├── middleware
+│   │   │   │   ├── middleware_spec.cr.ecr
+│   │   │   │   └── middleware.cr.ecr
+│   │   │   ├── model
+│   │   │   │   ├── model_spec.cr.ecr
+│   │   │   │   └── model.cr.ecr
+│   │   │   ├── page
+│   │   │   │   ├── page_spec.cr.ecr
+│   │   │   │   ├── page.cr.ecr
+│   │   │   │   └── page.jinja.ecr
+│   │   │   └── service
+│   │   │       ├── service_spec.cr.ecr
+│   │   │       └── service.cr.ecr
+│   │   ├── hot_reload_client.js
+│   │   ├── project
+│   │   │   ├── db
+│   │   │   ├── LICENSE
+│   │   │   ├── public
+│   │   │   │   ├── assets
+│   │   │   │   │   ├── css
+│   │   │   │   │   │   ├── bootstrap.css.map
+│   │   │   │   │   │   ├── bootstrap.min.css
+│   │   │   │   │   │   └── cover.css
+│   │   │   │   │   └── js
+│   │   │   │   │       ├── bootstrap.min.js
+│   │   │   │   │       └── bootstrap.min.js.map
+│   │   │   │   └── templates
+│   │   │   │       ├── helpers
+│   │   │   │       │   └── _nav.jinja
+│   │   │   │       ├── layout.jinja
+│   │   │   │       └── welcome
+│   │   │   │           └── index_page.jinja
+│   │   │   ├── README.md.ecr
+│   │   │   ├── shard.yml.ecr
+│   │   │   ├── spec
+│   │   │   │   ├── {{project}}_spec.cr.ecr
+│   │   │   │   └── spec_helper.cr.ecr
+│   │   │   ├── src
+│   │   │   │   ├── {{project}}.cr.ecr
+│   │   │   │   ├── contracts
+│   │   │   │   │   └── welcome
+│   │   │   │   │       └── index_contract.cr.ecr
+│   │   │   │   ├── db
+│   │   │   │   │   ├── migrations
+│   │   │   │   │   ├── README.md.ecr
+│   │   │   │   │   ├── schema.cr.ecr
+│   │   │   │   │   └── seed.cr.ecr
+│   │   │   │   ├── endpoints
+│   │   │   │   │   └── welcome
+│   │   │   │   │       └── index_endpoint.cr.ecr
+│   │   │   │   ├── initializers
+│   │   │   │   │   ├── database.cr.ecr
+│   │   │   │   │   └── logger.cr.ecr
+│   │   │   │   ├── models
+│   │   │   │   │   └── your_models_goes_here.txt
+│   │   │   │   ├── pages
+│   │   │   │   │   └── welcome
+│   │   │   │   │       └── index_page.cr.ecr
+│   │   │   │   └── server.cr.ecr
+│   │   │   └── tasks
+│   │   │       └── taskfile.cr.ecr
+│   │   └── scaffold
+│   │       ├── public
+│   │       │   └── templates
+│   │       │       ├── helpers
+│   │       │       │   └── +_nav.jinja.ecr
+│   │       │       └── pages
+│   │       │           └── {{resource}}
+│   │       │               ├── edit_page.jinja.ecr
+│   │       │               ├── index_page.jinja.ecr
+│   │       │               ├── new_page.jinja.ecr
+│   │       │               └── show_page.jinja.ecr
+│   │       └── src
+│   │           ├── contracts
+│   │           │   └── {{resource}}
+│   │           │       ├── create_contract.cr.ecr
+│   │           │       ├── destroy_contract.cr.ecr
+│   │           │       ├── edit_contract.cr.ecr
+│   │           │       ├── index_contract.cr.ecr
+│   │           │       ├── new_contract.cr.ecr
+│   │           │       ├── show_contract.cr.ecr
+│   │           │       └── update_contract.cr.ecr
+│   │           ├── endpoints
+│   │           │   └── {{resource}}
+│   │           │       ├── create_endpoint.cr.ecr
+│   │           │       ├── destroy_endpoint.cr.ecr
+│   │           │       ├── edit_endpoint.cr.ecr
+│   │           │       ├── index_endpoint.cr.ecr
+│   │           │       ├── new_endpoint.cr.ecr
+│   │           │       ├── show_endpoint.cr.ecr
+│   │           │       └── update_endpoint.cr.ecr
+│   │           ├── models
+│   │           │   └── your_models_goes_here.txt
+│   │           └── pages
+│   │               └── {{resource}}
+│   │                   ├── edit_page.cr.ecr
+│   │                   ├── index_page.cr.ecr
+│   │                   ├── new_page.cr.ecr
+│   │                   └── show_page.cr.ecr
+│   └── utils.cr
+└── azu_cli.cr
+
+48 directories, 106 files
 ```
 
 ### File Naming
@@ -392,12 +433,12 @@ ation errors gracefully
 **Priority:** P0
 **Dependencies:** Crystal CLI libraries
 
-- [ ] Set up Crystal CLI framework Topia (https://github.com/azutoolkit/topia/tree/master)
-- [ ] Implement command parsing and routing
-- [ ] Create base command structure
-- [ ] Add configuration management system
-- [ ] Implement logging and error handling
-- [ ] Set up testing framework for CLI commands
+- [x] Set up Crystal CLI framework Topia (https://github.com/azutoolkit/topia/tree/master)
+- [x] Implement command parsing and routing
+- [x] Create base command structure
+- [x] Add configuration management system
+- [x] Implement logging and error handling
+- [x] Set up testing framework for CLI commands
 
 **Acceptance Criteria:**
 - CLI can parse commands and subcommands
@@ -412,12 +453,12 @@ ation errors gracefully
 **Priority:** P0
 **Dependencies:** Azu toolkit integration
 
-- [ ] `azu new <project-name>` command
-- [ ] `azu init` for existing projects
-- [ ] Template system architecture
-- [ ] Basic project templates (web, api, cli)
-- [ ] Interactive project setup wizard
-- [ ] Shard.yml generation and management
+- [x] `azu new <project-name>` command
+- [x] `azu init` for existing projects
+- [x] Template system architecture
+- [x] Basic project templates (web, api, cli)
+- [x] Interactive project setup wizard
+- [x] Shard.yml generation and management
 
 **Acceptance Criteria:**
 - Can create new Azu projects from templates
@@ -430,12 +471,12 @@ ation errors gracefully
 **Priority:** P0
 **Dependencies:** Project templates
 
-- [ ] `azu generate` command framework
-- [ ] Controller generation
-- [ ] Model generation
-- [ ] Service generation
-- [ ] Middleware generation
-- [ ] Custom component templates
+- [x] `azu generate` command framework
+- [x] Controller generation
+- [x] Model generation
+- [x] Service generation
+- [x] Middleware generation
+- [x] Custom component templates
 
 **Acceptance Criteria:**
 - Generated components follow Azu conventions
@@ -450,12 +491,12 @@ ation errors gracefully
 **Priority:** P1
 **Dependencies:** CQL toolkit integration
 
-- [ ] `azu db:create` command
-- [ ] `azu db:migrate` command
-- [ ] `azu db:seed` command
-- [ ] `azu db:reset` command
-- [ ] Migration file generation
-- [ ] Database configuration management
+- [x] `azu db:create` command
+- [x] `azu db:migrate` command
+- [x] `azu db:seed` command
+- [x] `azu db:reset` command
+- [x] Migration file generation
+- [x] Database configuration management
 
 **Acceptance Criteria:**
 - Database operations work with multiple adapters
@@ -478,12 +519,12 @@ ation errors gracefully
 **Priority:** P1
 **Dependencies:** File system watching
 
-- [ ] `azu serve` command
-- [ ] File system watcher implementation
-- [ ] Hot reloading mechanism
-- [ ] Multi-environment configuration
-- [ ] Development middleware integration
-- [ ] Error reporting and recovery
+- [x] `azu serve` command
+- [x] File system watcher implementation
+- [x] Hot reloading mechanism
+- [x] Multi-environment configuration
+- [x] Development middleware integration
+- [x] Error reporting and recovery
 
 **Acceptance Criteria:**
 - Changes trigger automatic rebuilds
@@ -859,6 +900,5 @@ ation errors gracefully
 **Release Management:** Semantic versioning with automated releases
 **Community:** Discord/Gitter for real-time support
 :::
-
 
 Remember: The Azu CLI should feel intuitive and powerful, following Crystal's philosophy of performance and expressiveness while maintaining the elegant simplicity that makes developers productive.
