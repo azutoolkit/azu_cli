@@ -7,57 +7,127 @@ require "mysql"
 require "sqlite3"
 <% end -%>
 
-# Configure CQL database connection
+# Configure CQL database settings
 # See: https://azutopia.gitbook.io/cql/getting-started/configuration
+CQL.configure do |config|
+  # Core Database Settings
 <% case @database when "postgresql", "postgres", "pg" -%>
-AppDB = CQL::Schema.define(
-  :app_database,
-  adapter: CQL::Adapter::Postgres,
-  uri: ENV.fetch("DATABASE_URL", "postgresql://postgres@localhost:5432/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}")
-) do
-  # Define your database schema here
-  # Example:
-  # table :users do
-  #   primary :id, Int32
-  #   column :name, String
-  #   column :email, String
-  #   column :active, Bool, default: true
-  #   timestamps
-  # end
-end
+  config.database_url = ENV.fetch("DATABASE_URL", "postgresql://postgres@localhost:5432/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}")
 <% when "mysql" -%>
-AppDB = CQL::Schema.define(
-  :app_database,
-  adapter: CQL::Adapter::MySQL,
-  uri: ENV.fetch("DATABASE_URL", "mysql://root@localhost:3306/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}")
-) do
-  # Define your database schema here
-  # Example:
-  # table :users do
-  #   primary :id, Int32
-  #   column :name, String
-  #   column :email, String
-  #   column :active, Bool, default: true
-  #   timestamps
-  # end
-end
+  config.database_url = ENV.fetch("DATABASE_URL", "mysql://root@localhost:3306/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}")
 <% when "sqlite" -%>
-AppDB = CQL::Schema.define(
-  :app_database,
-  adapter: CQL::Adapter::SQLite,
-  uri: ENV.fetch("DATABASE_URL", "sqlite3://db/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}.db")
-) do
-  # Define your database schema here
-  # Example:
-  # table :users do
-  #   primary :id, Int32
-  #   column :name, String
-  #   column :email, String
-  #   column :active, Bool, default: true
-  #   timestamps
-  # end
-end
+  config.database_url = ENV.fetch("DATABASE_URL", "sqlite3://db/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}.db")
 <% end -%>
+
+  # Environment settings
+  config.environment = ENV.fetch("AZU_ENV", "development")
+  config.default_timezone = :utc
+
+  # Migration and Schema Management
+  config.migration_table_name = :cql_schema_migrations
+  config.schema_path = "src/db"
+  config.schema_file_name = "schema.cr"
+  config.schema_constant_name = :AppSchema
+  config.schema_symbol = :app_schema
+  config.auto_load_models = true
+  config.enable_auto_schema_sync = true
+  config.bootstrap_on_startup = false
+  config.verify_schema_on_startup = false
+
+  # Query and Performance Settings
+  config.enable_query_cache = false
+  config.cache_ttl = 1.hour
+  config.enable_performance_monitoring = false
+
+  # Connection Pool Settings
+  config.connection_pool.size = ENV.fetch("DB_POOL_SIZE", "10").to_i
+  config.connection_pool.initial_size = 1
+  config.connection_pool.max_idle_size = ENV.fetch("DB_MAX_IDLE", "5").to_i
+  config.connection_pool.max_retry_attempts = 3
+  config.connection_pool.retry_delay = 1.second
+  config.connection_pool.checkout_timeout = 5.seconds
+
+<% if @database == "postgresql" || @database == "postgres" || @database == "pg" -%>
+  # PostgreSQL specific settings
+  config.postgresql.sslmode = ENV.fetch("DB_SSLMODE", "prefer")
+  config.postgresql.connect_timeout = ENV.fetch("DB_CONNECT_TIMEOUT", "10").to_i
+  config.postgresql.prepared_statements = true
+  config.postgresql.max_connections = ENV.fetch("DB_MAX_CONNECTIONS", "100").to_i
+
+<% elsif @database == "mysql" -%>
+  # MySQL specific settings
+  config.mysql.charset = ENV.fetch("DB_CHARSET", "utf8mb4")
+  config.mysql.collation = ENV.fetch("DB_COLLATION", "utf8mb4_unicode_ci")
+  config.mysql.read_timeout = ENV.fetch("DB_READ_TIMEOUT", "30").to_i
+  config.mysql.write_timeout = ENV.fetch("DB_WRITE_TIMEOUT", "30").to_i
+  config.mysql.connect_timeout = ENV.fetch("DB_CONNECT_TIMEOUT", "10").to_i
+
+<% elsif @database == "sqlite" -%>
+  # SQLite specific settings
+  config.sqlite.journal_mode = ENV.fetch("DB_JOURNAL_MODE", "wal")
+  config.sqlite.synchronous = ENV.fetch("DB_SYNCHRONOUS", "normal")
+  config.sqlite.cache_size = ENV.fetch("DB_CACHE_SIZE", "10000").to_i
+  config.sqlite.busy_timeout = ENV.fetch("DB_BUSY_TIMEOUT", "30000").to_i
+  config.sqlite.foreign_keys = true
+
+<% end -%>
+  # Environment-specific configurations
+  case config.environment
+  when "development"
+    config.enable_performance_monitoring = ENV.fetch("ENABLE_PERFORMANCE_MONITORING", "true") == "true"
+    config.auto_load_models = true
+    config.enable_auto_schema_sync = true
+    config.enable_query_cache = false
+    config.verify_schema_on_startup = ENV.fetch("VERIFY_SCHEMA_ON_STARTUP", "false") == "true"
+
+  when "test"
+    config.enable_performance_monitoring = false
+    config.auto_load_models = false
+    config.enable_auto_schema_sync = false
+    config.enable_query_cache = false
+    config.bootstrap_on_startup = false
+    config.verify_schema_on_startup = false
+    config.connection_pool.size = 1
+
+  when "production"
+    config.enable_performance_monitoring = ENV.fetch("ENABLE_PERFORMANCE_MONITORING", "false") == "true"
+    config.auto_load_models = false
+    config.enable_auto_schema_sync = false
+    config.enable_query_cache = ENV.fetch("ENABLE_QUERY_CACHE", "true") == "true"
+    config.cache_ttl = ENV.fetch("CACHE_TTL_HOURS", "1").to_i.hours
+    config.bootstrap_on_startup = false
+    config.verify_schema_on_startup = ENV.fetch("VERIFY_SCHEMA_ON_STARTUP", "true") == "true"
+    config.connection_pool.size = ENV.fetch("DB_POOL_SIZE", "25").to_i
+    config.connection_pool.max_idle_size = ENV.fetch("DB_MAX_IDLE", "10").to_i
+
+  when "staging"
+    config.enable_performance_monitoring = ENV.fetch("ENABLE_PERFORMANCE_MONITORING", "true") == "true"
+    config.auto_load_models = false
+    config.enable_auto_schema_sync = false
+    config.enable_query_cache = ENV.fetch("ENABLE_QUERY_CACHE", "true") == "true"
+    config.verify_schema_on_startup = ENV.fetch("VERIFY_SCHEMA_ON_STARTUP", "true") == "true"
+    config.connection_pool.size = ENV.fetch("DB_POOL_SIZE", "15").to_i
+  end
+
+  # Logger configuration
+  config.logger = Log.for("CQL")
+
+  # Custom validation (optional)
+  config.add_validator(Class.new(CQL::Configure::ConfigValidator) do
+    def validate!(config : CQL::Configure::Config) : Nil
+      if config.environment == "production" && config.database_url.includes?("localhost")
+        Log.warn { "⚠️  Using localhost database URL in production environment" }
+      end
+
+      if config.connection_pool.size < 5 && config.environment == "production"
+        Log.warn { "⚠️  Connection pool size might be too small for production" }
+      end
+    end
+  end.new)
+end
+
+# Load the database schema
+require "./db/schema"
 
 # Enable query logging in development
 if ENV.fetch("AZU_ENV", "development") == "development"

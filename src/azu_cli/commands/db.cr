@@ -66,9 +66,9 @@ module AzuCLI::Commands
 
     private def get_database_schema_paths : Array(String)
       [
-        "src/schema.cr",
         "src/db/schema.cr",
-        "src/database/schema.cr"
+        "src/schema.cr",
+        "src/database/schema.cr",
       ]
     end
 
@@ -94,7 +94,6 @@ module AzuCLI::Commands
         end
 
         log.success("✅ Database '#{database_name}' created successfully!")
-
       rescue ex : Exception
         log.error("Failed to create database: #{ex.message}")
         log.info("Make sure the database server is running and you have the necessary permissions")
@@ -120,7 +119,6 @@ module AzuCLI::Commands
         end
 
         log.success("✅ Migrations completed successfully!")
-
       rescue ex : Exception
         log.error("Migration failed: #{ex.message}")
         log.info("Check your migration files and database connectivity")
@@ -131,7 +129,7 @@ module AzuCLI::Commands
       log.info("🌱 Seeding database...")
 
       begin
-        seed_file = "db/seeds.cr"
+        seed_file = "src/db/seed.cr"
 
         if File.exists?(seed_file)
           log.info("Running seed file: #{seed_file}")
@@ -143,7 +141,6 @@ module AzuCLI::Commands
           log.info("Create #{seed_file} to define your seed data")
           show_seed_example
         end
-
       rescue ex : Exception
         log.error("Seeding failed: #{ex.message}")
       end
@@ -182,7 +179,6 @@ module AzuCLI::Commands
         db_seed(args)
 
         log.success("✅ Database reset completed successfully!")
-
       rescue ex : Exception
         log.error("Database reset failed: #{ex.message}")
       end
@@ -196,7 +192,6 @@ module AzuCLI::Commands
         check_migrations_directory
         rollback_migrations(steps)
         log.success("✅ Rollback completed successfully!")
-
       rescue ex : Exception
         log.error("Rollback failed: #{ex.message}")
       end
@@ -208,7 +203,6 @@ module AzuCLI::Commands
       begin
         check_migrations_directory
         show_migration_status
-
       rescue ex : Exception
         log.error("Failed to get migration status: #{ex.message}")
       end
@@ -230,7 +224,6 @@ module AzuCLI::Commands
       begin
         create_migration_file(migration_name)
         log.success("✅ Migration file created successfully!")
-
       rescue ex : Exception
         log.error("Failed to create migration: #{ex.message}")
       end
@@ -344,7 +337,7 @@ module AzuCLI::Commands
     end
 
     private def check_migrations_directory
-      migrations_dir = "db/migrations"
+      migrations_dir = "src/db/migrations"
 
       unless Dir.exists?(migrations_dir)
         log.error("Migrations directory not found: #{migrations_dir}")
@@ -354,12 +347,12 @@ module AzuCLI::Commands
     end
 
     private def run_all_migrations
-      migrations_dir = "db/migrations"
+      migrations_dir = "src/db/migrations"
       migration_files = Dir.glob("#{migrations_dir}/*.cr").sort
 
       if migration_files.empty?
         log.info("No migration files found in #{migrations_dir}")
-        log.info("Create migrations with: azu db new_migration <name>")
+        log.info("Create migrations with: azu generate migration <name>")
         return
       end
 
@@ -383,21 +376,21 @@ module AzuCLI::Commands
     end
 
     private def show_migration_status
-      migrations_dir = "db/migrations"
+      migrations_dir = "src/db/migrations"
       migration_files = Dir.glob("#{migrations_dir}/*.cr").sort
 
       puts "\n📋 Migration Status:"
 
       if migration_files.empty?
         puts "   No migrations found"
-        puts "   Create migrations with: azu db new_migration <name>"
+        puts "   Create migrations with: azu generate migration <name>"
       else
         puts "   Migration files found:"
         migration_files.each do |file|
           basename = File.basename(file, ".cr")
           puts "   📄 #{basename}"
         end
-        puts "\n   💡 Run 'azu db migrate' to apply migrations"
+        puts "\n   💡 Run 'azu db:migrate' to apply migrations"
         puts "   💡 Use CQL.migrator.print_applied_migrations in your app for detailed status"
       end
       puts
@@ -408,7 +401,7 @@ module AzuCLI::Commands
       class_name = name.split(/[_\s]/).map(&.capitalize).join
       filename = "#{timestamp}_#{name.gsub(/\s+/, "_").downcase}.cr"
 
-      migrations_dir = "db/migrations"
+      migrations_dir = "src/db/migrations"
       ensure_directory(migrations_dir)
 
       file_path = File.join(migrations_dir, filename)
@@ -468,32 +461,37 @@ module AzuCLI::Commands
 
     private def show_seed_example
       puts
-      puts "💡 Example seed file content (db/seeds.cr):".colorize(:cyan).bold
+      puts "💡 Example seed file content (src/db/seed.cr):".colorize(:cyan).bold
       puts <<-EXAMPLE
       require "cql"
-      require "../src/initializers/database"
-      require "../src/models/*"
+      require "../initializers/database"
+      require "../models/*"
 
-      # Clear existing data (optional)
-      # User.delete_all
+      puts "🌱 Seeding database..."
+
+      # Ensure we're connected to the database
+      unless AppSchema.connected?
+        puts "❌ Database not connected. Run 'azu db:create' and 'azu db:migrate' first."
+        exit(1)
+      end
 
       # Create seed data
-      puts "Creating users..."
+      puts "  👥 Creating users..."
 
       admin = User.create!(
         name: "Admin User",
         email: "admin@example.com",
-        role: "admin"
+        active: true
       )
 
-      regular_user = User.create!(
+      user = User.create!(
         name: "Regular User",
         email: "user@example.com",
-        role: "user"
+        active: true
       )
 
-      puts "Created \#{User.count} users"
-      puts "Seeding completed!"
+      puts "    ✅ Created \#{User.count} users"
+      puts "🎉 Seeding completed!"
       EXAMPLE
     end
 

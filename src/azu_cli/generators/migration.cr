@@ -13,7 +13,7 @@ module AzuCLI::Generator
       validate_name!
 
       # Create migrations directory if it doesn't exist
-      migrations_dir = File.join(".", "db", "migrations")
+      migrations_dir = File.join(".", "src", "db", "migrations")
       ensure_directory(migrations_dir)
 
       # Generate timestamp-based filename
@@ -317,55 +317,55 @@ module AzuCLI::Generator
 
             # Map common type aliases to CQL types based on CQL documentation
             column_type = case raw_type.downcase
-                         when "string", "text"
-                           "String"
-                         when "integer", "int"
-                           "Int32"
-                         when "bigint", "big_integer", "long"
-                           "Int64"
-                         when "float", "decimal", "number"
-                           "Float64"
-                         when "boolean", "bool"
-                           "Bool"
-                         when "datetime", "timestamp"
-                           "Time"
-                         when "date"
-                           "Time"
-                         when "json"
-                           "JSON::Any"
-                         when "uuid"
-                           "UUID"
-                         when "binary", "blob"
-                           "Bytes"
-                         when "real"
-                           "Float32"
-                         when "smallint", "short"
-                           "Int16"
-                         when "tinyint", "byte"
-                           "Int8"
-                         else
-                           "String"
-                         end
+                          when "string", "text"
+                            "String"
+                          when "integer", "int"
+                            "Int32"
+                          when "bigint", "big_integer", "long"
+                            "Int64"
+                          when "float", "decimal", "number"
+                            "Float64"
+                          when "boolean", "bool"
+                            "Bool"
+                          when "datetime", "timestamp"
+                            "Time"
+                          when "date"
+                            "Time"
+                          when "json"
+                            "JSON::Any"
+                          when "uuid"
+                            "UUID"
+                          when "binary", "blob"
+                            "Bytes"
+                          when "real"
+                            "Float32"
+                          when "smallint", "short"
+                            "Int16"
+                          when "tinyint", "byte"
+                            "Int8"
+                          else
+                            "String"
+                          end
 
             # Set appropriate options based on type
             column_options = case raw_type.downcase
-                           when "string", "text"
-                             "null: true"
-                           when "boolean", "bool"
-                             "default: false"
-                           when "integer", "int", "bigint", "float", "decimal"
-                             "null: true"
-                           else
-                             "null: true"
-                           end
+                             when "string", "text"
+                               "null: true"
+                             when "boolean", "bool"
+                               "default: false"
+                             when "integer", "int", "bigint", "float", "decimal"
+                               "null: true"
+                             else
+                               "null: true"
+                             end
           end
         end
       end
 
       {
-        "name" => column_name,
-        "type" => column_type,
-        "options" => column_options
+        "name"    => column_name,
+        "type"    => column_type,
+        "options" => column_options,
       }
     end
   end
