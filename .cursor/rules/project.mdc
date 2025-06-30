@@ -491,10 +491,10 @@ ation errors gracefully
 **Priority:** P1
 **Dependencies:** CQL toolkit integration
 
-- [x] `azu db:create` command
-- [x] `azu db:migrate` command
-- [x] `azu db:seed` command
-- [x] `azu db:reset` command
+- [x] `azu db create` command
+- [x] `azu db migrate` command
+- [x] `azu db seed` command
+- [x] `azu db reset` command
 - [x] Migration file generation
 - [x] Database configuration management
 

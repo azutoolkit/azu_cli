@@ -41,7 +41,6 @@ Azu CLI is a powerful, developer-friendly command-line tool designed to accelera
 
 - **Azu Web Framework**: High-performance, type-safe web framework
 - **CQL ORM**: Crystal Query Language Object-Relational Mapping
-- **Jennifer ORM**: Legacy ORM support
 - **Topia CLI**: Powerful command-line parsing framework
 
 ## 🎯 Who Is This For?
@@ -149,11 +148,11 @@ azu dev
 
 ```bash
 # Create and migrate database
-azu db:create
-azu db:migrate
+azu db create
+azu db migrate
 
 # Seed with sample data
-azu db:seed
+azu db seed
 ```
 
 ## 🤝 Community & Support
@@ -172,7 +171,7 @@ Azu CLI is open source software licensed under the [MIT License](https://github.
 - **[Azu Web Framework](https://github.com/azutoolkit/azu)**: The core web framework
 - **[CQL ORM](https://github.com/azutoolkit/cql)**: Crystal Query Language ORM
 - **[Topia](https://github.com/azutoolkit/topia)**: CLI framework used by Azu CLI
-- **[Jennifer ORM](https://imdrasil.github.io/jennifer.cr/)**: Alternative ORM option
+- **[CQL ORM](https://github.com/azutoolkit/cql)**: Crystal Query Language ORM
 
 ---
 

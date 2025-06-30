@@ -199,10 +199,10 @@ Performance considerations in design:
 
 ```
 src/
-├── azu_cli.cr                    # Main entry point
+├── azu_cli.cr                   # Main entry point
 ├── azu_cli/
-│   ├── command.cr                # Base command class
-│   ├── commands/                 # Command implementations
+│   ├── command.cr               # Base command class
+│   ├── commands/                # Command implementations
 │   │   ├── new.cr               # Project creation
 │   │   ├── generate.cr          # Code generation
 │   │   ├── serve.cr             # Development server

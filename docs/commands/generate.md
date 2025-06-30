@@ -13,7 +13,7 @@ azu generate <generator_type> <name> [attributes] [options]
 | Generator    | Alias             | Description                                         |
 | ------------ | ----------------- | --------------------------------------------------- |
 | `endpoint`   | `e`, `controller` | HTTP endpoints with full CRUD operations            |
-| `model`      | `m`               | CQL/Jennifer ORM models with validations            |
+| `model`      | `m`               | CQL ORM models with validations                     |
 | `service`    | `s`               | Business logic services following DDD patterns      |
 | `middleware` | `mw`              | HTTP middleware components                          |
 | `contract`   | `c`               | Request/response validation contracts               |
@@ -121,7 +121,7 @@ end
 
 ## Model Generator
 
-Generates CQL or Jennifer ORM models with validations and relationships.
+Generates CQL ORM models with validations and relationships.
 
 ### Usage
 

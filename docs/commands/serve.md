@@ -42,18 +42,12 @@ azu serve
 
 ## Command Options
 
-| Option                | Description                | Default     |
-| --------------------- | -------------------------- | ----------- |
-| `--port <port>`       | Server port                | 3000        |
-| `--host <host>`       | Server host                | localhost   |
-| `--env <environment>` | Environment name           | development |
-| `--debug`             | Enable debug mode          | false       |
-| `--ssl`               | Enable SSL                 | false       |
-| `--ssl-cert <path>`   | SSL certificate path       |             |
-| `--ssl-key <path>`    | SSL private key path       |             |
-| `--workers <number>`  | Number of worker processes | 1           |
-| `--watch`             | Watch for file changes     | true        |
-| `--no-watch`          | Disable file watching      | false       |
+| Option          | Description           | Default   |
+| --------------- | --------------------- | --------- |
+| `--port <port>` | Server port           | 3000      |
+| `--host <host>` | Server host           | localhost |
+| `--no-watch`    | Disable file watching | false     |
+| `--verbose`     | Enable verbose output | false     |
 
 ## Development Server Features
 
@@ -72,17 +66,14 @@ The development server automatically detects file changes and recompiles your ap
 # 🔄 Server restarted
 ```
 
-**Watched Directories:**
+**Watched File Patterns:**
 
-- `src/` - Application source code
-- `public/` - Static assets and templates
-- `config/` - Configuration files
-
-**Ignored Files:**
-
-- `spec/` - Test files
-- `*.log` - Log files
-- `tmp/` - Temporary files
+- `src/**/*.cr` - Crystal source files
+- `config/**/*.cr` - Configuration files
+- `public/templates/**/*.jinja` - Jinja templates
+- `public/templates/**/*.html` - HTML templates
+- `public/assets/**/*.css` - CSS files
+- `public/assets/**/*.js` - JavaScript files
 
 ### Error Reporting
 
@@ -138,27 +129,16 @@ azu serve --host 192.168.1.100 --port 4000
 # Server: http://192.168.1.100:4000
 ```
 
-### SSL/HTTPS Development
+### Verbose Mode
 
 ```bash
-# Enable SSL with self-signed certificate
-azu serve --ssl
-
-# Use custom SSL certificate
-azu serve --ssl --ssl-cert cert.pem --ssl-key key.pem
-```
-
-### Debug Mode
-
-```bash
-# Enable debug mode for detailed logging
-azu serve --debug
+# Enable verbose output for detailed logging
+azu serve --verbose
 
 # Output includes:
-# - Request/response details
-# - Database queries
-# - Performance metrics
-# - Stack traces
+# - File change notifications
+# - Build process details
+# - Debug information
 ```
 
 ## File Watching

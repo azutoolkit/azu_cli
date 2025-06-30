@@ -35,8 +35,8 @@ shards install
 ### 4. Set Up the Database (Optional)
 
 ```bash
-azu db:create
-azu db:migrate
+azu db create
+azu db migrate
 ```
 
 ### 5. Start the Development Server
@@ -266,19 +266,19 @@ crystal spec --coverage
 
 ```bash
 # Create database
-azu db:create
+azu db create
 
 # Run migrations
-azu db:migrate
+azu db migrate
 
 # Rollback migrations
-azu db:rollback
+azu db rollback
 
 # Seed database
-azu db:seed
+azu db seed
 
 # Reset database (drop, create, migrate, seed)
-azu db:reset
+azu db reset
 ```
 
 ## Common Next Steps

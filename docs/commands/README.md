@@ -20,11 +20,13 @@ Azu CLI provides a comprehensive set of commands to help you develop, manage, an
 
 ### Database Management
 
-- [`azu db:create`](database.md#db-create) - Create the database
-- [`azu db:migrate`](database.md#db-migrate) - Run database migrations
-- [`azu db:rollback`](database.md#db-rollback) - Rollback migrations
-- [`azu db:seed`](database.md#db-seed) - Seed database with sample data
-- [`azu db:reset`](database.md#db-reset) - Reset database (drop, create, migrate)
+- [`azu db create`](database.md#azu-db-create) - Create the database
+- [`azu db migrate`](database.md#azu-db-migrate) - Run database migrations
+- [`azu db rollback`](database.md#azu-db-rollback) - Rollback migrations
+- [`azu db seed`](database.md#azu-db-seed) - Seed database with sample data
+- [`azu db reset`](database.md#azu-db-reset) - Reset database (drop, create, migrate)
+- [`azu db status`](database.md#azu-db-status) - Show migration status
+- [`azu db new_migration`](database.md#azu-db-new_migration) - Create new migration file
 
 ### Information & Help
 
@@ -49,7 +51,7 @@ azu new my_app --database postgres
 azu generate scaffold Post title:string content:text
 
 # Database operations
-azu db:migrate
+azu db migrate
 
 # Development server
 azu serve --port 4000
@@ -73,7 +75,7 @@ These options are available for most commands:
 ```bash
 # Get help for any command
 azu generate --help
-azu db:migrate --help
+azu db migrate --help
 
 # Enable debug mode
 azu serve --debug
@@ -195,7 +197,7 @@ azu dev --port 8080
 
 Commands for database management.
 
-#### `azu db:create`
+#### `azu db create`
 
 Creates the database for the current environment.
 

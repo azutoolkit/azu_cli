@@ -34,9 +34,9 @@ azu serve
 azu generate scaffold Post title:string content:text
 
 # 5. Setup database
-azu db:create
-azu db:migrate
-azu db:seed
+azu db create
+azu db migrate
+azu db seed
 
 # 6. Visit your app
 # http://localhost:3000/posts
@@ -306,7 +306,8 @@ end
 shards install
 
 # 2. Setup database
-azu db:setup
+azu db create
+azu db migrate
 
 # 3. Start development server
 azu serve
@@ -376,7 +377,7 @@ azu generate migration add_phone_to_users phone:string
 cat db/migrations/*_add_phone_to_users.cr
 
 # 4. Run migration
-azu db:migrate
+azu db migrate
 
 # 5. Test changes
 crystal spec spec/models/user_spec.cr
@@ -403,13 +404,10 @@ end
 
 ```bash
 # Rollback last migration
-azu db:rollback
+azu db rollback
 
 # Rollback multiple migrations
-azu db:rollback --steps 3
-
-# Rollback to specific version
-azu db:rollback --version 20231201000001
+azu db rollback --steps 3
 ```
 
 ## Testing Workflows
@@ -479,11 +477,11 @@ user = UserFactory.create(name: "John", email: "john@example.com")
 crystal build src/main.cr --release -o bin/my_app
 
 # 2. Setup production database
-azu db:create --env production
-azu db:migrate --env production
+azu db create
+azu db migrate
 
 # 3. Seed production data
-azu db:seed --env production
+azu db seed
 
 # 4. Test production build
 ./bin/my_app serve --env production
@@ -679,8 +677,8 @@ azu docs:serve
 
 ```bash
 # Database connection issues
-azu db:create
-azu db:migrate
+azu db create
+azu db migrate
 
 # Compilation errors
 crystal build src/main.cr

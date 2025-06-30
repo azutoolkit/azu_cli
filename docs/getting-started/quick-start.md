@@ -41,7 +41,7 @@ This command will:
 
 📋 Next Steps:
   cd my_blog
-  azu db:create
+  azu db create
   azu serve
 ```
 
@@ -79,7 +79,7 @@ my_blog/
 Create your database:
 
 ```bash
-azu db:create
+azu db create
 ```
 
 **Output:**
@@ -92,7 +92,7 @@ azu db:create
 Run initial migrations:
 
 ```bash
-azu db:migrate
+azu db migrate
 ```
 
 **Output:**
@@ -181,7 +181,7 @@ azu generate migration create_posts_table title:string content:text published:bo
 Run the migration:
 
 ```bash
-azu db:migrate
+azu db migrate
 ```
 
 **Output:**
