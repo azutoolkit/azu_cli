@@ -2,21 +2,18 @@ require "topia"
 
 module AzuCLI
   # Adapter class to integrate our Command classes with Topia framework
-  class TopiaAdapter(T)
-    include Topia::Plugin
+  class TopiaAdapter(T) < Topia::Plugin
 
     def initialize(@command : T)
     end
 
-    def run(input, args)
-      begin
-        # Execute the command
-        result = @command.run(input, args)
-        result.to_s
-      rescue ex : Exception
-        Logger.exception(ex, "Command execution failed")
-        ""
-      end
+    def run(input, args : Array(String))
+      # Execute the command
+      result = @command.run(input, args)
+      result.to_s
+    rescue ex : Exception
+      Logger.exception(ex, "Command execution failed")
+      ""
     end
 
     def on(event : String)
