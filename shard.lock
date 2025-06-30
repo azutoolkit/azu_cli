@@ -6,7 +6,7 @@ shards:
 
   cql:
     git: https://github.com/azutoolkit/cql.git
-    version: 0.0.408
+    version: 0.0.410
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -18,7 +18,7 @@ shards:
 
   pg:
     git: https://github.com/will/crystal-pg.git
-    version: 0.28.0
+    version: 0.29.0
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
@@ -42,7 +42,7 @@ shards:
 
   topia:
     git: https://github.com/azutoolkit/topia.git
-    version: 0.1.0+git.commit.477521b2aea0687beed7462e11508b7728836bd7
+    version: 0.1.0+git.commit.40f621ded59f00a5d8e3bed0345170df32730ccc
 
   ulid:
     git: https://github.com/superpaintman/ulid.git

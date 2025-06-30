@@ -1,8 +1,6 @@
 require "../command"
-require "readline"
 require "process"
 require "file_utils"
-require "json"
 
 module AzuCLI::Commands
   # Console command - provides interactive REPL for Azu applications
@@ -14,7 +12,6 @@ module AzuCLI::Commands
     @project_name : String?
     @main_file : String?
     @console_process : Process?
-    @history_file : String?
 
     def execute(args : Hash(String, String | Array(String))) : String | Nil
       require_project_root!
@@ -22,18 +19,15 @@ module AzuCLI::Commands
       # Parse command line arguments
       environment = get_flag(args, "environment", "development")
       verbose = has_flag?(args, "verbose") || config.verbose
-      no_history = has_flag?(args, "no-history")
 
       # Get project information
       @project_name = get_project_name
       @main_file = "src/#{@project_name}.cr"
-      @history_file = no_history ? nil : ".azu_console_history"
 
       log.info("🚀 Starting Azu Console...")
       log.info("   Project: #{@project_name}")
       log.info("   Environment: #{environment}")
       log.info("   Main file: #{@main_file}")
-      log.info("   History: #{@history_file ? "enabled" : "disabled"}")
 
       # Validate project structure
       unless validate_project_structure
@@ -74,349 +68,151 @@ module AzuCLI::Commands
       # Set up signal handling for graceful shutdown
       setup_signal_handlers
 
-      # Create console script
-      console_script = create_console_script(environment, verbose)
+      # Set environment variable
+      ENV["AZU_ENV"] = environment
 
-      # Start the console process
-      start_console_process(console_script, verbose)
+      log.info("Starting Crystal interactive mode...")
+      log.info("Environment: #{environment}")
+      log.info("Loading: #{@main_file}")
 
-      # Clean up
-      cleanup_console_script(console_script)
+      # Start Crystal's interactive mode with the main file
+      start_crystal_interactive(verbose)
     end
 
-    private def create_console_script(environment : String, verbose : Bool) : String
+    private def start_crystal_interactive(verbose : Bool)
+      # Show welcome message
+      puts
+      puts "💎 Azu Console (Crystal Interactive Mode)"
+      puts "========================================="
+      puts "Environment: #{ENV["AZU_ENV"]? || "development"}"
+      puts "Project: #{@project_name}"
+      puts "Main file: #{@main_file}"
+      puts
+      puts "💡 Console Tips:"
+      puts "   • Type Crystal code directly"
+      puts "   • Use pp(object) to pretty print"
+      puts "   • Use exit or Ctrl+D to quit"
+      puts "   • Press Ctrl+C to interrupt"
+      puts
+
+      # Create temporary console script
+      console_script = create_console_script
+
+      begin
+        # Start Crystal's interactive mode with the console script
+        @console_process = Process.new(
+          "crystal", ["i", console_script],
+          input: Process::Redirect::Inherit,
+          output: Process::Redirect::Inherit,
+          error: Process::Redirect::Inherit
+        )
+
+        # Wait for the process to complete
+        @console_process.not_nil!.wait
+      ensure
+        # Clean up the temporary console script
+        cleanup_console_script(console_script)
+      end
+    end
+
+    private def create_console_script : String
+      # Create console script content
       script_content = <<-CRYSTAL
-        # Azu Console Script
-        # This script loads the full application context for interactive development
+        # Minimal Azu Console Entry Point
+        # This file loads only essential dependencies to avoid Crystal REPL issues
 
-        require "readline"
-        require "json"
+        require "log"
 
-        # Set environment
-        ENV["AZU_ENV"] = "#{environment}"
+        # Set up basic environment
+        ENV["AZU_ENV"] ||= "#{ENV["AZU_ENV"]? || "development"}"
 
-        # Load the main application
-        puts "Loading #{@project_name} application..."
-
-        begin
-          # Load the main application file
-          require "./#{@main_file}"
-
-          # Load additional components if they exist
-          load_components
-
-          puts "✅ Application loaded successfully!"
-          puts "   Environment: #{environment}"
-          puts "   Available modules: (see 'help' in console)"
-          puts
-          puts "💡 Console Tips:"
-          puts "   • Use 'help' to see available commands"
-          puts "   • Use 'models' to list available models"
-          puts "   • Use 'services' to list available services"
-          puts "   • Use 'db' to show database status"
-          puts "   • Use 'exit' or Ctrl+D to quit"
-          puts "   • Use Ctrl+C to interrupt current operation"
-          puts
-
-          # Start interactive REPL
-          start_repl
-
-        rescue ex : Exception
-          puts "❌ Failed to load application. See error above."
-          exit 1
-        end
-
-        def get_available_modules : String
-          modules = [] of String
-
-          # Check for models
-          if Dir.exists?("src/models") && !Dir.glob("src/models/**/*.cr").empty?
-            modules << "Models"
-          end
-
-          # Check for services
-          if Dir.exists?("src/services") && !Dir.glob("src/services/**/*.cr").empty?
-            modules << "Services"
-          end
-
-          # Check for contracts
-          if Dir.exists?("src/contracts") && !Dir.glob("src/contracts/**/*.cr").empty?
-            modules << "Contracts"
-          end
-
-          # Check for endpoints
-          if Dir.exists?("src/endpoints") && !Dir.glob("src/endpoints/**/*.cr").empty?
-            modules << "Endpoints"
-          end
-
-          modules.empty? ? "None" : modules.join(", ")
-        end
-
-        def load_components
-          # Load models
-          Dir.glob("src/models/**/*.cr").each do |file|
-            begin
-              require "./\#{file}"
-              puts "   Loaded model: \#{File.basename(file, ".cr")}" if #{verbose.inspect}
-            rescue ex
-              puts "   Warning: Failed to load \#{file}: \#{ex.message}" if #{verbose.inspect}
-            end
-          end
-
-          # Load services
-          Dir.glob("src/services/**/*.cr").each do |file|
-            begin
-              require "./\#{file}"
-              puts "   Loaded service: \#{File.basename(file, ".cr")}" if #{verbose.inspect}
-            rescue ex
-              puts "   Warning: Failed to load \#{file}: \#{ex.message}" if #{verbose.inspect}
-            end
-          end
-
-          # Load contracts
-          Dir.glob("src/contracts/**/*.cr").each do |file|
-            begin
-              require "./\#{file}"
-              puts "   Loaded contract: \#{File.basename(file, ".cr")}" if #{verbose.inspect}
-            rescue ex
-              puts "   Warning: Failed to load \#{file}: \#{ex.message}" if #{verbose.inspect}
-            end
-          end
-
-          # Load endpoints
-          Dir.glob("src/endpoints/**/*.cr").each do |file|
-            begin
-              require "./\#{file}"
-              puts "   Loaded endpoint: \#{File.basename(file, ".cr")}" if #{verbose.inspect}
-            rescue ex
-              puts "   Warning: Failed to load \#{file}: \#{ex.message}" if #{verbose.inspect}
-            end
-          end
-        end
-
-        private def start_repl
-          history_file = "#{@history_file}"
-          line_number = 1
-
-          # Load history if available
-          if !history_file.empty? && File.exists?(history_file)
-            File.each_line(history_file) do |line|
-              Readline::HISTORY << line
-            end
-          end
-
-          loop do
-            begin
-              # Get input with line number
-              prompt = "\#{line_number.to_s.rjust(3)} #{@project_name} > "
-              input = Readline.readline(prompt, true)
-
-              break unless input
-
-              input = input.strip
-              next if input.empty?
-
-              # Handle special commands
-              case input.downcase
-              when "exit", "quit"
-                puts "👋 Goodbye!"
-                break
-              when "help"
-                show_help
-                next
-              when "models"
-                show_models
-                next
-              when "services"
-                show_services
-                next
-              when "db"
-                show_database_status
-                next
-              when "clear"
-                system("clear") || system("cls")
-                next
-              when "history"
-                show_history
-                next
-              when "info"
-                show_application_info
-                next
-              end
-
-              # Evaluate the input using Crystal's eval (simplified approach)
-              begin
-                eval_result = eval_crystal_code(input)
-                if eval_result
-                  puts "=> \#{eval_result.inspect}"
-                end
-              rescue ex : Exception
-                puts "❌ Error: \#{ex.message}"
-                if #{verbose.inspect}
-                  puts "   Backtrace:"
-                  ex.backtrace?.try(&.each { |line| puts "     \#{line}" })
-                end
-              end
-
-              line_number += 1
-
-            rescue ex : Interrupt
-              puts
-              puts "Use 'exit' to quit the console"
-              next
-            end
-          end
-
-          # Save history
-          if !history_file.empty?
-            File.write(history_file, Readline::HISTORY.join("\\n"))
-          end
-        end
-
-        private def eval_crystal_code(code : String)
-          # For now, we'll use a simple approach
-          # In a real implementation, you might want to use a more sophisticated approach
-          # that can actually evaluate Crystal code in the current context
-
-          # Check if it's a simple expression or method call
-          if code.includes?("puts") || code.includes?("print")
-            # Handle output statements
-            "Output statement executed"
-          elsif code.includes?("=") && !code.includes?("==")
-            # Handle assignment
-            "Assignment executed"
-          elsif code.includes?(".")
-            # Handle method calls
-            "Method call executed"
-          else
-            # Handle other expressions
-            "Expression evaluated: \#{code}"
-          end
-        end
-
-        private def show_help
-          puts
-          puts "🎯 Azu Console Help"
-          puts "=================="
-          puts
-          puts "Special Commands:"
-          puts "  help     - Show this help"
-          puts "  models   - List available models"
-          puts "  services - List available services"
-          puts "  db       - Show database status"
-          puts "  info     - Show application information"
-          puts "  history  - Show command history"
-          puts "  clear    - Clear the screen"
-          puts "  exit     - Exit the console"
-          puts
-          puts "Examples:"
-          puts "  User.all                    # Query all users"
-          puts "  Post.find_by(title: \"Hello\") # Find post by title"
-          puts "  UserService.create(name: \"John\") # Use a service"
-          puts "  puts \"Hello World\"           # Crystal code"
-          puts "  x = 1 + 2                   # Variable assignment"
-          puts
-        end
-
-        private def show_models
-          puts
-          puts "📊 Available Models:"
-          puts "==================="
-
-          if Dir.exists?("src/models")
-            models = Dir.glob("src/models/**/*.cr").map { |file| File.basename(file, ".cr").camelcase }
-            if models.empty?
-              puts "  No models found"
+        # Basic project detection
+        def project_name
+          if File.exists?("shard.yml")
+            content = File.read("shard.yml")
+            if match = content.match(/^name:\\s*(.+)$/)
+              match[1].strip
             else
-              models.each { |model| puts "  \#{model}" }
+              File.basename(Dir.current)
             end
           else
-            puts "  Models directory not found"
+            File.basename(Dir.current)
           end
+        end
+
+        def project_root
+          Dir.current
+        end
+
+        # Set up basic logging
+        Log.setup(:info)
+
+        # Welcome message
+        puts
+        puts "💎 Azu Console"
+        puts "=============="
+        puts "Environment: \#{ENV["AZU_ENV"]}"
+        puts "Project: \#{project_name}"
+        puts "Directory: \#{project_root}"
+        puts
+
+        # Check if project's main file exists
+        main_file = "src/\#{project_name}.cr"
+        if File.exists?(main_file)
+          puts "📁 Main project file found: \#{main_file}"
+          puts "   Note: To load your project code, you can manually require it:"
+          puts "   require \"./\#{main_file}\""
+        else
+          puts "⚠️  Main project file not found: \#{main_file}"
+        end
+
+        puts "   Crystal REPL is ready for your code!"
+
+        puts
+        puts "💡 Console Tips:"
+        puts "   • Type Crystal code directly"
+        puts "   • Use pp(object) to pretty print"
+        puts "   • Access ENV[\\"AZU_ENV\\"] for environment"
+        puts "   • Use exit or Ctrl+D to quit"
+        puts
+
+        # Helper functions available in console
+        def reload!
+          puts "🔄 Note: Crystal doesn't support dynamic reloading"
+          puts "   You'll need to exit and restart the console to reload changes"
+          puts "   Tip: Use 'exit' then run 'azu console' again"
+        end
+
+        def info
+          puts
+          puts "📊 Project Information:"
+          puts "   Name: \#{project_name}"
+          puts "   Environment: \#{ENV["AZU_ENV"]}"
+          puts "   Crystal Version: \#{Crystal::VERSION}"
+          puts "   Directory: \#{project_root}"
           puts
         end
 
-        private def show_services
-          puts
-          puts "🔧 Available Services:"
-          puts "====================="
-
-          if Dir.exists?("src/services")
-            services = Dir.glob("src/services/**/*.cr").map { |file| File.basename(file, ".cr").camelcase }
-            if services.empty?
-              puts "  No services found"
-            else
-              services.each { |service| puts "  \#{service}" }
-            end
-          else
-            puts "  Services directory not found"
-          end
-          puts
-        end
-
-        private def show_database_status
-          puts
-          puts "🗄️  Database Status:"
-          puts "=================="
-
-          # Check if database configuration exists
-          if File.exists?("config/database.yml") || File.exists?("src/initializers/database.cr")
-            puts "  Configuration: Found"
-
-            # Check if database is accessible (simplified)
-            puts "  Connection: Unknown (run a query to test)"
-          else
-            puts "  Configuration: Not found"
-            puts "  Connection: Not configured"
-          end
-          puts
-        end
-
-        private def show_application_info
-          puts
-          puts "ℹ️  Application Information:"
-          puts "=========================="
-          puts "  Name: #{@project_name}"
-          puts "  Environment: #{ENV["AZU_ENV"]? || "development"}"
-          puts "  Crystal Version: #{Crystal::VERSION}"
-          puts "  Loaded Modules: \#{get_available_modules}"
-          puts
-        end
-
-        private def show_history
-          puts
-          puts "📜 Command History:"
-          puts "=================="
-
-          Readline::HISTORY.each_with_index do |command, index|
-            puts "  \#{index + 1}: \#{command}"
-          end
-          puts
-        end
+        # Make helper functions available
+        puts "Available helpers: info, reload!, project_name"
+        puts
         CRYSTAL
 
       # Write the script to a temporary file
-      script_file = "tmp/console_#{Process.pid}.cr"
       Dir.mkdir_p("tmp")
+      script_file = "tmp/azu_console_#{Process.pid}.cr"
       File.write(script_file, script_content)
-
       script_file
     end
 
-    private def start_console_process(script_file : String, verbose : Bool)
-      log.info("Starting Crystal interpreter...")
-
-      # Start the console process
-      @console_process = Process.new(
-        "crystal", ["run", script_file],
-        input: Process::Redirect::Inherit,
-        output: Process::Redirect::Inherit,
-        error: Process::Redirect::Inherit
-      )
-
-      # Wait for the process to complete
-      @console_process.not_nil!.wait
+    private def cleanup_console_script(script_file : String)
+      # Clean up the temporary script file
+      if File.exists?(script_file)
+        File.delete(script_file)
+      end
     end
+
+
 
     private def setup_signal_handlers
       Signal::INT.trap do
@@ -430,21 +226,14 @@ module AzuCLI::Commands
       end
     end
 
-    private def cleanup_console_script(script_file : String)
-      # Clean up the temporary script file
-      if File.exists?(script_file)
-        File.delete(script_file)
-      end
-    end
-
     private def cleanup_and_exit(exit_code : Int32)
       # Terminate console process if running
       if process = @console_process
         process.terminate unless process.terminated?
       end
 
-      # Clean up temporary files
-      Dir.glob("tmp/console_*.cr").each do |file|
+      # Clean up any temporary console scripts
+      Dir.glob("tmp/azu_console_*.cr").each do |file|
         File.delete(file) if File.exists?(file)
       end
 
@@ -459,13 +248,11 @@ module AzuCLI::Commands
       puts "Options:"
       puts "  --environment ENV  Set the environment (default: development)"
       puts "  --verbose          Enable verbose output"
-      puts "  --no-history       Disable command history"
       puts
       puts "Examples:"
       puts "  azu console                           # Start console in development"
       puts "  azu console --environment test        # Start console in test environment"
       puts "  azu console --verbose                 # Enable verbose output"
-      puts "  azu console --no-history              # Disable command history"
     end
   end
 end
