@@ -1,28 +1,291 @@
 require "azu"
 require "./initializers/**"
 
-# Docs - https://azutopia.gitbook.io/azu/defining-your-app
+# <%= @project.capitalize %> Application
+#
+# This is the main application module for your <%= @project %> application.
+# It includes comprehensive Azu configuration following best practices.
+#
+# Docs: https://azutopia.gitbook.io/azu/getting-started/configuration
 module <%= @project.camelcase %>
   include Azu
   VERSION = "0.1.0"
 
+  # Middleware Stack Configuration
+  # Order matters: place error handlers and loggers early, static/file handlers later
+  # See: https://azutopia.gitbook.io/azu/getting-started/configuration#8-middleware-stack
   HANDLERS = [
-    Azu::Handler::Rescuer.new,
-    Azu::Handler::Logger.new,
+    Azu::Handler::RequestId.new,        # Request tracking (adds X-Request-ID header)
+    Azu::Handler::Rescuer.new,          # Error handling and exception catching
+    Azu::Handler::Logger.new,           # Request/response logging
+    Azu::Handler::CORS.new,             # Cross-Origin Resource Sharing
+    Azu::Handler::IpSpoofing.new,       # IP spoofing protection
+    Azu::Handler::Throttle.new,         # Rate limiting (configure as needed)
+    # Azu::Handler::CSRF.new,           # CSRF protection (uncomment for forms)
+    # Azu::Handler::PerformanceMonitor.new, # Performance monitoring (uncomment to enable)
   ]
 
-  configure do |c|
-    # Uncomment to enable Spark real time apps
-    # Docs: https://azutopia.gitbook.io/azu/spark-1
-    # c.router.ws "/live-view", Spark
+  configure do |config|
+    # =============================================================================
+    # SERVER CONFIGURATION
+    # =============================================================================
 
-    # Serve static files
-    c.router.get "/*", Handler::Static.new
+    # Server binding settings
+    # Use 0.0.0.0 to bind to all interfaces, or specific IP for restrictions
+    config.host = ENV.fetch("HOST", "0.0.0.0")
+    config.port = ENV.fetch("PORT", "4000").to_i
+    config.port_reuse = ENV.fetch("PORT_REUSE", "false") == "true"
+
+    # =============================================================================
+    # SSL/TLS CONFIGURATION
+    # =============================================================================
+
+    # HTTPS/TLS settings for production
+    # Set both SSL_CERT and SSL_KEY environment variables to enable TLS
+    config.ssl_cert = ENV["SSL_CERT"]?
+    config.ssl_key = ENV["SSL_KEY"]?
+
+    # TLS protocol settings (uncomment and configure for production)
+    # config.ssl_protocols = ["TLSv1.2", "TLSv1.3"]
+    # config.ssl_ciphers = "ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS"
+
+    # =============================================================================
+    # TEMPLATE ENGINE CONFIGURATION
+    # =============================================================================
+
+    # Template search paths (in order of priority)
+    config.templates.path = [
+      "public/templates",
+      "src/templates",
+      "templates"
+    ]
+
+    # Error page templates
+    config.templates.error_path = "public/templates/errors"
+
+    # Hot reloading for development (automatically disabled in production)
+    config.template_hot_reload = config.env.development?
+
+    # Template engine settings
+    # config.templates.auto_escape = true        # Enable HTML auto-escaping
+    # config.templates.strict_variables = false # Raise on undefined variables
+
+    # =============================================================================
+    # FILE UPLOAD CONFIGURATION
+    # =============================================================================
+
+    # File upload limits and security
+    config.upload.max_file_size = config.env.production? ? 10.megabytes : 50.megabytes
+    config.upload.temp_dir = ENV.fetch("UPLOAD_TEMP_DIR", "/tmp/<%= @project %>_uploads")
+
+    # Security: Restrict allowed file types (uncomment and customize as needed)
+    # config.upload.allowed_extensions = [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx"]
+    # config.upload.allowed_mime_types = [
+    #   "image/jpeg", "image/png", "image/gif",
+    #   "application/pdf", "application/msword",
+    #   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    # ]
+
+    # Upload file naming strategy
+    # config.upload.filename_strategy = :uuid    # Use UUID for filenames
+    # config.upload.preserve_filename = false    # Don't preserve original names
+
+    # =============================================================================
+    # LOGGING CONFIGURATION
+    # =============================================================================
+
+    # Log level based on environment
+    config.log.level = case config.env
+                       when .production?
+                         Log::Severity::INFO
+                       when .test?
+                         Log::Severity::WARN
+                       else
+                         Log::Severity::DEBUG
+                       end
+
+    # Custom logger configuration (uncomment to customize)
+    # config.log = Log.new(
+    #   STDOUT,
+    #   level: config.log.level,
+    #   formatter: Log::Formatter.new do |entry, io|
+    #     label = entry.severity.to_s.upcase
+    #     io << "[#{entry.timestamp}] #{label}: #{entry.message}"
+    #   end
+    # )
+
+    # =============================================================================
+    # SECURITY CONFIGURATION
+    # =============================================================================
+
+    # CORS settings (configure for your frontend domains)
+    # config.cors.allowed_origins = ["http://localhost:3000", "https://yourdomain.com"]
+    # config.cors.allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    # config.cors.allowed_headers = ["Content-Type", "Authorization", "X-Requested-With"]
+    # config.cors.max_age = 3600
+
+    # CSRF protection settings
+    # config.csrf.origin_check = true
+    # config.csrf.same_site = :strict
+    # config.csrf.secure = config.env.production?
+
+    # Rate limiting configuration
+    # config.throttle.max_requests = 100
+    # config.throttle.period = 1.minute
+    # config.throttle.storage = :memory  # or :redis for distributed systems
+
+    # =============================================================================
+    # CACHING CONFIGURATION
+    # =============================================================================
+
+    # Cache settings for performance
+    config.cache.enabled = config.env.production?
+    config.cache.ttl = ENV.fetch("CACHE_TTL_SECONDS", "3600").to_i.seconds
+
+    # Cache storage backend
+    # config.cache.storage = :memory    # For single-instance apps
+    # config.cache.storage = :redis     # For distributed apps (configure Redis URL)
+    # config.cache.redis_url = ENV["REDIS_URL"]?
+
+    # =============================================================================
+    # PERFORMANCE CONFIGURATION
+    # =============================================================================
+
+    # Performance monitoring (disable in production unless needed)
+    config.performance_monitoring = config.env.development?
+
+    # Request timeout settings
+    # config.request_timeout = 30.seconds
+    # config.keep_alive_timeout = 60.seconds
+
+    # Connection limits
+    # config.max_connections = 1000
+    # config.max_concurrent_connections = 100
+
+    # =============================================================================
+    # ENVIRONMENT-SPECIFIC CONFIGURATION
+    # =============================================================================
+
+    case config.env
+    when .development?
+      # Development-specific settings
+      config.template_hot_reload = true
+      config.performance_monitoring = true
+      config.log.level = Log::Severity::DEBUG
+
+      # Enable detailed error pages in development
+      # config.show_error_details = true
+
+    when .test?
+      # Test environment settings
+      config.template_hot_reload = false
+      config.performance_monitoring = false
+      config.cache.enabled = false
+      config.log.level = Log::Severity::WARN
+
+    when .production?
+      # Production security and performance settings
+      config.template_hot_reload = false
+      config.performance_monitoring = false
+      config.cache.enabled = true
+      config.log.level = Log::Severity::INFO
+
+      # Security headers for production
+      # config.security_headers = true
+      # config.force_ssl = true
+
+    when .staging?
+      # Staging environment (production-like with some debugging)
+      config.template_hot_reload = false
+      config.performance_monitoring = true
+      config.cache.enabled = true
+      config.log.level = Log::Severity::INFO
+    end
+
+    # =============================================================================
+    # CUSTOM APPLICATION CONFIGURATION
+    # =============================================================================
+
+    # Add your custom configuration here
+    # Examples:
+    # config.api_key = ENV["API_KEY"]?
+    # config.feature_flags = {
+    #   new_ui: ENV["NEW_UI_ENABLED"]? == "true",
+    #   beta_features: ENV["BETA_FEATURES"]? == "true"
+    # }
+    # config.external_services = {
+    #   payment_gateway: ENV["PAYMENT_GATEWAY_URL"]?,
+    #   email_service: ENV["EMAIL_SERVICE_URL"]?
+    # }
+
+    # =============================================================================
+    # ROUTING CONFIGURATION
+    # =============================================================================
+
+    # WebSocket configuration for real-time features
+    # Uncomment to enable Spark real-time applications
+    # Docs: https://azutopia.gitbook.io/azu/real-time-features/spark-system
+    # config.router.ws "/live-view", Spark
+    # config.router.ws "/cable", CableChannel
+
+    # Static file serving (should be last in middleware chain)
+    # Serves files from the "public" directory
+    config.router.get "/*", Azu::Handler::Static.new("public")
+
+    # Health check endpoint (useful for load balancers)
+    # config.router.get "/health", HealthCheckEndpoint
+
+    # API versioning (if building an API)
+    # config.router.scope "/api/v1" do
+    #   # API endpoints here
+    # end
   end
+
+  # =============================================================================
+  # STARTUP HOOKS
+  # =============================================================================
+
+  # Startup hook - runs when the application starts
+  # def self.on_startup
+  #   puts "🚀 Starting <%= @project.capitalize %> v#{VERSION}"
+  #   puts "🌍 Environment: #{CONFIG.env}"
+  #   puts "🔗 Listening on #{CONFIG.host}:#{CONFIG.port}"
+  #
+  #   # Initialize external services, warm up caches, etc.
+  #   # Database.migrate! if CONFIG.env.production?
+  # end
+
+  # Shutdown hook - runs when the application stops
+  # def self.on_shutdown
+  #   puts "🛑 Shutting down <%= @project.capitalize %>"
+  #   # Cleanup resources, close connections, etc.
+  # end
 end
 
-# Require files after initializing project module
-require "./contracts/**"
-require "./pages/**"
+# =============================================================================
+# LOAD APPLICATION COMPONENTS
+# =============================================================================
+
+# Load components in dependency order
+# Database and models first, then business logic, finally endpoints
+
+# Models and database (loaded after database initialization)
 require "./models/**"
+
+# Contracts (request/response schemas)
+require "./contracts/**"
+
+# Pages (view logic and templates)
+require "./pages/**"
+
+# Endpoints (HTTP handlers and controllers)
 require "./endpoints/**"
+
+# Channels (WebSocket handlers for real-time features)
+# require "./channels/**"
+
+# Services (business logic and external integrations)
+# require "./services/**"
+
+# Jobs (background processing)
+# require "./jobs/**"
