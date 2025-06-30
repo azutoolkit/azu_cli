@@ -7,12 +7,16 @@ module AzuCLI
     def initialize(@command : T)
     end
 
-    def run(input, args : Array(String))
+    def run(input, args = [] of String)
+      # Convert args to the format expected by our Command classes
+      parsed_args = {} of String => String | Array(String)
+      parsed_args["_positional"] = args
+
       # Execute the command
-      result = @command.run(input, args)
-      result.to_s
+      result = @command.execute(parsed_args)
+      result.to_s if result
     rescue ex : Exception
-      Logger.exception(ex, "Command execution failed")
+      STDERR.puts "Command execution failed: #{ex.message}"
       ""
     end
 
