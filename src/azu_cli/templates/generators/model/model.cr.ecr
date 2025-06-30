@@ -1,0 +1,42 @@
+require "cql"
+
+module {{module_name}}
+  # {{class_name}} model using CQL Active Record
+  class {{class_name}} < CQL::Model
+    table :{{table_name}}
+
+    # Default fields
+    field id : Int64, primary: true, auto_increment: true
+    field created_at : Time, auto: true
+    field updated_at : Time, auto: true
+
+    # Custom attributes
+{{attributes_list}}
+
+    # Validations
+    # Add your validations here
+    # Examples:
+    # validates_presence_of :name
+    # validates_uniqueness_of :email
+    # validates_length_of :name, minimum: 2, maximum: 50
+
+    # Associations
+    # Add your associations here
+    # Examples:
+    # has_many :posts, dependent: :destroy
+    # belongs_to :user
+    # has_one :profile
+
+    # Scopes
+    # Add your scopes here
+    # Examples:
+    # scope :active, -> { where(active: true) }
+    # scope :recent, -> { order(created_at: :desc) }
+
+    # Class methods
+    # Add your class methods here
+
+    # Instance methods
+    # Add your instance methods here
+  end
+end

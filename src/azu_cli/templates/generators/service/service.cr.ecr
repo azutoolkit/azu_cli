@@ -1,0 +1,31 @@
+module {{module_name}}
+  module Services
+    # {{class_name}} application service
+    # Handles business logic and coordinates between domain objects
+    class {{class_name}}
+      # Dependencies can be injected via constructor
+      def initialize
+        # Initialize dependencies here
+        # @repository = {{class_name}}Repository.new
+        # @logger = Logger.new
+        # @event_bus = EventBus.new
+      end
+
+{{methods_list}}
+
+      private
+
+      # Add private helper methods here
+      def log_operation(operation : String)
+        # Log the operation
+        puts "#{self.class.name}: #{operation}"
+      end
+
+      def handle_error(error : Exception)
+        # Handle errors appropriately
+        log_operation("Error: #{error.message}")
+        raise error
+      end
+    end
+  end
+end

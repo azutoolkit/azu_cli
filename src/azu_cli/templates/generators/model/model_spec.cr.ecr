@@ -1,0 +1,47 @@
+require "../spec_helper"
+
+describe {{module_name}}::{{class_name}} do
+  describe "validations" do
+    it "creates a valid {{snake_case_name}}" do
+      {{snake_case_name}} = {{module_name}}::{{class_name}}.new(
+{{attributes_list}}
+      )
+
+      {{snake_case_name}}.valid?.should be_true
+    end
+
+    # Add specific validation tests
+    # it "requires name to be present" do
+    #   {{snake_case_name}} = {{module_name}}::{{class_name}}.new
+    #   {{snake_case_name}}.valid?.should be_false
+    #   {{snake_case_name}}.errors.should contain("Name can't be blank")
+    # end
+  end
+
+  describe "associations" do
+    # Add association tests
+    # it "belongs to user" do
+    #   {{snake_case_name}} = {{module_name}}::{{class_name}}.new
+    #   {{snake_case_name}}.should respond_to(:user)
+    # end
+  end
+
+  describe "scopes" do
+    # Add scope tests
+    # it "returns active {{plural_name}}" do
+    #   active_{{snake_case_name}} = create(:{{snake_case_name}}, active: true)
+    #   inactive_{{snake_case_name}} = create(:{{snake_case_name}}, active: false)
+    #
+    #   {{module_name}}::{{class_name}}.active.should contain(active_{{snake_case_name}})
+    #   {{module_name}}::{{class_name}}.active.should_not contain(inactive_{{snake_case_name}})
+    # end
+  end
+
+  describe "methods" do
+    # Add method tests
+    # it "returns full name" do
+    #   {{snake_case_name}} = {{module_name}}::{{class_name}}.new(first_name: "John", last_name: "Doe")
+    #   {{snake_case_name}}.full_name.should eq("John Doe")
+    # end
+  end
+end

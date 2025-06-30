@@ -1,0 +1,11 @@
+module {{module_name}}
+  # {{class_name}} contract for request validation
+  struct {{class_name}}Contract
+    include Request
+
+{{attributes_list}}
+
+    # Validations
+{{validations_list}}
+  end
+end

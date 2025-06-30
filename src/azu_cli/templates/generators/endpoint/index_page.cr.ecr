@@ -1,0 +1,18 @@
+module {{module_name}}
+  module {{class_name}}
+    struct {{action_class}}Page
+      include Response
+      include Templates::Renderable
+
+      def initialize(@{{plural_name}} : Array({{class_name}}))
+      end
+
+      def render
+        view data: {
+          "{{plural_name}}" => @{{plural_name}},
+          "title" => "{{class_name}} List"
+        }
+      end
+    end
+  end
+end

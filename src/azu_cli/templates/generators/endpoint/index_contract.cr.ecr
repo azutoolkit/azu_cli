@@ -1,0 +1,12 @@
+module {{module_name}}
+  module {{class_name}}
+    struct {{action_class}}Contract
+      include Request
+
+      # Add query parameters for filtering, pagination, etc.
+      getter page : Int32 = 1
+      getter per_page : Int32 = 10
+      getter search : String = ""
+    end
+  end
+end

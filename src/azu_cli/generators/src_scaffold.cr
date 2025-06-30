@@ -11,10 +11,10 @@ class Generator::SrcScaffold < Teeplate::FileTree
     "destroy" => "/:resource/:id",
   }
 
-  getter fields : Jennifer::Generators::FieldSet
+  getter fields : Array(String)
 
   def initialize(@project : String, @resource : String, @field_list : Array(String))
-    @fields = Jennifer::Generators::FieldSet.new(@field_list)
+    @fields = @field_list
   end
 
   private def path(action : Symbol)

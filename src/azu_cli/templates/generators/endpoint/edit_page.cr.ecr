@@ -1,0 +1,18 @@
+module {{module_name}}
+  module {{class_name}}
+    struct {{action_class}}Page
+      include Response
+      include Templates::Renderable
+
+      def initialize(@{{snake_case_name}} : {{class_name}})
+      end
+
+      def render
+        view data: {
+          "{{snake_case_name}}" => @{{snake_case_name}},
+          "title" => "Edit {{class_name}}"
+        }
+      end
+    end
+  end
+end

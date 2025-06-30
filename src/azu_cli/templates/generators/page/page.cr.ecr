@@ -1,0 +1,13 @@
+module {{module_name}}
+  # {{class_name}} page component (view)
+  struct {{class_name}}Page
+    include Response
+    include Templates::Renderable
+
+{{template_vars_list}}
+
+    def render
+      view data: {{render_data}}
+    end
+  end
+end

@@ -1,0 +1,19 @@
+module {{module_name}}
+  module {{class_name}}
+    struct {{action_class}}Page
+      include Response
+      include Templates::Renderable
+
+      def initialize(@{{snake_case_name}} : {{class_name}}, @success : Bool = false)
+      end
+
+      def render
+        view data: {
+          "{{snake_case_name}}" => @{{snake_case_name}},
+          "success" => @success,
+          "title" => @success ? "{{class_name}} Deleted" : "Error Deleting {{class_name}}"
+        }
+      end
+    end
+  end
+end

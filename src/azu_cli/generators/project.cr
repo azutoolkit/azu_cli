@@ -1,4 +1,5 @@
-class Generator::Project < Teeplate::FileTree
+module AzuCLI
+  class Generator::Project < Teeplate::FileTree
   directory "#{__DIR__}/../templates/project"
 
   getter database_name
@@ -47,5 +48,6 @@ class Generator::Project < Teeplate::FileTree
       github_user = nil if github_user.empty?
     end
     github_user || "your-github-user"
+  end
   end
 end

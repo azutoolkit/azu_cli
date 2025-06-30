@@ -1,0 +1,38 @@
+require "../../spec_helper"
+
+describe {{module_name}}::{{class_name}}::{{action_class}}Endpoint do
+  let(endpoint) { {{module_name}}::{{class_name}}::{{action_class}}Endpoint.new }
+
+  describe "#call" do
+    it "returns a {{action_class}}Page" do
+      # Set up test data
+      # {{snake_case_name}} = create(:{{snake_case_name}})
+
+      result = endpoint.call
+      result.should be_a({{module_name}}::{{class_name}}::{{action_class}}Page)
+    end
+
+    # Add specific tests for this action
+    # it "handles valid {{snake_case_name}} data" do
+    #   # Test with valid data
+    # end
+    #
+    # it "handles invalid {{snake_case_name}} data" do
+    #   # Test with invalid data
+    # end
+  end
+
+  describe "contract delegation" do
+    # Add tests for contract delegation
+    # it "delegates id to contract" do
+    #   endpoint.should respond_to(:id)
+    # end
+  end
+
+  describe "error handling" do
+    # Add tests for error scenarios
+    # it "handles not found errors" do
+    #   expect { endpoint.call }.to raise_error(CQL::RecordNotFound)
+    # end
+  end
+end

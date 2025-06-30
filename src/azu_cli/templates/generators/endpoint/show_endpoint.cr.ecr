@@ -1,0 +1,16 @@
+module {{module_name}}
+  module {{class_name}}
+    struct {{action_class}}Endpoint
+      include Endpoint({{action_class}}Contract, {{action_class}}Page)
+
+      {{http_method}} "{{route_path}}"
+
+      delegate id, to: {{snake_case_name}}_contract
+
+      def call : {{action_class}}Page
+        {{snake_case_name}} = {{class_name}}.find!(id)
+        {{action_class}}Page.new({{snake_case_name}})
+      end
+    end
+  end
+end
