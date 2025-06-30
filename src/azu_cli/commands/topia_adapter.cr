@@ -3,7 +3,6 @@ require "topia"
 module AzuCLI
   # Adapter class to integrate our Command classes with Topia framework
   class TopiaAdapter(T) < Topia::Plugin
-
     def initialize(@command : T)
     end
 

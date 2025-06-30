@@ -68,7 +68,6 @@ module AzuCLI::Commands
         else
           wait_for_server_process
         end
-
       rescue ex : Exception
         log.error("Server startup failed: #{ex.message}")
         cleanup_and_exit(1)
@@ -96,7 +95,7 @@ module AzuCLI::Commands
         "public/templates/**/*.jinja",
         "public/templates/**/*.html",
         "public/assets/**/*.css",
-        "public/assets/**/*.js"
+        "public/assets/**/*.js",
       ]
 
       watch_paths.each do |pattern|
@@ -207,9 +206,9 @@ module AzuCLI::Commands
       end
 
       env = {
-        "HOST" => host,
-        "PORT" => port.to_s,
-        "AZU_ENV" => config.environment
+        "HOST"    => host,
+        "PORT"    => port.to_s,
+        "AZU_ENV" => config.environment,
       }
 
       @server_process = Process.new(

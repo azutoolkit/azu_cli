@@ -24,7 +24,6 @@ module AzuCLI
   Topia.task("db").pipe(TopiaAdapter.new(Commands::Db.new))
   Topia.task("serve").pipe(TopiaAdapter.new(Commands::Serve.new))
   Topia.task("dev").pipe(TopiaAdapter.new(Commands::Dev.new))
-  Topia.task("console").pipe(TopiaAdapter.new(Commands::Console.new))
 
   def self.run
     # Initialize configuration
@@ -40,13 +39,6 @@ module AzuCLI
     else
       command_name = ARGV[0]
       command_args = ARGV[1..]
-
-      # Special handling for console command to bypass Topia spinner
-      if command_name == "console"
-        console_command = Commands::Console.new
-        console_command.run("", command_args)
-        return
-      end
 
       begin
         Topia.run(command_name, command_args)

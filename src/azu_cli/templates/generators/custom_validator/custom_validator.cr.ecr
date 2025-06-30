@@ -1,0 +1,42 @@
+module {{module_name}}
+  # {{class_name}}Validator - Custom CQL validation
+  # Integrates with CQL validations system for {{validation_type}} validation
+  # See: https://github.com/azutoolkit/cql/blob/master/src/active_record/validations.cr
+  class {{class_name}}Validator
+{{attributes_list}}
+
+    # Primary validation method
+{{validator_method}}
+
+    # Error message for validation failures
+    def self.error_message : String
+      {{error_message}}
+    end
+
+    # Validation method that can be used with CQL models
+    def self.validate(record, attribute, value)
+      unless {{validation_logic}}
+        record.errors.add(attribute, error_message)
+      end
+    end
+
+    # Convenient validation method for contracts
+    def self.call(value) : Bool
+      {{validation_logic}}
+    end
+
+    # Check if value passes validation (alias for call)
+    def self.valid?(value) : Bool
+      call(value)
+    end
+
+    # Get validation result with error details
+    def self.validate_with_error(value) : {Bool, String?}
+      if valid?(value)
+        {true, nil}
+      else
+        {false, error_message}
+      end
+    end
+  end
+end

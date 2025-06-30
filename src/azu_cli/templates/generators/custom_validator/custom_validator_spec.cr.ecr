@@ -1,0 +1,86 @@
+require "../spec_helper"
+
+describe {{module_name}}::{{class_name}}Validator do
+  describe "validation methods" do
+{{test_cases}}
+  end
+
+  describe ".call" do
+    it "returns true for valid values" do
+      valid_examples = [{{valid_examples}}]
+      valid_examples.each do |example|
+        {{module_name}}::{{class_name}}Validator.call(example).should be_true
+      end
+    end
+
+    it "returns false for invalid values" do
+      invalid_examples = [{{invalid_examples}}]
+      invalid_examples.each do |example|
+        {{module_name}}::{{class_name}}Validator.call(example).should be_false
+      end
+    end
+  end
+
+  describe ".valid?" do
+    it "aliases call method" do
+      {{module_name}}::{{class_name}}Validator.valid?("test").should eq({{module_name}}::{{class_name}}Validator.call("test"))
+    end
+  end
+
+  describe ".error_message" do
+    it "returns appropriate error message" do
+      message = {{module_name}}::{{class_name}}Validator.error_message
+      message.should be_a(String)
+      message.should_not be_empty
+    end
+  end
+
+  describe ".validate_with_error" do
+    it "returns validation result with error details" do
+      valid_result, error = {{module_name}}::{{class_name}}Validator.validate_with_error({{valid_examples}}.split(", ").first)
+      valid_result.should be_true
+      error.should be_nil
+    end
+
+    it "returns error message for invalid values" do
+      valid_result, error = {{module_name}}::{{class_name}}Validator.validate_with_error("")
+      valid_result.should be_false
+      error.should eq({{module_name}}::{{class_name}}Validator.error_message)
+    end
+  end
+
+  describe ".validate" do
+    it "adds errors to record for invalid values" do
+      # Mock record object for testing
+      record = double("record")
+      errors = double("errors")
+
+      record.stub(:errors) { errors }
+      errors.should_receive(:add).with(:test_field, {{module_name}}::{{class_name}}Validator.error_message)
+
+      {{module_name}}::{{class_name}}Validator.validate(record, :test_field, "")
+    end
+
+    it "does not add errors for valid values" do
+      # Mock record object for testing
+      record = double("record")
+      errors = double("errors")
+
+      record.stub(:errors) { errors }
+      errors.should_not_receive(:add)
+
+      {{module_name}}::{{class_name}}Validator.validate(record, :test_field, {{valid_examples}}.split(", ").first)
+    end
+  end
+
+  # Model integration tests (if model_name is specified)
+  {% if "{{model_name}}" != "" %}
+  describe "integration with {{model_name}}" do
+    it "integrates with CQL model validation" do
+      # Test integration with actual model
+      # {{model_name}}.new.should respond_to(:valid?)
+      # Add specific model integration tests here
+    end
+  end
+  {% end %}
+end

@@ -6,6 +6,8 @@ require "../generators/middleware"
 require "../generators/contract"
 require "../generators/page"
 require "../generators/migration"
+require "../generators/component"
+require "../generators/custom_validator"
 
 module AzuCLI::Commands
   # Generate command - creates various Azu components using generators
@@ -21,6 +23,8 @@ module AzuCLI::Commands
       "middleware" => "HTTP middleware component",
       "contract"   => "Request/response contract",
       "page"       => "Page component (view)",
+      "component"  => "Live interactive component with real-time features",
+      "validator"  => "Custom CQL validator with validation logic",
       "migration"  => "Database migration file",
       "scaffold"   => "Complete resource with CRUD operations",
     }
@@ -33,6 +37,9 @@ module AzuCLI::Commands
       "mw"         => "middleware",
       "c"          => "contract",
       "p"          => "page",
+      "comp"       => "component",
+      "val"        => "validator",
+      "v"          => "validator",
       "mig"        => "migration",
     }
 
@@ -95,6 +102,10 @@ module AzuCLI::Commands
         generate_contract(component_name, additional_args, force, skip_tests)
       when "page"
         generate_page(component_name, additional_args, force, skip_tests)
+      when "component"
+        generate_component(component_name, additional_args, force, skip_tests)
+      when "validator"
+        generate_validator(component_name, additional_args, force, skip_tests)
       when "migration"
         generate_migration(component_name, additional_args, force)
       when "scaffold"
@@ -126,6 +137,8 @@ module AzuCLI::Commands
       puts "Examples:".colorize(:yellow).bold
       puts "  azu generate endpoint users"
       puts "  azu generate model User name:string email:string"
+      puts "  azu generate component Counter count:integer --websocket"
+      puts "  azu generate validator EmailValidator type:email"
       puts "  azu generate migration create_users_table"
       puts "  azu generate service UserRegistration"
       puts "  azu generate scaffold Post title:string content:text"
@@ -237,6 +250,54 @@ module AzuCLI::Commands
       log.success("Page #{name} generated successfully!")
     end
 
+    private def generate_component(name : String, args : Array(String), force : Bool, skip_tests : Bool)
+      log.info("Generating component: #{name}")
+
+      # Parse arguments for component generation
+      attributes = parse_attributes(args)
+      events = extract_events(args)
+      with_websocket = has_websocket_flag?(args)
+
+      generator = Generator::Component.new(
+        name: name,
+        project_name: get_project_name,
+        attributes: attributes,
+        events: events,
+        with_websocket: with_websocket,
+        force: force,
+        skip_tests: skip_tests
+      )
+
+      generator.generate!
+
+      log.success("Component #{name} generated successfully!")
+      show_component_next_steps(name)
+    end
+
+    private def generate_validator(name : String, args : Array(String), force : Bool, skip_tests : Bool)
+      log.info("Generating validator: #{name}")
+
+      # Parse arguments for validator generation
+      attributes = parse_attributes(args)
+      validation_type = extract_validation_type(args)
+      model_name = extract_model_name(args)
+
+      generator = Generator::CustomValidator.new(
+        name: name,
+        project_name: get_project_name,
+        validation_type: validation_type,
+        model_name: model_name,
+        attributes: attributes,
+        force: force,
+        skip_tests: skip_tests
+      )
+
+      generator.generate!
+
+      log.success("Validator #{name} generated successfully!")
+      show_validator_next_steps(name, validation_type)
+    end
+
     private def generate_migration(name : String, args : Array(String), force : Bool)
       log.info("Generating migration: #{name}")
 
@@ -291,6 +352,46 @@ module AzuCLI::Commands
     private def extract_actions(args : Array(String)) : Array(String)
       actions = args.select { |arg| !arg.includes?(":") }
       actions.empty? ? ["index", "show", "new", "create", "edit", "update", "destroy"] : actions
+    end
+
+    private def extract_events(args : Array(String)) : Array(String)
+      events = args.select { |arg| arg.starts_with?("event:") }.map { |arg| arg.split(":", 2)[1] }
+      events
+    end
+
+    private def has_websocket_flag?(args : Array(String)) : Bool
+      args.includes?("--websocket") || args.includes?("--ws") || args.includes?("realtime")
+    end
+
+    private def extract_validation_type(args : Array(String)) : String
+      type_arg = args.find { |arg| arg.starts_with?("type:") }
+      if type_arg
+        type_arg.split(":", 2)[1]
+      else
+        # Try to detect type from common arguments
+        if args.any? { |arg| arg.includes?("email") }
+          "email"
+        elsif args.any? { |arg| arg.includes?("phone") }
+          "phone"
+        elsif args.any? { |arg| arg.includes?("url") }
+          "url"
+        elsif args.any? { |arg| arg.includes?("pattern") || arg.includes?("regex") }
+          "regex"
+        elsif args.any? { |arg| arg.includes?("min") || arg.includes?("max") }
+          "range"
+        else
+          "custom"
+        end
+      end
+    end
+
+    private def extract_model_name(args : Array(String)) : String
+      model_arg = args.find { |arg| arg.starts_with?("model:") }
+      if model_arg
+        model_arg.split(":", 2)[1]
+      else
+        ""
+      end
     end
 
     private def parse_attributes(args : Array(String)) : Hash(String, String)
@@ -360,6 +461,70 @@ module AzuCLI::Commands
       puts "  4. Add middleware tests in spec/middleware/#{name.downcase}_spec.cr"
     end
 
+    private def show_component_next_steps(name : String)
+      puts
+      puts "📋 Next Steps:".colorize(:yellow).bold
+      puts "  1. Customize the component content in src/components/#{name.downcase}_component.cr"
+      puts "  2. Add event handlers for user interactions"
+      puts "  3. Include the component in your endpoints or pages:"
+      puts "     component = #{name.capitalize}Component.new"
+      puts "     component.render"
+      puts
+      puts "  4. For real-time features, configure WebSocket routes:"
+      puts "     config.router.ws \"/live\", YourWebSocketHandler"
+      puts
+      puts "  5. Test your component in spec/components/#{name.downcase}_component_spec.cr"
+      puts
+      puts "💡 Real-time Examples:".colorize(:blue).bold
+      puts "  - update_element(\"id\", \"new content\")"
+      puts "  - append_element(\"container\", \"<div>new item</div>\")"
+      puts "  - broadcast_update({type: \"update\", data: \"value\"})"
+      puts
+      puts "📚 Learn more: https://azutopia.gitbook.io/azu/real-time/components".colorize(:cyan)
+    end
+
+    private def show_validator_next_steps(name : String, validation_type : String)
+      puts
+      puts "📋 Next Steps:".colorize(:yellow).bold
+      puts "  1. Customize validation logic in src/validators/#{name.downcase}_validator.cr"
+      puts "  2. Use in your CQL models:"
+      puts "     class YourModel < CQL::Model"
+      puts "       validate :field_name, with: #{name.capitalize}Validator"
+      puts "     end"
+      puts
+      puts "  3. Use in request contracts:"
+      puts "     struct YourContract"
+      puts "       include Request"
+      puts "       validate field_name, custom: #{name.capitalize}Validator"
+      puts "     end"
+      puts
+      puts "  4. Test your validator in spec/validators/#{name.downcase}_validator_spec.cr"
+      puts
+      puts "💡 Validation Examples (#{validation_type}):".colorize(:blue).bold
+      case validation_type.downcase
+      when "email"
+        puts "  - Validates email format: user@example.com"
+        puts "  - Rejects invalid formats: invalid-email, @domain.com"
+      when "phone"
+        puts "  - Validates phone formats: (555) 123-4567, 555-123-4567"
+        puts "  - Supports multiple formats including international"
+      when "url"
+        puts "  - Validates URL format: https://example.com"
+        puts "  - Supports HTTP and HTTPS protocols"
+      when "regex"
+        puts "  - Custom pattern matching with configurable regex"
+        puts "  - Flexible validation for specific formats"
+      when "range"
+        puts "  - Numeric range validation with min/max values"
+        puts "  - Works with integers and floating-point numbers"
+      else
+        puts "  - Custom business logic validation"
+        puts "  - Implement your specific validation rules"
+      end
+      puts
+      puts "📚 Learn more: https://github.com/azutoolkit/cql/blob/master/src/active_record/validations.cr".colorize(:cyan)
+    end
+
     private def show_migration_next_steps(name : String)
       puts
       puts "📋 Next Steps:".colorize(:yellow).bold
@@ -394,16 +559,27 @@ module AzuCLI::Commands
       puts "  --force             Overwrite existing files"
       puts "  --skip-tests        Skip generating test files"
       puts "  --skip-routes       Skip adding routes (for endpoints)"
+      puts "  --websocket         Enable WebSocket features (for components)"
       puts
       puts "Generator-specific syntax:"
       puts "  Model attributes:   name:string email:string age:integer"
       puts "  Migration attrs:    email:string age:integer active:boolean"
       puts "  Endpoint actions:   index show create update destroy"
       puts "  Page variables:     title='My Page' layout=application"
+      puts "  Component events:   event:click event:submit event:change"
+      puts "  Component attrs:    title:string count:integer visible:boolean"
+      puts "  Validator types:    type:email type:phone type:url type:regex type:range"
+      puts "  Validator args:     pattern:\\A[a-z]+\\z min:0 max:100 model:User"
       puts
       puts "Examples:"
       puts "  azu generate endpoint users"
       puts "  azu generate model User name:string email:string"
+      puts "  azu generate component Counter count:integer --websocket"
+      puts "  azu generate component ChatBox event:send event:typing --websocket"
+      puts "  azu generate validator EmailValidator type:email"
+      puts "  azu generate validator PhoneValidator type:phone"
+      puts "  azu generate validator RangeValidator type:range min:1 max:100"
+      puts "  azu generate validator CustomValidator pattern:\"\\A[A-Z]{2,3}\\z\""
       puts "  azu generate migration create_users_table"
       puts "  azu generate migration add_email_to_users email:string"
       puts "  azu generate service UserRegistration"
