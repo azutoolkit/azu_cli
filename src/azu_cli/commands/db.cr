@@ -67,8 +67,6 @@ module AzuCLI::Commands
     private def get_database_schema_paths : Array(String)
       [
         "src/db/schema.cr",
-        "src/schema.cr",
-        "src/database/schema.cr",
       ]
     end
 
