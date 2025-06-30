@@ -53,7 +53,7 @@ module AzuCLI::Commands
         {name: "test", desc: "Run the test suite", category: "Testing"},
         {name: "build", desc: "Build the application for production", category: "Build"},
         {name: "version", desc: "Show version information", category: "Info"},
-        {name: "help", desc: "Show help information", category: "Info"}
+        {name: "help", desc: "Show help information", category: "Info"},
       ]
 
       # Group commands by category

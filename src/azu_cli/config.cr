@@ -18,7 +18,7 @@ module AzuCLI
       "./config/azu.yml",
       "./azu.yml",
       "~/.config/azu/config.yml",
-      "~/.azu.yml"
+      "~/.azu.yml",
     ]
 
     # Global configuration
@@ -181,13 +181,13 @@ module AzuCLI
       if logging = config["logging"]?
         if level_str = logging["level"]?.try(&.as_s)
           @log_level = case level_str.downcase
-                      when "debug" then Log::Severity::Debug
-                      when "info" then Log::Severity::Info
-                      when "warn", "warning" then Log::Severity::Warn
-                      when "error" then Log::Severity::Error
-                      when "fatal" then Log::Severity::Fatal
-                      else Log::Severity::Info
-                      end
+                       when "debug"           then Log::Severity::Debug
+                       when "info"            then Log::Severity::Info
+                       when "warn", "warning" then Log::Severity::Warn
+                       when "error"           then Log::Severity::Error
+                       when "fatal"           then Log::Severity::Fatal
+                       else                        Log::Severity::Info
+                       end
         end
         @log_format = logging["format"]?.try(&.as_s) || @log_format
       end

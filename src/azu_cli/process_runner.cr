@@ -16,7 +16,7 @@ module AzuCLI
       files = [] of String,
       should_build = true,
       install_shards = false,
-      colorize = true
+      colorize = true,
     )
       @files = files
       @should_build = should_build

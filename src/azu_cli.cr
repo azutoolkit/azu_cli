@@ -18,6 +18,8 @@ module AzuCLI
   # Register all commands with Topia
   Topia.task("help").pipe(TopiaAdapter.new(Commands::Help.new))
   Topia.task("version").pipe(TopiaAdapter.new(Commands::Version.new))
+  Topia.task("new").pipe(TopiaAdapter.new(Commands::New.new))
+  Topia.task("init").pipe(TopiaAdapter.new(Commands::Init.new))
 
   def self.run
     # Initialize configuration
@@ -37,9 +39,9 @@ module AzuCLI
       begin
         Topia.run(command_name, command_args)
       rescue
-                 Logger.error("Unknown command: #{command_name}")
-         Logger.info("Run 'azu help' to see available commands")
-         exit(Config::EXIT_INVALID_USAGE)
+        Logger.error("Unknown command: #{command_name}")
+        Logger.info("Run 'azu help' to see available commands")
+        exit(Config::EXIT_INVALID_USAGE)
       end
     end
   rescue ex : Exception

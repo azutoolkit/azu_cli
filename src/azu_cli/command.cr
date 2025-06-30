@@ -56,7 +56,7 @@ module AzuCLI
       def on(event : String)
       end
 
-      def not_exists?(path)
+      def not_exists?(path, &)
         if File.exists? path
           error "File `#{path.underscore}` already exists"
           exit EXIT_FAILURE
@@ -126,7 +126,6 @@ module AzuCLI
 
         log.debug("Command '#{command_name}' completed successfully")
         result.to_s
-
       rescue ex : ArgumentError
         handle_argument_error(ex)
         ""

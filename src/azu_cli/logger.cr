@@ -17,7 +17,7 @@ module AzuCLI
       fatal:   :magenta,
       success: :green,
       title:   :cyan,
-      prompt:  :blue
+      prompt:  :blue,
     }
 
     # Icons for different message types
@@ -29,7 +29,7 @@ module AzuCLI
       fatal:   "💀",
       success: "✅",
       title:   "📋",
-      prompt:  "❓"
+      prompt:  "❓",
     }
 
     @@log : Log?
@@ -76,9 +76,9 @@ module AzuCLI
         Log::Formatter.new do |entry, io|
           {
             timestamp: entry.timestamp.to_rfc3339,
-            level: entry.severity.to_s.downcase,
-            message: entry.message,
-            source: entry.source
+            level:     entry.severity.to_s.downcase,
+            message:   entry.message,
+            source:    entry.source,
           }.to_json(io)
         end
       when "compact"
@@ -252,26 +252,26 @@ module AzuCLI
 
       def write(entry : Log::Entry)
         color = case entry.severity
-               when .debug? then COLORS[:debug]
-               when .info?  then COLORS[:info]
-               when .warn?  then COLORS[:warn]
-               when .error? then COLORS[:error]
-               when .fatal? then COLORS[:fatal]
-               else :white
-               end
+                when .debug? then COLORS[:debug]
+                when .info?  then COLORS[:info]
+                when .warn?  then COLORS[:warn]
+                when .error? then COLORS[:error]
+                when .fatal? then COLORS[:fatal]
+                else              :white
+                end
 
         icon = if @show_icons
-                case entry.severity
-                when .debug? then ICONS[:debug]
-                when .info?  then ICONS[:info]
-                when .warn?  then ICONS[:warn]
-                when .error? then ICONS[:error]
-                when .fatal? then ICONS[:fatal]
-                else ""
-                end
-              else
-                ""
-              end
+                 case entry.severity
+                 when .debug? then ICONS[:debug]
+                 when .info?  then ICONS[:info]
+                 when .warn?  then ICONS[:warn]
+                 when .error? then ICONS[:error]
+                 when .fatal? then ICONS[:fatal]
+                 else              ""
+                 end
+               else
+                 ""
+               end
 
         @io.print icon unless icon.empty?
         @io.print " " unless icon.empty?
@@ -299,7 +299,7 @@ module AzuCLI
           STDERR.puts
           STDERR.puts "Backtrace:".colorize(:dark_gray)
           backtrace.each_with_index do |frame, index|
-            if index < 10  # Limit backtrace in non-debug mode
+            if index < 10 # Limit backtrace in non-debug mode
               STDERR.puts "  #{frame}".colorize(:dark_gray)
             end
           end
