@@ -169,8 +169,9 @@ azu generate model user name:string email:string age:integer --validations --tim
 # src/models/user.cr
 require "cql"
 
-class User < CQL::Model
-  table :users
+class User
+  include CQL::Model(Int64)
+  db_context AppDB, :users
 
   column id : Int64, primary: true, auto: true
   column name : String
@@ -206,8 +207,9 @@ azu generate model post title:string content:text user:references --timestamps
 # src/models/post.cr
 require "cql"
 
-class Post < CQL::Model
-  table :posts
+class Post
+  include CQL::Model(Int63)
+  db_context AppDB, :posts
 
   column id : Int64, primary: true, auto: true
   column title : String
@@ -246,8 +248,9 @@ azu generate model category name:string description:text --uuid
 # src/models/category.cr
 require "cql"
 
-class Category < CQL::Model
-  table :categories
+class Category
+  include CQL::Model(UUID)
+  db_context AppDB, :categories
 
   column id : UUID, primary: true, auto: true
   column name : String
@@ -272,8 +275,9 @@ azu generate model comment content:text post:references user:references
 
 ```crystal
 # src/models/comment.cr
-class Comment < CQL::Model
-  table :comments
+class Comment
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :comments
 
   column id : Int64, primary: true, auto: true
   column content : String
@@ -293,7 +297,9 @@ end
 
 ```crystal
 # src/models/post.cr
-class Post < CQL::Model
+class Post
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :posts
   # ... other code ...
 
   has_many :comments, Comment
@@ -314,8 +320,9 @@ azu generate model post_tag post:references tag:references
 
 ```crystal
 # src/models/post_tag.cr
-class PostTag < CQL::Model
-  table :post_tags
+class PostTag
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :post_tags
 
   column id : Int64, primary: true, auto: true
   column post_id : Int64
@@ -341,7 +348,9 @@ azu generate model user name:string email:string --validations
 **Generated Validations:**
 
 ```crystal
-class User < CQL::Model
+class User
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :users
   # ... columns ...
 
   validates :name, presence: true
@@ -354,7 +363,9 @@ end
 
 ```crystal
 # src/models/user.cr
-class User < CQL::Model
+class User
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :users
   # ... columns and basic validations ...
 
   validate :email_domain
@@ -376,7 +387,9 @@ end
 
 ```crystal
 # src/models/user.cr
-class User < CQL::Model
+class User
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, users
   # ... columns and validations ...
 
   # Generated scopes
@@ -399,7 +412,9 @@ end
 
 ```crystal
 # src/models/user.cr
-class User < CQL::Model
+class User
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :users
   # ... columns and validations ...
 
   def full_name
@@ -431,8 +446,9 @@ azu generate model like user:references likeable:references{polymorphic}
 
 ```crystal
 # src/models/like.cr
-class Like < CQL::Model
-  table :likes
+class Like
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :likes
 
   column id : Int64, primary: true, auto: true
   column user_id : Int64
@@ -458,7 +474,8 @@ azu generate model vehicle type:string make:string model:string
 ```crystal
 # src/models/vehicle.cr
 class Vehicle < CQL::Model
-  table :vehicles
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :vehicles
 
   column id : Int64, primary: true, auto: true
   column type : String
@@ -494,8 +511,9 @@ azu generate model product name:string price:decimal metadata:json
 
 ```crystal
 # src/models/product.cr
-class Product < CQL::Model
-  table :products
+class Product
+  include CQL::ActiveRecord::Model(Int32)
+  db_context AppDB, :products
 
   column id : Int64, primary: true, auto: true
   column name : String
