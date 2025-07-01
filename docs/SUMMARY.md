@@ -6,15 +6,13 @@
 - [Installation](getting-started/installation.md)
 - [Quick Start](getting-started/quick-start.md)
 - [Project Structure](getting-started/project-structure.md)
-
-## Configuration
-
-- [Configuration Overview](configuration/README.md)
-- [Project Configuration](configuration/project-config.md)
-- [Database Configuration](configuration/database-config.md)
-- [Development Server Configuration](configuration/dev-server-config.md)
-- [Generator Configuration](configuration/generator-config.md)
-- [Environment Variables](configuration/environment.md)
+- Configuration
+  - [Configuration Overview](configuration/README.md)
+  - [Project Configuration](configuration/project-config.md)
+  - [Database Configuration](configuration/database-config.md)
+  - [Development Server Configuration](configuration/dev-server-config.md)
+  - [Generator Configuration](configuration/generator-config.md)
+  - [Environment Variables](configuration/environment.md)
 
 ## Command Reference
 
