@@ -25,6 +25,7 @@
   - [azu db new_migration](commands/database.md#azu-db-new_migration)
 - [azu help](commands/help.md)
 - [azu version](commands/version.md)
+- [CLI Options Reference](reference/cli-options.md)
 
 ## Generators
 
@@ -69,32 +70,7 @@
 ## Troubleshooting
 
 - [Common Issues](troubleshooting/README.md)
-- [Installation Issues](troubleshooting/installation.md)
-- [Generation Issues](troubleshooting/generation.md)
-- [Database Issues](troubleshooting/database.md)
-- [Development Server Issues](troubleshooting/dev-server.md)
-- [Build Issues](troubleshooting/build.md)
-
-## Reference
-
-- [CLI Options Reference](reference/cli-options.md)
-- [Template Variables](reference/template-variables.md)
-- [File Naming Conventions](reference/naming-conventions.md)
-- [Directory Structure](reference/directory-structure.md)
-- [Crystal Language Guide](reference/crystal-guide.md)
 
 ## Contributing
 
 - [Contributing Guide](contributing/README.md)
-- [Development Setup](contributing/development-setup.md)
-- [Adding New Generators](contributing/new-generators.md)
-- [Adding New Commands](contributing/new-commands.md)
-- [Testing Guidelines](contributing/testing.md)
-- [Documentation Guidelines](contributing/documentation.md)
-
-## Appendices
-
-- [Changelog](appendices/changelog.md)
-- [Migration Guides](appendices/migration-guides.md)
-- [FAQ](appendices/faq.md)
-- [Glossary](appendices/glossary.md)
