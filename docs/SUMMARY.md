@@ -7,6 +7,15 @@
 - [Quick Start](getting-started/quick-start.md)
 - [Project Structure](getting-started/project-structure.md)
 
+## Configuration
+
+- [Configuration Overview](configuration/README.md)
+- [Project Configuration](configuration/project-config.md)
+- [Database Configuration](configuration/database-config.md)
+- [Development Server Configuration](configuration/dev-server-config.md)
+- [Generator Configuration](configuration/generator-config.md)
+- [Environment Variables](configuration/environment.md)
+
 ## Command Reference
 
 - [Command Overview](commands/README.md)
@@ -51,15 +60,6 @@
 - [Logging System](architecture/logging.md)
 - [Plugin System](architecture/plugins.md)
 
-## Configuration
-
-- [Configuration Overview](configuration/README.md)
-- [Project Configuration](configuration/project-config.md)
-- [Database Configuration](configuration/database-config.md)
-- [Development Server Configuration](configuration/dev-server-config.md)
-- [Generator Configuration](configuration/generator-config.md)
-- [Environment Variables](configuration/environment.md)
-
 ## Integration
 
 - [Framework Integration](integration/README.md)
@@ -67,10 +67,7 @@
 - [CQL ORM](integration/cql-orm.md)
 - [Third-party Libraries](integration/third-party.md)
 
-## Troubleshooting
+## Help & Contributing
 
 - [Common Issues](troubleshooting/README.md)
-
-## Contributing
-
 - [Contributing Guide](contributing/README.md)
