@@ -57,15 +57,7 @@
 - [Generator System](architecture/generator-system.md)
 - [Template Engine (ECR)](architecture/template-engine.md)
 - [Configuration System](architecture/configuration.md)
-- [Logging System](architecture/logging.md)
 - [Plugin System](architecture/plugins.md)
-
-## Integration
-
-- [Framework Integration](integration/README.md)
-- [Azu Web Framework](integration/azu-framework.md)
-- [CQL ORM](integration/cql-orm.md)
-- [Third-party Libraries](integration/third-party.md)
 
 ## Help & Contributing
 
