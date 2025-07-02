@@ -29,8 +29,8 @@ describe AzuCLI::Generator::ValidatorGenerator do
       options = create_generator_options(additional_args: ["min:2", "max:50"])
       generator = AzuCLI::Generator::ValidatorGenerator.new("LengthValidator", "test_project", options)
 
-      generator.parameters.should have_key("min")
-      generator.parameters.should have_key("max")
+      generator.parameters.has_key?("min").should be_true
+      generator.parameters.has_key?("max").should be_true
       generator.parameters["min"].should eq("2")
       generator.parameters["max"].should eq("50")
     end
@@ -171,6 +171,8 @@ describe AzuCLI::Generator::ValidatorGenerator do
       generator = AzuCLI::Generator::ValidatorGenerator.new("RangeValidator", "test_project", options)
 
       generator.validator_type.should eq("range")
+      generator.parameters.has_key?("min").should be_true
+      generator.parameters.has_key?("max").should be_true
       generator.parameters["min"].should eq("0")
       generator.parameters["max"].should eq("100")
     end
@@ -183,6 +185,8 @@ describe AzuCLI::Generator::ValidatorGenerator do
       generator = AzuCLI::Generator::ValidatorGenerator.new("LengthValidator", "test_project", options)
 
       generator.validator_type.should eq("length")
+      generator.parameters.has_key?("min").should be_true
+      generator.parameters.has_key?("max").should be_true
       generator.parameters["min"].should eq("2")
       generator.parameters["max"].should eq("50")
     end
@@ -195,6 +199,8 @@ describe AzuCLI::Generator::ValidatorGenerator do
       generator = AzuCLI::Generator::ValidatorGenerator.new("UniqueValidator", "test_project", options)
 
       generator.validator_type.should eq("uniqueness")
+      generator.parameters.has_key?("model").should be_true
+      generator.parameters.has_key?("column").should be_true
       generator.parameters["model"].should eq("User")
       generator.parameters["column"].should eq("email")
     end
@@ -467,6 +473,8 @@ describe AzuCLI::Generator::ValidatorGenerator do
 
       # Test through post generation tasks
       generator.validator_type.should eq("range")
+      generator.parameters.has_key?("min").should be_true
+      generator.parameters.has_key?("max").should be_true
       generator.parameters["min"].should eq("0")
       generator.parameters["max"].should eq("100")
     end

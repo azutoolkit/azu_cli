@@ -1,5 +1,6 @@
 require "spec"
 require "../../../src/azu_cli"
+require "../../../src/azu_cli/generators/core/factory"
 require "file_utils"
 
 # Generator Spec Helper

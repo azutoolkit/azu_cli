@@ -65,7 +65,7 @@ module AzuCLI::Generator
 
     # Validate project type
     private def validate_project_type : Nil
-      valid_types = config.get_hash("project_types").keys
+      valid_types = config.get_hash_keys("project_types")
       unless valid_types.includes?(@project_type)
         raise ArgumentError.new("Invalid project type: #{@project_type}. Valid types: #{valid_types.join(", ")}")
       end
@@ -73,7 +73,7 @@ module AzuCLI::Generator
 
     # Validate database type
     private def validate_database_type : Nil
-      valid_databases = config.get_hash("databases").keys
+      valid_databases = config.get_hash_keys("databases")
       unless valid_databases.includes?(@database)
         raise ArgumentError.new("Invalid database: #{@database}. Valid databases: #{valid_databases.join(", ")}")
       end
@@ -122,11 +122,9 @@ module AzuCLI::Generator
     private def generate_project_type_files : Nil
       puts "🎯 Generating #{@project_type} specific files...".colorize(:yellow)
 
-      project_type_config = config.get_hash("project_types.#{@project_type}")
-      templates = project_type_config["templates"]?.try(&.as_a?) || [] of YAML::Any
+      templates = config.get_array("project_types.#{@project_type}.templates")
 
-      templates.each do |template_yaml|
-        template_key = template_yaml.as_s
+      templates.each do |template_key|
         if template_name = config.get("templates.#{template_key}")
           output_path = get_template_output_path(template_key)
           if output_path
@@ -199,10 +197,8 @@ module AzuCLI::Generator
 
     # Generate project features list
     private def generate_project_features : String
-      project_type_config = config.get_hash("project_types.#{@project_type}")
-      features = project_type_config["features"]?.try(&.as_a?) || [] of YAML::Any
-
-      feature_list = features.map(&.as_s).join(", ")
+      features = config.get_array("project_types.#{@project_type}.features")
+      feature_list = features.join(", ")
       "Features: #{feature_list}"
     end
 
@@ -371,13 +367,13 @@ module AzuCLI::Generator
       puts "   Type: #{@project_type.capitalize}"
       puts "   Database: #{@database.capitalize}"
 
-      project_type_config = config.get_hash("project_types.#{@project_type}")
-      if description = project_type_config["description"]?
+      if description = config.get("project_types.#{@project_type}.description")
         puts "   Description: #{description}"
       end
 
-      if features = project_type_config["features"]?.try(&.as_a?)
-        feature_list = features.map(&.as_s).join(", ")
+      features = config.get_array("project_types.#{@project_type}.features")
+      unless features.empty?
+        feature_list = features.join(", ")
         puts "   Features: #{feature_list}"
       end
       puts

@@ -1,41 +1,33 @@
-require "../command"
+require "./base"
 
-module AzuCLI::Commands
-  # Version command - displays version information
-  class Version < Command
-    command_name "version"
-    description "Show version information"
-    usage "version"
+module AzuCLI
+  module Commands
+    # Version command to display CLI version information
+    class Version < Base
+      def initialize
+        super("version", "Show Azu CLI version information")
+      end
 
-    def execute_with_options(
-      options : Hash(String, String | Bool | Array(String)),
-      args : Array(String),
-    ) : String | Nil
-      puts
-      puts "🚀 Azu CLI v#{AzuCLI::VERSION}".colorize(:cyan).bold
-      puts
-      puts "A Crystal toolkit for building web applications"
-      puts
-      puts "📦 Dependencies:"
-      puts "  • Crystal: #{Crystal::VERSION}"
-      puts "  • Teeplate: Template engine"
-      puts "  • Cadmium Inflector: String inflections"
-      puts "  • CQL: ORM framework"
-      puts
-      puts "🌐 Links:"
-      puts "  • Documentation: https://azutopia.gitbook.io/azu/"
-      puts "  • Source Code: https://github.com/azutoolkit/azu_cli"
-      puts "  • Issues: https://github.com/azutoolkit/azu_cli/issues"
-      puts
-      puts "👨‍💻 Created by: Elias J. Perez <eliasjpr@gmail.com>"
-      puts "📄 License: MIT"
-      puts
+      def execute : Result
+        puts "Azu CLI v#{AzuCLI::VERSION}"
+        puts "Crystal #{Crystal::VERSION}"
+        puts "Topia CLI Framework"
+        puts
 
-      nil
-    end
+        # Show plugin versions if available
+        show_plugin_versions
 
-    def show_command_specific_help
-      puts "Shows detailed version information including dependencies."
+        success("Version information displayed")
+      end
+
+      private def show_plugin_versions
+        # This would show loaded plugin versions
+        # For now, just show a placeholder
+        puts "Plugins:"
+        puts "  - Generator Plugin v1.0.0"
+        puts "  - Database Plugin v1.0.0"
+        puts "  - Development Plugin v1.0.0"
+      end
     end
   end
 end

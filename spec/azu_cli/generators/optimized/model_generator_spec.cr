@@ -18,7 +18,7 @@ describe AzuCLI::Generator::ModelGenerator do
       )
       generator = AzuCLI::Generator::ModelGenerator.new("Post", "test_project", options)
 
-      generator.associations.should have_key("belongs_to")
+      generator.associations.has_key?("belongs_to").should be_true
     end
 
     it "auto-detects foreign key associations" do
@@ -27,7 +27,7 @@ describe AzuCLI::Generator::ModelGenerator do
       )
       generator = AzuCLI::Generator::ModelGenerator.new("Post", "test_project", options)
 
-      generator.associations.should have_key("belongs_to")
+      generator.associations.has_key?("belongs_to").should be_true
     end
 
     it "sets auto_migration flag from options" do
@@ -278,7 +278,7 @@ describe AzuCLI::Generator::ModelGenerator do
       )
       generator = AzuCLI::Generator::ModelGenerator.new("Post", "test_project", options)
 
-      generator.associations.should have_key("belongs_to")
+      generator.associations.has_key?("belongs_to").should be_true
     end
 
     it "handles multiple associations" do
@@ -288,8 +288,8 @@ describe AzuCLI::Generator::ModelGenerator do
       )
       generator = AzuCLI::Generator::ModelGenerator.new("Post", "test_project", options)
 
-      generator.associations.should have_key("belongs_to")
-      generator.associations.should have_key("has_many")
+      generator.associations.has_key?("belongs_to").should be_true
+      generator.associations.has_key?("has_many").should be_true
     end
   end
 

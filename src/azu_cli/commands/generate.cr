@@ -1,178 +1,190 @@
-require "../command"
-require "../generators/core/factory"
+require "./base"
 
-module AzuCLI::Commands
-  # Optimized Generate command using SOLID principles and design patterns
-  # Integrates with the new configuration-driven generator system
-  class Generate < Command
-    command_name "generate"
-    description "Generate Azu components using optimized configuration-driven generators"
-    usage "generate <generator_type> <name> [options]"
-
-    def setup_command_options(parser : OptionParser)
-      parser.on("--skip-tests", "Skip generating test files") do
-        parsed_options["skip-tests"] = true
+module AzuCLI
+  module Commands
+    # Generate command for code generation
+    class Generate < Base
+      def initialize
+        super("generate", "Generate code for your Azu project")
       end
 
-      parser.on("--skip-routes", "Skip adding routes (for endpoints)") do
-        parsed_options["skip-routes"] = true
+      def execute : Result
+        parse_args(get_args)
+
+        unless validate_required_args(2)
+          return error("Usage: azu generate <type> <name> [options] [attributes]")
+        end
+
+        generator_type = get_arg(0).not_nil!
+        name = get_arg(1).not_nil!
+
+        # Extract attributes from remaining arguments
+        attributes = extract_attributes
+        additional_args = extract_additional_args
+
+        # Create generator options
+        options = create_generator_options(attributes, additional_args)
+
+        # Execute the appropriate generator
+        execute_generator(generator_type, name, options)
       end
 
-      parser.on("--file-upload", "Include file upload support") do
-        parsed_options["file-upload"] = true
-      end
-    end
+      private def extract_attributes : Hash(String, String)
+        attributes = {} of String => String
 
-    def execute_with_options(
-      options : Hash(String, String | Bool | Array(String)),
-      args : Array(String),
-    ) : String | Nil
-      require_project_root!
+        get_args[2..-1].each do |arg|
+          if arg.includes?(":")
+            parts = arg.split(":", 2)
+            if parts.size == 2
+              attributes[parts[0]] = parts[1]
+            end
+          end
+        end
 
-      if args.empty?
-        show_available_generators
-        return "Help displayed"
-      end
-
-      generator_type = args.first
-      component_name = args[1]? || ""
-
-      # Check if this is a request for generator-specific help
-      if component_name == "--help" || component_name == "-h"
-        show_generator_help(generator_type)
-        return "Help displayed"
+        attributes
       end
 
-      # Validate generator type
-      unless AzuCLI::Generator::Core::GeneratorFactory.exists?(generator_type)
-        log.error("Unknown generator: #{generator_type}")
-        show_available_generators
-        return "Unknown generator error"
+      private def extract_additional_args : Array(String)
+        get_args[2..-1].reject { |arg| arg.includes?(":") }
       end
 
-      # Validate component name
-      if component_name.empty?
-        log.error("Component name is required")
-        log.info("Usage: azu generate #{generator_type} <name> [options]")
-        return "Component name required"
+      private def create_generator_options(attributes : Hash(String, String), additional_args : Array(String)) : Generator::Core::GeneratorOptions
+        options = Generator::Core::GeneratorOptions.new
+        options.attributes = attributes
+        options.additional_args = additional_args
+        options.force = has_option?("force")
+        options.skip_tests = has_option?("skip-tests")
+        options.custom_options = extract_custom_options
+
+        options
       end
 
-      unless valid_component_name?(component_name)
-        log.error("Invalid component name: #{component_name}")
-        log.info("Component name must contain only letters, numbers, and underscores")
-        log.info("Examples: user, user_profile, BlogPost")
-        return "Invalid component name"
+      private def extract_custom_options : Hash(String, String)
+        custom_options = {} of String => String
+
+        # Extract type-specific options
+        if type = get_option("type")
+          custom_options["type"] = type
+        end
+
+        if api_only = get_option("api-only")
+          custom_options["api-only"] = api_only
+        end
+
+        if web_only = get_option("web-only")
+          custom_options["web-only"] = web_only
+        end
+
+        custom_options
       end
 
-      begin
-        # Create generator options from arguments and remaining args
-        generator_options = AzuCLI::Generator::Core::GeneratorOptions.from_parsed_options(
-          options,
-          args[2..] # attributes/additional arguments
-        )
+      private def execute_generator(type : String, name : String, options : Generator::Core::GeneratorOptions) : Result
+        begin
+          # Get project name from current directory or config
+          project_name = get_project_name
 
-        # Create generator using factory
-        generator = AzuCLI::Generator::Core::GeneratorFactory.create(
-          generator_type,
-          component_name,
-          get_project_name,
-          generator_options
-        )
+          # Create and execute the appropriate generator
+          generator = create_generator(type, name, project_name, options)
+          result = generator.generate!
 
-        # Execute generation
-        generator.generate!
-
-        log.success("Generated #{generator_type} '#{component_name}' successfully")
-        return "Generated successfully"
-      rescue ex : ArgumentError
-        log.error("Error: #{ex.message}")
-        show_available_generators
-        return "Generation error"
-      rescue ex : Exception
-        log.error("Error generating #{generator_type}: #{ex.message}")
-        return "Generation failed"
-      end
-    end
-
-    private def show_available_generators
-      puts "\n🔧 Available generators:".colorize(:yellow).bold
-
-      descriptions = AzuCLI::Generator::Core::GeneratorFactory.generator_descriptions
-
-      descriptions.each do |type, description|
-        aliases = AzuCLI::Generator::Core::GeneratorFactory.aliases_for(type)
-        alias_text = aliases.empty? ? "" : " (aliases: #{aliases.join(", ")})"
-        puts "  #{type.ljust(12)} - #{description}#{alias_text}"
+          Logger.info("✅ #{result}")
+          success(result)
+        rescue ex : ArgumentError
+          error("Invalid generator arguments: #{ex.message}")
+        rescue ex : File::Error
+          error("File operation failed: #{ex.message}")
+        rescue ex : Exception
+          error("Generation failed: #{ex.message}")
+        end
       end
 
-      puts "\nUse 'azu generate <type> --help' for type-specific help"
-    end
+      private def create_generator(type : String, name : String, project_name : String, options : Generator::Core::GeneratorOptions) : Generator::Core::AbstractGenerator
+        case type.downcase
+        when "model"
+          Generator::ModelGenerator.new(name, project_name, options)
+        when "endpoint"
+          Generator::EndpointGenerator.new(name, project_name, options)
+        when "service"
+          Generator::ServiceGenerator.new(name, project_name, options)
+        when "contract"
+          Generator::ContractGenerator.new(name, project_name, options)
+        when "page"
+          Generator::PageGenerator.new(name, project_name, options)
+        when "migration"
+          Generator::MigrationGenerator.new(name, project_name, options)
+        when "scaffold"
+          Generator::ScaffoldGenerator.new(name, project_name, options)
+        when "component"
+          Generator::ComponentGenerator.new(name, project_name, options)
+        when "middleware"
+          Generator::MiddlewareGenerator.new(name, project_name, options)
+        when "validator"
+          Generator::ValidatorGenerator.new(name, project_name, options)
+        when "channel"
+          Generator::ChannelGenerator.new(name, project_name, options)
+        when "handler"
+          Generator::HandlerGenerator.new(name, project_name, options)
+        when "request"
+          Generator::RequestGenerator.new(name, project_name, options)
+        when "response"
+          Generator::ResponseGenerator.new(name, project_name, options)
+        else
+          raise ArgumentError.new("Unknown generator type: #{type}")
+        end
+      end
 
-    private def show_generator_help(generator_type : String)
-      puts "Help for #{generator_type} generator would be shown here"
-      # TODO: Implement generator-specific help from configuration
-    end
+      private def get_project_name : String
+        # Try to get project name from current directory
+        current_dir = Dir.current
+        project_name = File.basename(current_dir)
 
-    private def valid_component_name?(name : String) : Bool
-      # Component name should contain only letters, numbers, and underscores
-      # Should start with a letter
-      /\A[A-Za-z][A-Za-z0-9_]*\z/.match(name) != nil
-    end
+        # If we're in a typical project structure, try to find the main file
+        if File.exists?(File.join(current_dir, "shard.yml"))
+          # Read project name from shard.yml
+          if content = File.read(File.join(current_dir, "shard.yml"))
+            if match = content.match(/name:\s*(\w+)/)
+              project_name = match[1]
+            end
+          end
+        end
 
-    def show_command_specific_help
-      puts "The optimized generate command uses configuration-driven generators"
-      puts "that follow SOLID principles and design patterns for better maintainability."
-      puts
-      puts "Arguments:"
-      puts "  <generator_type>    Type of component to generate"
-      puts "  <name>              Name of the component"
-      puts "  [attributes...]     Component-specific attributes"
-      puts
-      puts "Options:"
-      puts "  --force             Overwrite existing files"
-      puts "  --skip-tests        Skip generating test files"
-      puts "  --skip-routes       Skip adding routes (for endpoints)"
-      puts "  --file-upload       Include file upload support"
-      puts "  --help              Show help for specific generator"
-      puts
-      puts "Generator-specific syntax:"
-      puts "  Model attributes:   name:string email:string age:integer"
-      puts "  Migration attrs:    email:string age:integer active:boolean"
-      puts "  Endpoint actions:   index show create update destroy"
-      puts "  Page variables:     title='My Page' layout=application"
-      puts "  Component events:   event:click event:submit event:change"
-      puts "  Component attrs:    title:string count:integer visible:boolean"
-      puts "  Validator types:    type:email type:phone type:url type:regex type:range"
-      puts "  Validator args:     pattern:\\A[a-z]+\\z min:0 max:100 model:User"
-      puts "  Channel events:     event:message event:typing event:connect"
-      puts "  Request attrs:      name:string email:string --file-upload"
-      puts "  Response attrs:     user:User data:Hash format:json template:custom.jinja"
-      puts "  Handler types:      type:auth type:cors type:rate_limit type:logging type:security"
-      puts
-      puts "Configuration:"
-      puts "  Generators are configured via YAML files in src/azu_cli/generators/config/"
-      puts "  Each generator type has its own configuration with templates, validations, and patterns."
-      puts "  This allows for easy customization and extension without code changes."
-      puts
-      puts "Architecture:"
-      puts "  - Configuration-driven generation"
-      puts "  - SOLID principles implementation"
-      puts "  - Strategy pattern for different generation approaches"
-      puts "  - Template method pattern for generation workflow"
-      puts "  - Factory pattern for generator creation"
-      puts "  - Dependency injection for strategies"
-      puts
-      puts "Benefits:"
-      puts "  - Highly maintainable and extensible"
-      puts "  - Easy to add new generator types"
-      puts "  - Configuration changes don't require code changes"
-      puts "  - Consistent generation patterns across all generators"
-      puts "  - Better separation of concerns"
-      puts
-      puts "Examples:"
-      puts "  azu generate contract UserContract name:string email:string"
-      puts "  azu generate contract --help                    # Show contract generator help"
-      puts "  azu generate contract LoginContract email:string password:string"
+        project_name
+      end
+
+      def show_help
+        puts "Usage: azu generate <type> <name> [options] [attributes]"
+        puts
+        puts "Generate code for your Azu project."
+        puts
+        puts "Generator Types:"
+        puts "  model <name> [attr:type]     Generate a model with attributes"
+        puts "  endpoint <name> [actions]    Generate endpoints with actions"
+        puts "  service <name> [methods]     Generate a service with methods"
+        puts "  contract <name> [attr:type]  Generate a contract with attributes"
+        puts "  page <name> [attr:type]      Generate a page with template variables"
+        puts "  migration <name> [attr:type] Generate a database migration"
+        puts "  scaffold <name> [attr:type]  Generate a complete CRUD scaffold"
+        puts "  component <name> [attr:type] Generate a component"
+        puts "  middleware <name> [type]     Generate middleware"
+        puts "  validator <name> [type]      Generate a custom validator"
+        puts "  channel <name> [events]      Generate a WebSocket channel"
+        puts "  handler <name> [type]        Generate a request handler"
+        puts "  request <name> [attr:type]   Generate a request class"
+        puts "  response <name> [attr:type]  Generate a response class"
+        puts
+        puts "Options:"
+        puts "  --force                    Overwrite existing files"
+        puts "  --skip-tests               Skip test file generation"
+        puts "  --type <type>              Generator-specific type"
+        puts "  --api-only                 Generate API-only components"
+        puts "  --web-only                 Generate web-only components"
+        puts
+        puts "Examples:"
+        puts "  azu generate model User name:string email:string age:int32"
+        puts "  azu generate endpoint Users index show create update destroy"
+        puts "  azu generate scaffold Post title:string content:text published:bool"
+        puts "  azu generate service UserService create find update delete"
+      end
     end
   end
 end

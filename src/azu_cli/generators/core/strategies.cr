@@ -10,13 +10,16 @@ module AzuCLI::Generator::Core
   # ECR template strategy implementation
   class EcrTemplateStrategy < TemplateStrategy
     def render(template_path : String, variables : Hash(String, String)) : String
-      unless File.exists?(template_path)
-        raise ArgumentError.new("Template not found: #{template_path}")
+      content : String
+
+      # Determine if it's a file path or template content
+      if File.exists?(template_path)
+        content = File.read(template_path)
+      else
+        content = template_path
       end
 
-      content = File.read(template_path)
-
-      # Replace template variables
+      # Replace template variables using {{key}} syntax
       variables.each do |key, value|
         content = content.gsub("{{#{key}}}", value)
       end
@@ -33,6 +36,8 @@ module AzuCLI::Generator::Core
   abstract class FileCreationStrategy
     abstract def create_file(path : String, content : String, options : Hash(String, String)) : Bool
     abstract def create_directory(path : String) : Bool
+    abstract def file_exists?(path : String) : Bool
+    abstract def directory_exists?(path : String) : Bool
   end
 
   # Standard file creation strategy
@@ -63,6 +68,14 @@ module AzuCLI::Generator::Core
       else
         false
       end
+    end
+
+    def file_exists?(path : String) : Bool
+      File.exists?(path)
+    end
+
+    def directory_exists?(path : String) : Bool
+      Dir.exists?(path)
     end
   end
 

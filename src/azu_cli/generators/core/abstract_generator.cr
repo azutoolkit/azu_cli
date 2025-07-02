@@ -48,13 +48,18 @@ module AzuCLI::Generator::Core
       success_message
     end
 
+    # Alias for generate! to maintain compatibility with tests
+    def call : String
+      generate!
+    end
+
     # Abstract methods that subclasses must implement (Open/Closed Principle)
     abstract def generator_type : String
     abstract def generate_files : Nil
 
     # Hook methods that subclasses can override
     def validate_input! : Nil
-      errors = validation_strategy.validate(name)
+      errors = validation_strategy.validate(name, {} of String => String)
       unless errors.empty?
         raise ArgumentError.new(errors.join(", "))
       end

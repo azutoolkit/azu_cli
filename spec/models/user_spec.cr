@@ -1,0 +1,1 @@
+src/templates/model/model_spec.cr.ecr

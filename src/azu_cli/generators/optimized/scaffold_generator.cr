@@ -336,7 +336,7 @@ module AzuCLI::Generator
 
     # Override to show more detailed information
     def validate_preconditions : Nil
-      super
+      validate_input!
 
       # Validate scaffold-specific preconditions
       if @attributes.empty?

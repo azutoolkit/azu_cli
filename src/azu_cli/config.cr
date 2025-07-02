@@ -85,21 +85,37 @@ module AzuCLI
     private def load_from_file(file_path : String)
       return unless File.exists?(file_path)
 
-      yaml_content = File.read(file_path)
-      config_data = YAML.parse(yaml_content)
+      begin
+        yaml_content = File.read(file_path)
+        config_data = YAML.parse(yaml_content)
 
-      # Load environment-specific configuration
-      env_config = config_data[environment]? || config_data
+        # Ensure the config_data is a Hash-like structure
+        unless config_data.as_h?
+          # If it's not a hash, skip this file (it might be shard.yml or another type of YAML)
+          return
+        end
 
-      # Parse configuration sections
-      load_general_config(env_config)
-      load_database_config(env_config)
-      load_server_config(env_config)
-      load_logging_config(env_config)
+        # Load environment-specific configuration
+        env_config = config_data[environment]? || config_data
 
-      @config_file_path = file_path
-    rescue ex : Exception
-      raise "Failed to load configuration from #{file_path}: #{ex.message}"
+        # Parse configuration sections
+        load_general_config(env_config)
+        load_database_config(env_config)
+        load_server_config(env_config)
+        load_logging_config(env_config)
+
+        @config_file_path = file_path
+      rescue ex : YAML::ParseException
+        # Skip files that aren't valid YAML or aren't Azu config files
+        return
+      rescue ex : Exception
+        # Only raise for actual Azu config files, not other YAML files
+        if file_path.includes?("azu")
+          raise "Failed to load configuration from #{file_path}: #{ex.message}"
+        end
+        # Otherwise, just skip the file
+        return
+      end
     end
 
     # Load configuration from environment variables

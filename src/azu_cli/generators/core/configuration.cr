@@ -4,8 +4,10 @@ module AzuCLI::Generator::Core
   # Configuration loader following SOLID principles
   class Configuration
     property data : Hash(String, YAML::Any)
+    getter generator_type : String
 
     def initialize(@type : String, @config_path : String = "src/azu_cli/generators/config")
+      @generator_type = @type
       @data = {} of String => YAML::Any
     end
 
@@ -129,11 +131,36 @@ module AzuCLI::Generator::Core
       if value = get_nested(key)
         if hash = value.as_h?
           hash.each do |k, v|
-            result[k.as_s] = v.as_s
+            # Only convert values that are actually strings or can be safely converted
+            if v.as_s?
+              result[k.as_s] = v.as_s
+            elsif v.as_i?
+              result[k.as_s] = v.as_i.to_s
+            elsif v.as_bool?
+              result[k.as_s] = v.as_bool.to_s
+            elsif v.as_a?
+              # For arrays, join them with commas or skip them
+              result[k.as_s] = v.as_a.map(&.as_s).join(", ")
+            else
+              # Skip other complex types
+              next
+            end
           end
         end
       end
       result
+    end
+
+    def get_hash_keys(key : String) : Array(String)
+      if value = get_nested(key)
+        if hash = value.as_h?
+          hash.keys.map(&.as_s)
+        else
+          [] of String
+        end
+      else
+        [] of String
+      end
     end
 
     # Supports nested key access like "validation_types.email.pattern"

@@ -2,10 +2,11 @@ require "../../../spec_helper"
 require "../../../../src/azu_cli/generators/optimized/project_generator"
 
 describe AzuCLI::Generator::ProjectGenerator do
-  let(project_name) { "test_project" }
-  let(app_name) { "MyApp" }
-  let(options) { AzuCLI::Generator::Core::GeneratorOptions.new }
-  let(generator) { AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options) }
+  # Shared variables for most tests
+  project_name = "test_project"
+  app_name = "MyApp"
+  options = AzuCLI::Generator::Core::GeneratorOptions.new
+  generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
 
   describe "#initialize" do
     it "sets default project type to web" do
@@ -80,52 +81,49 @@ describe AzuCLI::Generator::ProjectGenerator do
 
   describe "project type specific behavior" do
     describe "web project" do
-      let(web_options) do
+      it "sets copy_assets to true" do
         options = AzuCLI::Generator::Core::GeneratorOptions.new
         options.custom_options["type"] = "web"
-        options
-      end
-      let(web_generator) { AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, web_options) }
-
-      it "sets copy_assets to true" do
+        web_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         web_generator.copy_assets.should be_true
       end
 
       it "sets copy_templates to true" do
+        options = AzuCLI::Generator::Core::GeneratorOptions.new
+        options.custom_options["type"] = "web"
+        web_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         web_generator.copy_templates.should be_true
       end
     end
 
     describe "api project" do
-      let(api_options) do
+      it "sets copy_assets to false" do
         options = AzuCLI::Generator::Core::GeneratorOptions.new
         options.custom_options["type"] = "api"
-        options
-      end
-      let(api_generator) { AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, api_options) }
-
-      it "sets copy_assets to false" do
+        api_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         api_generator.copy_assets.should be_false
       end
 
       it "sets copy_templates to false" do
+        options = AzuCLI::Generator::Core::GeneratorOptions.new
+        options.custom_options["type"] = "api"
+        api_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         api_generator.copy_templates.should be_false
       end
     end
 
     describe "cli project" do
-      let(cli_options) do
+      it "sets copy_assets to false" do
         options = AzuCLI::Generator::Core::GeneratorOptions.new
         options.custom_options["type"] = "cli"
-        options
-      end
-      let(cli_generator) { AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, cli_options) }
-
-      it "sets copy_assets to false" do
+        cli_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         cli_generator.copy_assets.should be_false
       end
 
       it "sets copy_templates to false" do
+        options = AzuCLI::Generator::Core::GeneratorOptions.new
+        options.custom_options["type"] = "cli"
+        cli_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         cli_generator.copy_templates.should be_false
       end
     end
@@ -133,40 +131,28 @@ describe AzuCLI::Generator::ProjectGenerator do
 
   describe "database configuration" do
     describe "postgresql" do
-      let(pg_options) do
+      it "sets database to postgresql" do
         options = AzuCLI::Generator::Core::GeneratorOptions.new
         options.custom_options["database"] = "postgresql"
-        options
-      end
-      let(pg_generator) { AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, pg_options) }
-
-      it "sets database to postgresql" do
+        pg_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         pg_generator.database.should eq("postgresql")
       end
     end
 
     describe "mysql" do
-      let(mysql_options) do
+      it "sets database to mysql" do
         options = AzuCLI::Generator::Core::GeneratorOptions.new
         options.custom_options["database"] = "mysql"
-        options
-      end
-      let(mysql_generator) { AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, mysql_options) }
-
-      it "sets database to mysql" do
+        mysql_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         mysql_generator.database.should eq("mysql")
       end
     end
 
     describe "sqlite" do
-      let(sqlite_options) do
+      it "sets database to sqlite" do
         options = AzuCLI::Generator::Core::GeneratorOptions.new
         options.custom_options["database"] = "sqlite"
-        options
-      end
-      let(sqlite_generator) { AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, sqlite_options) }
-
-      it "sets database to sqlite" do
+        sqlite_generator = AzuCLI::Generator::ProjectGenerator.new(project_name, app_name, options)
         sqlite_generator.database.should eq("sqlite")
       end
     end
@@ -174,8 +160,6 @@ describe AzuCLI::Generator::ProjectGenerator do
 
   describe "template variable generation" do
     it "generates project variables with correct values" do
-      # This would require mocking the config and testing the private method
-      # We test the public interface instead
       generator.project_type.should eq("web")
       generator.database.should eq("postgresql")
       generator.name.should eq(project_name)
@@ -209,17 +193,17 @@ describe AzuCLI::Generator::ProjectGenerator do
     it "loads project types from configuration" do
       config = generator.config
       project_types = config.get_hash("project_types")
-      project_types.should have_key("web")
-      project_types.should have_key("api")
-      project_types.should have_key("cli")
+      project_types.has_key?("web").should be_true
+      project_types.has_key?("api").should be_true
+      project_types.has_key?("cli").should be_true
     end
 
     it "loads database configurations" do
       config = generator.config
       databases = config.get_hash("databases")
-      databases.should have_key("postgresql")
-      databases.should have_key("mysql")
-      databases.should have_key("sqlite")
+      databases.has_key?("postgresql").should be_true
+      databases.has_key?("mysql").should be_true
+      databases.has_key?("sqlite").should be_true
     end
   end
 

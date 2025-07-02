@@ -118,7 +118,7 @@ describe AzuCLI::Generator::Core::AbstractGenerator do
       generator = TestGenerator.new("TestName", "test_project", false, false)
 
       # Should not raise any exceptions for valid input
-      generator.validate_preconditions
+      generator.validate_input!
     end
 
     it "raises error for invalid names" do
