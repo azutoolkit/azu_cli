@@ -146,52 +146,6 @@ module AzuCLI
       exit(Config::EXIT_INVALID_USAGE)
     end
   end
-
-  # Legacy argument parsing for backward compatibility
-  private def self.parse_args(args : Array(String)) : Hash(String, String | Array(String))
-    parsed = Hash(String, String | Array(String)).new
-    positional = [] of String
-
-    i = 0
-    while i < args.size
-      arg = args[i]
-
-      if arg.starts_with?("--")
-        # Long option
-        key = arg[2..]
-        if key.includes?("=")
-          parts = key.split("=", 2)
-          parsed[parts[0]] = parts[1]
-        elsif i + 1 < args.size && !args[i + 1].starts_with?("-")
-          parsed[key] = args[i + 1]
-          i += 1
-        else
-          parsed[key] = "true"
-        end
-      elsif arg.starts_with?("-") && arg.size > 1
-        # Short option
-        key = arg[1..]
-        if i + 1 < args.size && !args[i + 1].starts_with?("-")
-          parsed[key] = args[i + 1]
-          i += 1
-        else
-          parsed[key] = "true"
-        end
-      else
-        # Positional argument
-        positional << arg
-      end
-
-      i += 1
-    end
-
-    # Store positional arguments
-    if !positional.empty?
-      parsed["_positional"] = positional
-    end
-
-    parsed
-  end
 end
 
 AzuCLI.run
