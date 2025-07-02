@@ -164,15 +164,15 @@ module AzuCLI::Generator
       database_config = config.get_hash("databases.#{@database}")
 
       default_template_variables.merge({
-        "project_type"       => @project_type,
-        "database"           => @database,
-        "database_url"       => expand_template_string(database_config["url"]? || ""),
-        "database_driver"    => database_config["driver"]? || "",
-        "database_adapter"   => database_config["adapter"]? || "",
-        "project_features"   => generate_project_features,
-        "timestamp"          => Time.utc.to_rfc3339,
-        "crystal_version"    => "1.10.0",
-        "azu_version"        => "~> 1.0.0",
+        "project_type"     => @project_type,
+        "database"         => @database,
+        "database_url"     => expand_template_string(database_config["url"]? || ""),
+        "database_driver"  => database_config["driver"]? || "",
+        "database_adapter" => database_config["adapter"]? || "",
+        "project_features" => generate_project_features,
+        "timestamp"        => Time.utc.to_rfc3339,
+        "crystal_version"  => "1.10.0",
+        "azu_version"      => "~> 1.0.0",
       })
     end
 
@@ -188,8 +188,8 @@ module AzuCLI::Generator
     # Expand template variables in strings
     private def expand_template_string(template : String) : String
       template.gsub("{{project}}", snake_case_name)
-             .gsub("{{Project}}", class_name)
-             .gsub("{{PROJECT}}", snake_case_name.upcase)
+        .gsub("{{Project}}", class_name)
+        .gsub("{{PROJECT}}", snake_case_name.upcase)
     end
 
     # Expand template variables in paths

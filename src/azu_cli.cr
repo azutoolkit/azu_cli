@@ -25,7 +25,6 @@ module AzuCLI
 
       # Handle empty command (show help)
       if command_name.empty?
-        Commands::Help.new.run("", [] of String)
         exit(Config::EXIT_SUCCESS)
       end
 
@@ -126,18 +125,8 @@ module AzuCLI
   # Create command instance based on command name
   private def self.create_command(command_name : String) : Command
     case command_name.downcase
-    when "help", "h"
-      Commands::Help.new
-    when "version", "v"
-      Commands::Version.new
-    when "new"
-      Commands::New.new
-    when "init"
-      Commands::Init.new
     when "generate", "g"
-      Commands::GenerateOptimized.new
-    when "db"
-      Commands::Db.new
+      Commands::Generate.new
     else
       Logger.error("Unknown command: #{command_name}")
       Logger.info("Run 'azu help' to see available commands")

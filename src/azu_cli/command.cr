@@ -168,89 +168,14 @@ module AzuCLI
     end
 
     # Abstract method for command execution with parsed options
-    # This replaces the old execute method
     abstract def execute_with_options(
       options : Hash(String, String | Bool | Array(String)),
       args : Array(String),
     ) : String | Nil
 
-    # Backward compatibility method - converts old execute signature to new one
-    def execute(args : Hash(String, String | Array(String))) : String | Nil
-      # Convert old-style args to new format
-      options = {} of String => String | Bool | Array(String)
-      remaining = [] of String
-
-      args.each do |key, value|
-        if key == "_positional"
-          case value
-          when Array(String)
-            remaining = value
-          when String
-            remaining = [value]
-          end
-        else
-          case value
-          when "true"
-            options[key] = true
-          when "false"
-            options[key] = false
-          else
-            options[key] = value
-          end
-        end
-      end
-
-      execute_with_options(options, remaining)
-    end
-
-    # Legacy argument parsing for backward compatibility
-    def parse_args(args : Array(String)) : Hash(String, String | Array(String))
-      parsed = Hash(String, String | Array(String)).new
-
-      i = 0
-      while i < args.size
-        arg = args[i]
-
-        if arg.starts_with?("--")
-          # Long option
-          key = arg[2..]
-          if key.includes?("=")
-            parts = key.split("=", 2)
-            parsed[parts[0]] = parts[1]
-          elsif i + 1 < args.size && !args[i + 1].starts_with?("-")
-            parsed[key] = args[i + 1]
-            i += 1
-          else
-            parsed[key] = "true"
-          end
-        elsif arg.starts_with?("-") && arg.size > 1
-          # Short option
-          key = arg[1..]
-          if i + 1 < args.size && !args[i + 1].starts_with?("-")
-            parsed[key] = args[i + 1]
-            i += 1
-          else
-            parsed[key] = "true"
-          end
-        else
-          # Positional argument
-          if parsed.has_key?("_positional")
-            if current = parsed["_positional"]
-              if current.is_a?(Array(String))
-                current << arg
-              else
-                parsed["_positional"] = [current.as(String), arg]
-              end
-            end
-          else
-            parsed["_positional"] = [arg] of String
-          end
-        end
-
-        i += 1
-      end
-
-      parsed
+    # Validate parsed arguments
+    def validate_parsed_args
+      # Override in subclasses for custom validation
     end
 
     # Helper methods for accessing parsed options
@@ -296,51 +221,23 @@ module AzuCLI
       parsed_options.has_key?(key)
     end
 
-    # Get positional arguments from parsed args - backward compatibility
-    def get_positional_args(args : Hash(String, String | Array(String))) : Array(String)
-      if positional = args["_positional"]?
-        case positional
-        when Array(String)
-          positional
-        when String
-          [positional]
-        else
-          [] of String
-        end
-      else
-        [] of String
+    def get_remaining_args : Array(String)
+      remaining_args
+    end
+
+    def has_remaining_args? : Bool
+      !remaining_args.empty?
+    end
+
+    def get_first_arg(default : String = "") : String
+      remaining_args.first? || default
+    end
+
+    def require_args(count : Int32, message : String = "")
+      if remaining_args.size < count
+        error_msg = message.empty? ? "Expected at least #{count} arguments, got #{remaining_args.size}" : message
+        raise ArgumentError.new(error_msg)
       end
-    end
-
-    # Get flag value from parsed args - backward compatibility
-    def get_flag(args : Hash(String, String | Array(String)), flag : String, default : String = "") : String
-      if value = args[flag]?
-        case value
-        when String
-          value
-        when Array(String)
-          value.first? || default
-        else
-          default
-        end
-      else
-        default
-      end
-    end
-
-    # Check if flag is present - backward compatibility
-    def has_flag?(args : Hash(String, String | Array(String)), flag : String) : Bool
-      args.has_key?(flag)
-    end
-
-    # Validate parsed arguments
-    def validate_parsed_args
-      # Override in subclasses for custom validation
-    end
-
-    # Legacy validate method for backward compatibility
-    def validate_args(args : Array(String))
-      # This is now handled by OptionParser, but kept for compatibility
     end
 
     # File system utilities
@@ -353,6 +250,8 @@ module AzuCLI
     end
 
     def write_file(path : String, content : String, force : Bool = false)
+      force = force || get_option_bool("force")
+
       if File.exists?(path) && !force
         if ask_overwrite(path)
           File.write(path, content)
@@ -368,6 +267,8 @@ module AzuCLI
     end
 
     def copy_file(source : String, destination : String, force : Bool = false)
+      force = force || get_option_bool("force")
+
       if File.exists?(destination) && !force
         if ask_overwrite(destination)
           File.copy(source, destination)
@@ -383,13 +284,12 @@ module AzuCLI
     end
 
     def ask_overwrite(path : String) : Bool
-      unless config.quiet
-        log.prompt("File #{path} already exists. Overwrite? [y/N]")
-        response = gets
-        response.try(&.strip.downcase.starts_with?("y")) || false
-      else
-        false
-      end
+      return true if get_option_bool("force")
+      return false if get_option_bool("quiet")
+
+      log.prompt("File #{path} already exists. Overwrite? [y/N]")
+      response = gets
+      response.try(&.strip.downcase.starts_with?("y")) || false
     end
 
     # Template rendering utilities

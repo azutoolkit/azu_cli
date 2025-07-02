@@ -152,9 +152,45 @@ module AzuCLI::Generator::Core
       new(force, skip_tests, skip_routes, attributes, additional_args, custom_options)
     end
 
+    # Factory method for creating options from OptionParser parsed options
+    def self.from_parsed_options(
+      options : Hash(String, String | Bool | Array(String)),
+      additional_args : Array(String),
+    ) : GeneratorOptions
+      force = get_bool_option(options, "force")
+      skip_tests = get_bool_option(options, "skip-tests")
+      skip_routes = get_bool_option(options, "skip-routes")
+
+      # Extract attributes from additional arguments
+      attributes = parse_attributes(additional_args)
+
+      # Additional args that aren't attributes
+      remaining_args = additional_args.reject { |arg| arg.includes?(":") }
+
+      # Custom options from parsed options
+      custom_options = extract_custom_options_from_parsed(options)
+
+      new(force, skip_tests, skip_routes, attributes, remaining_args, custom_options)
+    end
+
     # Helper methods for parsing command line arguments
     private def self.has_flag?(args : Hash(String, String | Array(String)), flag : String) : Bool
       args.has_key?(flag) || args.has_key?("--#{flag}")
+    end
+
+    private def self.get_bool_option(
+      options : Hash(String, String | Bool | Array(String)),
+      key : String,
+    ) : Bool
+      value = options[key]?
+      case value
+      when Bool
+        value
+      when String
+        value == "true"
+      else
+        false
+      end
     end
 
     private def self.parse_attributes(args : Array(String)) : Hash(String, String)
@@ -182,6 +218,27 @@ module AzuCLI::Generator::Core
         if value.is_a?(String)
           custom[key] = value
         elsif value.is_a?(Array(String))
+          custom[key] = value.join(",")
+        end
+      end
+
+      custom
+    end
+
+    private def self.extract_custom_options_from_parsed(
+      options : Hash(String, String | Bool | Array(String)),
+    ) : Hash(String, String)
+      custom = {} of String => String
+
+      options.each do |key, value|
+        next if ["force", "skip-tests", "skip-routes", "verbose", "quiet", "help", "version"].includes?(key)
+
+        case value
+        when String
+          custom[key] = value
+        when Bool
+          custom[key] = value.to_s
+        when Array(String)
           custom[key] = value.join(",")
         end
       end

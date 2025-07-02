@@ -4,23 +4,38 @@ require "../generators/core/factory"
 module AzuCLI::Commands
   # Optimized Generate command using SOLID principles and design patterns
   # Integrates with the new configuration-driven generator system
-  class GenerateOptimized < Command
+  class Generate < Command
     command_name "generate"
     description "Generate Azu components using optimized configuration-driven generators"
     usage "generate <generator_type> <name> [options]"
 
-    def execute(args : Hash(String, String | Array(String))) : String | Nil
+    def setup_command_options(parser : OptionParser)
+      parser.on("--skip-tests", "Skip generating test files") do
+        parsed_options["skip-tests"] = true
+      end
+
+      parser.on("--skip-routes", "Skip adding routes (for endpoints)") do
+        parsed_options["skip-routes"] = true
+      end
+
+      parser.on("--file-upload", "Include file upload support") do
+        parsed_options["file-upload"] = true
+      end
+    end
+
+    def execute_with_options(
+      options : Hash(String, String | Bool | Array(String)),
+      args : Array(String),
+    ) : String | Nil
       require_project_root!
 
-      positional = get_positional_args(args)
-
-      if positional.empty?
+      if args.empty?
         show_available_generators
         return "Help displayed"
       end
 
-      generator_type = positional.first
-      component_name = positional[1]? || ""
+      generator_type = args.first
+      component_name = args[1]? || ""
 
       # Check if this is a request for generator-specific help
       if component_name == "--help" || component_name == "-h"
@@ -50,15 +65,18 @@ module AzuCLI::Commands
       end
 
       begin
-        # Create generator options from arguments
-        options = AzuCLI::Generator::Core::GeneratorOptions.from_args(args, positional)
+        # Create generator options from arguments and remaining args
+        generator_options = AzuCLI::Generator::Core::GeneratorOptions.from_parsed_options(
+          options,
+          args[2..] # attributes/additional arguments
+        )
 
         # Create generator using factory
         generator = AzuCLI::Generator::Core::GeneratorFactory.create(
           generator_type,
           component_name,
           get_project_name,
-          options
+          generator_options
         )
 
         # Execute generation
@@ -114,6 +132,7 @@ module AzuCLI::Commands
       puts "  --force             Overwrite existing files"
       puts "  --skip-tests        Skip generating test files"
       puts "  --skip-routes       Skip adding routes (for endpoints)"
+      puts "  --file-upload       Include file upload support"
       puts "  --help              Show help for specific generator"
       puts
       puts "Generator-specific syntax:"
