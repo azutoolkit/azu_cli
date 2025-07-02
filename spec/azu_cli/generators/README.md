@@ -23,11 +23,13 @@ The generator system is built on a solid foundation with these key components:
 ## 🧪 Running the Tests
 
 ### Run All Generator Tests
+
 ```bash
 crystal spec spec/azu_cli/generators_spec.cr
 ```
 
 ### Run Individual Test Suites
+
 ```bash
 # Core architecture tests
 crystal spec spec/azu_cli/generators/core/
@@ -40,6 +42,7 @@ crystal spec spec/azu_cli/generators/optimized/validator_generator_spec.cr
 ```
 
 ### Run with Verbose Output
+
 ```bash
 crystal spec spec/azu_cli/generators_spec.cr --verbose
 ```
@@ -47,6 +50,7 @@ crystal spec spec/azu_cli/generators_spec.cr --verbose
 ## 📋 Test Coverage
 
 ### Core Architecture (100% Coverage)
+
 - ✅ AbstractGenerator base class functionality
 - ✅ Template Method pattern implementation
 - ✅ Factory pattern with aliases and type resolution
@@ -54,6 +58,7 @@ crystal spec spec/azu_cli/generators_spec.cr --verbose
 - ✅ Strategy patterns for templates, files, validation, naming
 
 ### Generator Types Covered
+
 - ✅ **ModelGenerator** - CQL Active Record models with auto-migrations
 - ✅ **ServiceGenerator** - Business logic services with interfaces
 - ✅ **ScaffoldGenerator** - Complete CRUD resource generation
@@ -66,6 +71,7 @@ crystal spec spec/azu_cli/generators_spec.cr --verbose
 - 🔄 **PageGenerator** - Template pages (planned)
 
 ### Test Categories
+
 - **Initialization Tests** - Constructor parameters and option parsing
 - **File Generation Tests** - Template rendering and file creation
 - **Directory Creation Tests** - Proper directory structure setup
@@ -77,6 +83,7 @@ crystal spec spec/azu_cli/generators_spec.cr --verbose
 ## 🛠️ Test Utilities
 
 ### GeneratorSpecHelper
+
 The `spec_helper.cr` provides utilities for testing:
 
 - **`with_temp_directory`** - Isolated temporary directories for file operations
@@ -86,6 +93,7 @@ The `spec_helper.cr` provides utilities for testing:
 - **Sample data** - `sample_attributes`, `complex_attributes` for testing
 
 ### Example Usage
+
 ```crystal
 describe "MyGenerator" do
   it "generates files correctly" do
@@ -108,6 +116,7 @@ end
 ## 🎯 Quality Standards
 
 ### Test Principles
+
 - **Comprehensive Coverage** - All public methods and edge cases tested
 - **Isolation** - Tests don't depend on file system or external resources
 - **Fast Execution** - Mock strategies prevent slow I/O operations
@@ -115,6 +124,7 @@ end
 - **Maintainable** - DRY principles with shared utilities
 
 ### SOLID Principles in Tests
+
 - **Single Responsibility** - Each test has one clear purpose
 - **Open/Closed** - Easy to extend with new test cases
 - **Liskov Substitution** - Mock strategies implement same interface
@@ -154,12 +164,14 @@ end
 ## 🔍 Debugging Tests
 
 ### Viewing Generated Content
+
 ```crystal
 # In your test, inspect generated content:
 puts mock_strategy.file_contents["src/models/user.cr"]
 ```
 
 ### Test-Driven Development
+
 1. Write failing test first
 2. Implement minimal code to pass
 3. Refactor while keeping tests green

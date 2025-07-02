@@ -65,18 +65,18 @@ module AzuCLI::Generator
     private def generate_response_variables : Hash(String, String)
       default_template_variables.merge({
         "data_properties" => generate_data_properties,
-        "render_method" => generate_render_method,
-        "response_type" => @response_type,
-        "format" => @format,
-        "content_type" => get_content_type,
+        "render_method"   => generate_render_method,
+        "response_type"   => @response_type,
+        "format"          => @format,
+        "content_type"    => get_content_type,
       })
     end
 
     private def generate_test_variables : Hash(String, String)
       default_template_variables.merge({
-        "test_data" => generate_test_data,
+        "test_data"     => generate_test_data,
         "response_type" => @response_type,
-        "format" => @format,
+        "format"        => @format,
       })
     end
 

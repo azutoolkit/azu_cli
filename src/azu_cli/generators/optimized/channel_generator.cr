@@ -50,16 +50,16 @@ module AzuCLI::Generator
 
     private def generate_channel_variables : Hash(String, String)
       default_template_variables.merge({
-        "event_handlers" => generate_event_handlers,
-        "auth_methods" => generate_auth_methods,
-        "channel_type" => @channel_type,
+        "event_handlers"    => generate_event_handlers,
+        "auth_methods"      => generate_auth_methods,
+        "channel_type"      => @channel_type,
         "lifecycle_methods" => generate_lifecycle_methods,
       })
     end
 
     private def generate_test_variables : Hash(String, String)
       default_template_variables.merge({
-        "test_events" => generate_test_events,
+        "test_events"  => generate_test_events,
         "channel_type" => @channel_type,
       })
     end
@@ -76,7 +76,7 @@ module AzuCLI::Generator
 
     private def has_auth_flag?(options : Core::GeneratorOptions) : Bool
       options.custom_options.has_key?("auth") ||
-      options.additional_args.includes?("--auth")
+        options.additional_args.includes?("--auth")
     end
 
     private def generate_event_handlers : String

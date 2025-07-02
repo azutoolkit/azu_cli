@@ -47,8 +47,8 @@ module AzuCLI::Generator
     private def generate_handler_variables : Hash(String, String)
       default_template_variables.merge({
         "handler_implementation" => generate_handler_implementation,
-        "handler_type" => @handler_type,
-        "helper_methods" => generate_helper_methods,
+        "handler_type"           => @handler_type,
+        "helper_methods"         => generate_helper_methods,
       })
     end
 

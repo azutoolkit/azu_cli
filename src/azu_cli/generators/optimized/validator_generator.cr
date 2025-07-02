@@ -51,11 +51,11 @@ module AzuCLI::Generator
 
     private def generate_validator_variables : Hash(String, String)
       default_template_variables.merge({
-        "validator_type" => @validator_type,
-        "base_class" => config.get("base_validator.class") || "CQL::Validator",
-        "validation_logic" => generate_validation_logic,
-        "error_message" => generate_error_message,
-        "parameters" => generate_parameters_code,
+        "validator_type"    => @validator_type,
+        "base_class"        => config.get("base_validator.class") || "CQL::Validator",
+        "validation_logic"  => generate_validation_logic,
+        "error_message"     => generate_error_message,
+        "parameters"        => generate_parameters_code,
         "initialize_method" => generate_initialize_method,
       })
     end
@@ -63,8 +63,8 @@ module AzuCLI::Generator
     private def generate_test_variables : Hash(String, String)
       default_template_variables.merge({
         "validator_type" => @validator_type,
-        "test_cases" => generate_test_cases,
-        "valid_values" => generate_valid_values,
+        "test_cases"     => generate_test_cases,
+        "valid_values"   => generate_valid_values,
         "invalid_values" => generate_invalid_values,
       })
     end
@@ -142,7 +142,7 @@ module AzuCLI::Generator
     private def generate_error_message : String
       validator_config = config.get_hash("validator_types.#{@validator_type}")
 
-      if error_msg = validator_config["error_message"]?.try(&.as_s)
+      if error_msg = validator_config["error_message"]?
         substitute_error_message_variables(error_msg)
       else
         config.get("error_message_patterns.custom") || "is invalid"
@@ -205,7 +205,7 @@ module AzuCLI::Generator
 
     private def get_param_type(param_name : String) : String
       parameter_configs = config.get_hash("configuration_parameters.#{@validator_type}")
-      parameter_configs[param_name]?.try(&.as_s) || "String"
+      parameter_configs[param_name]? || "String"
     end
 
     private def generate_test_cases : String
@@ -276,17 +276,17 @@ module AzuCLI::Generator
       return "" if parameters.empty?
 
       test_params = case @validator_type
-                   when "range"
-                     "(min: 0.0, max: 100.0)"
-                   when "length"
-                     "(min: 2, max: 50)"
-                   when "uniqueness"
-                     "(model_class: User, column: \"email\")"
-                   when "regex"
-                     "(pattern: /\\A[A-Z]{2,3}\\z/)"
-                   else
-                     ""
-                   end
+                    when "range"
+                      "(min: 0.0, max: 100.0)"
+                    when "length"
+                      "(min: 2, max: 50)"
+                    when "uniqueness"
+                      "(model_class: User, column: \"email\")"
+                    when "regex"
+                      "(pattern: /\\A[A-Z]{2,3}\\z/)"
+                    else
+                      ""
+                    end
 
       test_params
     end
@@ -294,30 +294,30 @@ module AzuCLI::Generator
     private def generate_valid_values : String
       case @validator_type
       when "email"
-        '["user@example.com", "test.email@domain.co.uk"]'
+        %{["user@example.com", "test.email@domain.co.uk"]}
       when "phone"
-        '["+1 (555) 123-4567", "555-123-4567"]'
+        %{["+1 (555) 123-4567", "555-123-4567"]}
       when "url"
-        '["https://example.com", "http://test.org"]'
+        %{["https://example.com", "http://test.org"]}
       when "range"
-        '["50", "25", "75"]'
+        %{["50", "25", "75"]}
       else
-        '["valid_value"]'
+        %{["valid_value"]}
       end
     end
 
     private def generate_invalid_values : String
       case @validator_type
       when "email"
-        '["invalid-email", "user@", "@domain.com"]'
+        %{["invalid-email", "user@", "@domain.com"]}
       when "phone"
-        '["invalid-phone", "123", "abcd"]'
+        %{["invalid-phone", "123", "abcd"]}
       when "url"
-        '["invalid-url", "not-a-url", "ftp://example.com"]'
+        %{["invalid-url", "not-a-url", "ftp://example.com"]}
       when "range"
-        '["150", "-10", "abc"]'
+        %{["150", "-10", "abc"]}
       else
-        '["invalid_value"]'
+        %{["invalid_value"]}
       end
     end
 

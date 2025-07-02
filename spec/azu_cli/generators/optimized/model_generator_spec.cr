@@ -243,10 +243,10 @@ describe AzuCLI::Generator::ModelGenerator do
         create_mock_project
 
         attributes = {
-          "name" => "string",
-          "age" => "integer",
-          "active" => "boolean",
-          "created_at" => "datetime"
+          "name"       => "string",
+          "age"        => "integer",
+          "active"     => "boolean",
+          "created_at" => "datetime",
         }
         options = create_generator_options(attributes: attributes)
         generator = AzuCLI::Generator::ModelGenerator.new("User", "test_project", options)
@@ -335,9 +335,9 @@ describe AzuCLI::Generator::ModelGenerator do
     it "generates appropriate validations based on attribute types" do
       options = create_generator_options(
         attributes: {
-          "name" => "string",
-          "age" => "integer",
-          "email" => "string"
+          "name"  => "string",
+          "age"   => "integer",
+          "email" => "string",
         }
       )
       generator = AzuCLI::Generator::ModelGenerator.new("User", "test_project", options)

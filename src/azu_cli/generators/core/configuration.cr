@@ -137,7 +137,7 @@ module AzuCLI::Generator::Core
     end
 
     # Supports nested key access like "validation_types.email.pattern"
-    private def get_nested(key : String) : YAML::Any?
+    def get_nested(key : String) : YAML::Any?
       keys = key.split(".")
       current_key = keys.first
 

@@ -8,7 +8,7 @@ describe AzuCLI::Generator::ValidatorGenerator do
 
       generator.name.should eq("EmailValidator")
       generator.project_name.should eq("test_project")
-      generator.validator_type.should eq("custom")  # default type
+      generator.validator_type.should eq("custom") # default type
     end
 
     it "sets validator type from options" do

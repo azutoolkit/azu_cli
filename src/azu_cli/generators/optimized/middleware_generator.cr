@@ -79,9 +79,9 @@ module AzuCLI::Generator
     # Generate test-specific template variables
     private def generate_test_variables : Hash(String, String)
       default_template_variables.merge({
-        "test_methods"      => generate_test_methods,
-        "middleware_type"   => @middleware_type,
-        "mock_helpers"      => generate_mock_helpers,
+        "test_methods"    => generate_test_methods,
+        "middleware_type" => @middleware_type,
+        "mock_helpers"    => generate_mock_helpers,
       })
     end
 
@@ -276,11 +276,11 @@ module AzuCLI::Generator
       <<-CRYSTAL
 
       private def log_request(context : HTTP::Server::Context)
-        Log.info { "#{self.class.name}: #{context.request.method} #{context.request.path}" }
+        Log.info { "#{class_name}: \#{context.request.method} \#{context.request.path}" }
       end
 
       private def log_response(context : HTTP::Server::Context)
-        Log.info { "#{self.class.name}: Response #{context.response.status_code}" }
+        Log.info { "#{class_name}: Response \#{context.response.status_code}" }
       end
 
       private def json_response(context : HTTP::Server::Context, data : Hash, status : HTTP::Status = HTTP::Status::OK)

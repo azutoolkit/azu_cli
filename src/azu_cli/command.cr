@@ -1,75 +1,15 @@
 require "yaml"
+require "option_parser"
 
 module AzuCLI
   # Base command class for all Azu CLI commands
-  # Provides common functionality, error handling, and validation
+  # Provides common functionality, error handling, validation, and OptionParser integration
   abstract class Command
     # Command will be integrated with Topia via plugin pattern
 
     # Exit code constants for consistent CLI behavior
     EXIT_SUCCESS = 0
     EXIT_FAILURE = 1
-
-    PROGRAM = self.name.split("::").last
-    VERSION = Shard.git_description.split(/\s+/, 2).last
-    USAGE   = <<-EOF
-
-    {description}
-
-    #{bold :Usage}
-
-      #{light_blue :azu} {{program}} {{args}}
-
-    #{bold :Options}
-
-    {options}
-
-    {version}
-    EOF
-
-    getter project_name : String { shard.as_h["name"].as_s }
-
-    macro included
-      macro finished
-        option help : Bool, "--help", "Show this help", false
-        option version : Bool, "--version", "Print the version and exit", false
-      end
-
-      def run(input, args)
-        die "Invalid number of arguments" if args.empty? && !ARGS.empty?
-        run(args)
-        run
-        true
-      rescue e
-        error "#{PROGRAM} command failed! - #{e.message}"
-        exit EXIT_FAILURE
-      end
-
-      def show_usage
-        USAGE.gsub(/{version}/, show_version)
-          .gsub(/{program}/, PROGRAM.downcase)
-          .gsub(/{description}/, DESCRIPTION)
-          .gsub(/{args}/, ARGS)
-          .gsub(/{options}/, new_option_parser.to_s)
-      end
-
-      def on(event : String)
-      end
-
-      def not_exists?(path, &)
-        if File.exists? path
-          error "File `#{path.underscore}` already exists"
-          exit EXIT_FAILURE
-        else
-          yield
-        end
-      end
-
-      def shard(path = "./shard.yml")
-        contents = File.read(path)
-        YAML.parse contents
-      end
-    end
 
     # Command metadata
     macro command_name(name)
@@ -112,20 +52,43 @@ module AzuCLI
       Logger
     end
 
-    # Execute the command with proper error handling
+    # Storage for parsed options and remaining arguments
+    getter parsed_options : Hash(String, String | Bool | Array(String)) = {} of String => String | Bool | Array(String)
+    getter remaining_args : Array(String) = [] of String
+    getter help_requested : Bool = false
+    getter version_requested : Bool = false
+
+    # Execute the command with proper error handling using OptionParser
     def run(input, args : Array(String)) : String
       begin
-        # Validate arguments before execution
-        validate_args(args)
+        # Parse arguments using OptionParser
+        parse_with_option_parser(args)
 
-        # Parse command-line arguments
-        parsed_args = parse_args(args)
+        # Handle help and version requests early
+        if help_requested
+          show_help
+          return ""
+        end
 
-        # Execute the command
-        result = execute(parsed_args)
+        if version_requested
+          show_version
+          return ""
+        end
+
+        # Validate arguments after parsing
+        validate_parsed_args
+
+        # Execute the command with parsed options and remaining args
+        result = execute_with_options(parsed_options, remaining_args)
 
         log.debug("Command '#{command_name}' completed successfully")
         result.to_s
+      rescue ex : OptionParser::InvalidOption
+        handle_invalid_option_error(ex)
+        ""
+      rescue ex : OptionParser::MissingOption
+        handle_missing_option_error(ex)
+        ""
       rescue ex : ArgumentError
         handle_argument_error(ex)
         ""
@@ -141,11 +104,106 @@ module AzuCLI
       end
     end
 
-    # Abstract method that subclasses must implement
-    abstract def execute(args : Hash(String, String | Array(String))) : String | Nil
+    # Parse arguments using Crystal's OptionParser
+    private def parse_with_option_parser(args : Array(String))
+      parser = OptionParser.new
 
-    # Parse command line arguments into a hash
-    # Override in subclasses for custom argument parsing
+      # Set up common options that all commands support
+      setup_common_options(parser)
+
+      # Set up command-specific options
+      setup_command_options(parser)
+
+      # Parse the arguments
+      parser.parse(args)
+
+      # Store remaining arguments
+      @remaining_args = args
+    end
+
+    # Setup common options available to all commands
+    private def setup_common_options(parser : OptionParser)
+      parser.banner = "Usage: azu #{usage}"
+
+      parser.on("-h", "--help", "Show help for this command") do
+        @help_requested = true
+      end
+
+      parser.on("-v", "--version", "Show version information") do
+        @version_requested = true
+      end
+
+      parser.on("--verbose", "Enable verbose output") do
+        @parsed_options["verbose"] = true
+      end
+
+      parser.on("--quiet", "Suppress output") do
+        @parsed_options["quiet"] = true
+      end
+
+      parser.on("--force", "Force operation without prompts") do
+        @parsed_options["force"] = true
+      end
+
+      # Handle unknown arguments
+      parser.unknown_args do |unknown_args, _|
+        @remaining_args = unknown_args
+      end
+
+      # Handle invalid options
+      parser.invalid_option do |option|
+        raise OptionParser::InvalidOption.new("Unknown option: #{option}")
+      end
+
+      # Handle missing options
+      parser.missing_option do |option|
+        raise OptionParser::MissingOption.new("Missing required argument for option: #{option}")
+      end
+    end
+
+    # Abstract method for command-specific option setup
+    # Override in subclasses to add command-specific options
+    def setup_command_options(parser : OptionParser)
+      # Default implementation - override in subclasses
+    end
+
+    # Abstract method for command execution with parsed options
+    # This replaces the old execute method
+    abstract def execute_with_options(
+      options : Hash(String, String | Bool | Array(String)),
+      args : Array(String)
+    ) : String | Nil
+
+    # Backward compatibility method - converts old execute signature to new one
+    def execute(args : Hash(String, String | Array(String))) : String | Nil
+      # Convert old-style args to new format
+      options = {} of String => String | Bool | Array(String)
+      remaining = [] of String
+
+      args.each do |key, value|
+        if key == "_positional"
+          case value
+          when Array(String)
+            remaining = value
+          when String
+            remaining = [value]
+          end
+        else
+          case value
+          when "true"
+            options[key] = true
+          when "false"
+            options[key] = false
+          else
+            options[key] = value
+          end
+        end
+      end
+
+      execute_with_options(options, remaining)
+    end
+
+    # Legacy argument parsing for backward compatibility
     def parse_args(args : Array(String)) : Hash(String, String | Array(String))
       parsed = Hash(String, String | Array(String)).new
 
@@ -195,7 +253,50 @@ module AzuCLI
       parsed
     end
 
-    # Get positional arguments from parsed args
+    # Helper methods for accessing parsed options
+    def get_option(key : String, default : String = "") : String
+      value = parsed_options[key]?
+      case value
+      when String
+        value
+      when Bool
+        value.to_s
+      when Array(String)
+        value.first? || default
+      else
+        default
+      end
+    end
+
+    def get_option_bool(key : String, default : Bool = false) : Bool
+      value = parsed_options[key]?
+      case value
+      when Bool
+        value
+      when String
+        value == "true"
+      else
+        default
+      end
+    end
+
+    def get_option_array(key : String) : Array(String)
+      value = parsed_options[key]?
+      case value
+      when Array(String)
+        value
+      when String
+        [value]
+      else
+        [] of String
+      end
+    end
+
+    def has_option?(key : String) : Bool
+      parsed_options.has_key?(key)
+    end
+
+    # Get positional arguments from parsed args - backward compatibility
     def get_positional_args(args : Hash(String, String | Array(String))) : Array(String)
       if positional = args["_positional"]?
         case positional
@@ -211,7 +312,7 @@ module AzuCLI
       end
     end
 
-    # Get flag value from parsed args
+    # Get flag value from parsed args - backward compatibility
     def get_flag(args : Hash(String, String | Array(String)), flag : String, default : String = "") : String
       if value = args[flag]?
         case value
@@ -227,25 +328,19 @@ module AzuCLI
       end
     end
 
-    # Check if flag is present
+    # Check if flag is present - backward compatibility
     def has_flag?(args : Hash(String, String | Array(String)), flag : String) : Bool
       args.has_key?(flag)
     end
 
-    # Validate command arguments
-    # Override in subclasses for custom validation
-    def validate_args(args : Array(String))
-      # Check for help flag
-      if args.includes?("--help") || args.includes?("-h")
-        show_help
-        exit(Config::EXIT_SUCCESS)
-      end
+    # Validate parsed arguments
+    def validate_parsed_args
+      # Override in subclasses for custom validation
+    end
 
-      # Check for version flag
-      if args.includes?("--version") || args.includes?("-v")
-        show_version
-        exit(Config::EXIT_SUCCESS)
-      end
+    # Legacy validate method for backward compatibility
+    def validate_args(args : Array(String))
+      # This is now handled by OptionParser, but kept for compatibility
     end
 
     # File system utilities
@@ -357,28 +452,34 @@ module AzuCLI
       puts "Azu CLI v#{AzuCLI::VERSION}"
     end
 
-    # Error handling methods
+    # Error handling methods for OptionParser and other errors
+    private def handle_invalid_option_error(ex : OptionParser::InvalidOption)
+      log.error("Invalid option: #{ex.message}")
+      log.info("Run 'azu #{command_name} --help' to see available options")
+    end
+
+    private def handle_missing_option_error(ex : OptionParser::MissingOption)
+      log.error("Missing required argument: #{ex.message}")
+      log.info("Run 'azu #{command_name} --help' for usage information")
+    end
+
     private def handle_argument_error(ex : ArgumentError)
       log.error("Invalid arguments: #{ex.message}")
       log.info("Run 'azu #{command_name} --help' for usage information")
-      exit(Config::EXIT_INVALID_USAGE)
     end
 
     private def handle_validation_error(ex : ValidationError)
       log.error("Validation error: #{ex.message}")
       ex.suggestions.each { |suggestion| log.info("  • #{suggestion}") }
-      exit(Config::EXIT_INVALID_USAGE)
     end
 
     private def handle_filesystem_error(ex : FileSystemError)
       log.error("File system error: #{ex.message}")
       log.info("Please check file permissions and paths")
-      exit(Config::EXIT_FAILURE)
     end
 
     private def handle_unexpected_error(ex : Exception)
       log.exception(ex, "Command '#{command_name}' execution")
-      exit(Config::EXIT_FAILURE)
     end
 
     # Custom exception classes

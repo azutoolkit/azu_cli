@@ -13,9 +13,6 @@ dependencies:
     github: amberframework/teeplate
     version: ~> 0.11.2
 
-  topia:
-    github: azutoolkit/topia
-
   cadmium_inflector:
     github: cadmiumcr/inflector
 

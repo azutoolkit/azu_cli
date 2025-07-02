@@ -112,11 +112,11 @@ module AzuCLI::Generator
     # Generate migration-specific template variables
     private def generate_migration_variables(version : Int64, table_name : String) : Hash(String, String)
       default_template_variables.merge({
-        "version"        => version.to_s,
-        "table_name"     => table_name,
-        "columns_list"   => generate_migration_columns,
-        "indexes_list"   => generate_migration_indexes,
-        "timestamps"     => config.get("cql.timestamps.enabled") == "true" ? "timestamps" : "",
+        "version"      => version.to_s,
+        "table_name"   => table_name,
+        "columns_list" => generate_migration_columns,
+        "indexes_list" => generate_migration_indexes,
+        "timestamps"   => config.get("cql.timestamps.enabled") == "true" ? "timestamps" : "",
       })
     end
 
@@ -286,8 +286,8 @@ module AzuCLI::Generator
     # Get Crystal type from attribute type
     private def get_crystal_type(attr_type : String) : String
       config.get("crystal_types.#{attr_type.downcase}") ||
-      config.get("attribute_types.#{attr_type.downcase}.crystal_type") ||
-      "String"
+        config.get("attribute_types.#{attr_type.downcase}.crystal_type") ||
+        "String"
     end
 
     # Get database type from attribute type
@@ -320,7 +320,7 @@ module AzuCLI::Generator
 
       <<-CRYSTAL
       def to_s(io : IO) : Nil
-        io << "#<#{class_name}:#{object_id} @#{primary_field}=#{@#{primary_field}}>"
+        io << "#<#{class_name}:\#{object_id} @#{primary_field}=\#{@#{primary_field}}>"
       end
       CRYSTAL
     end

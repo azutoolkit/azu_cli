@@ -238,7 +238,7 @@ describe AzuCLI::Generator::ScaffoldGenerator do
     end
 
     it "warns about missing attributes" do
-      options = create_generator_options  # No attributes
+      options = create_generator_options # No attributes
       generator = AzuCLI::Generator::ScaffoldGenerator.new("User", "test_project", options)
 
       generator.attributes.should be_empty
@@ -246,7 +246,7 @@ describe AzuCLI::Generator::ScaffoldGenerator do
     end
 
     it "warns about missing actions" do
-      options = create_generator_options(additional_args: [] of String)  # No actions
+      options = create_generator_options(additional_args: [] of String) # No actions
       generator = AzuCLI::Generator::ScaffoldGenerator.new("User", "test_project", options)
 
       # Should use default actions

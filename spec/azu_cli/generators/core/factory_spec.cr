@@ -114,6 +114,15 @@ describe AzuCLI::Generator::Core::GeneratorFactory do
       generator.should be_a(AzuCLI::Generator::ResponseGenerator)
       generator.name.should eq("UserResponse")
     end
+
+    it "creates project generator" do
+      options = create_generator_options
+      generator = AzuCLI::Generator::Core::GeneratorFactory.create("project", "MyApp", "my_app", options)
+
+      generator.should be_a(AzuCLI::Generator::ProjectGenerator)
+      generator.name.should eq("MyApp")
+      generator.project_name.should eq("my_app")
+    end
   end
 
   describe "aliases" do
@@ -158,6 +167,13 @@ describe AzuCLI::Generator::Core::GeneratorFactory do
 
       generator.should be_a(AzuCLI::Generator::ScaffoldGenerator)
     end
+
+    it "resolves project alias" do
+      options = create_generator_options
+      generator = AzuCLI::Generator::Core::GeneratorFactory.create("proj", "MyApp", "my_app", options)
+
+      generator.should be_a(AzuCLI::Generator::ProjectGenerator)
+    end
   end
 
   describe "error handling" do
@@ -188,6 +204,7 @@ describe AzuCLI::Generator::Core::GeneratorFactory do
       types.should contain("handler")
       types.should contain("request")
       types.should contain("response")
+      types.should contain("project")
     end
   end
 
@@ -196,12 +213,14 @@ describe AzuCLI::Generator::Core::GeneratorFactory do
       AzuCLI::Generator::Core::GeneratorFactory.exists?("model").should be_true
       AzuCLI::Generator::Core::GeneratorFactory.exists?("service").should be_true
       AzuCLI::Generator::Core::GeneratorFactory.exists?("scaffold").should be_true
+      AzuCLI::Generator::Core::GeneratorFactory.exists?("project").should be_true
     end
 
     it "returns true for valid aliases" do
       AzuCLI::Generator::Core::GeneratorFactory.exists?("m").should be_true
       AzuCLI::Generator::Core::GeneratorFactory.exists?("s").should be_true
       AzuCLI::Generator::Core::GeneratorFactory.exists?("sc").should be_true
+      AzuCLI::Generator::Core::GeneratorFactory.exists?("proj").should be_true
     end
 
     it "returns false for invalid generator types" do

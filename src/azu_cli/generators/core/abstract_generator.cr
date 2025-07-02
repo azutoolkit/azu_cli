@@ -9,22 +9,32 @@ module AzuCLI::Generator::Core
     getter project_name : String
     getter force : Bool
     getter skip_tests : Bool
-    getter config : Configuration
 
     # Strategy dependencies (Dependency Inversion Principle)
     property template_strategy : TemplateStrategy
     property file_strategy : FileCreationStrategy
-    property validation_strategy : ValidationStrategy
     property naming_strategy : NamingStrategy
 
-    def initialize(@name : String, @project_name : String, @force = false, @skip_tests = false)
-      @config = Configuration.load(generator_type)
+    @config : Configuration?
+    @validation_strategy : ValidationStrategy?
 
+    def initialize(@name : String, @project_name : String, @force = false, @skip_tests = false)
       # Initialize strategies with dependency injection
       @template_strategy = EcrTemplateStrategy.new
       @file_strategy = StandardFileCreationStrategy.new(@force, true)
-      @validation_strategy = StandardValidationStrategy.new(@config)
       @naming_strategy = StandardNamingStrategy.new
+
+      # Configuration and validation strategy will be loaded lazily
+      @config = nil
+      @validation_strategy = nil
+    end
+
+    def config : Configuration
+      @config ||= Configuration.load(generator_type)
+    end
+
+    def validation_strategy : ValidationStrategy
+      @validation_strategy ||= StandardValidationStrategy.new(config)
     end
 
     # Template Method pattern - defines the skeleton of generation algorithm
@@ -148,10 +158,10 @@ module AzuCLI::Generator::Core
       puts "📋 Next Steps:".colorize(:yellow).bold
       steps.each do |step|
         formatted_step = step % {
-          name: name,
-          class_name: class_name,
+          name:            name,
+          class_name:      class_name,
           snake_case_name: snake_case_name,
-          plural_name: plural_name
+          plural_name:     plural_name,
         }
         puts "  #{formatted_step}"
       end

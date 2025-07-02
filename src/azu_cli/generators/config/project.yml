@@ -1,0 +1,189 @@
+description: "Generate new Azu project with full structure"
+
+# Template configurations
+templates:
+  main: "project/project.cr.ecr"
+  shard: "project/shard.yml.ecr"
+  readme: "project/README.md.ecr"
+  spec_helper: "project/spec/spec_helper.cr.ecr"
+  spec_main: "project/spec/{{project}}_spec.cr.ecr"
+  server: "project/src/server.cr.ecr"
+  database_init: "project/src/initializers/database.cr.ecr"
+  logger_init: "project/src/initializers/logger.cr.ecr"
+  schema: "project/src/db/schema.cr.ecr"
+  seed: "project/src/db/seed.cr.ecr"
+  db_readme: "project/src/db/README.md.ecr"
+  taskfile: "project/tasks/taskfile.cr.ecr"
+  welcome_endpoint: "project/src/endpoints/welcome/index_endpoint.cr.ecr"
+  welcome_contract: "project/src/contracts/welcome/index_contract.cr.ecr"
+  welcome_page: "project/src/pages/welcome/index_page.cr.ecr"
+
+# Directory structure
+directories:
+  root: "."
+  src: "src"
+  spec: "spec"
+  public: "public"
+  tasks: "tasks"
+  src_db: "src/db"
+  src_db_migrations: "src/db/migrations"
+  src_endpoints: "src/endpoints"
+  src_contracts: "src/contracts"
+  src_pages: "src/pages"
+  src_models: "src/models"
+  src_services: "src/services"
+  src_middlewares: "src/middlewares"
+  src_components: "src/components"
+  src_initializers: "src/initializers"
+  src_requests: "src/requests"
+  src_responses: "src/responses"
+  src_validations: "src/validations"
+  src_jobs: "src/jobs"
+  src_mailers: "src/mailers"
+  src_errors: "src/errors"
+  src_views_layouts: "src/views/layouts"
+  spec_endpoints: "spec/endpoints"
+  spec_contracts: "spec/contracts"
+  spec_pages: "spec/pages"
+  spec_models: "spec/models"
+  spec_services: "spec/services"
+  spec_validators: "spec/validators"
+  public_assets: "public/assets"
+  public_assets_css: "public/assets/css"
+  public_assets_js: "public/assets/js"
+  public_templates: "public/templates"
+  public_templates_helpers: "public/templates/helpers"
+  public_templates_welcome: "public/templates/welcome"
+
+# Project types configuration
+project_types:
+  web:
+    name: "Full-stack Web Application"
+    description: "Complete web application with frontend and backend"
+    features:
+      ["Endpoints", "Views", "Models", "Authentication", "Asset Pipeline"]
+    templates:
+      [
+        "main",
+        "shard",
+        "readme",
+        "spec_helper",
+        "spec_main",
+        "server",
+        "database_init",
+        "logger_init",
+        "schema",
+        "seed",
+        "db_readme",
+        "taskfile",
+        "welcome_endpoint",
+        "welcome_contract",
+        "welcome_page",
+      ]
+    copy_assets: true
+    copy_templates: true
+  api:
+    name: "API-only Application"
+    description: "RESTful API server without frontend components"
+    features: ["Endpoints", "Models", "JSON serialization", "API versioning"]
+    templates:
+      [
+        "main",
+        "shard",
+        "readme",
+        "spec_helper",
+        "spec_main",
+        "server",
+        "database_init",
+        "logger_init",
+        "schema",
+        "seed",
+        "db_readme",
+        "taskfile",
+        "welcome_endpoint",
+        "welcome_contract",
+      ]
+    copy_assets: false
+    copy_templates: false
+  cli:
+    name: "Command Line Interface"
+    description: "CLI application using Crystal and Topia"
+    features:
+      ["Command structure", "Argument parsing", "Configuration", "Testing"]
+    templates:
+      ["main", "shard", "readme", "spec_helper", "spec_main", "taskfile"]
+    copy_assets: false
+    copy_templates: false
+
+# Database configurations
+databases:
+  postgresql:
+    url: "postgresql://localhost/{{project}}_development"
+    driver: "pg"
+    adapter: "postgresql"
+  mysql:
+    url: "mysql://localhost/{{project}}_development"
+    driver: "mysql"
+    adapter: "mysql"
+  sqlite:
+    url: "sqlite3://./db/{{project}}_development.db"
+    driver: "sqlite3"
+    adapter: "sqlite3"
+
+# Validation rules
+validation:
+  name:
+    required: true
+    pattern: "^[a-zA-Z][a-zA-Z0-9_-]*$"
+    min_length: 1
+    max_length: 50
+  project_type:
+    required: true
+    allowed_values: ["web", "api", "cli"]
+  database:
+    required: true
+    allowed_values: ["postgresql", "mysql", "sqlite"]
+
+# Template output path mappings
+template_output_paths:
+  main: "src/{{project}}.cr"
+  shard: "shard.yml"
+  readme: "README.md"
+  spec_helper: "spec/spec_helper.cr"
+  spec_main: "spec/{{project}}_spec.cr"
+  server: "src/server.cr"
+  database_init: "src/initializers/database.cr"
+  logger_init: "src/initializers/logger.cr"
+  schema: "src/db/schema.cr"
+  seed: "src/db/seed.cr"
+  db_readme: "src/db/README.md"
+  taskfile: "tasks/taskfile.cr"
+  welcome_endpoint: "src/endpoints/welcome/index_endpoint.cr"
+  welcome_contract: "src/contracts/welcome/index_contract.cr"
+  welcome_page: "src/pages/welcome/index_page.cr"
+
+# Placeholder directories for .gitkeep files
+placeholder_directories:
+  - "src/models"
+  - "src/services"
+  - "src/middlewares"
+  - "src/components"
+  - "src/requests"
+  - "src/responses"
+  - "src/validations"
+  - "src/jobs"
+  - "src/mailers"
+  - "src/errors"
+  - "src/views/layouts"
+
+# Special placeholder files
+placeholder_files:
+  models_readme:
+    path: "src/models/your_models_goes_here.txt"
+    content: "Your CQL models will be generated here.\n"
+
+# Post-generation tasks
+post_generation:
+  git_init: true
+  install_deps: true
+  show_success: true

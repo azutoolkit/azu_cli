@@ -47,7 +47,7 @@ module GeneratorSpecHelper
     skip_tests : Bool = false,
     attributes : Hash(String, String) = {} of String => String,
     additional_args : Array(String) = [] of String,
-    custom_options : Hash(String, String) = {} of String => String
+    custom_options : Hash(String, String) = {} of String => String,
   ) : AzuCLI::Generator::Core::GeneratorOptions
     AzuCLI::Generator::Core::GeneratorOptions.new(
       force: force,
@@ -59,7 +59,7 @@ module GeneratorSpecHelper
   end
 
   # Mock file strategy for testing without actual file creation
-  class MockFileStrategy < AzuCLI::Generator::Core::FileStrategy
+  class MockFileStrategy < AzuCLI::Generator::Core::FileCreationStrategy
     property created_files : Array(String)
     property created_directories : Array(String)
     property file_contents : Hash(String, String)
@@ -70,13 +70,15 @@ module GeneratorSpecHelper
       @file_contents = {} of String => String
     end
 
-    def create_file(path : String, content : String, description : String = "file")
+    def create_file(path : String, content : String, options : Hash(String, String) = {} of String => String) : Bool
       @created_files << path
       @file_contents[path] = content
+      true
     end
 
-    def create_directory(path : String)
+    def create_directory(path : String) : Bool
       @created_directories << path
+      true
     end
 
     def file_exists?(path : String) : Bool
@@ -91,23 +93,23 @@ module GeneratorSpecHelper
   # Sample attributes for testing
   def sample_attributes
     {
-      "name" => "string",
-      "email" => "string",
-      "age" => "integer",
-      "active" => "boolean"
+      "name"   => "string",
+      "email"  => "string",
+      "age"    => "integer",
+      "active" => "boolean",
     }
   end
 
   # Sample complex attributes
   def complex_attributes
     {
-      "title" => "string",
-      "content" => "text",
+      "title"        => "string",
+      "content"      => "text",
       "published_at" => "datetime",
-      "author_id" => "integer",
-      "view_count" => "integer",
-      "featured" => "boolean",
-      "tags" => "array"
+      "author_id"    => "integer",
+      "view_count"   => "integer",
+      "featured"     => "boolean",
+      "tags"         => "array",
     }
   end
 end

@@ -50,10 +50,10 @@ describe AzuCLI::Generator::Core::TemplateStrategy do
       ECR
 
       variables = {
-        "module_name" => "TestModule",
-        "class_name" => "TestClass",
+        "module_name"   => "TestModule",
+        "class_name"    => "TestClass",
         "property_name" => "name",
-        "property_type" => "String"
+        "property_type" => "String",
       }
 
       result = strategy.render(template_content, variables)
@@ -77,8 +77,8 @@ describe AzuCLI::Generator::Core::TemplateStrategy do
       ECR
 
       variables = {
-        "class_name" => "TestClass",
-        "has_validation" => "true"
+        "class_name"     => "TestClass",
+        "has_validation" => "true",
       }
 
       result = strategy.render(template_content, variables)

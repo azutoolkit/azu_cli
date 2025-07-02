@@ -109,9 +109,9 @@ module AzuCLI::Generator
     # Check for WebSocket flag
     private def has_websocket_flag?(options : Core::GeneratorOptions) : Bool
       options.custom_options.has_key?("websocket") ||
-      options.custom_options.has_key?("ws") ||
-      options.additional_args.includes?("--websocket") ||
-      options.additional_args.includes?("realtime")
+        options.custom_options.has_key?("ws") ||
+        options.additional_args.includes?("--websocket") ||
+        options.additional_args.includes?("realtime")
     end
 
     # Generate attributes list for constructor

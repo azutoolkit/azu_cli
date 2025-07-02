@@ -43,9 +43,9 @@ module AzuCLI::Generator
 
     private def generate_migration_variables(version : Int64) : Hash(String, String)
       default_template_variables.merge({
-        "version" => version.to_s,
-        "up_content" => generate_up_content,
-        "down_content" => generate_down_content,
+        "version"        => version.to_s,
+        "up_content"     => generate_up_content,
+        "down_content"   => generate_down_content,
         "migration_type" => @migration_type,
       })
     end
@@ -135,13 +135,13 @@ module AzuCLI::Generator
             raw_type = parts[1]
             column_type = crystal_type(raw_type)
             column_options = case raw_type.downcase
-                            when "string", "text"
-                              "null: true"
-                            when "boolean", "bool"
-                              "default: false"
-                            else
-                              "null: true"
-                            end
+                             when "string", "text"
+                               "null: true"
+                             when "boolean", "bool"
+                               "default: false"
+                             else
+                               "null: true"
+                             end
           end
         end
       end
@@ -149,7 +149,7 @@ module AzuCLI::Generator
       {
         "column_name" => column_name,
         "column_type" => column_type,
-        "options" => column_options
+        "options"     => column_options,
       }
     end
 

@@ -48,16 +48,16 @@ module AzuCLI::Generator
 
     private def generate_request_variables : Hash(String, String)
       default_template_variables.merge({
-        "validations" => generate_validations,
+        "validations"     => generate_validations,
         "attributes_list" => generate_attributes_list,
-        "request_type" => @request_type,
+        "request_type"    => @request_type,
       })
     end
 
     private def generate_test_variables : Hash(String, String)
       default_template_variables.merge({
         "test_validations" => generate_test_validations,
-        "request_type" => @request_type,
+        "request_type"     => @request_type,
       })
     end
 

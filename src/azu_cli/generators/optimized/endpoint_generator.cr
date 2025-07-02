@@ -128,8 +128,8 @@ module AzuCLI::Generator
     # Generate page variables for specific action
     private def generate_page_variables(action : String) : Hash(String, String)
       default_template_variables.merge({
-        "action"       => action,
-        "action_class" => classify(action),
+        "action"        => action,
+        "action_class"  => classify(action),
         "template_data" => generate_template_data(action),
       })
     end

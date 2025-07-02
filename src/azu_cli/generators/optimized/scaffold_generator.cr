@@ -49,7 +49,7 @@ module AzuCLI::Generator
       # Create all directories needed by scaffold components
       directories_config = config.get_hash("directories")
       directories_config.each do |dir_type, dir_path|
-        file_strategy.create_directory(dir_path.as_s)
+        file_strategy.create_directory(dir_path)
       end
     end
 
@@ -93,7 +93,7 @@ module AzuCLI::Generator
 
       order_config.each do |step_str, component|
         step = step_str.to_i
-        order[step] = component.as_s
+        order[step] = component
       end
 
       order
@@ -135,22 +135,22 @@ module AzuCLI::Generator
     private def generate_migration_component : Nil
       migration_options = create_component_options("migration")
       generator = MigrationGenerator.new(name, project_name, migration_options)
-      generator.call
+      generator.generate!
     end
 
     # Generate model using ModelGenerator
     private def generate_model_component : Nil
       model_options = create_component_options("model")
       generator = ModelGenerator.new(name, project_name, model_options)
-      generator.call
+      generator.generate!
     end
 
     # Generate service using ServiceGenerator
     private def generate_service_component : Nil
       service_options = create_component_options("service")
-      service_options.custom_options["type"] = "crud"  # Default to CRUD service for scaffold
+      service_options.custom_options["type"] = "crud" # Default to CRUD service for scaffold
       generator = ServiceGenerator.new(name, project_name, service_options)
-      generator.call
+      generator.generate!
     end
 
     # Generate contracts using ContractGenerator
@@ -163,7 +163,7 @@ module AzuCLI::Generator
         contract_options.custom_options["type"] = determine_contract_type(action)
 
         generator = ContractGenerator.new(contract_name, project_name, contract_options)
-        generator.call
+        generator.generate!
       end
     end
 
@@ -172,7 +172,7 @@ module AzuCLI::Generator
       endpoint_options = create_component_options("endpoint")
       endpoint_options.additional_args = @actions
       generator = EndpointGenerator.new(name, project_name, endpoint_options)
-      generator.call
+      generator.generate!
     end
 
     # Generate pages using PageGenerator
@@ -189,7 +189,7 @@ module AzuCLI::Generator
         page_options.custom_options["template_vars"] = generate_page_template_vars(action)
 
         generator = PageGenerator.new(page_name, project_name, page_options)
-        generator.call
+        generator.generate!
       end
     end
 
@@ -205,7 +205,7 @@ module AzuCLI::Generator
       # Add component-specific customizations
       case component_type
       when "model"
-        options.custom_options["migration"] = "false"  # Migration handled separately
+        options.custom_options["migration"] = "false" # Migration handled separately
       when "service"
         options.additional_args = ["create", "find", "update", "delete", "list"]
       end
@@ -359,9 +359,9 @@ module AzuCLI::Generator
       puts
     end
 
-    # Override call to show plan first
-    def call : Nil
-      validate_preconditions
+    # Override generate! to show plan first
+    def generate! : String
+      validate_input!
       show_scaffold_plan
 
       puts "Generating scaffold...".colorize(:green).bold

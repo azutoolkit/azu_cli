@@ -8,7 +8,7 @@ describe AzuCLI::Generator::ServiceGenerator do
 
       generator.name.should eq("UserService")
       generator.project_name.should eq("test_project")
-      generator.service_type.should eq("domain")  # default type
+      generator.service_type.should eq("domain") # default type
     end
 
     it "sets service type from options" do

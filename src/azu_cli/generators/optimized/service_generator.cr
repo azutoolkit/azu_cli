@@ -55,7 +55,8 @@ module AzuCLI::Generator
       return unless @with_interface
 
       interface_variables = generate_interface_variables
-      interface_name = config.get("interface.prefix") + class_name + "Service"
+      interface_prefix = config.get("interface.prefix") || "I"
+      interface_name = interface_prefix + class_name + "Service"
 
       create_file_from_template(
         "service/interface.cr.ecr",
@@ -67,10 +68,10 @@ module AzuCLI::Generator
 
     private def generate_service_variables : Hash(String, String)
       default_template_variables.merge({
-        "service_type" => @service_type,
-        "methods_list" => generate_methods_list,
-        "dependencies" => generate_dependencies,
-        "error_handling" => generate_error_handling,
+        "service_type"      => @service_type,
+        "methods_list"      => generate_methods_list,
+        "dependencies"      => generate_dependencies,
+        "error_handling"    => generate_error_handling,
         "interface_include" => generate_interface_include,
       })
     end
@@ -79,15 +80,15 @@ module AzuCLI::Generator
       interface_prefix = config.get("interface.prefix") || "I"
 
       default_template_variables.merge({
-        "interface_name" => interface_prefix + class_name + "Service",
+        "interface_name"   => interface_prefix + class_name + "Service",
         "abstract_methods" => generate_abstract_methods,
       })
     end
 
     private def generate_test_variables : Hash(String, String)
       default_template_variables.merge({
-        "test_methods" => generate_test_methods,
-        "service_type" => @service_type,
+        "test_methods"      => generate_test_methods,
+        "service_type"      => @service_type,
         "mock_dependencies" => generate_mock_dependencies,
       })
     end
@@ -96,8 +97,11 @@ module AzuCLI::Generator
       explicit_methods = options.additional_args.reject { |arg| arg.includes?(":") }
 
       if explicit_methods.empty?
-        service_type_config = config.get_hash("service_types.#{@service_type}")
-        service_type_config["methods"]?.try(&.as_a.map(&.as_s)) || config.get_array("default_methods")
+        # Get methods from configuration - first try service type specific, then defaults
+        config.get_array("service_types.#{@service_type}.methods").tap do |methods|
+          return methods unless methods.empty?
+        end
+        config.get_array("default_methods")
       else
         explicit_methods
       end
@@ -132,11 +136,19 @@ module AzuCLI::Generator
     private def determine_return_type(method_name : String) : String
       case method_name
       when "create", "find", "update"
-        config.get("return_types.model") % {model_name: extract_model_name} || "Bool"
+        if template = config.get("return_types.model")
+          template % {model_name: extract_model_name}
+        else
+          "Bool"
+        end
       when "delete", "valid?"
         "Bool"
       when "list"
-        config.get("return_types.array") % {model_name: extract_model_name} || "Array(String)"
+        if template = config.get("return_types.array")
+          template % {model_name: extract_model_name}
+        else
+          "Array(String)"
+        end
       else
         "Bool"
       end
@@ -156,12 +168,20 @@ module AzuCLI::Generator
         case dep_type
         when "repository"
           model_name = extract_model_name
-          lines << pattern % {model_name: model_name}
+          if pattern.includes?("%{model_name}")
+            lines << pattern % {model_name: model_name}
+          else
+            lines << pattern
+          end
         when "logger"
           lines << pattern
         when "validator"
           model_name = extract_model_name
-          lines << pattern % {model_name: model_name}
+          if pattern.includes?("%{model_name}")
+            lines << pattern % {model_name: model_name}
+          else
+            lines << pattern
+          end
         end
       end
 

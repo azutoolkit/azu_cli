@@ -67,9 +67,9 @@ module AzuCLI::Generator
     private def generate_page_variables : Hash(String, String)
       default_template_variables.merge({
         "template_vars_list" => generate_template_vars_list,
-        "render_data" => generate_render_data,
-        "page_type" => @page_type,
-        "template_engine" => @template_engine,
+        "render_data"        => generate_render_data,
+        "page_type"          => @page_type,
+        "template_engine"    => @template_engine,
       })
     end
 
@@ -83,7 +83,7 @@ module AzuCLI::Generator
     private def generate_template_variables : Hash(String, String)
       default_template_variables.merge({
         "template_data" => generate_template_data,
-        "page_type" => @page_type,
+        "page_type"     => @page_type,
       })
     end
 
