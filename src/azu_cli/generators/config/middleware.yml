@@ -1,0 +1,57 @@
+# Middleware Generator Configuration
+extends: "base.yml"
+
+# Middleware-specific settings
+type: "middleware"
+category: "http"
+description: "Generate HTTP middleware components for request/response processing"
+
+# Directories specific to middleware
+directories:
+  source: "src/middleware"
+  spec: "spec/middleware"
+
+# Templates for middleware generation
+templates:
+  main: "middleware/middleware.cr.ecr"
+  spec: "middleware/middleware_spec.cr.ecr"
+
+# Middleware types and their characteristics
+middleware_types:
+  authentication:
+    description: "Authentication middleware for verifying user credentials"
+    includes: ["token_validation", "user_context"]
+    
+  authorization:
+    description: "Authorization middleware for permission checking"
+    includes: ["role_checking", "resource_access"]
+    
+  cors:
+    description: "CORS middleware for cross-origin requests"
+    includes: ["cors_headers", "preflight_handling"]
+    
+  rate_limiting:
+    description: "Rate limiting middleware for request throttling"
+    includes: ["request_counting", "time_windows"]
+    
+  logging:
+    description: "Logging middleware for request/response tracking"
+    includes: ["request_logging", "response_logging"]
+    
+  security:
+    description: "Security middleware for various security headers"
+    includes: ["security_headers", "xss_protection"]
+
+# Usage examples
+usage_examples:
+  - "azu generate middleware Authentication"
+  - "azu generate middleware CORS type:cors"
+  - "azu generate middleware RateLimit type:rate_limiting"
+  - "azu generate middleware Logger type:logging"
+
+# Next steps
+next_steps:
+  - "Implement middleware logic in src/middleware/%{snake_case_name}.cr"
+  - "Add the middleware to your application stack"
+  - "Configure middleware options if needed"
+  - "Test your middleware in spec/middleware/%{snake_case_name}_spec.cr"

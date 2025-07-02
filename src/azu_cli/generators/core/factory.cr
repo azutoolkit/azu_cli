@@ -1,4 +1,17 @@
 require "./abstract_generator"
+require "../optimized/contract_generator"
+require "../optimized/component_generator"
+require "../optimized/endpoint_generator"
+require "../optimized/middleware_generator"
+require "../optimized/migration_generator"
+require "../optimized/model_generator"
+require "../optimized/page_generator"
+require "../optimized/service_generator"
+require "../optimized/validator_generator"
+require "../optimized/channel_generator"
+require "../optimized/handler_generator"
+require "../optimized/request_generator"
+require "../optimized/response_generator"
 
 module AzuCLI::Generator::Core
   # Factory pattern implementation for creating generators
@@ -31,19 +44,44 @@ module AzuCLI::Generator::Core
       # Resolve aliases
       resolved_type = GENERATOR_ALIASES[generator_type]? || generator_type
 
-      # Validate generator type
-      unless GENERATOR_REGISTRY.has_key?(resolved_type)
+      # Create generators using case statement for proper polymorphism
+      case resolved_type
+      when "contract"
+        AzuCLI::Generator::ContractGenerator.new(name, project_name, options)
+      when "component"
+        AzuCLI::Generator::ComponentGenerator.new(name, project_name, options)
+      when "endpoint"
+        AzuCLI::Generator::EndpointGenerator.new(name, project_name, options)
+      when "middleware"
+        AzuCLI::Generator::MiddlewareGenerator.new(name, project_name, options)
+      when "migration"
+        AzuCLI::Generator::MigrationGenerator.new(name, project_name, options)
+      when "model"
+        AzuCLI::Generator::ModelGenerator.new(name, project_name, options)
+      when "page"
+        AzuCLI::Generator::PageGenerator.new(name, project_name, options)
+      when "service"
+        AzuCLI::Generator::ServiceGenerator.new(name, project_name, options)
+      when "validator"
+        AzuCLI::Generator::ValidatorGenerator.new(name, project_name, options)
+      when "channel"
+        AzuCLI::Generator::ChannelGenerator.new(name, project_name, options)
+      when "handler"
+        AzuCLI::Generator::HandlerGenerator.new(name, project_name, options)
+      when "request"
+        AzuCLI::Generator::RequestGenerator.new(name, project_name, options)
+      when "response"
+        AzuCLI::Generator::ResponseGenerator.new(name, project_name, options)
+      else
         raise ArgumentError.new("Unknown generator type: #{generator_type}")
       end
-
-      # Get generator class and create instance  
-      generator_class = GENERATOR_REGISTRY[resolved_type]
-      generator_class.new(name, project_name, options)
     end
 
     # Get all available generator types
     def self.available_types : Array(String)
-      GENERATOR_REGISTRY.keys
+      ["contract", "component", "endpoint", "middleware", "migration", 
+       "model", "page", "service", "validator", "channel", 
+       "handler", "request", "response"]
     end
 
     # Get aliases for a generator type
@@ -54,16 +92,16 @@ module AzuCLI::Generator::Core
     # Check if generator type exists
     def self.exists?(generator_type : String) : Bool
       resolved_type = GENERATOR_ALIASES[generator_type]? || generator_type
-      GENERATOR_REGISTRY.has_key?(resolved_type)
+      available_types.includes?(resolved_type)
     end
 
     # Get generator descriptions for help
     def self.generator_descriptions : Hash(String, String)
       descriptions = {} of String => String
 
-      GENERATOR_REGISTRY.each do |type, generator_class|
+      available_types.each do |type|
         # Load configuration to get description
-        config = Configuration.load(type)
+        config = Configuration.new(type).load!
         description = config.get("description") || "Generate #{type} components"
         descriptions[type] = description
       end

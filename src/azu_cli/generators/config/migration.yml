@@ -1,0 +1,79 @@
+# Migration Generator Configuration
+extends: "base.yml"
+
+# Migration-specific settings
+type: "migration"
+category: "database"
+description: "Generate database migration files using CQL"
+
+# Directories specific to migrations
+directories:
+  source: "src/db/migrations"
+  spec: "spec/migrations"
+
+# Templates for migration generation
+templates:
+  main: "migration/migration.cr.ecr"
+
+# Migration types and patterns
+migration_types:
+  create_table:
+    pattern: "create_*_table"
+    description: "Creates a new database table"
+    
+  add_column:
+    pattern: "add_*_to_*"
+    description: "Adds a column to existing table"
+    
+  remove_column:
+    pattern: "remove_*_from_*"
+    description: "Removes a column from existing table"
+    
+  drop_table:
+    pattern: "drop_*_table"
+    description: "Drops an existing table"
+    
+  add_index:
+    pattern: "*_index*"
+    description: "Adds an index to table"
+    
+  add_foreign_key:
+    pattern: "*foreign_key*"
+    description: "Adds foreign key constraint"
+
+# CQL schema operations
+schema_operations:
+  create_table: |
+    schema.table :%{table_name} do
+      primary :id, Int32
+      %{columns}
+      timestamps
+    end
+    schema.%{table_name}.create!
+    
+  add_column: |
+    schema.alter :%{table_name} do
+      add_column :%{column_name}, %{column_type}, %{options}
+    end
+    
+  drop_column: |
+    schema.alter :%{table_name} do
+      drop_column :%{column_name}
+    end
+    
+  add_index: |
+    schema.add_index :%{table_name}, :%{column_name}, unique: %{unique}
+
+# Usage examples
+usage_examples:
+  - "azu generate migration create_users_table"
+  - "azu generate migration add_email_to_users email:string"
+  - "azu generate migration remove_name_from_users"
+  - "azu generate migration add_index_to_users_email"
+
+# Next steps
+next_steps:
+  - "Edit the generated migration file to define your schema changes"
+  - "Run 'azu db:migrate' to apply the migration"
+  - "Run 'azu db:rollback' if you need to undo the changes"
+  - "Use 'azu db:status' to check migration status"

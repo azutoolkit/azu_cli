@@ -1,6 +1,5 @@
 require "../command"
-require "../generators/optimized_base"
-require "../generators/optimized/contract_generator"
+require "../generators/core/factory"
 
 module AzuCLI::Commands
   # Optimized Generate command using SOLID principles and design patterns
@@ -10,17 +9,8 @@ module AzuCLI::Commands
     description "Generate Azu components using optimized configuration-driven generators"
     usage "generate <generator_type> <name> [options]"
 
-    # Register available generators with the factory
-    private def self.register_generators
-      AzuCLI::Generator::OptimizedBase.register_generator("contract", AzuCLI::Generator::ContractGenerator)
-      # Other generators will be registered as they are migrated
-    end
-
     def execute(args : Hash(String, String | Array(String))) : String | Nil
       require_project_root!
-
-      # Ensure generators are registered
-      self.class.register_generators
 
       positional = get_positional_args(args)
 
@@ -34,12 +24,12 @@ module AzuCLI::Commands
 
       # Check if this is a request for generator-specific help
       if component_name == "--help" || component_name == "-h"
-        AzuCLI::Generator::OptimizedBase.show_generator_help(generator_type)
+        show_generator_help(generator_type)
         return "Help displayed"
       end
 
       # Validate generator type
-      unless AzuCLI::Generator::OptimizedBase.supports?(generator_type)
+      unless AzuCLI::Generator::Core::GeneratorFactory.exists?(generator_type)
         log.error("Unknown generator: #{generator_type}")
         show_available_generators
         return "Unknown generator error"
@@ -52,34 +42,63 @@ module AzuCLI::Commands
         return "Component name required"
       end
 
-      unless AzuCLI::Generator::OptimizedBase.valid_component_name?(component_name)
+      unless valid_component_name?(component_name)
         log.error("Invalid component name: #{component_name}")
         log.info("Component name must contain only letters, numbers, and underscores")
         log.info("Examples: user, user_profile, BlogPost")
         return "Invalid component name"
       end
 
-      # Generate using the optimized system
-      result = AzuCLI::Generator::OptimizedBase.generate(
-        generator_type,
-        component_name,
-        get_project_name,
-        args,
-        positional
-      )
+      begin
+        # Create generator options from arguments
+        options = AzuCLI::Generator::Core::GeneratorOptions.from_args(args, positional)
 
-      # Check if generation was successful
-      if result.starts_with?("Error:") || result.starts_with?("Generation failed:")
-        log.error(result)
-        return result
-      else
-        log.success(result)
+        # Create generator using factory
+        generator = AzuCLI::Generator::Core::GeneratorFactory.create(
+          generator_type, 
+          component_name, 
+          get_project_name,
+          options
+        )
+
+        # Execute generation
+        generator.generate!
+
+        log.success("Generated #{generator_type} '#{component_name}' successfully")
         return "Generated successfully"
+      rescue ex : ArgumentError
+        log.error("Error: #{ex.message}")
+        show_available_generators
+        return "Generation error"
+      rescue ex : Exception
+        log.error("Error generating #{generator_type}: #{ex.message}")
+        return "Generation failed"
       end
     end
 
     private def show_available_generators
-      AzuCLI::Generator::OptimizedBase.show_available_generators
+      puts "\n🔧 Available generators:".colorize(:yellow).bold
+      
+      descriptions = AzuCLI::Generator::Core::GeneratorFactory.generator_descriptions
+      
+      descriptions.each do |type, description|
+        aliases = AzuCLI::Generator::Core::GeneratorFactory.aliases_for(type)
+        alias_text = aliases.empty? ? "" : " (aliases: #{aliases.join(", ")})"
+        puts "  #{type.ljust(12)} - #{description}#{alias_text}"
+      end
+      
+      puts "\nUse 'azu generate <type> --help' for type-specific help"
+    end
+
+    private def show_generator_help(generator_type : String)
+      puts "Help for #{generator_type} generator would be shown here"
+      # TODO: Implement generator-specific help from configuration
+    end
+
+    private def valid_component_name?(name : String) : Bool
+      # Component name should contain only letters, numbers, and underscores
+      # Should start with a letter
+      /\A[A-Za-z][A-Za-z0-9_]*\z/.match(name) != nil
     end
 
     def show_command_specific_help

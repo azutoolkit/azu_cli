@@ -1,0 +1,71 @@
+# Request Generator Configuration
+extends: "base.yml"
+
+# Request-specific settings
+type: "request"
+category: "validation"
+description: "Generate request objects for type-safe parameter validation"
+
+# Directories specific to requests
+directories:
+  source: "src/requests"
+  spec: "spec/requests"
+
+# Templates for request generation
+templates:
+  main: "request/request.cr.ecr"
+  spec: "request/request_spec.cr.ecr"
+
+# Request types and characteristics
+request_types:
+  form:
+    description: "Form request with standard form fields"
+    includes: ["validation", "parameter_extraction"]
+    
+  json:
+    description: "JSON API request with structured data"
+    includes: ["json_parsing", "validation"]
+    
+  file_upload:
+    description: "File upload request with multipart support"
+    includes: ["file_handling", "validation", "size_limits"]
+    
+  query:
+    description: "Query request for filtering and pagination"
+    includes: ["parameter_extraction", "filtering"]
+
+# File upload settings
+file_upload:
+  max_size: "10.megabytes"
+  allowed_types: [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".txt"]
+  
+# Validation patterns for requests
+validation_patterns:
+  presence: "validate :%{field}, presence: true"
+  length: "validate :%{field}, length: {min: %{min}, max: %{max}}"
+  format: "validate :%{field}, format: %{pattern}"
+  file_type: "validate :%{field}, file: {allowed_types: %{types}}"
+  file_size: "validate :%{field}, file: {max_size: %{size}}"
+
+# Common request attributes
+common_attributes:
+  pagination:
+    page: "Int32"
+    per_page: "Int32"
+  search:
+    query: "String"
+    filter: "String"
+
+# Usage examples
+usage_examples:
+  - "azu generate request UserRequest name:string email:string"
+  - "azu generate request LoginRequest email:string password:string"
+  - "azu generate request FileUploadRequest --file-upload"
+  - "azu generate request SearchRequest query:string page:integer"
+
+# Next steps
+next_steps:
+  - "Customize validation rules in src/requests/%{snake_case_name}_request.cr"
+  - "Use in your endpoints for automatic parameter validation"
+  - "Add custom validation methods if needed"
+  - "Test your request in spec/requests/%{snake_case_name}_request_spec.cr"
