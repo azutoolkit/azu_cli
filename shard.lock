@@ -40,6 +40,10 @@ shards:
     git: https://github.com/amberframework/teeplate.git
     version: 0.11.2
 
+  topia:
+    git: https://github.com/azutoolkit/topia.git
+    version: 0.1.0+git.commit.40f621ded59f00a5d8e3bed0345170df32730ccc
+
   ulid:
     git: https://github.com/superpaintman/ulid.git
     version: 0.1.0

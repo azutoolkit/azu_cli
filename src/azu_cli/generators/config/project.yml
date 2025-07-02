@@ -14,46 +14,78 @@ templates:
   seed: "project/src/db/seed.cr.ecr"
   db_readme: "project/src/db/README.md.ecr"
   taskfile: "project/tasks/taskfile.cr.ecr"
-  welcome_endpoint: "project/src/endpoints/welcome/index_endpoint.cr.ecr"
-  welcome_contract: "project/src/contracts/welcome/index_contract.cr.ecr"
-  welcome_page: "project/src/pages/welcome/index_page.cr.ecr"
 
-# Directory structure
+# Project-type-specific directory structures
 directories:
-  root: "."
-  src: "src"
-  spec: "spec"
-  public: "public"
-  tasks: "tasks"
-  src_db: "src/db"
-  src_db_migrations: "src/db/migrations"
-  src_endpoints: "src/endpoints"
-  src_contracts: "src/contracts"
-  src_pages: "src/pages"
-  src_models: "src/models"
-  src_services: "src/services"
-  src_middlewares: "src/middlewares"
-  src_components: "src/components"
-  src_initializers: "src/initializers"
-  src_requests: "src/requests"
-  src_responses: "src/responses"
-  src_validations: "src/validations"
-  src_jobs: "src/jobs"
-  src_mailers: "src/mailers"
-  src_errors: "src/errors"
-  src_views_layouts: "src/views/layouts"
-  spec_endpoints: "spec/endpoints"
-  spec_contracts: "spec/contracts"
-  spec_pages: "spec/pages"
-  spec_models: "spec/models"
-  spec_services: "spec/services"
-  spec_validators: "spec/validators"
-  public_assets: "public/assets"
-  public_assets_css: "public/assets/css"
-  public_assets_js: "public/assets/js"
-  public_templates: "public/templates"
-  public_templates_helpers: "public/templates/helpers"
-  public_templates_welcome: "public/templates/welcome"
+  web:
+    - "src"
+    - "spec"
+    - "tasks"
+    - "src/initializers"
+    - "src/db"
+    - "src/db/migrations"
+    - "src/endpoints"
+    - "src/contracts"
+    - "src/pages"
+    - "src/models"
+    - "src/services"
+    - "src/middlewares"
+    - "src/components"
+    - "src/validators"
+    - "src/jobs"
+    - "src/mailers"
+    - "src/errors"
+    - "src/requests"
+    - "src/responses"
+    - "src/views"
+    - "src/views/layouts"
+    - "public"
+    - "public/assets"
+    - "public/assets/css"
+    - "public/assets/js"
+    - "public/templates"
+    - "public/templates/helpers"
+    - "spec/endpoints"
+    - "spec/contracts"
+    - "spec/pages"
+    - "spec/models"
+    - "spec/services"
+    - "spec/validators"
+
+  api:
+    - "src"
+    - "spec"
+    - "tasks"
+    - "src/initializers"
+    - "src/db"
+    - "src/db/migrations"
+    - "src/endpoints"
+    - "src/contracts"
+    - "src/models"
+    - "src/services"
+    - "src/middlewares"
+    - "src/validators"
+    - "src/jobs"
+    - "src/mailers"
+    - "src/errors"
+    - "src/requests"
+    - "src/responses"
+    - "spec/endpoints"
+    - "spec/contracts"
+    - "spec/models"
+    - "spec/services"
+    - "spec/validators"
+
+  cli:
+    - "src"
+    - "spec"
+    - "tasks"
+    - "src/initializers"
+    - "src/commands"
+    - "src/services"
+    - "src/errors"
+    - "spec/commands"
+    - "spec/services"
 
 # Project types configuration
 project_types:
@@ -69,19 +101,17 @@ project_types:
         "readme",
         "spec_helper",
         "spec_main",
+        "taskfile",
         "server",
         "database_init",
         "logger_init",
         "schema",
         "seed",
         "db_readme",
-        "taskfile",
-        "welcome_endpoint",
-        "welcome_contract",
-        "welcome_page",
       ]
     copy_assets: true
     copy_templates: true
+
   api:
     name: "API-only Application"
     description: "RESTful API server without frontend components"
@@ -93,18 +123,17 @@ project_types:
         "readme",
         "spec_helper",
         "spec_main",
+        "taskfile",
         "server",
         "database_init",
         "logger_init",
         "schema",
         "seed",
         "db_readme",
-        "taskfile",
-        "welcome_endpoint",
-        "welcome_contract",
       ]
     copy_assets: false
     copy_templates: false
+
   cli:
     name: "Command Line Interface"
     description: "CLI application using Crystal and Topia"
@@ -117,15 +146,17 @@ project_types:
 
 # Database configurations
 databases:
-  postgresql:
+  postgresql: &db_base
     url: "postgresql://localhost/{{project}}_development"
     driver: "pg"
     adapter: "postgresql"
   mysql:
+    <<: *db_base
     url: "mysql://localhost/{{project}}_development"
     driver: "mysql"
     adapter: "mysql"
   sqlite:
+    <<: *db_base
     url: "sqlite3://./db/{{project}}_development.db"
     driver: "sqlite3"
     adapter: "sqlite3"
@@ -158,29 +189,67 @@ template_output_paths:
   seed: "src/db/seed.cr"
   db_readme: "src/db/README.md"
   taskfile: "tasks/taskfile.cr"
-  welcome_endpoint: "src/endpoints/welcome/index_endpoint.cr"
-  welcome_contract: "src/contracts/welcome/index_contract.cr"
-  welcome_page: "src/pages/welcome/index_page.cr"
 
-# Placeholder directories for .gitkeep files
+# Project-type-specific placeholder directories
 placeholder_directories:
-  - "src/models"
-  - "src/services"
-  - "src/middlewares"
-  - "src/components"
-  - "src/requests"
-  - "src/responses"
-  - "src/validations"
-  - "src/jobs"
-  - "src/mailers"
-  - "src/errors"
-  - "src/views/layouts"
+  web: &web_placeholders
+    - "src/models"
+    - "src/services"
+    - "src/middlewares"
+    - "src/components"
+    - "src/validators"
+    - "src/jobs"
+    - "src/mailers"
+    - "src/errors"
+    - "src/requests"
+    - "src/responses"
+    - "src/views/layouts"
+  api: &api_placeholders
+    - "src/models"
+    - "src/services"
+    - "src/middlewares"
+    - "src/validators"
+    - "src/jobs"
+    - "src/mailers"
+    - "src/errors"
+  cli:
+    - "src/commands"
+    - "src/services"
+    - "src/errors"
 
-# Special placeholder files
+# Project-type-specific placeholder files
 placeholder_files:
-  models_readme:
-    path: "src/models/your_models_goes_here.txt"
-    content: "Your CQL models will be generated here.\n"
+  web: &models_file
+    models_readme:
+      path: "src/models/your_models_goes_here.txt"
+      content: "Your CQL models will be generated here.\n"
+  api: *models_file
+  cli:
+    commands_readme:
+      path: "src/commands/your_commands_go_here.txt"
+      content: "Your CLI commands will be generated here.\n"
+
+# Project-type-specific scaffold configurations
+scaffolds:
+  web:
+    welcome:
+      name: "Welcome"
+      description: "Welcome page endpoint with Jinja templates"
+      actions: ["index"]
+      attributes: {}
+      skip_components: ["migration", "model", "service"]
+      options:
+        web_only: false
+        api_only: false
+  api:
+    welcome:
+      name: "Welcome"
+      description: "Welcome API endpoint"
+      actions: ["index"]
+      attributes: {}
+      skip_components: ["migration", "model", "service", "page"]
+      options:
+        api_only: true
 
 # Post-generation tasks
 post_generation:

@@ -1,0 +1,231 @@
+# Database Configuration for <%= @project.capitalize %>
+
+This directory contains the database-related files for your <%= @project %> application using [CQL (Crystal Query Language)](https://github.com/azutoolkit/cql).
+
+## Directory Structure
+
+```
+src/db/
+├── README.md          # This documentation file
+├── schema.cr          # Database schema definition
+├── seed.cr           # Database seed data
+└── migrations/       # Database migration files
+```
+
+## Configuration
+
+The database is configured in `src/initializers/database.cr` using CQL's comprehensive configuration system. See the [CQL Configuration Guide](https://azutopia.gitbook.io/cql/getting-started/configuration) for detailed documentation.
+
+### Environment Variables
+
+You can customize the database configuration using these environment variables:
+
+#### Core Database Settings
+- `DATABASE_URL` - Complete database connection URL
+- `AZU_ENV` - Application environment (development, test, production, staging)
+
+#### Connection Pool Settings
+- `DB_POOL_SIZE` - Number of connections in the pool (default: 10)
+- `DB_MAX_IDLE` - Maximum idle connections (default: 5)
+
+#### Performance Settings
+- `ENABLE_PERFORMANCE_MONITORING` - Enable query performance monitoring
+- `ENABLE_QUERY_CACHE` - Enable query result caching
+- `CACHE_TTL_HOURS` - Cache time-to-live in hours
+
+<% if @database == "postgresql" || @database == "postgres" || @database == "pg" -%>
+#### PostgreSQL Specific Settings
+- `DB_SSLMODE` - SSL mode (disable, allow, prefer, require, verify-ca, verify-full)
+- `DB_CONNECT_TIMEOUT` - Connection timeout in seconds
+- `DB_MAX_CONNECTIONS` - Maximum database connections
+
+<% elsif @database == "mysql" -%>
+#### MySQL Specific Settings
+- `DB_CHARSET` - Character set (default: utf8mb4)
+- `DB_COLLATION` - Collation (default: utf8mb4_unicode_ci)
+- `DB_READ_TIMEOUT` - Read timeout in seconds
+- `DB_WRITE_TIMEOUT` - Write timeout in seconds
+- `DB_CONNECT_TIMEOUT` - Connection timeout in seconds
+
+<% elsif @database == "sqlite" -%>
+#### SQLite Specific Settings
+- `DB_JOURNAL_MODE` - Journal mode (delete, truncate, persist, memory, wal, off)
+- `DB_SYNCHRONOUS` - Synchronous mode (off, normal, full, extra)
+- `DB_CACHE_SIZE` - Cache size in pages
+- `DB_BUSY_TIMEOUT` - Busy timeout in milliseconds
+
+<% end -%>
+#### Schema Management
+- `VERIFY_SCHEMA_ON_STARTUP` - Verify schema consistency on startup
+
+## Database Commands
+
+Use the Azu CLI for database operations:
+
+```bash
+# Create the database
+azu db:create
+
+# Run migrations
+azu db:migrate
+
+# Rollback migrations
+azu db:rollback
+
+# Show migration status
+azu db:status
+
+# Seed the database
+azu db:seed
+
+# Reset database (drop, create, migrate, seed)
+azu db:reset
+
+# Create a new migration
+azu generate migration create_users_table name:string email:string
+```
+
+## Schema Definition
+
+The `schema.cr` file defines your database structure using CQL's schema DSL:
+
+```crystal
+AppSchema = CQL::Schema.define(
+  :app_schema,
+<% case @database when "postgresql", "postgres", "pg" -%>
+  adapter: CQL::Adapter::Postgres,
+<% when "mysql" -%>
+  adapter: CQL::Adapter::MySQL,
+<% when "sqlite" -%>
+  adapter: CQL::Adapter::SQLite,
+<% end -%>
+  uri: CQL.config.database_url
+) do
+  table :users do
+    primary :id, Int32
+    column :name, String, null: false
+    column :email, String, null: false
+    column :active, Bool, default: true
+    timestamps
+
+    index :email, unique: true
+  end
+end
+```
+
+## Migrations
+
+Migrations are stored in the `migrations/` directory and use CQL's migration system:
+
+```crystal
+class CreateUsersTable < CQL::Migration(20240101120000)
+  def up
+    schema.table :users do |t|
+      t.primary :id, Int32
+      t.column :name, String, null: false
+      t.column :email, String, null: false
+      t.column :active, Bool, default: true
+      t.timestamps
+    end
+
+    schema.index :users, :email, unique: true
+  end
+
+  def down
+    schema.drop_table :users
+  end
+end
+```
+
+## Seeds
+
+The `seed.cr` file contains sample data for development and testing:
+
+```crystal
+# Create sample users
+admin_user = User.create!(
+  name: "Admin User",
+  email: "admin@<%= @project %>.com",
+  active: true
+)
+```
+
+## Models
+
+Create ActiveRecord models in `src/models/` that work with your schema:
+
+```crystal
+class User < CQL::Record(AppSchema)
+  def_table :users
+
+  validates :name, presence: true
+  validates :email, presence: true, uniqueness: true
+
+  scope :active, -> { where(active: true) }
+end
+```
+
+## Development Workflow
+
+1. **Design your schema** - Edit `schema.cr` to define tables
+2. **Create migrations** - Use `azu generate migration` for schema changes
+3. **Run migrations** - Use `azu db:migrate` to apply changes
+4. **Create models** - Define ActiveRecord models in `src/models/`
+5. **Seed data** - Add sample data to `seed.cr`
+6. **Test** - Use `azu db:seed` to populate development data
+
+## Environment-Specific Behavior
+
+### Development
+- Performance monitoring enabled by default
+- Auto-reloading of models enabled
+- Schema verification on startup (optional)
+- Query caching disabled for fresh data
+
+### Test
+- Uses minimal connection pool (1 connection)
+- Performance monitoring disabled
+- Schema auto-sync disabled
+- Isolated database per test run
+
+### Production
+- Query caching enabled by default
+- Larger connection pool (25 connections)
+- Performance monitoring configurable
+- Schema verification on startup recommended
+- Auto-reloading disabled for security
+
+### Staging
+- Similar to production but with monitoring enabled
+- Medium connection pool (15 connections)
+- Schema verification enabled
+
+## Best Practices
+
+1. **Always create migrations** for schema changes, never edit schema.cr directly in shared environments
+2. **Use environment variables** for configuration instead of hardcoding values
+3. **Test migrations** both up and down directions
+4. **Keep seeds idempotent** - they should be safe to run multiple times
+5. **Use proper indexing** for frequently queried columns
+6. **Follow naming conventions** for tables, columns, and constraints
+7. **Document complex migrations** with comments explaining the reasoning
+
+## Troubleshooting
+
+### Connection Issues
+- Verify `DATABASE_URL` is correct for your environment
+- Check database server is running and accessible
+- Verify user credentials and database exists
+
+### Migration Issues
+- Run `azu db:status` to check migration state
+- Use `azu db:rollback` to undo problematic migrations
+- Check migration files for syntax errors
+
+### Performance Issues
+- Enable performance monitoring in development
+- Check connection pool size for your workload
+- Review query patterns and add appropriate indexes
+- Use `Log.setup("CQL", :debug)` for query debugging
+
+For more help, see the [CQL documentation](https://azutopia.gitbook.io/cql/) or the [Azu Toolkit guides](https://github.com/azutoolkit/azu).

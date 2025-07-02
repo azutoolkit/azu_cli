@@ -1,4 +1,5 @@
 require "../core/abstract_generator"
+require "./scaffold_generator"
 
 module AzuCLI::Generator
   # Optimized Project Generator following SOLID principles
@@ -39,6 +40,7 @@ module AzuCLI::Generator
       generate_project_type_files
       copy_static_assets if @copy_assets
       copy_template_files if @copy_templates
+      generate_project_scaffolds
       generate_placeholder_files
     end
 
@@ -46,15 +48,12 @@ module AzuCLI::Generator
     def create_directories : Nil
       puts "📁 Creating project directories...".colorize(:blue)
 
-      # Get all directories from configuration
-      directories = config.get_hash("directories")
-      directories.each do |dir_key, dir_path|
-        expanded_path = expand_template_path(dir_path)
+      # Get project-type-specific directories from configuration
+      directories = config.get_array("directories.#{@project_type}")
+      directories.each do |dir_path|
+        expanded_path = expand_template_path(dir_path.to_s)
         file_strategy.create_directory(File.join(name, expanded_path))
       end
-
-      # Create additional directories based on project type
-      create_project_type_directories
     end
 
     # Override to skip individual file tests (project handles its own testing setup)
@@ -71,8 +70,11 @@ module AzuCLI::Generator
       end
     end
 
-    # Validate database type
+    # Validate database type (only for web and api projects)
     private def validate_database_type : Nil
+      # CLI projects don't require database validation
+      return if @project_type == "cli"
+
       valid_databases = config.get_hash_keys("databases")
       unless valid_databases.includes?(@database)
         raise ArgumentError.new("Invalid database: #{@database}. Valid databases: #{valid_databases.join(", ")}")
@@ -208,17 +210,21 @@ module AzuCLI::Generator
 
       # Base dependencies for all projects
       dependencies << "azu:\n    github: azutoolkit/azu"
-      dependencies << "cql:\n    github: azutoolkit/cql"
-      dependencies << "cql:\n    github: azutoolkit/topia"
+      dependencies << "topia:\n    github: azutoolkit/topia"
 
-      # Database-specific dependencies
-      case @database
-      when "postgresql"
-        dependencies << "pg:\n    github: will/crystal-pg"
-      when "mysql"
-        dependencies << "mysql:\n    github: crystal-lang/crystal-mysql"
-      when "sqlite"
-        dependencies << "sqlite3:\n    github: crystal-lang/crystal-sqlite3"
+      # Database dependencies only for web and api projects
+      unless @project_type == "cli"
+        dependencies << "cql:\n    github: azutoolkit/cql"
+
+        # Database-specific dependencies
+        case @database
+        when "postgresql"
+          dependencies << "pg:\n    github: will/crystal-pg"
+        when "mysql"
+          dependencies << "mysql:\n    github: crystal-lang/crystal-mysql"
+        when "sqlite"
+          dependencies << "sqlite3:\n    github: crystal-lang/crystal-sqlite3"
+        end
       end
 
       # Project type specific dependencies
@@ -226,7 +232,7 @@ module AzuCLI::Generator
       when "web"
         dependencies << "jinja:\n    github: straight-shoota/jinja.cr"
       when "cli"
-        dependencies << "topia:\n    github: azutoolkit/topia"
+        # CLI projects get additional Topia features
       end
 
       dependencies.join("\n  ")
@@ -245,8 +251,11 @@ module AzuCLI::Generator
       end
     end
 
-    # Generate database configuration
+    # Generate database configuration (only for web and api projects)
     private def generate_database_config : String
+      # CLI projects don't need database configuration
+      return "" if @project_type == "cli"
+
       database_config = config.get_hash("databases.#{@database}")
       database_url = expand_template_string(database_config["url"]? || "")
 
@@ -256,6 +265,76 @@ module AzuCLI::Generator
         settings.adapter = "#{database_config["adapter"]? || @database}"
       end
       CRYSTAL
+    end
+
+    # Generate project-type-specific scaffolds
+    private def generate_project_scaffolds : Nil
+      scaffold_configs = config.get_hash("scaffolds.#{@project_type}")
+      return if scaffold_configs.empty?
+
+      puts "🏗️ Generating project scaffolds...".colorize(:yellow)
+
+      scaffold_configs.each do |scaffold_name, scaffold_config|
+        next unless scaffold_config.is_a?(Hash)
+
+        puts "  📝 Generating #{scaffold_name} scaffold...".colorize(:blue)
+        generate_scaffold(scaffold_name, scaffold_config)
+      end
+    rescue
+      # If no scaffolds configured for this project type, continue silently
+      puts "  ℹ️  No scaffolds configured for #{@project_type} projects".colorize(:blue)
+    end
+
+    # Generate individual scaffold using ScaffoldGenerator
+    private def generate_scaffold(scaffold_name : String, scaffold_config : Hash) : Nil
+      # Extract scaffold configuration
+      scaffold_name_val = scaffold_config["name"]?.try(&.as_s) || scaffold_name
+      actions = scaffold_config["actions"]?.try(&.as_a).try(&.map(&.as_s)) || ["index"]
+      attributes = scaffold_config["attributes"]?.try(&.as_h) || {} of String => String
+      skip_components = scaffold_config["skip_components"]?.try(&.as_a).try(&.map(&.as_s)) || [] of String
+      options_config = scaffold_config["options"]?.try(&.as_h) || {} of String => String
+
+      # Create scaffold options
+      scaffold_options = Core::GeneratorOptions.new
+      scaffold_options.attributes = Hash(String, String).new
+
+      # Convert attributes if any
+      if scaffold_config["attributes"]?.try(&.as_h)
+        attributes_hash = scaffold_config["attributes"].as_h
+        attributes_hash.each do |key, value|
+          scaffold_options.attributes[key.as_s] = value.as_s
+        end
+      end
+
+      scaffold_options.additional_args = actions
+      scaffold_options.force = force
+      scaffold_options.skip_tests = skip_tests
+
+      # Set custom options
+      scaffold_options.custom_options = {} of String => String
+      skip_components.each do |component|
+        scaffold_options.custom_options["skip_#{component}"] = "true"
+      end
+
+      # Set API/Web only options
+      if options_config["api_only"]?.try(&.as_s) == "true"
+        scaffold_options.custom_options["api-only"] = "true"
+      end
+      if options_config["web_only"]?.try(&.as_s) == "true"
+        scaffold_options.custom_options["web-only"] = "true"
+      end
+
+      # Generate the scaffold
+      scaffold_generator = ScaffoldGenerator.new(scaffold_name_val, name, scaffold_options)
+
+      # Change to project directory before generating scaffold
+      original_dir = Dir.current
+      begin
+        Dir.cd(name)
+        scaffold_generator.generate!
+      ensure
+        Dir.cd(original_dir)
+      end
     end
 
     # Copy static assets if needed
@@ -290,17 +369,17 @@ module AzuCLI::Generator
     private def generate_placeholder_files : Nil
       puts "📋 Creating placeholder files...".colorize(:yellow)
 
-      # Create .gitkeep files for placeholder directories
-      placeholder_dirs = config.get_array("placeholder_directories")
+      # Create .gitkeep files for project-type-specific placeholder directories
+      placeholder_dirs = config.get_array("placeholder_directories.#{@project_type}")
       placeholder_dirs.each do |dir|
-        expanded_dir = expand_template_path(dir)
+        expanded_dir = expand_template_path(dir.to_s)
         placeholder_path = File.join(name, expanded_dir, ".gitkeep")
         file_strategy.create_file(placeholder_path, "", {"description" => "placeholder"})
       end
 
-      # Create special placeholder files
-      placeholder_files = config.get_hash("placeholder_files")
-      placeholder_files.each do |file_key, file_config|
+      # Create project-type-specific placeholder files
+      placeholder_files_config = config.get_hash("placeholder_files.#{@project_type}")
+      placeholder_files_config.each do |file_key, file_config|
         if file_config.is_a?(Hash)
           file_path = file_config["path"]?.try(&.as_s)
           file_content = file_config["content"]?.try(&.as_s) || ""
@@ -311,19 +390,6 @@ module AzuCLI::Generator
             file_strategy.create_file(full_path, file_content, {"description" => file_key})
           end
         end
-      end
-    end
-
-    # Create project type specific directories
-    private def create_project_type_directories : Nil
-      case @project_type
-      when "web"
-        # Web projects need additional view directories
-        file_strategy.create_directory(File.join(name, "src/views"))
-        file_strategy.create_directory(File.join(name, "src/views/layouts"))
-      when "cli"
-        # CLI projects need commands directory
-        file_strategy.create_directory(File.join(name, "src/commands"))
       end
     end
 
@@ -365,7 +431,11 @@ module AzuCLI::Generator
       puts "📊 Project Details:".colorize(:cyan).bold
       puts "   Name: #{name}"
       puts "   Type: #{@project_type.capitalize}"
-      puts "   Database: #{@database.capitalize}"
+
+      # Only show database info for web and api projects
+      unless @project_type == "cli"
+        puts "   Database: #{@database.capitalize}"
+      end
 
       if description = config.get("project_types.#{@project_type}.description")
         puts "   Description: #{description}"
@@ -375,6 +445,11 @@ module AzuCLI::Generator
       unless features.empty?
         feature_list = features.join(", ")
         puts "   Features: #{feature_list}"
+      end
+
+      # Show generated scaffolds
+      unless @project_type == "cli"
+        puts "   Generated: Welcome scaffold with #{@project_type == "web" ? "page and " : ""}endpoint"
       end
       puts
     end
@@ -393,7 +468,7 @@ module AzuCLI::Generator
       puts "     shards install"
       step_number += 1
 
-      # Database setup steps
+      # Database setup steps (only for web and api projects)
       unless @project_type == "cli"
         puts "  #{step_number}. Set up your database:"
         puts "     # Update database configuration in src/initializers/database.cr"
@@ -426,10 +501,11 @@ module AzuCLI::Generator
 
       puts
       puts "💡 Additional Commands:".colorize(:blue).bold
-      puts "   Generate models:     azu generate model User name:string email:string"
-      puts "   Generate endpoints:  azu generate endpoint Users"
-      puts "   Generate services:   azu generate service UserService"
-      puts "   Run tests:          crystal spec"
+      puts "   Generate full scaffold: azu generate scaffold User name:string email:string"
+      puts "   Generate models:        azu generate model User name:string email:string"
+      puts "   Generate endpoints:     azu generate endpoint Users"
+      puts "   Generate services:      azu generate service UserService"
+      puts "   Run tests:             crystal spec"
       puts
 
       puts "📚 Learn more: https://azutopia.gitbook.io/azu/getting-started".colorize(:cyan)

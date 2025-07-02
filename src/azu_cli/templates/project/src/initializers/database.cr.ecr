@@ -1,0 +1,191 @@
+require "cql"
+<% case @database when "postgresql", "postgres", "pg" -%>
+require "pg"
+<% when "mysql" -%>
+require "mysql"
+<% when "sqlite" -%>
+require "sqlite3"
+<% end -%>
+
+# Configure CQL database settings
+# See: https://github.com/azutoolkit/cql
+CQL.configure do |config|
+  # === 🔌 DATABASE CONNECTION ===
+  # Primary database connection URL - This is the main connection string for your database
+<% case @database when "postgresql", "postgres", "pg" -%>
+  config.db = ENV.fetch("DATABASE_URL", "postgresql://postgres@localhost:5432/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}")
+<% when "mysql" -%>
+  config.db = ENV.fetch("DATABASE_URL", "mysql://root@localhost:3306/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}")
+<% when "sqlite" -%>
+  config.db = ENV.fetch("DATABASE_URL", "sqlite3://db/<%= @project %>_#{ENV.fetch("AZU_ENV", "development")}.db")
+<% end -%>
+
+  # Environment detection (auto-detects from CRYSTAL_ENV or defaults to development)
+  config.env = ENV.fetch("AZU_ENV", "development")
+
+  # Timezone for date/time operations (UTC recommended for production)
+  config.timezone = :utc
+
+  # === 📋 LOGGING ===
+  # Main application logger for CQL operations
+  config.logger = Log.for("cql.*")
+
+  # Log level - adjust based on environment
+  config.log_level = case config.env
+                     when "development" then Log::Severity::Debug
+                     when "test"        then Log::Severity::Warn
+                     when "production"  then Log::Severity::Info
+                     else                    Log::Severity::Info
+                     end
+
+  # === 🗂️ SCHEMA & MIGRATIONS ===
+  # Directory containing your database schema files
+  config.schema_dir = "src/db"
+
+  # Main schema file name (contains your database structure)
+  config.schema_file = "schema.cr"
+
+  # Schema class name in Crystal code
+  config.schema_class = :AppSchema
+
+  # Schema instance symbol for referencing
+  config.schema_name = :app_schema
+
+  # Database table for tracking schema migrations
+  config.migrations_table = :schema_migrations
+
+  # === ⚡ BEHAVIOR FLAGS ===
+  # Environment-specific behavior configuration
+  case config.env
+  when "development"
+    # Auto-load model files on startup (helpful for development)
+    config.auto_load = true
+
+    # Keep schema file in sync with database changes
+    config.auto_sync = true
+
+    # Don't bootstrap from existing database
+    config.bootstrap = false
+
+    # Verify schema matches database on startup (can be slow)
+    config.verify_schema = ENV.fetch("VERIFY_SCHEMA", "false") == "true"
+
+  when "test"
+    # Minimal configuration for fast test execution
+    config.auto_load = false
+    config.auto_sync = false
+    config.bootstrap = false
+    config.verify_schema = false
+
+  when "production", "staging"
+    # Production-safe settings
+    config.auto_load = false
+    config.auto_sync = false
+    config.bootstrap = false
+
+    # Verify schema in production for safety
+    config.verify_schema = ENV.fetch("VERIFY_SCHEMA", "true") == "true"
+  end
+
+  # === 📊 PERFORMANCE ===
+  # Enable query performance monitoring based on environment
+  config.monitor_performance = case config.env
+                                when "development" then ENV.fetch("MONITOR_PERFORMANCE", "true") == "true"
+                                when "production"  then ENV.fetch("MONITOR_PERFORMANCE", "false") == "true"
+                                else                   false
+                                end
+
+  # === 🔗 CONNECTION POOL ===
+  # Number of database connections in pool (adjust based on load)
+  config.pool_size = case config.env
+                     when "development" then ENV.fetch("DB_POOL_SIZE", "5").to_i
+                     when "test"        then 1
+                     when "production"  then ENV.fetch("DB_POOL_SIZE", "20").to_i
+                     else                   ENV.fetch("DB_POOL_SIZE", "10").to_i
+                     end
+
+<% case @database when "postgresql", "postgres", "pg" -%>
+  # === 🗄️ POSTGRESQL-SPECIFIC SETTINGS ===
+  # Configure PostgreSQL adapter-specific options
+  config.adapter_options["sslmode"] = ENV.fetch("DB_SSLMODE", "prefer")
+  config.adapter_options["connect_timeout"] = ENV.fetch("DB_CONNECT_TIMEOUT", "10")
+  config.adapter_options["application_name"] = "<%= @project %>"
+
+<% when "mysql" -%>
+  # === 🗄️ MYSQL-SPECIFIC SETTINGS ===
+  # Configure MySQL adapter-specific options
+  config.adapter_options["charset"] = ENV.fetch("DB_CHARSET", "utf8mb4")
+  config.adapter_options["collation"] = ENV.fetch("DB_COLLATION", "utf8mb4_unicode_ci")
+  config.adapter_options["connect_timeout"] = ENV.fetch("DB_CONNECT_TIMEOUT", "10")
+
+<% when "sqlite" -%>
+  # === 🗄️ SQLITE-SPECIFIC SETTINGS ===
+  # Configure SQLite adapter-specific options
+  config.adapter_options["journal_mode"] = ENV.fetch("DB_JOURNAL_MODE", "wal")
+  config.adapter_options["synchronous"] = ENV.fetch("DB_SYNCHRONOUS", "normal")
+  config.adapter_options["foreign_keys"] = "true"
+
+<% end -%>
+  # === 🎨 SQL LOGGING ===
+  # Beautiful SQL log formatter (development only for performance)
+  if config.env == "development"
+    # Enable colorized SQL logging with query timing
+    config.sql_logging.enabled = true
+    config.sql_logging.colorize = true
+    config.sql_logging.show_query_time = true
+  end
+
+  # === 💾 CACHE SYSTEM ===
+  # Configure query result caching
+  config.cache.enabled = case config.env
+                          when "development" then false
+                          when "production"  then ENV.fetch("ENABLE_CACHE", "true") == "true"
+                          else                   false
+                          end
+
+  # Cache TTL (time-to-live) in seconds
+  config.cache.ttl = ENV.fetch("CACHE_TTL", "3600").to_i # 1 hour default
+end
+
+# Load the database schema (contains your table definitions)
+require "./src/db/schema"
+
+# === 🔧 DEVELOPMENT CONVENIENCES ===
+# Enable detailed query logging in development mode
+if ENV.fetch("AZU_ENV", "development") == "development"
+  # Set up CQL-specific logging with debug level
+  Log.setup("CQL", :debug)
+
+  # Optional: Log all SQL queries to console
+  # Uncomment the next line to see all executed SQL queries
+  # Log.setup("db", :debug)
+end
+
+# === 📝 CONFIGURATION SUMMARY ===
+# This configuration provides:
+#
+# 🔌 Database Connection:
+#   - Environment-specific database URLs
+#   - Automatic environment detection
+#   - Database adapter configuration
+#
+# 📊 Performance:
+#   - Connection pooling optimized per environment
+#   - Query monitoring in development
+#   - Caching in production
+#
+# 🗂️ Schema Management:
+#   - Auto-loading in development
+#   - Schema verification in production
+#   - Migration tracking
+#
+# 📋 Logging:
+#   - Beautiful SQL formatting in development
+#   - Appropriate log levels per environment
+#   - Query timing information
+#
+# 💡 Usage Tips:
+#   - Use environment variables to override defaults
+#   - Set VERIFY_SCHEMA=true in production for safety
+#   - Adjust pool_size based on your application load
+#   - Enable MONITOR_PERFORMANCE=true to track slow queries
