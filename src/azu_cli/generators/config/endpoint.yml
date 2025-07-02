@@ -1,0 +1,121 @@
+# Endpoint Generator Configuration
+extends: "base.yml"
+
+# Endpoint-specific settings
+type: "endpoint"
+category: "http"
+description: "Generate HTTP endpoints with contracts, pages, and full CRUD operations"
+
+# Directories specific to endpoints
+directories:
+  source: "src/endpoints"
+  contracts: "src/contracts"
+  pages: "src/pages"
+  spec: "spec/endpoints"
+
+# Templates for endpoint generation
+templates:
+  main: "endpoint/endpoint.cr.ecr"
+  contract: "endpoint/contract.cr.ecr"
+  page: "endpoint/page.cr.ecr"
+  spec: "endpoint/endpoint_spec.cr.ecr"
+
+# Default CRUD actions
+default_actions:
+  - "index"
+  - "show"
+  - "new"
+  - "create"
+  - "edit"
+  - "update"
+  - "destroy"
+
+# HTTP methods for each action
+http_methods:
+  index: "get"
+  show: "get"
+  new: "get"
+  create: "post"
+  edit: "get"
+  update: "put"
+  destroy: "delete"
+
+# Route patterns for each action
+route_patterns:
+  index: "/%{plural_name}"
+  show: "/%{plural_name}/:id"
+  new: "/%{plural_name}/new"
+  create: "/%{plural_name}"
+  edit: "/%{plural_name}/:id/edit"
+  update: "/%{plural_name}/:id"
+  destroy: "/%{plural_name}/:id"
+
+# Contract validations for each action
+contract_validations:
+  id: "validate :id, presence: true"
+  pagination:
+    page: "validate :page, numericality: {greater_than: 0}"
+    per_page: "validate :per_page, numericality: {greater_than: 0, less_than: 101}"
+
+# Response formats
+response_formats:
+  html: "text/html"
+  json: "application/json"
+  xml: "application/xml"
+
+# Status codes for actions
+status_codes:
+  index: 200
+  show: 200
+  new: 200
+  create: 201
+  edit: 200
+  update: 200
+  destroy: 204
+  not_found: 404
+  unprocessable_entity: 422
+
+# Action descriptions
+action_descriptions:
+  index: "List all %{plural_name}"
+  show: "Display a specific %{singular_name}"
+  new: "Show form for creating a new %{singular_name}"
+  create: "Create a new %{singular_name}"
+  edit: "Show form for editing a %{singular_name}"
+  update: "Update a specific %{singular_name}"
+  destroy: "Delete a specific %{singular_name}"
+
+# Authentication and authorization patterns
+auth_patterns:
+  before_action: "before_action :authenticate_user!"
+  authorize: "authorize! :%{action}, %{resource}"
+  current_user: "current_user"
+
+# Error handling patterns
+error_handling:
+  not_found: |
+    rescue CQL::RecordNotFound
+      render_error("Not found", 404)
+  
+  validation_error: |
+    rescue CQL::ValidationError => ex
+      render_error(ex.message, 422)
+  
+  unauthorized: |
+    rescue AuthorizationError
+      render_error("Unauthorized", 403)
+
+# Usage examples
+usage_examples:
+  - "azu generate endpoint Users"
+  - "azu generate endpoint Posts index show create update"
+  - "azu generate endpoint Products --skip-routes"
+  - "azu generate endpoint Admin::Reports --namespace admin"
+
+# Next steps
+next_steps:
+  - "Implement business logic in the endpoint files"
+  - "Add proper validations to contracts"
+  - "Customize page templates"
+  - "Add routes to your application"
+  - "Test endpoints in spec/endpoints/"

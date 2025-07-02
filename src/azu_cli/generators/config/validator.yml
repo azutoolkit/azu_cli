@@ -1,0 +1,149 @@
+# Validator Generator Configuration
+extends: "base.yml"
+
+# Validator-specific settings
+type: "validator"
+category: "validation"
+description: "Generate custom CQL validators with reusable validation logic"
+
+# Directories specific to validators
+directories:
+  source: "src/validators"
+  spec: "spec/validators"
+
+# Templates for validator generation
+templates:
+  main: "validator/validator.cr.ecr"
+  spec: "validator/validator_spec.cr.ecr"
+
+# Validator types and patterns
+validator_types:
+  email:
+    description: "Email format validation"
+    pattern: "/\\A[\\w+\\-.]+@[a-z\\d\\-]+(\\.[a-z\\d\\-]+)*\\.[a-z]+\\z/i"
+    error_message: "must be a valid email address"
+    
+  phone:
+    description: "Phone number format validation"
+    pattern: "/\\A[\\d\\-\\+\\(\\)\\s]+\\z/"
+    error_message: "must be a valid phone number"
+    
+  url:
+    description: "URL format validation"
+    pattern: "/\\Ahttps?:\\/\\/.+\\z/"
+    error_message: "must be a valid URL"
+    
+  regex:
+    description: "Custom regex pattern validation"
+    configurable_pattern: true
+    error_message: "does not match the required format"
+    
+  range:
+    description: "Numeric range validation"
+    parameters: ["min", "max"]
+    error_message: "must be between %{min} and %{max}"
+    
+  length:
+    description: "String length validation"
+    parameters: ["min", "max"]
+    error_message: "must be between %{min} and %{max} characters"
+    
+  uniqueness:
+    description: "Database uniqueness validation"
+    parameters: ["model", "column"]
+    error_message: "must be unique"
+    
+  custom:
+    description: "Custom validation logic"
+    configurable: true
+    error_message: "is invalid"
+
+# Base validator class
+base_validator:
+  class: "CQL::Validator"
+  methods:
+    - "validate(value, context) : Bool"
+    - "error_message : String"
+
+# Common validation patterns
+validation_patterns:
+  format_validation: |
+    def validate(value : String, context : CQL::ValidationContext) : Bool
+      return true if value.nil? || value.empty?
+      %{pattern}.match(value) != nil
+    end
+    
+  range_validation: |
+    def validate(value : String, context : CQL::ValidationContext) : Bool
+      return true if value.nil? || value.empty?
+      
+      number = value.to_f?
+      return false unless number
+      
+      return false if @min && number < @min
+      return false if @max && number > @max
+      
+      true
+    end
+    
+  uniqueness_validation: |
+    def validate(value : String, context : CQL::ValidationContext) : Bool
+      return true if value.nil? || value.empty?
+      
+      query = @model_class.where({@column => value})
+      
+      if context.record_id
+        query = query.where.not({id: context.record_id})
+      end
+      
+      query.first.nil?
+    end
+
+# Error message patterns
+error_message_patterns:
+  format: "must be in valid %{format} format"
+  range: "must be between %{min} and %{max}"
+  length: "must be between %{min} and %{max} characters"
+  presence: "cannot be blank"
+  uniqueness: "has already been taken"
+  custom: "is invalid"
+
+# Configuration parameters for different validator types
+configuration_parameters:
+  regex:
+    pattern: "String"
+    case_sensitive: "Bool"
+    
+  range:
+    min: "Float64?"
+    max: "Float64?"
+    
+  length:
+    min: "Int32?"
+    max: "Int32?"
+    
+  uniqueness:
+    model_class: "Class"
+    column: "String"
+    scope: "Array(String)?"
+
+# Integration with CQL models
+cql_integration:
+  validation_macro: "validate :%{field}, with: %{validator_class}"
+  custom_validator: "validate :%{field}, custom: %{validator_class}"
+  conditional: "validate :%{field}, with: %{validator_class}, if: %{condition}"
+
+# Usage examples
+usage_examples:
+  - "azu generate validator EmailValidator type:email"
+  - "azu generate validator PhoneValidator type:phone"
+  - "azu generate validator RangeValidator type:range min:0 max:100"
+  - "azu generate validator UniqueValidator type:uniqueness model:User column:email"
+  - "azu generate validator CustomValidator pattern:'\\A[A-Z]{2,3}\\z'"
+
+# Next steps
+next_steps:
+  - "Customize validation logic in src/validators/%{snake_case_name}_validator.cr"
+  - "Use in your CQL models with validate macro"
+  - "Use in request contracts for input validation"
+  - "Test your validator in spec/validators/%{snake_case_name}_validator_spec.cr"

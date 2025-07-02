@@ -1,0 +1,170 @@
+# Scaffold Generator Configuration
+extends: "base.yml"
+
+# Scaffold-specific settings
+type: "scaffold"
+category: "composite"
+description: "Generate complete CRUD resource with model, endpoints, contracts, pages, and migration"
+
+# Scaffold generates multiple components
+generated_components:
+  - "model"
+  - "migration"
+  - "endpoint"
+  - "contract"
+  - "page"
+  - "service"
+
+# Directories for all scaffold components
+directories:
+  models: "src/models"
+  endpoints: "src/endpoints"
+  contracts: "src/contracts"
+  pages: "src/pages"
+  services: "src/services"
+  migrations: "src/db/migrations"
+  templates: "public/templates"
+  spec: "spec"
+
+# Component generation order (dependencies)
+generation_order:
+  1: "migration"  # Database structure first
+  2: "model"      # Model depends on migration
+  3: "service"    # Service depends on model
+  4: "contract"   # Contracts for validation
+  5: "endpoint"   # Endpoints use contracts and services
+  6: "page"       # Pages for rendering
+
+# Default scaffold actions (full CRUD)
+default_actions:
+  - "index"
+  - "show"
+  - "new"
+  - "create"
+  - "edit"
+  - "update"
+  - "destroy"
+
+# Scaffold templates
+scaffold_templates:
+  model: "scaffold/model.cr.ecr"
+  migration: "scaffold/migration.cr.ecr"
+  service: "scaffold/service.cr.ecr"
+  endpoint: "scaffold/endpoint.cr.ecr"
+  contract: "scaffold/contract.cr.ecr"
+  page: "scaffold/page.cr.ecr"
+  template: "scaffold/template.jinja.ecr"
+
+# Resource patterns
+resource_patterns:
+  model_validations:
+    - "presence validations for required fields"
+    - "format validations for specific field types"
+    - "uniqueness validations for unique fields"
+  
+  service_methods:
+    - "create_%{singular_name}"
+    - "find_%{singular_name}"
+    - "update_%{singular_name}"
+    - "delete_%{singular_name}"
+    - "list_%{plural_name}"
+  
+  endpoint_actions:
+    - "index - list all resources"
+    - "show - display single resource"
+    - "new - show creation form"
+    - "create - handle resource creation"
+    - "edit - show edit form"
+    - "update - handle resource updates"
+    - "destroy - handle resource deletion"
+
+# Authentication and authorization defaults
+auth_defaults:
+  authentication_required: false
+  authorization_required: false
+  current_user_association: false
+
+# Database defaults for scaffold
+database_defaults:
+  primary_key: "id"
+  timestamps: true
+  soft_deletes: false
+  indexes: true
+
+# Form field types for different attribute types
+form_field_types:
+  string: "text_field"
+  text: "text_area"
+  integer: "number_field"
+  float: "number_field"
+  boolean: "check_box"
+  datetime: "datetime_field"
+  date: "date_field"
+  email: "email_field"
+  password: "password_field"
+  url: "url_field"
+
+# Table column types for index pages
+table_column_types:
+  string: "text"
+  text: "truncated_text"
+  integer: "number"
+  float: "number"
+  boolean: "badge"
+  datetime: "datetime"
+  date: "date"
+  email: "email_link"
+  url: "link"
+
+# Scaffold options
+scaffold_options:
+  skip_model: false
+  skip_migration: false
+  skip_service: false
+  skip_endpoints: false
+  skip_pages: false
+  skip_tests: false
+  api_only: false
+  web_only: false
+
+# API-only scaffold modifications
+api_only_modifications:
+  skip_pages: true
+  skip_templates: true
+  json_responses_only: true
+  
+# Web-only scaffold modifications  
+web_only_modifications:
+  include_pages: true
+  include_templates: true
+  html_responses: true
+
+# Generated file structure
+file_structure:
+  models: "src/models/%{singular_name}.cr"
+  migration: "src/db/migrations/%{timestamp}_create_%{plural_name}_table.cr"
+  service: "src/services/%{singular_name}_service.cr"
+  endpoints: "src/endpoints/%{plural_name}/*.cr"
+  contracts: "src/contracts/%{plural_name}/*.cr"
+  pages: "src/pages/%{plural_name}/*.cr"
+  templates: "public/templates/%{plural_name}/*.jinja"
+  specs: "spec/**/*_%{singular_name}_spec.cr"
+
+# Usage examples
+usage_examples:
+  - "azu generate scaffold User name:string email:string"
+  - "azu generate scaffold Post title:string content:text published:boolean"
+  - "azu generate scaffold Product name:string price:decimal category_id:integer"
+  - "azu generate scaffold Comment content:text post_id:integer user_id:integer"
+  - "azu generate scaffold Task title:string completed:boolean due_date:datetime"
+
+# Next steps after scaffold generation
+next_steps:
+  - "Run the migration: azu db:migrate"
+  - "Customize the model validations and associations"
+  - "Implement business logic in the service"
+  - "Customize the endpoint actions as needed"
+  - "Style the generated templates"
+  - "Add authentication and authorization"
+  - "Write comprehensive tests"
+  - "Add the routes to your application"

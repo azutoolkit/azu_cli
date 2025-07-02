@@ -1,0 +1,126 @@
+# Base Generator Configuration
+# This file defines common settings shared across all generators
+# Other generator configs can extend this using "extends: base.yml"
+
+# Common directories structure
+directories:
+  source: "src"
+  spec: "spec"
+  templates: "src/templates"
+
+# Common template files
+templates:
+  main: "main.cr.ecr"
+  spec: "spec.cr.ecr"
+
+# Common naming conventions
+naming:
+  class_naming: "pascal_case"    # PascalCase for class names
+  file_naming: "snake_case"      # snake_case for file names
+  method_naming: "snake_case"    # snake_case for method names
+  constant_naming: "screaming_snake_case"  # SCREAMING_SNAKE_CASE for constants
+
+# Common Crystal type mappings
+crystal_types:
+  string: "String"
+  text: "String"
+  integer: "Int32"
+  int: "Int32"
+  int32: "Int32"
+  int64: "Int64"
+  float: "Float64"
+  decimal: "Float64"
+  boolean: "Bool"
+  bool: "Bool"
+  datetime: "Time"
+  time: "Time"
+  date: "Time"
+  json: "JSON::Any"
+  hash: "Hash(String, String)"
+  array: "Array(String)"
+  uuid: "UUID"
+
+# Common validation patterns
+validation_patterns:
+  presence: "validate :%{field}, presence: true"
+  length: "validate :%{field}, length: {min: %{min}, max: %{max}}"
+  format: "validate :%{field}, format: %{pattern}"
+  email: "validate :%{field}, format: /\\A[\\w+\\-.]+@[a-z\\d\\-]+(\\.[a-z\\d\\-]+)*\\.[a-z]+\\z/i"
+  url: "validate :%{field}, format: /\\Ahttps?:\\/\\/.+\\z/"
+  numericality: "validate :%{field}, numericality: {greater_than: %{min}, less_than: %{max}}"
+  inclusion: "validate :%{field}, inclusion: %{values}"
+  exclusion: "validate :%{field}, exclusion: %{values}"
+  uniqueness: "validate :%{field}, uniqueness: true"
+
+# Common string transformation utilities
+string_transforms:
+  snake_case: "cadmium_inflector"
+  pascal_case: "cadmium_inflector"
+  camel_case: "cadmium_inflector"
+  kebab_case: "cadmium_inflector"
+  pluralize: "cadmium_inflector"
+  singularize: "cadmium_inflector"
+  humanize: "cadmium_inflector"
+
+# Common file creation options
+file_options:
+  force_overwrite: false
+  create_directories: true
+  file_permissions: "644"
+  executable_permissions: "755"
+
+# Common template variables available to all generators
+template_variables:
+  author: "Azu CLI Generator"
+  generated_at: "Time.utc"
+  generator_version: "1.0.0"
+  crystal_version: "1.10.0"
+  framework: "Azu Toolkit"
+
+# Common usage patterns and examples
+usage_patterns:
+  basic: "azu generate <type> <name>"
+  with_attributes: "azu generate <type> <name> attr1:type1 attr2:type2"
+  with_options: "azu generate <type> <name> --option1 --option2"
+  with_force: "azu generate <type> <name> --force"
+  skip_tests: "azu generate <type> <name> --skip-tests"
+
+# Common flags and options
+common_flags:
+  force:
+    description: "Overwrite existing files without prompting"
+    default: false
+    
+  skip_tests:
+    description: "Skip generating test files"
+    default: false
+    
+  skip_routes:
+    description: "Skip adding routes (for applicable generators)"
+    default: false
+
+# Help and documentation
+help:
+  documentation_url: "https://azutopia.gitbook.io/azu"
+  examples_url: "https://github.com/azutoolkit/azu/tree/master/examples"
+  support_url: "https://discord.gg/azu"
+
+# Quality and best practices
+quality:
+  max_line_length: 120
+  indentation: 2
+  use_trailing_commas: true
+  require_documentation: true
+  
+# Linting and formatting
+linting:
+  crystal_format: true
+  crystal_tool_format: "--check"
+  crystal_tool_context: "--check"
+
+# Testing defaults
+testing:
+  framework: "crystal_spec"
+  test_directory: "spec"
+  factory_support: true
+  mock_support: true

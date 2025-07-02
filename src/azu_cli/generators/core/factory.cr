@@ -12,6 +12,7 @@ require "../optimized/channel_generator"
 require "../optimized/handler_generator"
 require "../optimized/request_generator"
 require "../optimized/response_generator"
+require "../optimized/scaffold_generator"
 
 module AzuCLI::Generator::Core
   # Factory pattern implementation for creating generators
@@ -37,6 +38,8 @@ module AzuCLI::Generator::Core
       "req"        => "request",
       "res"        => "response",
       "h"          => "handler",
+      "sc"         => "scaffold",
+      "scaffold"   => "scaffold",
     }
 
     # Factory method - creates appropriate generator based on type
@@ -72,6 +75,8 @@ module AzuCLI::Generator::Core
         AzuCLI::Generator::RequestGenerator.new(name, project_name, options)
       when "response"
         AzuCLI::Generator::ResponseGenerator.new(name, project_name, options)
+      when "scaffold"
+        AzuCLI::Generator::ScaffoldGenerator.new(name, project_name, options)
       else
         raise ArgumentError.new("Unknown generator type: #{generator_type}")
       end
@@ -81,7 +86,7 @@ module AzuCLI::Generator::Core
     def self.available_types : Array(String)
       ["contract", "component", "endpoint", "middleware", "migration", 
        "model", "page", "service", "validator", "channel", 
-       "handler", "request", "response"]
+       "handler", "request", "response", "scaffold"]
     end
 
     # Get aliases for a generator type
