@@ -1,0 +1,19 @@
+# server.cr
+require "./src/<%= @app_name %>"
+
+# Build handler chain with explicit typing to avoid Crystal type inference issues
+{% if env("PERFORMANCE_MONITORING") == "true" || flag?(:performance_monitoring) %}
+  <%= app_name_camelcase %>.start [
+<%- handlers.each_with_index do |handler, index| %>
+    Azu::Handler::<%= handler %>.new,
+<% end %>
+    Azu::Handler::DevDashboard.new,
+    <%= app_name_camelcase %>::CONFIG.performance_monitor.not_nil!,     # Performance metrics collection (shared instance)
+  ]
+{% else %}
+  <%= app_name_camelcase %>.start [
+<%- handlers.each_with_index do |handler, index| %>
+    Azu::Handler::<%= handler %>.new,
+<% end %>
+  ]
+{% end %}
