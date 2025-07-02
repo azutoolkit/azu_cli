@@ -1,0 +1,82 @@
+# Response Generator Configuration
+extends: "base.yml"
+
+# Response-specific settings
+type: "response"
+category: "view"
+description: "Generate response objects for type-safe data rendering"
+
+# Directories specific to responses
+directories:
+  source: "src/responses"
+  templates: "public/templates"
+  spec: "spec/responses"
+
+# Templates for response generation
+templates:
+  main: "response/response.cr.ecr"
+  template: "response/response.jinja.ecr"
+  spec: "response/response_spec.cr.ecr"
+
+# Response types and characteristics
+response_types:
+  html:
+    description: "HTML response with template rendering"
+    includes: ["template_rendering", "data_binding"]
+    content_type: "text/html"
+
+  json:
+    description: "JSON API response with structured data"
+    includes: ["json_serialization", "status_handling"]
+    content_type: "application/json"
+
+  xml:
+    description: "XML response with structured data"
+    includes: ["xml_serialization", "status_handling"]
+    content_type: "application/xml"
+
+  redirect:
+    description: "Redirect response to another URL"
+    includes: ["url_handling", "status_codes"]
+    content_type: "text/plain"
+
+# Status code patterns
+status_codes:
+  success: 200
+  created: 201
+  no_content: 204
+  bad_request: 400
+  unauthorized: 401
+  forbidden: 403
+  not_found: 404
+  server_error: 500
+
+# Template engines supported
+template_engines:
+  jinja:
+    extension: ".jinja"
+    description: "Jinja2 templating engine"
+
+  ecr:
+    extension: ".ecr"
+    description: "Embedded Crystal templating"
+
+# Common response headers
+common_headers:
+  cache_control: "Cache-Control"
+  content_type: "Content-Type"
+  cors: "Access-Control-Allow-Origin"
+
+# Usage examples
+usage_examples:
+  - "azu generate response UserResponse user:User"
+  - "azu generate response ApiResponse data:Hash status:string format:json"
+  - "azu generate response ErrorResponse message:string code:integer"
+  - "azu generate response RedirectResponse url:string"
+
+# Next steps
+next_steps:
+  - "Customize response rendering in src/responses/%{snake_case_name}_response.cr"
+  - "Edit the template file if using HTML format"
+  - "Use in your endpoints for structured responses"
+  - "Test your response in spec/responses/%{snake_case_name}_response_spec.cr"

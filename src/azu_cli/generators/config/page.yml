@@ -1,0 +1,62 @@
+# Page Generator Configuration
+extends: "base.yml"
+
+# Page-specific settings
+type: "page"
+category: "view"
+description: "Generate page components for rendering views"
+
+# Directories specific to pages
+directories:
+  source: "src/pages"
+  templates: "public/templates"
+  spec: "spec/pages"
+
+# Templates for page generation
+templates:
+  main: "page/page.cr.ecr"
+  template: "page/page.jinja.ecr"
+  spec: "page/page_spec.cr.ecr"
+
+# Page types and characteristics
+page_types:
+  static:
+    description: "Static page with minimal data"
+    includes: ["basic_rendering"]
+
+  dynamic:
+    description: "Dynamic page with data binding"
+    includes: ["data_rendering", "template_variables"]
+
+  form:
+    description: "Form page with input handling"
+    includes: ["form_rendering", "validation_display"]
+
+# Template engines supported
+template_engines:
+  jinja:
+    extension: ".jinja"
+    description: "Jinja2 templating engine"
+
+  ecr:
+    extension: ".ecr"
+    description: "Embedded Crystal templating"
+
+# Default template variables
+default_template_variables:
+  title: "String"
+  layout: "String"
+  data: "Hash(String, String)"
+
+# Usage examples
+usage_examples:
+  - "azu generate page HomePage"
+  - "azu generate page UserProfile title:string user:User"
+  - "azu generate page ContactForm name:string email:string message:text"
+
+# Next steps
+next_steps:
+  - "Customize the page content in src/pages/%{snake_case_name}.cr"
+  - "Edit the template file in public/templates/%{snake_case_name}"
+  - "Include the page in your endpoints"
+  - "Test your page in spec/pages/%{snake_case_name}_spec.cr"

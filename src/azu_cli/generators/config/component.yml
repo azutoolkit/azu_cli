@@ -1,0 +1,90 @@
+# Component Generator Configuration
+extends: "base.yml"
+
+# Component-specific settings
+type: "component"
+category: "ui"
+description: "Generate interactive components with real-time features and event handling"
+
+# Directories specific to components
+directories:
+  source: "src/components"
+  spec: "spec/components"
+  templates: "public/templates/components"
+
+# Templates for component generation
+templates:
+  main: "component/component.cr.ecr"
+  spec: "component/component_spec.cr.ecr"
+  template: "component/component.jinja.ecr"
+
+# Component types and characteristics
+component_types:
+  static:
+    description: "Static content with no interactions"
+    includes: ["basic_rendering"]
+
+  interactive:
+    description: "Interactive content with event handling"
+    includes: ["event_handling", "state_management"]
+
+  realtime:
+    description: "Real-time updates via WebSocket"
+    includes: ["event_handling", "state_management", "websocket_lifecycle"]
+
+# Default events for components
+default_events:
+  - "click"
+  - "submit"
+  - "change"
+
+# WebSocket lifecycle methods
+websocket_lifecycle:
+  - "on_mount"
+  - "on_unmount"
+  - "on_connect"
+  - "on_disconnect"
+  - "on_error"
+
+# Event handling patterns
+event_patterns:
+  click: |
+    def on_event("click", data)
+      Log.info { "#{self.class.name}: Click event received" }
+      # Handle click events
+    end
+
+  submit: |
+    def on_event("submit", data)
+      Log.info { "#{self.class.name}: Submit event received" }
+      # Handle form submission
+    end
+
+  change: |
+    def on_event("change", data)
+      Log.info { "#{self.class.name}: Change event received" }
+      # Handle input changes
+    end
+
+# Component attribute types
+attribute_types:
+  string: "String"
+  integer: "Int32"
+  float: "Float64"
+  boolean: "Bool"
+  array: "Array(String)"
+  hash: "Hash(String, String)"
+
+# Usage examples
+usage_examples:
+  - "azu generate component Counter"
+  - "azu generate component ChatBox type:realtime event:send event:typing"
+  - "azu generate component UserCard name:string email:string avatar:string"
+  - "azu generate component TodoList items:array completed:boolean --websocket"
+
+# Next steps
+next_steps:
+  - "Customize component content in src/components/%{snake_case_name}_component.cr"
+  - "Add event handlers for user interactions"
+  - "Include component in your endpoints or pages"
+  - "Configure WebSocket routes if using real-time features"

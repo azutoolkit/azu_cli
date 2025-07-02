@@ -1,0 +1,144 @@
+# Service Generator Configuration
+extends: "base.yml"
+
+# Service-specific settings
+type: "service"
+category: "business_logic"
+description: "Generate DDD application services for business logic encapsulation"
+
+# Directories specific to services
+directories:
+  source: "src/services"
+  spec: "spec/services"
+  interfaces: "src/interfaces"
+
+# Templates for service generation
+templates:
+  main: "service/service.cr.ecr"
+  spec: "service/service_spec.cr.ecr"
+  interface: "service/interface.cr.ecr"
+
+# Service patterns and types
+service_types:
+  crud:
+    description: "CRUD operations service"
+    methods: ["create", "find", "update", "delete", "list"]
+
+  processing:
+    description: "Data processing service"
+    methods: ["process", "validate", "transform"]
+
+  integration:
+    description: "External integration service"
+    methods: ["fetch", "send", "sync"]
+
+  domain:
+    description: "Domain-specific business logic"
+    methods: ["execute", "validate", "calculate"]
+
+# Default service methods
+default_methods:
+  - "initialize"
+  - "call"
+  - "valid?"
+
+# Service method patterns
+method_patterns:
+  create: |
+    def create(data : Hash(String, String)) : %{return_type}
+      # Validate input
+      # Create resource
+      # Return result
+    end
+
+  find: |
+    def find(id : Int64) : %{return_type}?
+      # Find resource by ID
+      # Return resource or nil
+    end
+
+  update: |
+    def update(id : Int64, data : Hash(String, String)) : %{return_type}?
+      # Find existing resource
+      # Validate input
+      # Update resource
+      # Return updated resource
+    end
+
+  delete: |
+    def delete(id : Int64) : Bool
+      # Find resource
+      # Delete resource
+      # Return success status
+    end
+
+  list: |
+    def list(page : Int32 = 1, per_page : Int32 = 20) : Array(%{return_type})
+      # Fetch paginated resources
+      # Return array of resources
+    end
+
+# Error handling patterns
+error_handling:
+  service_error: "ServiceError"
+  validation_error: "ValidationError"
+  not_found_error: "NotFoundError"
+
+# Dependency injection patterns
+dependency_injection:
+  repository: "property repository : %{model_name}Repository"
+  logger: "property logger : Log = Log.for(self)"
+  validator: "property validator : %{model_name}Validator"
+
+# Return type patterns
+return_types:
+  model: "%{model_name}"
+  result: "Result(%{model_name}, ServiceError)"
+  boolean: "Bool"
+  array: "Array(%{model_name})"
+
+# Interface generation
+interface:
+  enabled: true
+  prefix: "I"
+  abstract_methods: true
+
+# Transaction handling
+transaction_handling:
+  enabled: true
+  pattern: |
+    CQL.transaction do
+      # Service logic here
+    end
+
+# Logging patterns
+logging_patterns:
+  info: 'Log.info { "%{service_name}: %{action} started" }'
+  error: 'Log.error { "%{service_name}: %{action} failed - #{ex.message}" }'
+  debug: 'Log.debug { "%{service_name}: %{action} data: #{data.inspect}" }'
+
+# Validation patterns
+validation_patterns:
+  presence: |
+    unless %{field}
+      raise ValidationError.new("%{field} is required")
+    end
+
+  format: |
+    unless %{field}.match(%{pattern})
+      raise ValidationError.new("%{field} format is invalid")
+    end
+
+# Usage examples
+usage_examples:
+  - "azu generate service UserRegistration"
+  - "azu generate service OrderProcessor type:processing"
+  - "azu generate service PaymentService type:integration"
+  - "azu generate service ReportGenerator type:domain"
+
+# Next steps
+next_steps:
+  - "Implement service methods in src/services/%{snake_case_name}_service.cr"
+  - "Add dependency injection for repositories and validators"
+  - "Add proper error handling and logging"
+  - "Test your service in spec/services/%{snake_case_name}_service_spec.cr"
