@@ -9,7 +9,7 @@ module AzuCLI::Commands
 
     def execute_with_options(
       options : Hash(String, String | Bool | Array(String)),
-      args : Array(String)
+      args : Array(String),
     ) : String | Nil
       puts
       puts "🚀 Azu CLI v#{AzuCLI::VERSION}".colorize(:cyan).bold

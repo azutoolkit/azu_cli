@@ -9,7 +9,6 @@ require "./azu_cli/command"
 require "./azu_cli/commands/**"
 require "./azu_cli/templates/**"
 require "./azu_cli/generators/**"
-require "./azu_cli/utils"
 
 module AzuCLI
   VERSION = "0.0.1"
@@ -33,7 +32,6 @@ module AzuCLI
       # Create command instance and execute
       command_instance = create_command(command_name)
       command_instance.run("", command_args)
-
     rescue ex : OptionParser::InvalidOption
       Logger.error("Invalid option: #{ex.message}")
       Logger.info("Run 'azu --help' to see available options")

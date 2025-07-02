@@ -171,7 +171,7 @@ module AzuCLI
     # This replaces the old execute method
     abstract def execute_with_options(
       options : Hash(String, String | Bool | Array(String)),
-      args : Array(String)
+      args : Array(String),
     ) : String | Nil
 
     # Backward compatibility method - converts old execute signature to new one
