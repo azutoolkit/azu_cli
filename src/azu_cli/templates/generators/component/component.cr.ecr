@@ -1,5 +1,5 @@
 module {{module_name}}
-  # {{class_name}}Component - Interactive Azu component
+  # {{class_name}}Component - Interactive Azu Live Component
   # Provides real-time UI updates through WebSocket connections
   # See: https://azutopia.gitbook.io/azu/real-time/components
   class {{class_name}}Component < Azu::Component
@@ -9,6 +9,7 @@ module {{module_name}}
 {{content_method}}
     end
 
+    # Event handling
 {{events_list}}
 {{websocket_methods}}
 
@@ -19,7 +20,7 @@ module {{module_name}}
 
     private def broadcast_component_update(data : Hash)
       # Broadcast updates to other connected clients
-      # broadcast_update(data.merge({component: "{{snake_case_name}}"}))
+      broadcast_update(data.merge({component: "{{snake_case_name}}"}))
     end
   end
 end

@@ -1,0 +1,19 @@
+require "../spec_helper"
+
+describe {{module_name}}::{{class_name}}Response do
+  describe "rendering" do
+{{render_tests}}
+  end
+{{format_tests}}
+
+  describe "attributes" do
+    it "provides access to all attributes" do
+      response = {{module_name}}::{{class_name}}Response.new(
+        {{test_attributes}}
+      )
+
+      # Add specific attribute accessor tests
+      # response.attribute_name.should eq("expected_value")
+    end
+  end
+end

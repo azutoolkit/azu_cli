@@ -1,0 +1,43 @@
+module {{module_name}}
+  # {{class_name}}Channel - WebSocket channel for real-time communication
+  # Handles WebSocket connections and message broadcasting
+  # See: https://azutopia.gitbook.io/azu/real-time/channels
+  class {{class_name}}Channel < Azu::Channel
+{{auth_methods}}
+
+    # Message handling
+{{events_list}}
+{{lifecycle_methods}}
+
+    private
+
+    # Helper method for logging channel events
+    private def log_event(event_name : String, **metadata)
+      Log.info { "#{self.class.name}: #{event_name}" }
+      metadata.each do |key, value|
+        Log.debug { "  #{key}: #{value}" }
+      end
+    end
+
+    # Broadcast message to all connected clients in this channel
+    private def broadcast_to_channel(message : Hash)
+      broadcast(message.to_json)
+    end
+
+    # Send message to current client only
+    private def send_to_client(message : Hash)
+      send(message.to_json)
+    end
+
+    # Error response helper
+    private def send_error(message : String, code : String? = nil)
+      error_response = {
+        type: "error",
+        message: message,
+        code: code,
+        timestamp: Time.utc.to_rfc3339
+      }
+      send_to_client(error_response)
+    end
+  end
+end

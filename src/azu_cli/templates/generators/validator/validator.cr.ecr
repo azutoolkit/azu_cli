@@ -1,0 +1,12 @@
+# {{class_name}}Validator - Custom validation for {{module_name}}
+# Implements reusable validation logic using Azu's validator pattern
+# See: https://azutopia.gitbook.io/azu/validation/custom-validators
+class {{class_name}}Validator < Azu::Validator
+  getter :record, :field, :message
+
+  {{constants}}
+
+  {{initialize_method}}
+
+  {{validator_implementation}}
+end

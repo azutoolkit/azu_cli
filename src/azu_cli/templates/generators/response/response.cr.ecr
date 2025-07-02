@@ -1,0 +1,18 @@
+module {{module_name}}
+  # {{class_name}}Response - Type-safe response rendering
+  # Handles HTTP response generation with template support
+  # See: https://azutopia.gitbook.io/azu/responses
+  struct {{class_name}}Response
+    include Azu::Response
+    include Azu::Templates::Renderable
+
+    {{attributes_list}}
+
+    {{constructor}}
+
+    {{render_method}}
+
+    {{data_method}}
+    {{response_helpers}}
+  end
+end

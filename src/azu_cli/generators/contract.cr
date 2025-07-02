@@ -69,7 +69,19 @@ module AzuCLI
         lines = [] of String
         attributes.each do |attr_name, attr_type|
           unless attr_type.ends_with?("?")
-            lines << "    validate #{attr_name}, message: \"#{attr_name.capitalize} must be present.\", required: true"
+            lines << "    validate :#{attr_name}, presence: true"
+
+            # Add type-specific validations based on Azu README patterns
+            case attr_type.downcase
+            when "string", "text"
+              lines << "    validate :#{attr_name}, length: {min: 1, max: 255}"
+            when "integer", "int", "big_integer", "bigint"
+              lines << "    validate :#{attr_name}, numericality: {greater_than: 0}"
+            when "float", "decimal"
+              lines << "    validate :#{attr_name}, numericality: {greater_than: 0.0}"
+            when "boolean", "bool"
+              # Boolean validation is handled by presence
+            end
           end
         end
 

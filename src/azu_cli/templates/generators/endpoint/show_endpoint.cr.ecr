@@ -1,7 +1,7 @@
 module {{module_name}}
   module {{class_name}}
     struct {{action_class}}Endpoint
-      include Endpoint({{action_class}}Contract, {{action_class}}Page)
+      include Azu::Endpoint({{action_class}}Contract, {{action_class}}Page)
 
       {{http_method}} "{{route_path}}"
 

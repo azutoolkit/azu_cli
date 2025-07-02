@@ -1,11 +1,11 @@
 module {{module_name}}
   module {{class_name}}
     struct {{action_class}}Contract
-      include Request
+      include Azu::Request
 
       getter id : Int64
 
-      validate id, message: "ID must be present.", required: true
+      validate :id, presence: true, numericality: {greater_than: 0}
     end
   end
 end

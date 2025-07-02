@@ -75,22 +75,35 @@ module AzuCLI
 
       private def generate_method_definition(method_name : String) : String
         <<-CRYSTAL
-          # #{method_name.capitalize} service method
-          def #{method_name}
-            # TODO: Implement #{method_name} logic
-            raise NotImplementedError.new("#{method_name} method not implemented")
-          end
+        # #{method_name.capitalize} service method
+        def #{method_name}
+          log_operation("#{method_name} called")
+
+          # TODO: Implement #{method_name} logic
+          # Return success or failure result
+          success("#{method_name} completed successfully")
+        rescue ex : Exception
+          handle_error(ex, "#{method_name} operation failed")
+        end
         CRYSTAL
       end
 
       private def generate_test_method(method_name : String) : String
         <<-CRYSTAL
-          describe "##{method_name}" do
-            it "implements #{method_name} logic" do
-              service = described_class.new
-              expect { service.#{method_name} }.to raise_error(NotImplementedError)
-            end
+        describe "##{method_name}" do
+          it "implements #{method_name} logic" do
+            service = #{module_name}::#{class_name}.new
+            result = service.#{method_name}
+
+            result[:success].should be_true
+            result[:error].should be_nil
           end
+
+          it "handles errors in #{method_name}" do
+            service = #{module_name}::#{class_name}.new
+            # Test error scenarios
+          end
+        end
         CRYSTAL
       end
     end

@@ -80,24 +80,35 @@ module AzuCLI
 
       private def generate_default_events : String
         <<-CRYSTAL
-        def on_event("click", data)
-          # Handle click events
-          # Example: update counter, toggle state, etc.
-          Log.info { "#{self.class.name}: Click event received" }
+        def on_event(event : String, data : JSON::Any)
+          case event
+          when "click"
+            # Handle click events
+            # Example: update counter, toggle state, etc.
+            Log.info { "#{self.class.name}: Click event received" }
+            # broadcast_update({type: "click", component: "#{snake_case_name}"})
+          else
+            Log.warn { "#{self.class.name}: Unknown event '#{event}'" }
+          end
         end
         CRYSTAL
       end
 
       private def generate_event_handler(event_name : String) : String
         <<-CRYSTAL
-        def on_event("#{event_name}", data)
-          # Handle #{event_name} event
-          # data contains event payload from client
-          Log.info { "#{self.class.name}: #{event_name.capitalize} event received" }
+        def on_event(event : String, data : JSON::Any)
+          case event
+          when "#{event_name}"
+            # Handle #{event_name} event
+            # data contains event payload from client
+            Log.info { "#{self.class.name}: #{event_name.capitalize} event received" }
 
-          # Example DOM updates:
-          # update_element "status", "#{event_name.capitalize} clicked!"
-          # broadcast_update({type: "#{event_name}", component: "#{snake_case_name}"})
+            # Example DOM updates:
+            # update_element "status", "#{event_name.capitalize} clicked!"
+            # broadcast_update({type: "#{event_name}", component: "#{snake_case_name}"})
+          else
+            Log.warn { "#{self.class.name}: Unknown event '#{event}'" }
+          end
         end
         CRYSTAL
       end
@@ -277,7 +288,6 @@ module AzuCLI
         puts "  3. Handle events in your component:"
         puts "     def on_event(\"your_event\", data)"
         puts "       # Process event and update DOM"
-        puts "     end"
         puts
         if with_websocket
           puts "  4. WebSocket lifecycle methods are ready to use:"

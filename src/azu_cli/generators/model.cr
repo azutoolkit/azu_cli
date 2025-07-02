@@ -55,9 +55,12 @@ module AzuCLI
         attributes.each do |attr_name, attr_type|
           crystal_type = crystal_type(attr_type)
           nullable = attr_type.ends_with?("?")
-          type_annotation = nullable ? "#{crystal_type}?" : crystal_type
 
-          lines << "  property #{attr_name} : #{type_annotation}"
+          if nullable
+            lines << "  field #{attr_name} : #{crystal_type}?"
+          else
+            lines << "  field #{attr_name} : #{crystal_type}"
+          end
         end
 
         lines.join("\n")

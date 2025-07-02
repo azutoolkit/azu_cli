@@ -1,31 +1,41 @@
 module {{module_name}}
-  module Services
-    # {{class_name}} application service
-    # Handles business logic and coordinates between domain objects
-    class {{class_name}}
-      # Dependencies can be injected via constructor
-      def initialize
-        # Initialize dependencies here
-        # @repository = {{class_name}}Repository.new
-        # @logger = Logger.new
-        # @event_bus = EventBus.new
+  # {{class_name}} application service
+  # Handles business logic and coordinates between domain objects
+  # Follows Azu service patterns for maintainable code organization
+  class {{class_name}}
+    # Dependencies can be injected via constructor
+    def initialize
+      # Initialize dependencies here
+      # @repository = {{class_name}}Repository.new
+      # @logger = Log.for(self)
+      # @event_bus = Azu::EventBus.new
+    end
+
+    {{methods_list}}
+
+    private
+
+    # Error handling following Azu patterns
+    def handle_error(error : Exception, context : String = "")
+      Log.error(exception: error) { "#{self.class.name}: #{context}" }
+      raise error
+    end
+
+    # Logging helper
+    def log_operation(operation : String, **metadata)
+      Log.info { "#{self.class.name}: #{operation}" }
+      metadata.each do |key, value|
+        Log.debug { "  #{key}: #{value}" }
       end
+    end
 
-{{methods_list}}
+    # Result wrapper for service operations
+    def success(data = nil)
+      {success: true, data: data, error: nil}
+    end
 
-      private
-
-      # Add private helper methods here
-      def log_operation(operation : String)
-        # Log the operation
-        puts "#{self.class.name}: #{operation}"
-      end
-
-      def handle_error(error : Exception)
-        # Handle errors appropriately
-        log_operation("Error: #{error.message}")
-        raise error
-      end
+    def failure(error : String)
+      {success: false, data: nil, error: error}
     end
   end
 end

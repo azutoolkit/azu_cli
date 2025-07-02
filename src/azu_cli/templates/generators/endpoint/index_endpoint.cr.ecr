@@ -1,12 +1,13 @@
 module {{module_name}}
   module {{class_name}}
     struct {{action_class}}Endpoint
-      include Endpoint({{action_class}}Contract, {{action_class}}Page)
+      include Azu::Endpoint({{action_class}}Contract, {{action_class}}Page)
 
       {{http_method}} "{{route_path}}"
 
       def call : {{action_class}}Page
-        {{action_class}}Page.new({{class_name}}.all.to_a)
+        {{plural_name}} = {{class_name}}.all.to_a
+        {{action_class}}Page.new({{plural_name}})
       end
     end
   end

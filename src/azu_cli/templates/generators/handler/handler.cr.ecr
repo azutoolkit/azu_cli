@@ -1,0 +1,12 @@
+module {{module_name}}
+  # {{class_name}}Handler - HTTP request handler
+  # Processes HTTP requests in the middleware chain
+  # See: https://azutopia.gitbook.io/azu/handlers
+  class {{class_name}}Handler
+    include HTTP::Handler
+
+{{handler_methods}}
+{{auth_methods}}
+{{helper_methods}}
+  end
+end

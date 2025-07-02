@@ -1,0 +1,16 @@
+module {{module_name}}
+  # {{class_name}}Request - Type-safe request validation
+  # Handles HTTP request parameters with automatic validation
+  # See: https://azutopia.gitbook.io/azu/validation/requests
+  struct {{class_name}}Request
+    include Azu::Request
+
+    {{attributes_list}}
+
+    {{constructor}}
+
+    # Validation rules
+    {{validations_list}}
+    {{file_upload_attrs}}
+  end
+end

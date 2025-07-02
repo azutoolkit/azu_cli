@@ -1,0 +1,52 @@
+require "../spec_helper"
+
+describe {{module_name}}::{{class_name}}Request do
+  describe "validations" do
+    it "validates with valid attributes" do
+      request = {{module_name}}::{{class_name}}Request.new(
+        {{valid_attributes}}
+      )
+
+      request.valid?.should be_true
+    end
+
+    it "rejects invalid attributes" do
+      request = {{module_name}}::{{class_name}}Request.new(
+        {{invalid_attributes}}
+      )
+
+      request.valid?.should be_false
+    end
+
+{{validation_tests}}
+  end
+
+  describe "attribute accessors" do
+    it "provides access to all attributes" do
+      request = {{module_name}}::{{class_name}}Request.new(
+        {{valid_attributes}}
+      )
+
+      # Add specific attribute accessor tests
+      # request.attribute_name.should eq("expected_value")
+    end
+  end
+
+  private def mock_file
+    # Create a mock file for testing
+    io = IO::Memory.new("test file content")
+    HTTP::FormData::File.new(io, "test.jpg", "image/jpeg")
+  end
+
+  private def large_file
+    # Create a mock large file for testing file size validation
+    io = IO::Memory.new("x" * (11 * 1024 * 1024)) # 11MB file
+    HTTP::FormData::File.new(io, "large.jpg", "image/jpeg")
+  end
+
+  private def valid_file
+    # Create a valid mock file for testing
+    io = IO::Memory.new("valid file content")
+    HTTP::FormData::File.new(io, "valid.jpg", "image/jpeg")
+  end
+end

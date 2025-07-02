@@ -1,0 +1,11 @@
+require "../spec_helper"
+
+describe {{module_name}}::{{class_name}}Handler do
+  let(handler) { {{module_name}}::{{class_name}}Handler.new }
+
+  describe "#call" do
+{{test_methods}}
+  end
+{{mock_helpers}}
+{{auth_tests}}
+end

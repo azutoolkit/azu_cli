@@ -5,7 +5,7 @@ module {{module_name}}
   class {{class_name}} < CQL::Model
     table :{{table_name}}
 
-    # Default fields
+    # Primary key and timestamps
     field id : Int64, primary: true, auto_increment: true
     field created_at : Time, auto: true
     field updated_at : Time, auto: true
@@ -16,9 +16,9 @@ module {{module_name}}
     # Validations
     # Add your validations here
     # Examples:
-    # validates_presence_of :name
-    # validates_uniqueness_of :email
-    # validates_length_of :name, minimum: 2, maximum: 50
+    # validates :name, presence: true, length: {min: 2, max: 50}
+    # validates :email, presence: true, format: /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
+    # validates :email, uniqueness: true
 
     # Associations
     # Add your associations here

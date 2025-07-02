@@ -1,7 +1,7 @@
 module {{module_name}}
   module {{class_name}}
     struct {{action_class}}Contract
-      include Request
+      include Azu::Request
 
       getter id : Int64
 
@@ -9,10 +9,12 @@ module {{module_name}}
       # Example:
       # getter name : String
       # getter email : String
+      # getter age : Int32?
       #
-      validate id, message: "ID must be present.", required: true
-      # validate name, message: "Name must be present.", required: true
-      # validate email, message: "Email must be present.", required: true
+      validate :id, presence: true, numericality: {greater_than: 0}
+      # validate :name, presence: true, length: {min: 2, max: 50}
+      # validate :email, presence: true, format: /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
+      # validate :age, numericality: {greater_than: 0, less_than: 150}, if: ->{ age }
     end
   end
 end
