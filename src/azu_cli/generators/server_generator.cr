@@ -38,8 +38,9 @@ module AzuCLI
 
       def initialize(app_name : String,
                      handlers : Array(String) = ServerConfiguration::DEFAULT_HANDLERS,
-                     output_dir : String = ".")
-        super(app_name, output_dir)
+                     output_dir : String = ".",
+                     generate_specs : Bool = true)
+        super(app_name, output_dir, generate_specs)
         @configuration = ServerConfiguration.new(handlers)
         @app_name = app_name
         @app_name_camelcase = app_name.camelcase
@@ -52,6 +53,11 @@ module AzuCLI
 
       def build_output_path : String
         File.join(@output_dir, "server.cr")
+      end
+
+      # Override spec template name to match our template
+      protected def spec_template_name : String
+        "server_spec.cr.ecr"
       end
 
       # Template methods for accessing server properties

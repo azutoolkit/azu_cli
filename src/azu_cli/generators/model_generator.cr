@@ -48,8 +48,9 @@ module AzuCLI
                      attributes : Array(AttributeDefinition) = [] of AttributeDefinition,
                      associations : Array(AssociationDefinition) = [] of AssociationDefinition,
                      validations : Array(ValidationDefinition) = [] of ValidationDefinition,
-                     output_dir : String = "src")
-        super(model_name, output_dir)
+                     output_dir : String = "src",
+                     generate_specs : Bool = true)
+        super(model_name, output_dir, generate_specs)
         @configuration = ModelConfiguration.new(attributes, associations, validations)
         @model_name = model_name
         @model_name_camelcase = model_name.camelcase
@@ -65,6 +66,11 @@ module AzuCLI
 
       def build_output_path : String
         File.join(@output_dir, "models", "#{@name}.cr")
+      end
+
+      # Override spec template name to match our template
+      protected def spec_template_name : String
+        "#{model_name}_spec.cr.ecr"
       end
 
       # Template methods for accessing model properties

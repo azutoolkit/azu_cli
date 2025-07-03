@@ -1,0 +1,78 @@
+require "spec"
+require "../spec_helper"
+require "../../src/models/<%= model_name %>"
+
+describe <%= model_name_camelcase %> do
+  describe "model definition" do
+    it "includes CQL::Model" do
+      <%= model_name_camelcase %>.should respond_to(:db_context)
+    end
+
+    it "has correct table name" do
+      # Test that the model maps to the correct table
+      # Example: <%= model_name_camelcase %>.table_name.should eq("<%= model_name_pluralized %>")
+    end
+  end
+
+<%- unless attributes.empty? -%>
+  describe "attributes" do
+<%- attributes.each do |attr| -%>
+    it "has <%= attr[:name] %> attribute" do
+      model = <%= model_name_camelcase %>.new
+      model.should respond_to(:<%= attr[:name] %>)
+      model.should respond_to(:<%= attr[:name] %>=)
+    end
+
+    it "validates <%= attr[:name] %> type" do
+      model = <%= model_name_camelcase %>.new
+      # Add type-specific validations for <%= attr[:type] %>
+    end
+<%- end -%>
+  end
+<%- end -%>
+
+<%- unless associations.empty? -%>
+  describe "associations" do
+<%- associations.each do |assoc| -%>
+    it "has <%= assoc[:name] %> association" do
+      model = <%= model_name_camelcase %>.new
+      # Test <%= assoc[:type] %> association
+      # model.should respond_to(:<%= assoc[:name] %>)
+    end
+<%- end -%>
+  end
+<%- end -%>
+
+<%- unless validations.empty? -%>
+  describe "validations" do
+<%- validations.each do |validation| -%>
+    it "validates <%= validation[:field] %>" do
+      model = <%= model_name_camelcase %>.new
+      # Test validation rules: <%= validation[:rules].join(", ") %>
+      # Add specific validation tests
+    end
+<%- end -%>
+  end
+<%- end -%>
+
+  describe "persistence" do
+    it "can be saved to database" do
+      # Test model saving
+      # model = <%= model_name_camelcase %>.new
+      # model.save.should be_true
+    end
+
+    it "can be retrieved from database" do
+      # Test model retrieval
+      # <%= model_name_camelcase %>.find(1).should be_a(<%= model_name_camelcase %>)
+    end
+
+    it "can be updated" do
+      # Test model updates
+    end
+
+    it "can be deleted" do
+      # Test model deletion
+    end
+  end
+end

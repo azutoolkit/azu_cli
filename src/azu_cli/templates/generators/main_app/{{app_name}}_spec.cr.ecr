@@ -1,0 +1,30 @@
+require "spec"
+require "./<%= app_name %>"
+
+describe <%= app_name_camelcase %> do
+  describe "configuration" do
+    it "has default port configuration" do
+      # Test that the module can be loaded and configured
+      # Add specific configuration tests here
+    end
+
+    it "loads environment variables correctly" do
+      # Test environment variable loading
+      # Example: ENV["PORT"]?, ENV["HOST"]?
+    end
+  end
+
+  describe "module inclusion" do
+    it "includes Azu framework" do
+      # Test that Azu is properly included
+      <%= app_name_camelcase %>.should respond_to(:configure)
+    end
+  end
+
+  describe "component loading" do
+    it "loads all required components" do
+      # Test that all components are properly required
+      # This ensures the require statements work correctly
+    end
+  end
+end

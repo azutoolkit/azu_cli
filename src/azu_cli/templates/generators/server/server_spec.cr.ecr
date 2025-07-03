@@ -1,0 +1,67 @@
+require "spec"
+require "../spec_helper"
+require "../../server"
+
+describe "Server Configuration" do
+  describe "application startup" do
+    it "loads the application module" do
+      # Test that <%= app_name_camelcase %> can be loaded
+      <%= app_name_camelcase %>.should_not be_nil
+    end
+
+    it "has correct configuration" do
+      # Test server configuration
+      # <%= app_name_camelcase %>.config.should_not be_nil
+    end
+  end
+
+  describe "handler chain" do
+<%- handlers.each do |handler| -%>
+    it "includes <%= handler %> handler" do
+      # Test that <%= handler %> handler is in the chain
+      # handlers = <%= app_name_camelcase %>.handlers
+      # handlers.any? { |h| h.is_a?(Azu::Handler::<%= handler %>) }.should be_true
+    end
+<%- end -%>
+
+    it "has correct handler order" do
+      # Test that handlers are in the correct order
+      # Expected order: <%= handlers.join(", ") %>
+    end
+  end
+
+  describe "performance monitoring" do
+    it "configures performance monitoring when enabled" do
+      # Test performance monitoring configuration
+      # This should be conditional based on environment
+    end
+
+    it "excludes performance monitoring when disabled" do
+      # Test that performance monitoring is not included in production
+    end
+  end
+
+  describe "error handling" do
+    it "handles startup errors gracefully" do
+      # Test error handling during server startup
+    end
+
+    it "provides meaningful error messages" do
+      # Test error message quality
+    end
+  end
+
+  describe "environment configuration" do
+    it "respects PORT environment variable" do
+      # Test port configuration from environment
+    end
+
+    it "respects HOST environment variable" do
+      # Test host configuration from environment
+    end
+
+    it "uses defaults when environment variables are not set" do
+      # Test default configuration
+    end
+  end
+end

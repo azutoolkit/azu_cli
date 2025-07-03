@@ -34,8 +34,9 @@ module AzuCLI
 
       def initialize(validator_name : String,
                      model_name : String,
-                     output_dir : String = "src")
-        super(validator_name, output_dir)
+                     output_dir : String = "src",
+                     generate_specs : Bool = true)
+        super(validator_name, output_dir, generate_specs)
         @configuration = ValidatorConfiguration.new(model_name)
         @validator_name = validator_name
         @validator_name_camelcase = validator_name.camelcase
@@ -48,6 +49,11 @@ module AzuCLI
 
       def build_output_path : String
         File.join(@output_dir, "validators", "#{@name}.cr")
+      end
+
+      # Override spec template name to match our template
+      protected def spec_template_name : String
+        "#{validator_name}_spec.cr.ecr"
       end
 
       # Template methods for accessing validator properties

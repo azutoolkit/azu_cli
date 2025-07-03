@@ -1,0 +1,91 @@
+require "spec"
+require "../spec_helper"
+require "../../src/responses/<%= response_name %>"
+
+describe <%= class_name %> do
+  describe "response structure" do
+    it "includes Response module" do
+      response = <%= class_name %>.new
+      response.should be_a(Response)
+    end
+
+<%- if json_serializable? -%>
+    it "includes JSON::Serializable" do
+      response = <%= class_name %>.new
+      response.should respond_to(:to_json)
+    end
+<%- end -%>
+
+    it "can be instantiated" do
+      response = <%= class_name %>.new
+      response.should be_a(<%= class_name %>)
+    end
+  end
+
+<%- unless attributes.empty? -%>
+  describe "attributes" do
+<%- attributes.each do |attr| -%>
+    it "has <%= attr[:name] %> attribute" do
+      response = <%= class_name %>.new
+      # Test that <%= attr[:name] %> is accessible
+      # response.<%= attr[:name] %>.should be_a(<%= attr[:type] %>)
+    end
+
+    it "sets default value for <%= attr[:name] %>" do
+      response = <%= class_name %>.new
+      # response.<%= attr[:name] %>.should eq(<%= attr[:default] %>)
+    end
+<%- end -%>
+  end
+
+  describe "initialization" do
+    it "sets default values" do
+      response = <%= class_name %>.new
+<%- attributes.each do |attr| -%>
+      # response.<%= attr[:name] %>.should eq(<%= attr[:default] %>)
+<%- end -%>
+    end
+
+    it "accepts custom values" do
+      # Test initialization with custom values
+      # response = <%= class_name %>.new(param1: value1, param2: value2)
+    end
+  end
+<%- end -%>
+
+<%- if json_serializable? -%>
+  describe "JSON serialization" do
+    it "can be serialized to JSON" do
+      response = <%= class_name %>.new
+      json = response.to_json
+      json.should be_a(String)
+      json.should contain("{")
+    end
+
+    it "can be deserialized from JSON" do
+      json = "{}"  # Add appropriate JSON structure
+      # response = <%= class_name %>.from_json(json)
+      # response.should be_a(<%= class_name %>)
+    end
+
+    it "includes all attributes in JSON" do
+      response = <%= class_name %>.new
+      json = response.to_json
+<%- attributes.each do |attr| -%>
+      json.should contain("<%= attr[:name] %>")
+<%- end -%>
+    end
+  end
+<%- end -%>
+
+  describe "response formatting" do
+    it "formats response correctly" do
+      response = <%= class_name %>.new
+      # Test response formatting
+    end
+
+    it "handles error cases" do
+      # Test error response formatting
+    end
+  end
+end

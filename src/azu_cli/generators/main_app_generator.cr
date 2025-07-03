@@ -9,8 +9,8 @@ module AzuCLI
       @app_name : String
       @app_name_camelcase : String
 
-      def initialize(app_name : String, output_dir : String = "src")
-        super(app_name, output_dir)
+      def initialize(app_name : String, output_dir : String = "src", generate_specs : Bool = true)
+        super(app_name, output_dir, generate_specs)
         @app_name = app_name
         @app_name_camelcase = app_name.camelcase
       end
@@ -21,6 +21,11 @@ module AzuCLI
 
       def build_output_path : String
         File.join(@output_dir, "#{@name}.cr")
+      end
+
+      # Override spec template name to match our template
+      protected def spec_template_name : String
+        "#{@app_name}_spec.cr.ecr"
       end
 
       # Template method for accessing app name in camelcase

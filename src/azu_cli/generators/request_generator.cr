@@ -37,8 +37,9 @@ module AzuCLI
 
       def initialize(request_name : String,
                      properties : Array(PropertyDefinition) = [] of PropertyDefinition,
-                     output_dir : String = "src")
-        super(request_name, output_dir)
+                     output_dir : String = "src",
+                     generate_specs : Bool = true)
+        super(request_name, output_dir, generate_specs)
         @configuration = RequestConfiguration.new(properties)
         @request_name = request_name
         @request_name_camelcase = request_name.camelcase
@@ -51,6 +52,11 @@ module AzuCLI
 
       def build_output_path : String
         File.join(@output_dir, "requests", "#{@name}.cr")
+      end
+
+      # Override spec template name to match our template
+      protected def spec_template_name : String
+        "#{request_name}_spec.cr.ecr"
       end
 
       # Template methods for accessing request properties

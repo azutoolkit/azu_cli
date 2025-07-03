@@ -172,14 +172,15 @@ module AzuCLI
                      response_class : String? = nil,
                      service_class : String? = nil,
                      namespace : String? = nil,
-                     output_dir : String = "src")
+                     output_dir : String = "src",
+                     generate_specs : Bool = true)
         # Validate resource name before creating endpoint configuration
         if resource_name.empty?
           raise ArgumentError.new("Name cannot be empty")
         end
 
         endpoint_name = "#{resource_name}_#{action}_endpoint"
-        super(endpoint_name, output_dir)
+        super(endpoint_name, output_dir, generate_specs)
         @configuration = EndpointConfiguration.new(resource_name, action, request_class, response_class, service_class, namespace)
 
         # Set instance variables for Teeplate
@@ -201,6 +202,11 @@ module AzuCLI
 
       def build_output_path : String
         File.join(@output_dir, "endpoints", "#{@resource_name}", "#{@action}_endpoint.cr")
+      end
+
+      # Override spec template name to match our template
+      protected def spec_template_name : String
+        "#{resource_name}_#{action}_endpoint_spec.cr.ecr"
       end
 
       # Override render_template to handle custom filename
@@ -296,18 +302,19 @@ module AzuCLI
       getter resource_name : String
       getter output_dir : String
       getter namespace : String?
+      getter generate_specs : Bool
 
       # All standard REST actions
       REST_ACTIONS = ["index", "new", "create", "show", "edit", "update", "destroy"]
 
-      def initialize(@resource_name : String, @output_dir : String = "src", @namespace : String? = nil)
+      def initialize(@resource_name : String, @output_dir : String = "src", @namespace : String? = nil, @generate_specs : Bool = true)
       end
 
       def generate_all!
         generated_files = [] of String
 
         REST_ACTIONS.each do |action|
-          generator = EndpointGenerator.new(@resource_name, action, output_dir: @output_dir, namespace: @namespace)
+          generator = EndpointGenerator.new(@resource_name, action, output_dir: @output_dir, namespace: @namespace, generate_specs: @generate_specs)
           generated_files << generator.generate!
         end
 
@@ -322,7 +329,7 @@ module AzuCLI
             raise ArgumentError.new("Invalid REST action: #{action}. Valid actions: #{REST_ACTIONS.join(", ")}")
           end
 
-          generator = EndpointGenerator.new(@resource_name, action, output_dir: @output_dir, namespace: @namespace)
+          generator = EndpointGenerator.new(@resource_name, action, output_dir: @output_dir, namespace: @namespace, generate_specs: @generate_specs)
           generated_files << generator.generate!
         end
 

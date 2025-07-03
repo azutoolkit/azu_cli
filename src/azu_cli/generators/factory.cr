@@ -72,7 +72,8 @@ module AzuCLI
       private def self.create_app_generator(name : String, **options) : MainAppGenerator
         validate_common_options(**options)
         output_dir = options[:output_dir]?.try(&.to_s) || "src"
-        MainAppGenerator.new(name, output_dir)
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || true
+        MainAppGenerator.new(name, output_dir, generate_specs)
       end
 
       private def self.create_model_generator(name : String, **options) : ModelGenerator
@@ -82,8 +83,9 @@ module AzuCLI
         associations = options[:associations]?.try(&.as(Array(AssociationDefinition))) || [] of AssociationDefinition
         validations = options[:validations]?.try(&.as(Array(ValidationDefinition))) || [] of ValidationDefinition
         output_dir = options[:output_dir]?.try(&.to_s) || "src"
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || true
 
-        ModelGenerator.new(name, attributes, associations, validations, output_dir)
+        ModelGenerator.new(name, attributes, associations, validations, output_dir, generate_specs)
       end
 
       private def self.create_request_generator(name : String, **options) : RequestGenerator
@@ -91,8 +93,9 @@ module AzuCLI
 
         properties = options[:properties]?.try(&.as(Array(PropertyDefinition))) || [] of PropertyDefinition
         output_dir = options[:output_dir]?.try(&.to_s) || "src"
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || true
 
-        RequestGenerator.new(name, properties, output_dir)
+        RequestGenerator.new(name, properties, output_dir, generate_specs)
       end
 
       private def self.create_response_generator(name : String, **options) : ResponseGenerator
@@ -101,8 +104,9 @@ module AzuCLI
         attributes = options[:attributes]?.try(&.as(Array(ResponseAttribute))) || [] of ResponseAttribute
         include_json = options[:include_json]?.try(&.as(Bool)) || true
         output_dir = options[:output_dir]?.try(&.to_s) || "src"
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || true
 
-        ResponseGenerator.new(name, attributes, include_json, output_dir)
+        ResponseGenerator.new(name, attributes, include_json, output_dir, generate_specs)
       end
 
       private def self.create_server_generator(name : String, **options) : ServerGenerator
@@ -110,8 +114,9 @@ module AzuCLI
 
         handlers = options[:handlers]?.try(&.as(Array(String))) || ["web", "api"]
         output_dir = options[:output_dir]?.try(&.to_s) || "."
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || true
 
-        ServerGenerator.new(name, handlers, output_dir)
+        ServerGenerator.new(name, handlers, output_dir, generate_specs)
       end
 
       private def self.create_validator_generator(name : String, **options) : ValidatorGenerator
@@ -121,8 +126,9 @@ module AzuCLI
         raise GeneratorError.new("Model name is required for validator generator") unless model_name
 
         output_dir = options[:output_dir]?.try(&.to_s) || "src"
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || true
 
-        ValidatorGenerator.new(name, model_name, output_dir)
+        ValidatorGenerator.new(name, model_name, output_dir, generate_specs)
       end
 
       private def self.create_endpoint_generator(name : String, **options) : EndpointGenerator
@@ -136,8 +142,9 @@ module AzuCLI
         service_class = options[:service_class]?.try(&.to_s)
         namespace = options[:namespace]?.try(&.to_s)
         output_dir = options[:output_dir]?.try(&.to_s) || "src"
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || true
 
-        EndpointGenerator.new(name, action, request_class, response_class, service_class, namespace, output_dir)
+        EndpointGenerator.new(name, action, request_class, response_class, service_class, namespace, output_dir, generate_specs)
       end
     end
 
@@ -154,6 +161,11 @@ module AzuCLI
 
       def output_dir(dir : String)
         @options[:output_dir] = dir
+        self
+      end
+
+      def generate_specs(generate_specs : Bool)
+        @options[:generate_specs] = generate_specs
         self
       end
 
@@ -223,7 +235,52 @@ module AzuCLI
       end
 
       def build : Base
-        Factory.create(@type, @name, **@options)
+        # Convert options to individual arguments instead of using double splat
+        case @type
+        when "app"
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "src"
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || true
+          Factory.create(@type, @name, output_dir: output_dir, generate_specs: generate_specs)
+        when "model"
+          attributes = @options[:attributes]?.try(&.as(Array(AttributeDefinition))) || [] of AttributeDefinition
+          associations = @options[:associations]?.try(&.as(Array(AssociationDefinition))) || [] of AssociationDefinition
+          validations = @options[:validations]?.try(&.as(Array(ValidationDefinition))) || [] of ValidationDefinition
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "src"
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || true
+          Factory.create(@type, @name, attributes: attributes, associations: associations, validations: validations, output_dir: output_dir, generate_specs: generate_specs)
+        when "request"
+          properties = @options[:properties]?.try(&.as(Array(PropertyDefinition))) || [] of PropertyDefinition
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "src"
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || true
+          Factory.create(@type, @name, properties: properties, output_dir: output_dir, generate_specs: generate_specs)
+        when "response"
+          attributes = @options[:attributes]?.try(&.as(Array(ResponseAttribute))) || [] of ResponseAttribute
+          include_json = @options[:include_json]?.try(&.as(Bool)) || true
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "src"
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || true
+          Factory.create(@type, @name, attributes: attributes, include_json: include_json, output_dir: output_dir, generate_specs: generate_specs)
+        when "server"
+          handlers = @options[:handlers]?.try(&.as(Array(String))) || [] of String
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "."
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || true
+          Factory.create(@type, @name, handlers: handlers, output_dir: output_dir, generate_specs: generate_specs)
+        when "validator"
+          model_name = @options[:model_name]?.try(&.as(String)) || ""
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "src"
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || true
+          Factory.create(@type, @name, model_name: model_name, output_dir: output_dir, generate_specs: generate_specs)
+        when "endpoint"
+          action = @options[:action]?.try(&.as(String)) || ""
+          request_class = @options[:request_class]?.try(&.as(String))
+          response_class = @options[:response_class]?.try(&.as(String))
+          service_class = @options[:service_class]?.try(&.as(String))
+          namespace = @options[:namespace]?.try(&.as(String))
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "src"
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || true
+          Factory.create(@type, @name, action: action, request_class: request_class, response_class: response_class, service_class: service_class, namespace: namespace, output_dir: output_dir, generate_specs: generate_specs)
+        else
+          raise Factory::GeneratorError.new("Unsupported generator type: #{@type}")
+        end
       end
     end
   end

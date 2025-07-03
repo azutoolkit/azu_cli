@@ -40,8 +40,9 @@ module AzuCLI
       def initialize(response_name : String,
                      attributes : Array(ResponseAttribute) = [] of ResponseAttribute,
                      include_json : Bool = true,
-                     output_dir : String = "src")
-        super(response_name, output_dir)
+                     output_dir : String = "src",
+                     generate_specs : Bool = true)
+        super(response_name, output_dir, generate_specs)
         @configuration = ResponseConfiguration.new(attributes, include_json)
         @response_name = response_name
         @class_name = response_name.camelcase
@@ -54,6 +55,11 @@ module AzuCLI
 
       def build_output_path : String
         File.join(@output_dir, "responses", "#{@name}.cr")
+      end
+
+      # Override spec template name to match our template
+      protected def spec_template_name : String
+        "#{response_name}_spec.cr.ecr"
       end
 
       # Template methods for accessing response properties
