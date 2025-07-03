@@ -5,7 +5,7 @@ CQL.configure do |config|
   config.env = ENV["CRYSTAL_ENV"]? || "development"
 
   # Database connection - environment-aware database names
-  config.db = ENV["DATABASE_URL"]? || <%= database_env_url %>
+  config.db = ENV["DATABASE_URL"]? || "<%= database_env_url %>"
 
   config.timezone = :utc
 
@@ -73,6 +73,4 @@ CQL.configure do |config|
   config.ssl.cert_path = ENV["DB_SSL_CERT"]?
   config.ssl.key_path = ENV["DB_SSL_KEY"]?
   config.ssl.ca_path = ENV["DB_SSL_CA"]?
-
-<%= database_specific_config %>
 end

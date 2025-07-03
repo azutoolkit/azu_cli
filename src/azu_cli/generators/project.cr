@@ -64,61 +64,40 @@ module AzuCLI
             when "production"
               ENV["PRODUCTION_DATABASE_URL"]? || \"postgresql://localhost/#{@project}_production\"
             when "test"
-              \"postgresql://localhost/#{@project}_test\"
+              "postgresql://localhost/#{@project}_test"
             else # development
-              \"postgresql://localhost/#{@project}_development\"
+              "postgresql://localhost/#{@project}_development"
             end)
         when "mysql"
           %(case config.env
             when "production"
-              ENV["PRODUCTION_DATABASE_URL"]? || \"mysql://localhost/#{@project}_production\"
+              ENV["PRODUCTION_DATABASE_URL"]? || "mysql://localhost/#{@project}_production"
             when "test"
-              \"mysql://localhost/#{@project}_test\"
+              "mysql://localhost/#{@project}_test"
             else # development
-              \"mysql://localhost/#{@project}_development\"
+              "mysql://localhost/#{@project}_development"
             end)
         when "sqlite3"
           %(case config.env
             when "production"
-              ENV["PRODUCTION_DATABASE_URL"]? || \"sqlite3://./db/#{@project}_production.db\"
+              ENV["PRODUCTION_DATABASE_URL"]? || "sqlite3://./db/#{@project}_production.db"
             when "test"
-              \"sqlite3://./db/#{@project}_test.db\"
+              "sqlite3://./db/#{@project}_test.db"
             else # development
-              \"sqlite3://./db/#{@project}_development.db\"
+              "sqlite3://./db/#{@project}_development.db"
             end)
         else
           %(case config.env
             when "production"
-              ENV["PRODUCTION_DATABASE_URL"]? || \"postgresql://localhost/#{@project}_production\"
+              ENV["PRODUCTION_DATABASE_URL"]? || "postgresql://localhost/#{@project}_production"
             when "test"
-              \"postgresql://localhost/#{@project}_test\"
+              "postgresql://localhost/#{@project}_test"
             else # development
-              \"postgresql://localhost/#{@project}_development\"
+              "postgresql://localhost/#{@project}_development"
             end)
         end
       end
 
-      # Generate database-specific configuration
-      def database_specific_config : String
-        case database_adapter
-        when "pg"
-          %(  # PostgreSQL-specific optimizations
-  config.postgres.prepared_statements = true
-  config.postgres.search_path = ["public"])
-        when "mysql"
-          %(  # MySQL-specific optimizations
-  config.mysql.charset = "utf8mb4"
-  config.mysql.collation = "utf8mb4_unicode_ci")
-        when "sqlite3"
-          %(  # SQLite-specific optimizations
-  config.sqlite.busy_timeout = 5000
-  config.sqlite.journal_mode = "WAL")
-        else
-          %(  # PostgreSQL-specific optimizations (default)
-  config.postgres.prepared_statements = true
-  config.postgres.search_path = ["public"])
-        end
-      end
 
       def database_adapter_uri_prefix : String
         case @database
