@@ -1,0 +1,29 @@
+module <%= @project.camelcase %>
+  struct <%= @resource.camelcase %>::CreateEndpoint
+    include Endpoint(CreateContract, Response)
+
+    post "<%= path :create %>"
+
+    def call : Response
+      raise bad_request unless create_contract.valid?
+      new_<%= @resource.downcase %>.save
+
+      redirect to: IndexEndpoint.path.to_s
+    end
+
+    def new_<%= @resource.downcase %>
+      <%= @resource.camelcase %>.new({
+        <%- fields.common_fields.each do |field| -%>
+        <%= field.field_name %>: create_contract.<%= field.field_name %>,
+        <%- end -%>
+        <%- fields.references.each do |field| -%>
+        <%= field.field_name %>: create_contract.<%= field.field_name %>,
+        <%- end -%>
+      })
+    end
+
+    def bad_request
+      error("Bad <%= @resource.capitalize%>", 400, create_contract.error_messages)
+    end
+  end
+end

@@ -1,0 +1,16 @@
+module <%= @project.camelcase %>
+  module Welcome
+    struct IndexEndpoint
+      include Endpoint(IndexContract, IndexPage)
+
+      get "/"
+
+      delegate author, to: index_contract
+      delegate email, to: index_contract
+
+      def call : IndexPage
+        IndexPage.new author, email
+      end
+    end
+  end
+end

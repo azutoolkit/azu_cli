@@ -1,0 +1,28 @@
+require "azu"
+require "./initializers/**"
+
+# Docs - https://azutopia.gitbook.io/azu/defining-your-app
+module <%= @project.camelcase %>
+  include Azu
+  VERSION = "0.1.0"
+
+  HANDLERS = [
+    Azu::Handler::Rescuer.new,
+    Azu::Handler::Logger.new,
+  ]
+
+  configure do |c|
+    # Uncomment to enable Spark real time apps
+    # Docs: https://azutopia.gitbook.io/azu/spark-1
+    # c.router.ws "/live-view", Spark
+
+    # Serve static files
+    c.router.get "/*", Handler::Static.new
+  end
+end
+
+# Require files after initializing project module
+require "./contracts/**"
+require "./pages/**"
+require "./models/**"
+require "./endpoints/**"

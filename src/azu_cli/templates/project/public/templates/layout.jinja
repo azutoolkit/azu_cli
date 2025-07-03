@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" class="h-100">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="">
+  <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
+  <meta name="generator" content="Hugo 0.104.2">
+  <title>Azu · Bootstrap v5.2</title>
+  <link rel="canonical" href="https://getbootstrap.com/docs/5.2/examples/cover/">
+  <link href="/assets/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+  <!-- Favicons -->
+  <meta name="theme-color" content="#712cf9">
+  {% block page_header %}{% endblock %}
+  <!-- Custom styles for this template -->
+  <link href="/assets/css/cover.css" rel="stylesheet">
+</head>
+
+<body class="d-flex h-100 text-bg-dark">
+  <div class="cover-container d-flex  h-100 p-3 mx-auto flex-column">
+    <header class="mb-auto">
+      <div>
+        <h3 class="float-md-start mb-0">My App</h3>
+        <nav class="nav nav-masthead justify-content#-center float-md-end">
+          <a class="nav-link fw-bold py-1 px-0 active" aria-current="page" href="/">Home</a>
+          {% include "helpers/_nav.jinja" %}
+          <a class="nav-link fw-bold py-1 px-0" href="https://azutopia.gitbook.io/azu">Documentation</a>
+          <a class="nav-link fw-bold py-1 px-0" href="https://github.com/azutoolkit">Github</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>{% block page_body %}{% endblock %}</main>
+
+    <footer class="mt-auto text-white-50">
+      <p>Azu template by <a href="https://getbootstrap.com/" class="text-white">Bootstrap</a></p>
+    </footer>
+  </div>
+</body>
+
+</html>

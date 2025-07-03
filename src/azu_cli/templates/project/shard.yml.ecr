@@ -1,0 +1,39 @@
+name: <%= @project.downcase %>
+version: 0.1.0
+authors:
+  - <%= @author %> <<%= @email %>>
+crystal: <%= Crystal::VERSION %>
+license: <%= @license %>
+
+targets:
+  <%= @project.downcase.gsub(/[^a-z0-9_]/, "_") %>:
+    main: src/<% if @project_type == "web" %>server.cr<% elsif @project_type == "api" %>api.cr<% elsif @project_type == "cli" %><%= @project %>.cr<% else %>server.cr<% end %>
+<% if @include_example -%>
+  tasks:
+    main: tasks/taskfile.cr
+<% end -%>
+
+dependencies:
+  azu:
+    github: azutoolkit/azu
+
+  cql:
+    github: azutoolkit/cql
+
+<% case @database -%>
+<% when "postgresql", "postgres", "pg" -%>
+  pg:
+    github: will/crystal-pg
+<% when "mysql" -%>
+  mysql:
+    github: crystal-lang/crystal-mysql
+<% when "sqlite", "sqlite3" -%>
+  sqlite3:
+    github: crystal-lang/crystal-sqlite3
+<% end -%>
+
+<% if @test_framework == "minitest" -%>
+development_dependencies:
+  minitest:
+    github: ysbaddaden/minitest.cr
+<% end -%>

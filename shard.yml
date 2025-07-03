@@ -2,7 +2,7 @@ name: azu_cli
 version: 0.0.1
 authors:
   - Elias J. Perez <eliasjpr@gmail.com>
-crystal: 1.0.0
+crystal: 1.16.3
 license: MIT
 targets:
   azu:

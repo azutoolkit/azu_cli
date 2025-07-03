@@ -1,0 +1,29 @@
+module <%= @project.camelcase %>
+  struct <%= @resource.camelcase %>::UpdateEndpoint
+    include Endpoint(UpdateContract, Response)
+
+    patch "<%= path :update %>"
+
+    def call : Response
+      raise bad_request unless update_contract.valid?
+      update_<%= @resource.downcase %>
+      redirect to: ShowEndpoint.path(id: update_contract.id)
+    end
+
+    def update_<%= @resource.downcase %>
+      <%= @resource.camelcase %>.where { _id == update_contract.id }
+        .update(
+          <%- fields.common_fields.each do |field| -%>
+          <%= field.field_name %>: update_contract.<%= field.field_name %>,
+          <%- end -%>
+          <%- fields.references.each do |field| -%>
+          <%= field.field_name %>: update_contract.<%= field.field_name %>,
+          <%- end -%>
+        )
+    end
+
+    def bad_request
+      error("Cannot Update <%= @resource.capitalize%>", 400, update_contract.error_messages)
+    end
+  end
+end

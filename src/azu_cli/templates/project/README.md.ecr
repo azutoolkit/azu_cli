@@ -1,0 +1,108 @@
+# <%= @module_name %>
+
+[![Azu Framework](https://img.shields.io/badge/using-azu_framework-blue.svg)](https://azutoolkit.org)
+
+<% if @project_type == "web" -%>
+This is a web application built using [Azu](https://azutoolkit.org), a fast, simple, and productive web framework for Crystal.
+<% elsif @project_type == "api" -%>
+This is an API service built using [Azu](https://azutoolkit.org), a fast, simple, and productive web framework for Crystal.
+<% elsif @project_type == "cli" -%>
+This is a CLI application built using [Azu](https://azutoolkit.org) and Crystal.
+<% else -%>
+This is a project built using [Azu](https://azutoolkit.org), a fast, simple, and productive web framework for Crystal.
+<% end -%>
+
+## Getting Started
+
+These instructions will get a copy of this project running on your machine for development and testing purposes.
+
+## Prerequisites
+
+This project requires [Crystal](https://crystal-lang.org/) ([installation guide](https://crystal-lang.org/docs/installation/)).
+
+## Development
+
+<% if @project_type == "cli" -%>
+To develop your CLI application:
+
+1. Install dependencies with `shards install`
+2. Build your application with `shards build`
+3. Run your CLI with `./bin/<%= @project.downcase.gsub(/[^a-z0-9_]/, "_") %> --help`
+
+## Usage
+
+```bash
+./bin/<%= @project.downcase.gsub(/[^a-z0-9_]/, "_") %> --help
+```
+<% else -%>
+To start your Azu server:
+
+1. Install dependencies with `shards install`
+2. Configure your database in `src/initializers/database.cr`
+3. Create and migrate your database with `azu db create migrate`
+4. Start the development server with `azu serve`
+
+Now you can visit http://localhost:3000/ from your browser.
+
+## Configuration
+
+- **Database**: Configure your database connection in `src/initializers/database.cr`
+- **Server**: Adjust server settings in `src/server.cr`
+- **Environment**: Use environment variables for configuration
+
+## Database
+
+This project uses [CQL](https://github.com/azutoolkit/cql) as the ORM. Database operations:
+
+```bash
+azu db create    # Create the database
+azu db migrate   # Run migrations
+azu db seed      # Seed with data
+azu db reset     # Reset database
+```
+<% end -%>
+
+## Tests
+
+To run the test suite:
+
+```bash
+<% if @test_framework == "spec" -%>
+crystal spec
+<% else -%>
+crystal run spec/test_helper.cr
+<% end -%>
+```
+
+<% if @docker_support -%>
+## Docker
+
+This project includes Docker support:
+
+```bash
+docker build -t <%= @project %> .
+docker run -p 3000:3000 <%= @project %>
+```
+<% end -%>
+
+## Contributing
+
+1. Fork it ( https://github.com/<%= @github_name %>/<%= @project %>/fork )
+2. Create your feature branch ( `git checkout -b my-new-feature` )
+3. Commit your changes ( `git commit -am 'Add some feature'` )
+4. Push to the branch ( `git push origin my-new-feature` )
+5. Create a new Pull Request
+
+## License
+
+This project is licensed under the <%= @license %> License - see the [LICENSE](LICENSE) file for details.
+
+## Contributors
+
+- [<%= @github_name %>](https://github.com/<%= @github_name %>) <%= @author %> - creator, maintainer
+
+## Links
+
+- [Azu Framework](https://azutoolkit.org)
+- [Crystal Language](https://crystal-lang.org)
+- [CQL ORM](https://github.com/azutoolkit/cql)

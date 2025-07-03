@@ -1,0 +1,7 @@
+require "jennifer"
+require "jennifer/adapter/<%= @database %>"
+
+Jennifer::Config.configure do |conf|
+  conf.from_uri(ENV["DATABASE_URL"])
+  conf.logger = Log.for("Jennifer")
+end

@@ -109,164 +109,56 @@ end
 
 ## File Organization
 
-### Directory Structure
+### AZU PROJECT Directory Structure
 ```
 ./src
-├── azu_cli
-│   ├── command.cr
-│   ├── commands
-│   │   ├── db.cr
-│   │   ├── dev.cr
-│   │   ├── generate.cr
-│   │   ├── help.cr
-│   │   ├── init.cr
-│   │   ├── new.cr
-│   │   ├── serve.cr
-│   │   ├── topia_adapter.cr
-│   │   └── version.cr
-│   ├── config.cr
-│   ├── generators
-│   │   ├── base.cr
-│   │   ├── contract.cr
-│   │   ├── endpoint.cr
-│   │   ├── middleware.cr
-│   │   ├── migration.cr
-│   │   ├── model.cr
-│   │   ├── page.cr
-│   │   ├── project.cr
-│   │   └── service.cr
-│   ├── logger.cr
-│   ├── templates
-│   │   ├── generators
-│   │   │   ├── contract
-│   │   │   │   ├── contract_spec.cr.ecr
-│   │   │   │   └── contract.cr.ecr
-│   │   │   ├── endpoint
-│   │   │   │   ├── create_contract.cr.ecr
-│   │   │   │   ├── create_endpoint.cr.ecr
-│   │   │   │   ├── create_page.cr.ecr
-│   │   │   │   ├── destroy_contract.cr.ecr
-│   │   │   │   ├── destroy_endpoint.cr.ecr
-│   │   │   │   ├── destroy_page.cr.ecr
-│   │   │   │   ├── edit_contract.cr.ecr
-│   │   │   │   ├── edit_endpoint.cr.ecr
-│   │   │   │   ├── edit_page.cr.ecr
-│   │   │   │   ├── endpoint_spec.cr.ecr
-│   │   │   │   ├── index_contract.cr.ecr
-│   │   │   │   ├── index_endpoint.cr.ecr
-│   │   │   │   ├── index_page.cr.ecr
-│   │   │   │   ├── new_contract.cr.ecr
-│   │   │   │   ├── new_endpoint.cr.ecr
-│   │   │   │   ├── new_page.cr.ecr
-│   │   │   │   ├── show_contract.cr.ecr
-│   │   │   │   ├── show_endpoint.cr.ecr
-│   │   │   │   ├── show_page.cr.ecr
-│   │   │   │   ├── update_contract.cr.ecr
-│   │   │   │   ├── update_endpoint.cr.ecr
-│   │   │   │   └── update_page.cr.ecr
-│   │   │   ├── middleware
-│   │   │   │   ├── middleware_spec.cr.ecr
-│   │   │   │   └── middleware.cr.ecr
-│   │   │   ├── model
-│   │   │   │   ├── model_spec.cr.ecr
-│   │   │   │   └── model.cr.ecr
-│   │   │   ├── page
-│   │   │   │   ├── page_spec.cr.ecr
-│   │   │   │   ├── page.cr.ecr
-│   │   │   │   └── page.jinja.ecr
-│   │   │   └── service
-│   │   │       ├── service_spec.cr.ecr
-│   │   │       └── service.cr.ecr
-│   │   ├── hot_reload_client.js
-│   │   ├── project
-│   │   │   ├── db
-│   │   │   ├── LICENSE
-│   │   │   ├── public
-│   │   │   │   ├── assets
-│   │   │   │   │   ├── css
-│   │   │   │   │   │   ├── bootstrap.css.map
-│   │   │   │   │   │   ├── bootstrap.min.css
-│   │   │   │   │   │   └── cover.css
-│   │   │   │   │   └── js
-│   │   │   │   │       ├── bootstrap.min.js
-│   │   │   │   │       └── bootstrap.min.js.map
-│   │   │   │   └── templates
-│   │   │   │       ├── helpers
-│   │   │   │       │   └── _nav.jinja
-│   │   │   │       ├── layout.jinja
-│   │   │   │       └── welcome
-│   │   │   │           └── index_page.jinja
-│   │   │   ├── README.md.ecr
-│   │   │   ├── shard.yml.ecr
-│   │   │   ├── spec
-│   │   │   │   ├── {{project}}_spec.cr.ecr
-│   │   │   │   └── spec_helper.cr.ecr
-│   │   │   ├── src
-│   │   │   │   ├── {{project}}.cr.ecr
-│   │   │   │   ├── contracts
-│   │   │   │   │   └── welcome
-│   │   │   │   │       └── index_contract.cr.ecr
-│   │   │   │   ├── db
-│   │   │   │   │   ├── migrations
-│   │   │   │   │   ├── README.md.ecr
-│   │   │   │   │   ├── schema.cr.ecr
-│   │   │   │   │   └── seed.cr.ecr
-│   │   │   │   ├── endpoints
-│   │   │   │   │   └── welcome
-│   │   │   │   │       └── index_endpoint.cr.ecr
-│   │   │   │   ├── initializers
-│   │   │   │   │   ├── database.cr.ecr
-│   │   │   │   │   └── logger.cr.ecr
-│   │   │   │   ├── models
-│   │   │   │   │   └── your_models_goes_here.txt
-│   │   │   │   ├── pages
-│   │   │   │   │   └── welcome
-│   │   │   │   │       └── index_page.cr.ecr
-│   │   │   │   └── server.cr.ecr
-│   │   │   └── tasks
-│   │   │       └── taskfile.cr.ecr
-│   │   └── scaffold
-│   │       ├── public
-│   │       │   └── templates
-│   │       │       ├── helpers
-│   │       │       │   └── +_nav.jinja.ecr
-│   │       │       └── pages
-│   │       │           └── {{resource}}
-│   │       │               ├── edit_page.jinja.ecr
-│   │       │               ├── index_page.jinja.ecr
-│   │       │               ├── new_page.jinja.ecr
-│   │       │               └── show_page.jinja.ecr
-│   │       └── src
-│   │           ├── contracts
-│   │           │   └── {{resource}}
-│   │           │       ├── create_contract.cr.ecr
-│   │           │       ├── destroy_contract.cr.ecr
-│   │           │       ├── edit_contract.cr.ecr
-│   │           │       ├── index_contract.cr.ecr
-│   │           │       ├── new_contract.cr.ecr
-│   │           │       ├── show_contract.cr.ecr
-│   │           │       └── update_contract.cr.ecr
-│   │           ├── endpoints
-│   │           │   └── {{resource}}
-│   │           │       ├── create_endpoint.cr.ecr
-│   │           │       ├── destroy_endpoint.cr.ecr
-│   │           │       ├── edit_endpoint.cr.ecr
-│   │           │       ├── index_endpoint.cr.ecr
-│   │           │       ├── new_endpoint.cr.ecr
-│   │           │       ├── show_endpoint.cr.ecr
-│   │           │       └── update_endpoint.cr.ecr
-│   │           ├── models
-│   │           │   └── your_models_goes_here.txt
-│   │           └── pages
-│   │               └── {{resource}}
-│   │                   ├── edit_page.cr.ecr
-│   │                   ├── index_page.cr.ecr
-│   │                   ├── new_page.cr.ecr
-│   │                   └── show_page.cr.ecr
-│   └── utils.cr
-└── azu_cli.cr
-
-48 directories, 106 files
+├── project
+│   ├── db
+│   ├── LICENSE
+│   ├── public
+├── assets
+│   ├── css
+├── bootstrap.css.map
+├── bootstrap.min.css
+└── cover.css
+│   └── js
+│       ├── bootstrap.min.js
+│       └── bootstrap.min.js.map
+└── templates
+│   ├── helpers
+│   │   └── _nav.jinja
+│   ├── layout.jinja
+│   └── welcome
+│       └── index_page.jinja
+│   ├── README.md.ecr
+│   ├── shard.yml.ecr
+│   ├── spec
+├── {{project}}_spec.cr.ecr
+└── spec_helper.cr.ecr
+│   ├── src
+├── {{project}}.cr.ecr
+├── contracts
+│   └── welcome
+│       └── index_contract.cr.ecr
+├── db
+│   ├── migrations
+│   ├── README.md.ecr
+│   ├── schema.cr.ecr
+│   └── seed.cr.ecr
+├── endpoints
+│   └── welcome
+│       └── index_endpoint.cr.ecr
+├── initializers
+│   ├── database.cr.ecr
+│   └── logger.cr.ecr
+├── models
+│   └── your_models_goes_here.txt
+├── pages
+│   └── welcome
+│       └── index_page.cr.ecr
+└── server.cr.ecr
+│   └── tasks
+│       └── taskfile.cr.ecr
 ```
 
 ### File Naming
