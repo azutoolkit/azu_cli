@@ -1,18 +1,18 @@
-# src/requests/<%= @request_name %>.cr
+# src/requests/<%= request_name %>.cr
 struct <%= request_name_camelcase %>
   include Azu::Request
 
-<% properties.each do |prop| %>
+<%- properties.each do |prop| -%>
   getter <%= prop[:name] %> : <%= prop[:type] %>
-<% end %>
+<%- end -%>
 
   def initialize(<%= properties.map { |prop| "@#{prop[:name]} = #{prop[:default]}" }.join(", ") %>)
   end
 
   # Built-in validation rules
-<% properties.each do |prop| %>
-<% prop[:validations].each do |validation| %>
+<%- properties.each do |prop| -%>
+<%- prop[:validations].each do |validation| -%>
   validate :<%= prop[:name] %>, <%= validation %>
-<% end %>
-<% end %>
+<%- end -%>
+<%- end -%>
 end

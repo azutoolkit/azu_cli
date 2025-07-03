@@ -1,0 +1,20 @@
+# src/validators/<%= validator_name %>.cr
+class <%= validator_name_camelcase %> < Azu::Validator
+  getter :record, :message
+
+  def initialize(@record : <%= model_name_camelcase %>)
+    @message = " <%= model_name_camelcase %> must be valid!"
+  end
+
+  def valid? : Array(Schema::Error)
+    errors = [] of Schema::Error
+
+    # Todo Custom Validator logic
+    # Example:
+    # if @record.some_field.blank?
+    #   errors << Schema::Error.new(:some_field, "cannot be blank")
+    # end
+
+    errors
+  end
+end

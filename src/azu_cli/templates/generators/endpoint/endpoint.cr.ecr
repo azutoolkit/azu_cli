@@ -1,0 +1,43 @@
+# src/endpoints/<%= resource_name %>/<%= action %>_endpoint.cr
+struct <%= endpoint_class_name %>
+  include Azu::Endpoint(<%= request_class_name %>, <%= response_class_name %>)
+
+  <%= http_method %> "<%= api_path %>"
+
+  def call : <%= response_class_name %>
+<%- if action == "index" -%>
+    <%= resource_name_pluralized %> = <%= service_class_name %>.<%= service_method_name %>(request)
+    <%= response_class_name %>.new(<%= resource_name_pluralized %>)
+<%- elsif action == "show" -%>
+    <%= resource_name %> = <%= service_class_name %>.<%= service_method_name %>(request.path_params["id"])
+    <%= response_class_name %>.new(<%= resource_name %>)
+<%- elsif action == "new" -%>
+    # Return form data or empty <%= resource_name %> for new resource creation
+    <%= response_class_name %>.new
+<%- elsif action == "create" -%>
+    <%= resource_name %> = <%= service_class_name %>.<%= service_method_name %>(request)
+    <%= response_class_name %>.new(<%= resource_name %>)
+<%- elsif action == "edit" -%>
+    <%= resource_name %> = <%= service_class_name %>.find_<%= resource_name %>(request.path_params["id"])
+    <%= response_class_name %>.new(<%= resource_name %>)
+<%- elsif action == "update" -%>
+    <%= resource_name %> = <%= service_class_name %>.<%= service_method_name %>(request.path_params["id"], request)
+    <%= response_class_name %>.new(<%= resource_name %>)
+<%- elsif action == "destroy" -%>
+    <%= service_class_name %>.<%= service_method_name %>(request.path_params["id"])
+    <%= response_class_name %>.new
+<%- else -%>
+    # Custom action: <%= action %>
+    result = <%= service_class_name %>.<%= service_method_name %>(request<%- if needs_id_param? -%>, request.path_params["id"]<%- end -%>)
+    <%= response_class_name %>.new(result)
+<%- end -%>
+<%- if needs_error_handling? -%>
+  rescue ex : Azu::Response::ValidationError
+    raise ex
+  rescue ex : Azu::Response::NotFoundError
+    raise ex
+  rescue ex
+    raise Azu::Response::InternalServerError.new("Failed to <%= action %> <%= resource_name %>: #{ex.message}")
+<%- end -%>
+  end
+end
