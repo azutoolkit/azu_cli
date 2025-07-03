@@ -454,3 +454,538 @@ The generator system is designed to accelerate your development while maintainin
 - [Endpoint Generator](endpoint.md) - Generate HTTP request handlers
 - [Model Generator](model.md) - Create database models
 - [Development Workflows](../workflows/README.md) - Use generators in real projects
+
+# README Generator
+
+The README Generator creates comprehensive, well-structured README.md files following modern documentation best practices for Crystal projects.
+
+## Overview
+
+The README generator produces professional README.md files that include:
+
+- **Project metadata**: title, description, badges, license information
+- **Installation instructions**: both shards and manual installation
+- **Usage examples**: tailored to project type (library, CLI, web, service)
+- **Development setup**: prerequisites, setup steps, testing, building
+- **Contribution guidelines**: standards, workflow, issue reporting
+- **Comprehensive sections**: API docs, changelog, roadmap, support
+
+## Usage
+
+### Basic Usage
+
+Generate a basic README.md file:
+
+```bash
+azu generate readme my_project
+```
+
+This creates a README.md file in the current directory with:
+
+- Project title: "My Project" (formatted)
+- Default description: "A Crystal project"
+- Standard sections for a library project
+- MIT license and basic author info
+- Default features and badges
+
+### Advanced Usage
+
+Generate with custom configuration:
+
+```bash
+azu generate readme my_awesome_cli \
+  --description "A powerful CLI tool for developers" \
+  --github-user "johndoe" \
+  --project-type "cli" \
+  --license "Apache-2.0" \
+  --database "postgresql" \
+  --crystal-version ">= 1.15.0" \
+  --output-dir "."
+```
+
+### Project Type Specific Generation
+
+Generate README tailored to specific project types:
+
+```bash
+# For CLI tools
+azu generate readme my_tool --project-type cli
+
+# For web applications
+azu generate readme my_webapp --project-type web
+
+# For libraries (default)
+azu generate readme my_lib --project-type library
+
+# For services/APIs
+azu generate readme my_api --project-type service
+```
+
+### Programmatic Usage
+
+```crystal
+require "azu_cli/generators/readme_generator"
+
+# Basic usage
+generator = AzuCLI::Generators::ReadmeGenerator.new("my_project")
+generator.generate!
+
+# Advanced configuration
+generator = AzuCLI::Generators::ReadmeGenerator.new(
+  "my_awesome_project",
+  output_dir: "/path/to/project",
+  description: "An amazing Crystal project that does awesome things",
+  github_user: "developer",
+  license: "MIT",
+  crystal_version: ">= 1.16.0",
+  authors: ["Developer <dev@example.com>"],
+  features: [
+    "🚀 Lightning fast performance",
+    "📦 Easy installation and setup",
+    "🔧 Comprehensive test coverage",
+    "💎 Built with Crystal",
+    "🛡️ Type-safe and reliable"
+  ],
+  project_type: "web",
+  database: "postgresql",
+  has_badges: true,
+  has_api_docs: true,
+  has_roadmap: true,
+  roadmap_items: [
+    "Add GraphQL support",
+    "Implement real-time features",
+    "Performance optimizations"
+  ],
+  has_acknowledgments: true,
+  acknowledgments: [
+    "Crystal programming language community",
+    "Contributors and maintainers"
+  ]
+)
+
+output_path = generator.generate!
+```
+
+## Generated Output
+
+### Example README.md
+
+Generated for a web application with PostgreSQL:
+
+````markdown
+# My Awesome Project
+
+An amazing Crystal project that does awesome things
+
+## Badges
+
+[![Crystal CI](https://github.com/developer/my-awesome-project/actions/workflows/ci.yml/badge.svg)](https://github.com/developer/my-awesome-project/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/release/developer/my-awesome-project.svg)](https://github.com/developer/my-awesome-project/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/developer/my-awesome-project/blob/master/LICENSE)
+
+## Features
+
+- 🚀 Lightning fast performance
+- 📦 Easy installation and setup
+- 🔧 Comprehensive test coverage
+- 💎 Built with Crystal
+- 🛡️ Type-safe and reliable
+
+## Installation
+
+### Using Shards
+
+Add this to your application's `shard.yml`:
+
+```yaml
+dependencies:
+  my_awesome_project:
+    github: developer/my-awesome-project
+```
+````
+
+### Web Application
+
+1. Start the server:
+
+   ```bash
+   crystal run src/my_awesome_project.cr
+   ```
+
+2. Open your browser and visit:
+   ```
+   http://localhost:3000
+   ```
+
+### Configuration
+
+Create a `.env` file in the project root:
+
+```bash
+# Database configuration
+DATABASE_URL=postgres://user:password@localhost:5432/database_name
+
+# Server configuration
+PORT=3000
+HOST=localhost
+
+# Environment
+ENVIRONMENT=development
+```
+
+## Development
+
+### Prerequisites
+
+- Crystal >= 1.16.0
+- PostgreSQL database
+
+### Setup
+
+1. Fork it (<https://github.com/developer/my-awesome-project/fork>)
+2. Clone your fork...
+3. Install dependencies...
+4. Set up the database...
+
+## Contributing
+
+1. Fork it
+2. Create your feature branch
+3. Make your changes and add tests
+4. Ensure all tests pass
+5. Format your code
+6. Run the linter
+7. Commit your changes
+8. Push to the branch
+9. Create a new Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+````
+
+## Configuration Options
+
+### Project Metadata
+
+| Option          | Type          | Default                          | Description                                  |
+| --------------- | ------------- | -------------------------------- | -------------------------------------------- |
+| `project_name`  | String        | Required                         | Project name (formatted automatically)      |
+| `description`   | String        | `"A Crystal project"`            | Project description                          |
+| `github_user`   | String        | `"your-github-user"`             | GitHub username/organization                 |
+| `license`       | String        | `"MIT"`                          | License identifier                           |
+| `authors`       | Array(String) | `["Your Name <your@email.com>"]` | Author information                           |
+
+### Project Configuration
+
+| Option             | Type   | Default        | Description                                                           |
+| ------------------ | ------ | -------------- | --------------------------------------------------------------------- |
+| `project_type`     | String | `"library"`    | Project type (`library`, `cli`, `web`, `service`)                    |
+| `crystal_version`  | String | `">= 1.16.0"`  | Minimum Crystal version requirement                                   |
+| `database`         | String | `"none"`       | Database type (`postgresql`, `mysql`, `sqlite`, `none`)              |
+
+### Features and Content
+
+| Option            | Type          | Default         | Description                      |
+| ----------------- | ------------- | --------------- | -------------------------------- |
+| `features`        | Array(String) | Default set     | List of project features         |
+| `has_badges`      | Bool          | `true`          | Include GitHub badges            |
+| `has_api_docs`    | Bool          | `true`          | Include API documentation section |
+| `has_roadmap`     | Bool          | `false`         | Include roadmap section          |
+| `roadmap_items`   | Array(String) | `[]`            | Roadmap items list               |
+
+## Project Types
+
+The generator tailors content based on project type:
+
+### Library Projects (`library`)
+- Installation via shards
+- Basic and advanced usage examples
+- API documentation links
+- Library-specific development setup
+
+### CLI Tools (`cli`)
+- Command-line usage examples
+- Available commands section
+- Installation instructions
+- CLI-specific help and options
+
+### Web Applications (`web`)
+- Server setup and configuration
+- Database setup instructions
+- Environment configuration
+- Development server commands
+
+### Services/APIs (`service`)
+- API endpoint documentation
+- Service configuration
+- Deployment considerations
+- Monitoring and health checks
+
+## Naming Conventions
+
+The generator automatically formats project names:
+
+### Project Name Formatting
+
+- Input: `my_awesome_project` → Title: "My Awesome Project"
+- Input: `MyAwesomeProject` → Title: "My Awesome Project"
+- Input: `my-awesome-project` → Title: "My Awesome Project"
+- Input: `myproject` → Title: "Myproject"
+
+### File and URL Generation
+
+```yaml
+Project: "my_awesome_project"
+├── README title: "My Awesome Project"
+├── GitHub repo: "my-awesome-project" (kebab-case)
+├── Shard name: "my_awesome_project" (snake_case)
+└── Class name: "MyAwesomeProject" (PascalCase)
+````
+
+## Database Integration
+
+When database support is specified, the README includes:
+
+### PostgreSQL
+
+- Database setup instructions
+- Connection configuration
+- Migration commands
+- Prerequisites section mentions PostgreSQL
+
+### MySQL
+
+- MySQL-specific setup
+- Connection string examples
+- Database creation steps
+
+### SQLite
+
+- File-based database info
+- Simplified setup process
+- Local development focus
+
+### None
+
+- Omits database-related sections
+- Focuses on application logic
+- Simplified prerequisites
+
+## Advanced Features
+
+### Badges and Shields
+
+Automatically includes relevant badges:
+
+- **CI/CD Status**: GitHub Actions workflow status
+- **Release Version**: Latest GitHub release version
+- **License**: License type with appropriate color
+- **Custom badges**: Can be extended for specific needs
+
+### Author Attribution
+
+Generates GitHub links for authors:
+
+- Extracts names from email format: `"John Doe <john@example.com>"`
+- Creates GitHub profile links: `https://github.com/john-doe`
+- Assigns roles: first author is "creator and maintainer", others are "contributors"
+
+### Roadmap Integration
+
+When enabled, includes:
+
+- Checkbox-style roadmap items
+- Future feature planning
+- Development priorities
+- Community engagement
+
+### Support Information
+
+Customizable support section:
+
+- Default: generic contribution encouragement
+- Custom: specific support channels, contact info
+- Community resources and links
+
+## Validation
+
+The generator validates:
+
+- **Project names**: Must be valid Crystal identifiers
+- **GitHub usernames**: Must follow GitHub username format
+- **Required fields**: Description, license, crystal version cannot be empty
+- **Author format**: Authors array cannot be empty
+- **Features**: Feature descriptions cannot be empty
+
+## Integration with Azu CLI
+
+The README generator integrates with the main `azu generate` command:
+
+```bash
+# List available generators
+azu generate --help
+
+# Generate README
+azu generate readme my_project
+
+# Generate with specific options
+azu generate readme my_project \
+  --description "My project description" \
+  --project-type web \
+  --github-user myusername
+```
+
+## Best Practices
+
+### Content Guidelines
+
+- Write clear, concise descriptions
+- Include comprehensive installation instructions
+- Provide working code examples
+- Document all configuration options
+- Keep README updated with project changes
+
+### Project Type Selection
+
+- **Library**: Choose for reusable packages and modules
+- **CLI**: Choose for command-line tools and utilities
+- **Web**: Choose for web applications and websites
+- **Service**: Choose for APIs and microservices
+
+### GitHub Integration
+
+- Use your actual GitHub username
+- Ensure repository names match project names
+- Set up CI/CD workflows referenced in badges
+- Create LICENSE file to match specified license
+
+### Feature Description
+
+- Use emoji for visual appeal and scanning
+- Focus on user benefits, not technical details
+- Keep descriptions short and impactful
+- Highlight unique selling points
+
+### Database Documentation
+
+- Document all required environment variables
+- Provide working connection examples
+- Include database schema information
+- Document migration and seeding processes
+
+## Troubleshooting
+
+### Common Issues
+
+**Invalid GitHub username error:**
+
+```
+Error: Invalid GitHub username format: -invalid-
+```
+
+_Solution_: Use valid GitHub username format (alphanumeric, hyphens allowed, cannot start/end with hyphen)
+
+**Empty description error:**
+
+```
+Error: Description cannot be empty
+```
+
+_Solution_: Provide a meaningful project description
+
+**Unsupported project type:**
+
+```
+Error: Unsupported project type: invalid
+```
+
+_Solution_: Use one of the supported types: `library`, `cli`, `web`, `service`
+
+### Debugging
+
+Check generated content:
+
+```bash
+cat README.md
+```
+
+Validate Markdown syntax:
+
+```bash
+# Use a Markdown linter
+markdownlint README.md
+```
+
+Preview rendered output:
+
+```bash
+# Use a Markdown viewer or GitHub preview
+```
+
+## Examples
+
+### Minimal Library
+
+```crystal
+generator = AzuCLI::Generators::ReadmeGenerator.new(
+  "crypto_utils",
+  description: "Cryptographic utilities for Crystal",
+  github_user: "cryptodev"
+)
+generator.generate!
+```
+
+### Full-Featured Web App
+
+```crystal
+generator = AzuCLI::Generators::ReadmeGenerator.new(
+  "social_platform",
+  description: "A modern social media platform built with Crystal",
+  github_user: "socialdev",
+  project_type: "web",
+  database: "postgresql",
+  features: [
+    "🔐 Secure authentication and authorization",
+    "📱 Real-time messaging and notifications",
+    "🎨 Modern, responsive UI design",
+    "⚡ High-performance backend",
+    "🛡️ Privacy-focused architecture"
+  ],
+  has_roadmap: true,
+  roadmap_items: [
+    "Mobile application development",
+    "Advanced analytics dashboard",
+    "Integration with external services",
+    "Performance monitoring and optimization"
+  ]
+)
+generator.generate!
+```
+
+### CLI Tool
+
+```crystal
+generator = AzuCLI::Generators::ReadmeGenerator.new(
+  "file_organizer",
+  description: "Intelligent file organization tool",
+  github_user: "devtools",
+  project_type: "cli",
+  features: [
+    "🗂️ Smart file categorization",
+    "⚡ Lightning-fast processing",
+    "🎯 Customizable organization rules",
+    "📊 Detailed operation reports"
+  ]
+)
+generator.generate!
+```
+
+## Related Documentation
+
+- [Crystal Language Documentation](https://crystal-lang.org/reference/)
+- [Azu Framework Documentation](https://github.com/azutoolkit/azu)
+- [Generator Architecture](../architecture/generator-system.md)
+- [CLI Commands Reference](../commands/generate.md)
+- [Markdown Guide](https://guides.github.com/features/mastering-markdown/)

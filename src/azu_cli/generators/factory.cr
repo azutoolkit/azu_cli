@@ -6,6 +6,8 @@ require "./response_generator"
 require "./server_generator"
 require "./validator_generator"
 require "./endpoint_generator"
+require "./shard_generator"
+require "./readme_generator"
 
 module AzuCLI
   module Generators
@@ -24,6 +26,8 @@ module AzuCLI
         "server"    => ServerGenerator,
         "validator" => ValidatorGenerator,
         "endpoint"  => EndpointGenerator,
+        "shard"     => ShardGenerator,
+        "readme"    => ReadmeGenerator,
       }
 
       # Create a generator instance based on type and configuration
@@ -46,6 +50,10 @@ module AzuCLI
           create_validator_generator(name, **options)
         when "endpoint"
           create_endpoint_generator(name, **options)
+        when "shard"
+          create_shard_generator(name, **options)
+        when "readme"
+          create_readme_generator(name, **options)
         else
           raise GeneratorError.new("Unsupported generator type: #{type}")
         end
@@ -146,6 +154,50 @@ module AzuCLI
 
         EndpointGenerator.new(name, action, request_class, response_class, service_class, namespace, output_dir, generate_specs)
       end
+
+      private def self.create_shard_generator(name : String, **options) : ShardGenerator
+        validate_common_options(**options)
+
+        output_dir = options[:output_dir]?.try(&.to_s) || "."
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || false # shard.yml doesn't need specs
+        version = options[:version]?.try(&.to_s) || "0.1.0"
+        crystal_version = options[:crystal_version]?.try(&.to_s) || ">= 1.16.0"
+        license = options[:license]?.try(&.to_s) || "MIT"
+        authors = options[:authors]?.try(&.as(Array(String))) || ["Your Name <your@email.com>"]
+        dependencies = options[:dependencies]?.try(&.as(Hash(String, String))) || Hash(String, String).new
+        dev_dependencies = options[:dev_dependencies]?.try(&.as(Hash(String, String))) || Hash(String, String).new
+        database = options[:database]?.try(&.to_s) || "postgresql"
+
+        ShardGenerator.new(name, output_dir, generate_specs, version, crystal_version, license, authors, dependencies, dev_dependencies, database)
+      end
+
+      private def self.create_readme_generator(name : String, **options) : ReadmeGenerator
+        validate_common_options(**options)
+
+        output_dir = options[:output_dir]?.try(&.to_s) || "."
+        generate_specs = options[:generate_specs]?.try(&.as(Bool)) || false # README doesn't need specs
+        description = options[:description]?.try(&.to_s) || "A Crystal project"
+        github_user = options[:github_user]?.try(&.to_s) || "your-github-user"
+        license = options[:license]?.try(&.to_s) || "MIT"
+        crystal_version = options[:crystal_version]?.try(&.to_s) || ">= 1.16.0"
+        authors = options[:authors]?.try(&.as(Array(String))) || ["Your Name <your@email.com>"]
+        features = options[:features]?.try(&.as(Array(String))) || [] of String
+        project_type = options[:project_type]?.try(&.to_s) || "library"
+        database = options[:database]?.try(&.to_s) || "none"
+        has_badges = options[:has_badges]?.try(&.as(Bool)) || true
+        has_api_docs = options[:has_api_docs]?.try(&.as(Bool)) || true
+        has_roadmap = options[:has_roadmap]?.try(&.as(Bool)) || false
+        roadmap_items = options[:roadmap_items]?.try(&.as(Array(String))) || [] of String
+        has_acknowledgments = options[:has_acknowledgments]?.try(&.as(Bool)) || false
+        acknowledgments = options[:acknowledgments]?.try(&.as(Array(String))) || [] of String
+        has_support_info = options[:has_support_info]?.try(&.as(Bool)) || false
+        support_info = options[:support_info]?.try(&.to_s) || ""
+
+        ReadmeGenerator.new(name, output_dir, generate_specs, description, github_user, license,
+                           crystal_version, authors, features, project_type, database, has_badges,
+                           has_api_docs, has_roadmap, roadmap_items, has_acknowledgments,
+                           acknowledgments, has_support_info, support_info)
+      end
     end
 
     # Builder pattern for complex generator configurations
@@ -234,6 +286,51 @@ module AzuCLI
         self
       end
 
+      def database(db_type : String)
+        @options[:database] = db_type
+        self
+      end
+
+      def description(desc : String)
+        @options[:description] = desc
+        self
+      end
+
+      def github_user(user : String)
+        @options[:github_user] = user
+        self
+      end
+
+      def project_type(type : String)
+        @options[:project_type] = type
+        self
+      end
+
+      def features(feature_list : Array(String))
+        @options[:features] = feature_list
+        self
+      end
+
+      def has_badges(enable : Bool)
+        @options[:has_badges] = enable
+        self
+      end
+
+      def has_api_docs(enable : Bool)
+        @options[:has_api_docs] = enable
+        self
+      end
+
+      def has_roadmap(enable : Bool)
+        @options[:has_roadmap] = enable
+        self
+      end
+
+      def roadmap_items(items : Array(String))
+        @options[:roadmap_items] = items
+        self
+      end
+
       def build : Base
         # Convert options to individual arguments instead of using double splat
         case @type
@@ -278,6 +375,20 @@ module AzuCLI
           output_dir = @options[:output_dir]?.try(&.as(String)) || "src"
           generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || true
           Factory.create(@type, @name, action: action, request_class: request_class, response_class: response_class, service_class: service_class, namespace: namespace, output_dir: output_dir, generate_specs: generate_specs)
+        when "shard"
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "."
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || false
+          database = @options[:database]?.try(&.as(String)) || "postgresql"
+          Factory.create(@type, @name, output_dir: output_dir, generate_specs: generate_specs, database: database)
+        when "readme"
+          output_dir = @options[:output_dir]?.try(&.as(String)) || "."
+          generate_specs = @options[:generate_specs]?.try(&.as(Bool)) || false
+          description = @options[:description]?.try(&.as(String)) || "A Crystal project"
+          github_user = @options[:github_user]?.try(&.as(String)) || "your-github-user"
+          project_type = @options[:project_type]?.try(&.as(String)) || "library"
+          database = @options[:database]?.try(&.as(String)) || "none"
+          Factory.create(@type, @name, output_dir: output_dir, generate_specs: generate_specs,
+                        description: description, github_user: github_user, project_type: project_type, database: database)
         else
           raise Factory::GeneratorError.new("Unsupported generator type: #{@type}")
         end

@@ -1,0 +1,300 @@
+# <%= project_name_title %>
+
+<%= description %>
+
+<% if has_badges? -%>
+## Badges
+
+[![Crystal CI](https://github.com/<%= github_user %>/<%= project_name_kebabcase %>/actions/workflows/ci.yml/badge.svg)](https://github.com/<%= github_user %>/<%= project_name_kebabcase %>/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/release/<%= github_user %>/<%= project_name_kebabcase %>.svg)](https://github.com/<%= github_user %>/<%= project_name_kebabcase %>/releases)
+[![License: <%= license %>](https://img.shields.io/badge/License-<%= license %>-blue.svg)](https://github.com/<%= github_user %>/<%= project_name_kebabcase %>/blob/master/LICENSE)
+
+<% end -%>
+## Features
+
+<% features.each do |feature| -%>
+- <%= feature %>
+<% end -%>
+
+## Installation
+
+### Using Shards
+
+Add this to your application's `shard.yml`:
+
+```yaml
+dependencies:
+  <%= project_name_snakecase %>:
+    github: <%= github_user %>/<%= project_name_kebabcase %>
+```
+
+Then run:
+
+```bash
+shards install
+```
+
+### Manual Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/<%= github_user %>/<%= project_name_kebabcase %>.git
+   cd <%= project_name_kebabcase %>
+   ```
+
+2. Install dependencies:
+   ```bash
+   shards install
+   ```
+
+3. Build the project:
+   ```bash
+   crystal build src/<%= project_name_snakecase %>.cr
+   ```
+
+## Usage
+
+<% if project_type == "library" -%>
+### Basic Usage
+
+```crystal
+require "<%= project_name_snakecase %>"
+
+# Example usage
+<%= project_name_camelcase %>.new
+```
+
+### Advanced Usage
+
+```crystal
+require "<%= project_name_snakecase %>"
+
+# Advanced example
+# TODO: Add more detailed examples
+```
+<% elsif project_type == "cli" -%>
+### Command Line Usage
+
+```bash
+# Basic usage
+<%= project_name_kebabcase %> [options] [arguments]
+
+# Get help
+<%= project_name_kebabcase %> --help
+
+# Examples
+<%= project_name_kebabcase %> --version
+```
+
+### Available Commands
+
+```bash
+# List all available commands
+<%= project_name_kebabcase %> help
+```
+<% elsif project_type == "web" -%>
+### Web Application
+
+1. Start the server:
+   ```bash
+   crystal run src/<%= project_name_snakecase %>.cr
+   ```
+
+2. Open your browser and visit:
+   ```
+   http://localhost:3000
+   ```
+
+### Configuration
+
+Create a `.env` file in the project root:
+
+```bash
+# Database configuration
+DATABASE_URL=postgres://user:password@localhost:5432/database_name
+
+# Server configuration
+PORT=3000
+HOST=localhost
+
+# Environment
+ENVIRONMENT=development
+```
+<% else -%>
+### Getting Started
+
+```crystal
+require "<%= project_name_snakecase %>"
+
+# TODO: Add usage examples
+```
+<% end -%>
+
+## API Documentation
+
+<% if has_api_docs? -%>
+Full API documentation is available at: [https://<%= github_user %>.github.io/<%= project_name_kebabcase %>](https://<%= github_user %>.github.io/<%= project_name_kebabcase %>)
+
+You can also generate the documentation locally:
+
+```bash
+crystal docs
+```
+
+<% end -%>
+## Development
+
+### Prerequisites
+
+- Crystal <%= crystal_version %>
+<% if database != "none" -%>
+- <%= database_display_name %> database
+<% end -%>
+
+### Setup
+
+1. Fork it (<https://github.com/<%= github_user %>/<%= project_name_kebabcase %>/fork>)
+2. Clone your fork:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/<%= project_name_kebabcase %>.git
+   cd <%= project_name_kebabcase %>
+   ```
+
+3. Install dependencies:
+   ```bash
+   shards install
+   ```
+
+<% if database != "none" -%>
+4. Set up the database:
+   ```bash
+   # Create and migrate database
+   crystal run tasks/db_setup.cr
+   ```
+
+<% end -%>
+### Running Tests
+
+```bash
+# Run all tests
+crystal spec
+
+# Run specific test file
+crystal spec spec/specific_test_spec.cr
+
+# Run tests with verbose output
+crystal spec --verbose
+```
+
+### Code Quality
+
+This project uses several tools to maintain code quality:
+
+```bash
+# Format code
+crystal tool format
+
+# Lint code
+bin/ameba
+
+# Check for potential issues
+crystal tool unreachable
+```
+
+### Building
+
+```bash
+# Build for development
+crystal build src/<%= project_name_snakecase %>.cr
+
+# Build optimized release
+crystal build --release src/<%= project_name_snakecase %>.cr
+```
+
+<% if project_type == "web" -%>
+### Development Server
+
+```bash
+# Start development server with auto-reload
+azu serve
+```
+
+<% end -%>
+## Contributing
+
+1. Fork it (<https://github.com/<%= github_user %>/<%= project_name_kebabcase %>/fork>)
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Make your changes and add tests
+4. Ensure all tests pass (`crystal spec`)
+5. Format your code (`crystal tool format`)
+6. Run the linter (`bin/ameba`)
+7. Commit your changes (`git commit -am 'Add some feature'`)
+8. Push to the branch (`git push origin my-new-feature`)
+9. Create a new Pull Request
+
+### Coding Standards
+
+- Follow Crystal's official style guide
+- Write meaningful commit messages
+- Add tests for new functionality
+- Update documentation as needed
+- Ensure backward compatibility when possible
+
+### Reporting Issues
+
+Please use the [GitHub issue tracker](https://github.com/<%= github_user %>/<%= project_name_kebabcase %>/issues) to report bugs or request features.
+
+When reporting bugs, please include:
+
+- Crystal version
+- Operating system
+- Steps to reproduce the issue
+- Expected vs actual behavior
+- Any relevant error messages
+
+## Changelog
+
+All notable changes to this project are documented in [CHANGELOG.md](CHANGELOG.md).
+
+<% if has_roadmap? -%>
+## Roadmap
+
+<% roadmap_items.each do |item| -%>
+- [ ] <%= item %>
+<% end -%>
+
+<% end -%>
+## License
+
+This project is licensed under the <%= license %> License - see the [LICENSE](LICENSE) file for details.
+
+## Contributors
+
+<% authors.each do |author| -%>
+- [<%= author.split('<').first.strip %>](<%= author_github_url(author) %>) - <%= author_role(author) %>
+<% end -%>
+
+## Acknowledgments
+
+<% if has_acknowledgments? -%>
+<% acknowledgments.each do |ack| -%>
+- <%= ack %>
+<% end -%>
+<% else -%>
+- Crystal programming language community
+- All contributors who helped improve this project
+<% end -%>
+
+## Support
+
+<% if has_support_info? -%>
+<%= support_info %>
+<% else -%>
+If you find this project useful, please consider:
+
+- ⭐ Starring the repository
+- 🐛 Reporting bugs
+- 💡 Suggesting new features
+- 🔧 Contributing code
+- 📖 Improving documentation
+<% end -%>
