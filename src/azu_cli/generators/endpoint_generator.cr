@@ -271,10 +271,6 @@ module AzuCLI
         @resource_name_pluralized
       end
 
-      def needs_error_handling?
-        @configuration.needs_error_handling?
-      end
-
       def needs_id_param?
         @configuration.needs_id_param?
       end

@@ -62,11 +62,6 @@ module AzuCLI::Generators
         content.should contain("user = UserService.create_user(request)")
         content.should contain("UserResponse.new(user)")
 
-        # Check error handling
-        content.should contain("rescue ex : Azu::Response::ValidationError")
-        content.should contain("rescue ex : Azu::Response::NotFoundError")
-        content.should contain("Failed to create user:")
-
         # Clean up
         File.delete(output_file) if File.exists?(output_file)
         FileUtils.rm_rf(File.dirname(output_file)) if Dir.exists?(File.dirname(output_file))
@@ -126,9 +121,6 @@ module AzuCLI::Generators
         # Check service call with ID and request parameters
         content.should contain("user = UserService.update_user(request.path_params[\"id\"], request)")
         content.should contain("UserResponse.new(user)")
-
-        # Check error handling
-        content.should contain("rescue ex : Azu::Response::ValidationError")
 
         # Clean up
         File.delete(output_file) if File.exists?(output_file)

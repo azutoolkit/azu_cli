@@ -31,13 +31,5 @@ struct <%= endpoint_class_name %>
     result = <%= service_class_name %>.<%= service_method_name %>(request<%- if needs_id_param? -%>, request.path_params["id"]<%- end -%>)
     <%= response_class_name %>.new(result)
 <%- end -%>
-<%- if needs_error_handling? -%>
-  rescue ex : Azu::Response::ValidationError
-    raise ex
-  rescue ex : Azu::Response::NotFoundError
-    raise ex
-  rescue ex
-    raise Azu::Response::InternalServerError.new("Failed to <%= action %> <%= resource_name %>: #{ex.message}")
-<%- end -%>
   end
 end

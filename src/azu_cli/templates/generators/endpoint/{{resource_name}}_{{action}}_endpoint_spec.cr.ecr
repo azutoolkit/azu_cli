@@ -128,28 +128,6 @@ describe <%= endpoint_class_name %> do
 <%- end -%>
   end
 
-<%- if needs_error_handling? -%>
-  describe "error handling" do
-    it "catches validation errors" do
-      endpoint = <%= endpoint_class_name %>.new
-      # Mock service to raise Azu::Response::ValidationError
-      # Test that validation errors are re-raised correctly
-    end
-
-    it "catches not found errors" do
-      endpoint = <%= endpoint_class_name %>.new
-      # Mock service to raise Azu::Response::NotFoundError
-      # Test that not found errors are re-raised correctly
-    end
-
-    it "handles internal server errors" do
-      endpoint = <%= endpoint_class_name %>.new
-      # Mock service to raise generic exception
-      # Test that internal errors are wrapped correctly
-    end
-  end
-<%- end -%>
-
   describe "service integration" do
     it "calls the correct service method" do
       endpoint = <%= endpoint_class_name %>.new
