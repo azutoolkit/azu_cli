@@ -1,28 +1,85 @@
+<% if @project_type == "cli" -%>
+require "option_parser"
+
+module <%= @module_name %>
+  VERSION = "0.1.0"
+
+  def self.run(args : Array(String))
+    option_parser = OptionParser.parse(args) do |parser|
+      parser.banner = "Usage: <%= @project %> [options]"
+
+      parser.on("-v", "--version", "Show version") do
+        puts "v#{VERSION}"
+        exit
+      end
+
+      parser.on("-h", "--help", "Show help") do
+        puts parser
+        exit
+      end
+
+<% if @include_example -%>
+      parser.on("--hello NAME", "Say hello to NAME") do |name|
+        puts "Hello, #{name}!"
+        exit
+      end
+<% end -%>
+    end
+
+<% if @include_example -%>
+    # If no arguments provided, show help
+    if args.empty?
+      puts option_parser
+      exit
+    end
+<% end -%>
+  end
+end
+<%= @module_name %>.run(ARGV)
+<% else -%>
 require "azu"
 require "./initializers/**"
 
-# Docs - https://azutopia.gitbook.io/azu/defining-your-app
-module <%= @project.camelcase %>
+# Azu Framework Application
+# Docs: https://azutoolkit.org
+module <%= @module_name %>
   include Azu
   VERSION = "0.1.0"
 
+  configure do |c|
+<% if @project_type == "api" -%>
+    # API Configuration
+    c.router.before "*", Handler::CORS.new
+<% else -%>
+    # Web Application Configuration
+    # Uncomment to enable Spark real time apps
+    # Docs: https://azutoolkit.org/spark
+    # c.router.ws "/live-view", Spark
+    c.templates.path = "./public/templates"
+    # Serve static files
+    c.router.get "/*", Handler::Static.new
+    c.performance_enabled = true
+    c.performance_profiling_enabled = true
+    c.performance_memory_monitoring = true
+<% end -%>
+  end
+
   HANDLERS = [
+    Azu::Handler::RequestId.new,
+<% if @project_type == "web" -%>
+    Azu::Handler::DevDashboard.new,              # 👈 Full dashboard functionality
+    <%= @module_name %>.config.performance_monitor.not_nil!,  # Required for metrics
+<% end -%>
     Azu::Handler::Rescuer.new,
     Azu::Handler::Logger.new,
   ]
-
-  configure do |c|
-    # Uncomment to enable Spark real time apps
-    # Docs: https://azutopia.gitbook.io/azu/spark-1
-    # c.router.ws "/live-view", Spark
-
-    # Serve static files
-    c.router.get "/*", Handler::Static.new
-  end
 end
 
-# Require files after initializing project module
+# Require application files
 require "./contracts/**"
+<% if @project_type == "web" -%>
 require "./pages/**"
+<% end -%>
 require "./models/**"
 require "./endpoints/**"
+<% end -%>

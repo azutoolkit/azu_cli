@@ -5,9 +5,9 @@ require "topia"
 
 require "./azu_cli/config"
 require "./azu_cli/logger"
+require "./azu_cli/generators/**"
 require "./azu_cli/cli"
 require "./azu_cli/commands/**"
-require "./azu_cli/generators/**"
 require "./azu_cli/plugins/**"
 require "./azu_cli/middleware/**"
 

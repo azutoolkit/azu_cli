@@ -123,7 +123,7 @@ module AzuCLI::Generators
       it "creates generator with attributes" do
         attributes = [
           {name: "name", type: "String", nullable: false},
-          {name: "email", type: "String", nullable: false}
+          {name: "email", type: "String", nullable: false},
         ]
         generator = ModelGenerator.new("user", attributes)
         generator.attributes.size.should eq(2)
@@ -132,7 +132,7 @@ module AzuCLI::Generators
 
       it "creates generator with associations" do
         associations = [
-          {type: "has_many", name: "posts", model: "Post", foreign_key: "user_id"}
+          {type: "has_many", name: "posts", model: "Post", foreign_key: "user_id"},
         ]
         generator = ModelGenerator.new("user", associations: associations)
         generator.associations.size.should eq(1)
@@ -141,7 +141,7 @@ module AzuCLI::Generators
 
       it "creates generator with validations" do
         validations = [
-          {field: "email", rules: ["required", "unique"]}
+          {field: "email", rules: ["required", "unique"]},
         ]
         generator = ModelGenerator.new("user", validations: validations)
         generator.validations.size.should eq(1)
@@ -214,7 +214,7 @@ module AzuCLI::Generators
     describe "ModelConfiguration" do
       it "creates configuration with attributes" do
         attributes = [
-          {name: "name", type: "String", nullable: false}
+          {name: "name", type: "String", nullable: false},
         ]
         config = ModelConfiguration.new(attributes)
         config.has_attributes?.should be_true
@@ -223,7 +223,7 @@ module AzuCLI::Generators
 
       it "creates configuration with associations" do
         associations = [
-          {type: "belongs_to", name: "user", model: "User", foreign_key: "user_id"}
+          {type: "belongs_to", name: "user", model: "User", foreign_key: "user_id"},
         ]
         config = ModelConfiguration.new(associations: associations)
         config.has_associations?.should be_true
@@ -232,7 +232,7 @@ module AzuCLI::Generators
 
       it "creates configuration with validations" do
         validations = [
-          {field: "name", rules: ["required"]}
+          {field: "name", rules: ["required"]},
         ]
         config = ModelConfiguration.new(validations: validations)
         config.has_validations?.should be_true
@@ -250,7 +250,7 @@ module AzuCLI::Generators
     describe "#validate_preconditions!" do
       it "validates attributes" do
         attributes = [
-          {name: "", type: "String", nullable: false}
+          {name: "", type: "String", nullable: false},
         ]
         generator = ModelGenerator.new("user", attributes)
         expect_raises(ArgumentError, "Attribute name cannot be empty") do
@@ -260,7 +260,7 @@ module AzuCLI::Generators
 
       it "validates attribute types" do
         attributes = [
-          {name: "name", type: "", nullable: false}
+          {name: "name", type: "", nullable: false},
         ]
         generator = ModelGenerator.new("user", attributes)
         expect_raises(ArgumentError, "Attribute type cannot be empty") do
@@ -270,7 +270,7 @@ module AzuCLI::Generators
 
       it "validates associations" do
         associations = [
-          {type: "has_many", name: "", model: "Post", foreign_key: "user_id"}
+          {type: "has_many", name: "", model: "Post", foreign_key: "user_id"},
         ]
         generator = ModelGenerator.new("user", associations: associations)
         expect_raises(ArgumentError, "Association name cannot be empty") do
@@ -280,7 +280,7 @@ module AzuCLI::Generators
 
       it "validates validations" do
         validations = [
-          {field: "", rules: ["required"]}
+          {field: "", rules: ["required"]},
         ]
         generator = ModelGenerator.new("user", validations: validations)
         expect_raises(ArgumentError, "Validation field cannot be empty") do
@@ -290,7 +290,7 @@ module AzuCLI::Generators
 
       it "validates validation rules" do
         validations = [
-          {field: "name", rules: [] of String}
+          {field: "name", rules: [] of String},
         ]
         generator = ModelGenerator.new("user", validations: validations)
         expect_raises(ArgumentError, "Validation rules cannot be empty") do
@@ -304,15 +304,15 @@ module AzuCLI::Generators
         attributes = [
           {name: "name", type: "String", nullable: false},
           {name: "email", type: "String", nullable: false},
-          {name: "age", type: "Int32", nullable: true}
+          {name: "age", type: "Int32", nullable: true},
         ]
         associations = [
           {type: "has_many", name: "posts", model: "Post", foreign_key: "user_id"},
-          {type: "belongs_to", name: "company", model: "Company", foreign_key: "company_id"}
+          {type: "belongs_to", name: "company", model: "Company", foreign_key: "company_id"},
         ]
         validations = [
           {field: "name", rules: ["required", "min_length(2)"]},
-          {field: "email", rules: ["required", "unique", "format(email)"]}
+          {field: "email", rules: ["required", "unique", "format(email)"]},
         ]
 
         generator = ModelGenerator.new("user", attributes, associations, validations)

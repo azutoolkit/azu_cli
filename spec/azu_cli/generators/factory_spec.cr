@@ -98,7 +98,7 @@ module AzuCLI::Generators
 
       it "creates ModelGenerator with attributes" do
         attributes = [
-          {name: "name", type: "String", nullable: false}
+          {name: "name", type: "String", nullable: false},
         ]
         generator = Factory.create("model", "user", attributes: attributes)
         model_generator = generator.as(ModelGenerator)
@@ -107,7 +107,7 @@ module AzuCLI::Generators
 
       it "creates RequestGenerator with properties" do
         properties = [
-          {name: "name", type: "String", default: "", validations: ["required"]}
+          {name: "name", type: "String", default: "", validations: ["required"]},
         ]
         generator = Factory.create("request", "user_request", properties: properties)
         request_generator = generator.as(RequestGenerator)
@@ -116,7 +116,7 @@ module AzuCLI::Generators
 
       it "creates ResponseGenerator with attributes" do
         attributes = [
-          {name: "name", type: "String", default: ""}
+          {name: "name", type: "String", default: ""},
         ]
         generator = Factory.create("response", "user_response", attributes: attributes)
         response_generator = generator.as(ResponseGenerator)
@@ -144,10 +144,10 @@ module AzuCLI::Generators
 
       it "creates EndpointGenerator with custom classes" do
         generator = Factory.create("endpoint", "user", action: "index",
-                                 request_class: "CustomRequest",
-                                 response_class: "CustomResponse",
-                                 service_class: "CustomService",
-                                 namespace: "Api")
+          request_class: "CustomRequest",
+          response_class: "CustomResponse",
+          service_class: "CustomService",
+          namespace: "Api")
         endpoint_generator = generator.as(EndpointGenerator)
         endpoint_generator.request_class_name.should eq("CustomRequest")
         endpoint_generator.response_class_name.should eq("CustomResponse")
@@ -176,17 +176,17 @@ module AzuCLI::Generators
     describe "fluent interface" do
       it "chains method calls" do
         builder = GeneratorBuilder.new("app", "test_app")
-                                  .output_dir("custom_src")
-                                  .generate_specs(false)
+          .output_dir("custom_src")
+          .generate_specs(false)
         builder.options[:output_dir].should eq("custom_src")
         builder.options[:generate_specs].should eq(false)
       end
 
       it "builds generator with chained options" do
         generator = GeneratorBuilder.new("app", "test_app")
-                                   .output_dir("custom_src")
-                                   .generate_specs(false)
-                                   .build
+          .output_dir("custom_src")
+          .generate_specs(false)
+          .build
         generator.should be_a(MainAppGenerator)
         generator.output_dir.should eq("custom_src")
         generator.generate_specs.should be_false
@@ -208,7 +208,7 @@ module AzuCLI::Generators
 
       it "sets attributes" do
         attributes = [
-          {name: "name", type: "String", nullable: false}
+          {name: "name", type: "String", nullable: false},
         ]
         builder = GeneratorBuilder.new("model", "user")
         builder.attributes(attributes)
@@ -217,7 +217,7 @@ module AzuCLI::Generators
 
       it "sets associations" do
         associations = [
-          {type: "has_many", name: "posts", model: "Post", foreign_key: "user_id"}
+          {type: "has_many", name: "posts", model: "Post", foreign_key: "user_id"},
         ]
         builder = GeneratorBuilder.new("model", "user")
         builder.associations(associations)
@@ -226,7 +226,7 @@ module AzuCLI::Generators
 
       it "sets validations" do
         validations = [
-          {field: "name", rules: ["required"]}
+          {field: "name", rules: ["required"]},
         ]
         builder = GeneratorBuilder.new("model", "user")
         builder.validations(validations)
@@ -235,7 +235,7 @@ module AzuCLI::Generators
 
       it "sets properties" do
         properties = [
-          {name: "name", type: "String", default: "", validations: ["required"]}
+          {name: "name", type: "String", default: "", validations: ["required"]},
         ]
         builder = GeneratorBuilder.new("request", "user_request")
         builder.properties(properties)
@@ -244,7 +244,7 @@ module AzuCLI::Generators
 
       it "sets response_attributes" do
         attributes = [
-          {name: "name", type: "String", default: ""}
+          {name: "name", type: "String", default: ""},
         ]
         builder = GeneratorBuilder.new("response", "user_response")
         builder.response_attributes(attributes)
@@ -304,22 +304,22 @@ module AzuCLI::Generators
     describe "complex builder usage" do
       it "builds ModelGenerator with all options" do
         attributes = [
-          {name: "name", type: "String", nullable: false}
+          {name: "name", type: "String", nullable: false},
         ]
         associations = [
-          {type: "has_many", name: "posts", model: "Post", foreign_key: "user_id"}
+          {type: "has_many", name: "posts", model: "Post", foreign_key: "user_id"},
         ]
         validations = [
-          {field: "name", rules: ["required"]}
+          {field: "name", rules: ["required"]},
         ]
 
         generator = GeneratorBuilder.new("model", "user")
-                                   .output_dir("custom_src")
-                                   .generate_specs(false)
-                                   .attributes(attributes)
-                                   .associations(associations)
-                                   .validations(validations)
-                                   .build
+          .output_dir("custom_src")
+          .generate_specs(false)
+          .attributes(attributes)
+          .associations(associations)
+          .validations(validations)
+          .build
 
         generator.should be_a(ModelGenerator)
         model_generator = generator.as(ModelGenerator)
@@ -332,14 +332,14 @@ module AzuCLI::Generators
 
       it "builds EndpointGenerator with all options" do
         generator = GeneratorBuilder.new("endpoint", "user")
-                                   .output_dir("custom_src")
-                                   .generate_specs(false)
-                                   .action("index")
-                                   .request_class("CustomRequest")
-                                   .response_class("CustomResponse")
-                                   .service_class("CustomService")
-                                   .namespace("Api")
-                                   .build
+          .output_dir("custom_src")
+          .generate_specs(false)
+          .action("index")
+          .request_class("CustomRequest")
+          .response_class("CustomResponse")
+          .service_class("CustomService")
+          .namespace("Api")
+          .build
 
         generator.should be_a(EndpointGenerator)
         endpoint_generator = generator.as(EndpointGenerator)

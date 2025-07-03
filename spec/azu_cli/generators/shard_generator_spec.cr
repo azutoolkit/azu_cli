@@ -16,7 +16,7 @@ describe AzuCLI::Generators::ShardGenerator do
       generator.authors.should eq(["Your Name <your@email.com>"])
     end
 
-        it "initializes with custom values" do
+    it "initializes with custom values" do
       custom_authors = ["John Doe <john@example.com>", "Jane Smith <jane@example.com>"]
       custom_deps = {"custom" => "user/custom"}
 
@@ -172,7 +172,7 @@ describe AzuCLI::Generators::ShardGenerator do
     end
   end
 
-    describe "database support" do
+  describe "database support" do
     it "defaults to PostgreSQL" do
       generator = AzuCLI::Generators::ShardGenerator.new("test_app")
 

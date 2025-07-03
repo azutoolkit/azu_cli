@@ -2,7 +2,7 @@ name: <%= @project.downcase %>
 version: 0.1.0
 authors:
   - <%= @author %> <<%= @email %>>
-crystal: <%= Crystal::VERSION %>
+crystal: 1.16.3
 license: <%= @license %>
 
 targets:
@@ -20,14 +20,16 @@ dependencies:
   cql:
     github: azutoolkit/cql
 
-<% case @database -%>
-<% when "postgresql", "postgres", "pg" -%>
+  azu_cli:
+    github: azutoolkit/azu_cli
+
+<% if @database == "postgresql" || @database == "postgres" || @database == "pg" -%>
   pg:
     github: will/crystal-pg
-<% when "mysql" -%>
+<% elsif @database == "mysql" -%>
   mysql:
     github: crystal-lang/crystal-mysql
-<% when "sqlite", "sqlite3" -%>
+<% elsif @database == "sqlite" || @database == "sqlite3" -%>
   sqlite3:
     github: crystal-lang/crystal-sqlite3
 <% end -%>

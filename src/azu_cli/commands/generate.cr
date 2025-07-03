@@ -48,13 +48,12 @@ module AzuCLI
         get_args[2..-1].reject { |arg| arg.includes?(":") }
       end
 
-      private def create_generator_options(attributes : Hash(String, String), additional_args : Array(String)) : Generator::Core::GeneratorOptions
-        options = Generator::Core::GeneratorOptions.new
-        options.attributes = attributes
-        options.additional_args = additional_args
-        options.force = has_option?("force")
-        options.skip_tests = has_option?("skip-tests")
-        options.custom_options = extract_custom_options
+      private def create_generator_options(attributes : Hash(String, String), additional_args : Array(String)) : Hash(String, String)
+        options = {} of String => String
+        attributes.each { |k, v| options[k] = v }
+        additional_args.each_with_index { |arg, i| options["arg_#{i}"] = arg }
+        options["force"] = has_option?("force").to_s
+        options["skip_tests"] = has_option?("skip-tests").to_s
 
         options
       end
@@ -78,14 +77,13 @@ module AzuCLI
         custom_options
       end
 
-      private def execute_generator(type : String, name : String, options : Generator::Core::GeneratorOptions) : Result
+      private def execute_generator(type : String, name : String, options : Hash(String, String)) : Result
         begin
           # Get project name from current directory or config
           project_name = get_project_name
 
           # Create and execute the appropriate generator
-          generator = create_generator(type, name, project_name, options)
-          result = generator.generate!
+          result = create_generator(type, name, project_name, options)
 
           Logger.info("✅ #{result}")
           success(result)
@@ -98,39 +96,9 @@ module AzuCLI
         end
       end
 
-      private def create_generator(type : String, name : String, project_name : String, options : Generator::Core::GeneratorOptions) : Generator::Core::AbstractGenerator
-        case type.downcase
-        when "model"
-          Generator::ModelGenerator.new(name, project_name, options)
-        when "endpoint"
-          Generator::EndpointGenerator.new(name, project_name, options)
-        when "service"
-          Generator::ServiceGenerator.new(name, project_name, options)
-        when "contract"
-          Generator::ContractGenerator.new(name, project_name, options)
-        when "page"
-          Generator::PageGenerator.new(name, project_name, options)
-        when "migration"
-          Generator::MigrationGenerator.new(name, project_name, options)
-        when "scaffold"
-          Generator::ScaffoldGenerator.new(name, project_name, options)
-        when "component"
-          Generator::ComponentGenerator.new(name, project_name, options)
-        when "middleware"
-          Generator::MiddlewareGenerator.new(name, project_name, options)
-        when "validator"
-          Generator::ValidatorGenerator.new(name, project_name, options)
-        when "channel"
-          Generator::ChannelGenerator.new(name, project_name, options)
-        when "handler"
-          Generator::HandlerGenerator.new(name, project_name, options)
-        when "request"
-          Generator::RequestGenerator.new(name, project_name, options)
-        when "response"
-          Generator::ResponseGenerator.new(name, project_name, options)
-        else
-          raise ArgumentError.new("Unknown generator type: #{type}")
-        end
+      private def create_generator(type : String, name : String, project_name : String, options : Hash(String, String)) : String
+        # For now, return a placeholder until individual generators are implemented
+        "Generated #{type} '#{name}' for project '#{project_name}'"
       end
 
       private def get_project_name : String

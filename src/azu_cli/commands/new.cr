@@ -1,7 +1,6 @@
 require "./base"
 require "option_parser"
 require "readline"
-require "../generators/project"
 
 module AzuCLI
   module Commands
@@ -267,7 +266,7 @@ module AzuCLI
 
         begin
           # Create the generator
-          generator = Generate::Project.new(
+          generator = AzuCLI::Generate::Project.new(
             project: @project_name,
             module_name: @module_name,
             author: @author,

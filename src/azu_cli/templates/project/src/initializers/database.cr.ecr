@@ -1,7 +1,78 @@
-require "jennifer"
-require "jennifer/adapter/<%= @database %>"
+require "cql"
 
-Jennifer::Config.configure do |conf|
-  conf.from_uri(ENV["DATABASE_URL"])
-  conf.logger = Log.for("Jennifer")
+CQL.configure do |config|
+  # Environment configuration
+  config.env = ENV["CRYSTAL_ENV"]? || "development"
+
+  # Database connection - environment-aware database names
+  config.db = ENV["DATABASE_URL"]? || <%= database_env_url %>
+
+  config.timezone = :utc
+
+  # Connection pool settings (CQL ConnectionPoolConfig structure)
+  config.pool.size = (ENV["DB_POOL_SIZE"]? || "10").to_i
+  config.pool.initial_size = (ENV["DB_POOL_INITIAL_SIZE"]? || "1").to_i
+  config.pool.max_idle_size = (ENV["DB_POOL_MAX_IDLE_SIZE"]? || "1").to_i
+  config.pool.checkout_timeout = (ENV["DB_POOL_CHECKOUT_TIMEOUT"]? || "10").to_i.seconds
+  config.pool.query_timeout = (ENV["DB_POOL_QUERY_TIMEOUT"]? || "30").to_i.seconds
+  config.pool.max_retry_attempts = (ENV["DB_POOL_MAX_RETRY_ATTEMPTS"]? || "3").to_i
+  config.pool.retry_delay = (ENV["DB_POOL_RETRY_DELAY"]? || "1").to_i.seconds
+  config.pool.use_prepared_statements = (ENV["DB_USE_PREPARED_STATEMENTS"]? || "true") == "true"
+
+  # Schema and migration settings
+  config.schema_dir = "src/schemas"
+  config.schema_file = "app_schema.cr"
+  config.schema_class = :AppSchema
+  config.schema_name = :app_schema
+  config.migrations_table = :schema_migrations
+
+  # Development-friendly defaults
+  config.auto_load = true
+  config.auto_sync = ENV["CRYSTAL_ENV"]? != "production"
+  config.verify_schema = ENV["CRYSTAL_ENV"]? == "development"
+  config.bootstrap = false
+
+  # Logging configuration
+  config.log_level = case config.env
+                     when "production" then Log::Severity::Info
+                     when "test" then Log::Severity::Error
+                     else Log::Severity::Debug
+                     end
+
+  # Performance monitoring (enable in development and production)
+  config.monitor_performance = ENV["CRYSTAL_ENV"]? != "test"
+
+  # CQL Performance Monitor configuration (matches PerformanceConfig struct)
+  config.performance.plan_analysis_enabled = (ENV["CQL_PLAN_ANALYSIS"]? || (config.env == "development").to_s) == "true"
+  config.performance.n_plus_one_detection_enabled = (ENV["CQL_N_PLUS_ONE_DETECTION"]? || (config.env == "development").to_s) == "true"
+  config.performance.query_profiling_enabled = (ENV["CQL_QUERY_PROFILING"]? || (config.env == "development").to_s) == "true"
+  config.performance.auto_analyze_slow_queries = (ENV["CQL_AUTO_ANALYZE_SLOW"]? || (config.env == "development").to_s) == "true"
+  config.performance.context_tracking_enabled = (ENV["CQL_CONTEXT_TRACKING"]? || (config.env != "test").to_s) == "true"
+  config.performance.endpoint_tracking_enabled = (ENV["CQL_ENDPOINT_TRACKING"]? || "false") == "true"
+  config.performance.async_processing = (ENV["CQL_ASYNC_PROCESSING"]? || (config.env == "production").to_s) == "true"
+
+  # Optional performance context (can be set by application)
+  config.performance.current_endpoint = ENV["CQL_CURRENT_ENDPOINT"]?
+  config.performance.current_user_id = ENV["CQL_CURRENT_USER_ID"]?
+
+  # SQL logging configuration
+  config.sql_logging.enabled = config.env == "development"
+  config.sql_logging.colorize_output = true
+  config.sql_logging.include_parameters = true
+  config.sql_logging.pretty_format = true
+
+  # Cache configuration
+  config.cache.on = ENV["ENABLE_CACHE"]? == "true" || config.env == "production"
+  config.cache.ttl = 30.minutes
+  config.cache.memory_size = (ENV["CACHE_SIZE"]? || "2000").to_i
+  config.cache.request_cache = true
+  config.cache.fragments = true
+
+  # SSL/TLS Configuration (production security)
+  config.ssl.mode = ENV["DB_SSL_MODE"]? || (config.env == "production" ? "require" : "prefer")
+  config.ssl.cert_path = ENV["DB_SSL_CERT"]?
+  config.ssl.key_path = ENV["DB_SSL_KEY"]?
+  config.ssl.ca_path = ENV["DB_SSL_CA"]?
+
+<%= database_specific_config %>
 end
