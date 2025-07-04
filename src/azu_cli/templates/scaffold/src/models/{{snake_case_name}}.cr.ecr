@@ -1,14 +1,28 @@
-struct <%= name -%>
+require "cql"
+
+class <%= name -%>
   <%= include_statement -%>
   <%= db_context_declaration -%>
 
+  # Attribute accessors
   <%= getter_declarations -%>
 
 <% if has_validations? -%>
-  # Custom validations with clear error messages
+  # Validations
   <%= validation_declarations %>
 <% end %>
 
+  # Constructor
   def initialize(<%= constructor_params %>)
   end
+
+<% if has_scopes? -%>
+  # Scopes
+  <%= scope_declarations %>
+<% end %>
+
+<% if has_associations? -%>
+  # Associations
+  <%= association_declarations %>
+<% end %>
 end

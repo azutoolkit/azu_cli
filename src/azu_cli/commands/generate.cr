@@ -104,6 +104,8 @@ module AzuCLI
         case type.downcase
         when "model"
           create_model_generator(name, project_name, options)
+        when "migration"
+          create_migration_generator(name, project_name, options)
         when "request"
           create_request_generator(name, project_name, options)
         when "component"
@@ -123,6 +125,27 @@ module AzuCLI
         else
           "Generator type '#{type}' not yet implemented"
         end
+      end
+
+      private def create_migration_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        # Extract attributes from options
+        attributes = {} of String => String
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          attributes[key] = value
+        end
+
+        # Create migration generator
+        generator = AzuCLI::Generate::Migration.new(
+          name: name,
+          attributes: attributes,
+          timestamps: options["timestamps"]? == "true"
+        )
+
+        # Generate the migration
+        generator.render(project_name)
+
+        "Generated migration '#{name}' with #{attributes.size} attributes"
       end
 
       private def create_job_generator(name : String, project_name : String, options : Hash(String, String)) : String
