@@ -1,0 +1,24 @@
+struct <%= job_struct_name %>
+  include JoobQ::Job
+
+  # Name of the queue to be processed by
+  @queue   = "<%= queue %>"
+  # Number Of Retries for this job
+  @retries = <%= retries %>
+  # Job Expiration
+  @expires = <%= expiration_seconds %>
+
+<% if has_parameters? %>
+  def initialize(<%= constructor_params %>)
+  end
+
+<% else %>
+  def initialize()
+  end
+
+<% end %>
+  def perform
+<%= perform_method_body %>
+  end
+<%= error_handling_example %>
+end

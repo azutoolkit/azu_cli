@@ -1,0 +1,17 @@
+class <%= middleware_class_name %>
+  include HTTP::Handler
+
+  def call(context)
+    # Skip middleware for certain paths
+    if public_path?(context.request.path)
+      call_next(context)
+      return
+    end
+
+<%= middleware_logic %>
+
+    call_next(context)
+  end
+
+<%= private_methods %>
+end

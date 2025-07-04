@@ -37,7 +37,7 @@ module AzuCLI
         end
 
         generator_type = args[0]
-        valid_types = ["model", "endpoint", "service", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "request", "response", "page_response"]
+        valid_types = ["model", "endpoint", "service", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "request", "response", "page_response", "job", "middleware"]
 
         unless valid_types.includes?(generator_type)
           raise ArgumentError.new("Invalid generator type: #{generator_type}. Valid types: #{valid_types.join(", ")}")
@@ -56,6 +56,7 @@ module AzuCLI
           "service - Generate service layer with business logic",
           "contract - Generate validation contracts",
           "page - Generate view pages with templates",
+          "job - Generate background jobs",
           "middleware - Generate HTTP middleware",
           "migration - Generate database migrations",
           "scaffold - Generate complete CRUD resource",

@@ -55,6 +55,10 @@ module AzuCLI
         options["force"] = has_option?("force").to_s
         options["skip_tests"] = has_option?("skip-tests").to_s
 
+        # Merge custom options (like --type, --api-only, etc.)
+        custom_options = extract_custom_options
+        custom_options.each { |k, v| options[k] = v }
+
         options
       end
 
@@ -110,9 +114,108 @@ module AzuCLI
           create_response_generator(name, project_name, options)
         when "page_response"
           create_page_response_generator(name, project_name, options)
+        when "endpoint"
+          create_endpoint_generator(name, project_name, options)
+        when "job"
+          create_job_generator(name, project_name, options)
+        when "middleware"
+          create_middleware_generator(name, project_name, options)
         else
           "Generator type '#{type}' not yet implemented"
         end
+      end
+
+      private def create_job_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        parameters = {} of String => String
+        queue = "default"
+        retries = 3
+        expires = "1.days"
+
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          case key
+          when "queue"
+            queue = value
+          when "retries"
+            retries = value.to_i
+          when "expires"
+            expires = value
+          else
+            # Treat other options as parameters
+            parameters[key] = value
+          end
+        end
+
+        generator = AzuCLI::Generate::Job.new(
+          name: name,
+          parameters: parameters,
+          queue: queue,
+          retries: retries,
+          expires: expires
+        )
+
+        generator.render(project_name)
+        "Generated job '#{name}' with #{parameters.size} parameters (queue: #{queue}, retries: #{retries}, expires: #{expires})"
+      end
+
+      private def create_endpoint_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        actions = [] of String
+        endpoint_type = "api"
+        scaffold = false
+
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          case key
+          when "actions"
+            actions = value.split(",").map(&.strip)
+          when "type"
+            endpoint_type = value.downcase
+          when "scaffold"
+            scaffold = value.downcase == "true"
+          else
+            # Treat other options as actions
+            actions << value
+          end
+        end
+
+        generator = AzuCLI::Generate::Endpoint.new(
+          name: name,
+          actions: actions,
+          endpoint_type: endpoint_type,
+          scaffold: scaffold
+        )
+
+        generator.render(project_name)
+
+        # Generate scaffold components if requested
+        if scaffold
+          scaffold_message = generate_scaffold_components(name, endpoint_type, project_name)
+          "Generated endpoint '#{name}' with #{actions.size} actions (#{endpoint_type}) and scaffolded #{scaffold_message}"
+        else
+          "Generated endpoint '#{name}' with #{actions.size} actions (#{endpoint_type})"
+        end
+      end
+
+      private def generate_scaffold_components(name : String, endpoint_type : String, project_name : String) : String
+        components = [] of String
+
+        if endpoint_type == "api"
+          # Generate request and response
+          request_generator = AzuCLI::Generate::Request.new(name, {} of String => String)
+          request_generator.render(project_name)
+          components << "request"
+
+          response_generator = AzuCLI::Generate::Response.new(name, {} of String => String)
+          response_generator.render(project_name)
+          components << "response"
+        else
+          # Generate contract and page
+          # Note: Contract and Page generators would need to be implemented
+          components << "contract"
+          components << "page"
+        end
+
+        components.join(", ")
       end
 
       private def create_model_generator(name : String, project_name : String, options : Hash(String, String)) : String
@@ -238,6 +341,35 @@ module AzuCLI
         )
         generator.render(project_name)
         "Generated page response '#{name}' with #{fields.size} fields"
+      end
+
+      private def create_middleware_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        middleware_type = "authentication"
+        skip_paths = [] of String
+        context_vars = {} of String => String
+
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          case key
+          when "type"
+            middleware_type = value
+          when "skip_paths"
+            skip_paths = value.split(",").map(&.strip)
+          else
+            # Treat other options as context variables
+            context_vars[key] = value
+          end
+        end
+
+        generator = AzuCLI::Generate::Middleware.new(
+          name: name,
+          middleware_type: middleware_type,
+          skip_paths: skip_paths,
+          context_vars: context_vars
+        )
+
+        generator.render(project_name)
+        "Generated middleware '#{name}' (type: #{middleware_type}, skip_paths: #{skip_paths.size}, context_vars: #{context_vars.size})"
       end
 
       private def get_project_name : String
