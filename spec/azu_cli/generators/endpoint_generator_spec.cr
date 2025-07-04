@@ -83,29 +83,31 @@ describe AzuCLI::Generate::Endpoint do
     actions = ["index", "create"]
     generator = AzuCLI::Generate::Endpoint.new("User", actions, "api")
     test_dir = "./tmp_test"
+
     FileUtils.mkdir_p(test_dir)
-    generator.render(test_dir)
+
+    generator.render(test_dir, interactive: false)
 
     # Check that individual action files were created
-    index_file = File.join(test_dir, "src", "endpoints", "user_index_endpoint.cr")
-    create_file = File.join(test_dir, "src", "endpoints", "user_create_endpoint.cr")
+    index_file = File.join(test_dir, "src", "endpoints", "user", "user_index_endpoint.cr")
+    create_file = File.join(test_dir, "src", "endpoints", "user", "user_create_endpoint.cr")
 
     File.exists?(index_file).should be_true
     File.exists?(create_file).should be_true
 
     # Check index file content
     index_content = File.read(index_file)
-    index_content.should contain("struct UserEndpoint")
-    index_content.should contain("include Azu::Endpoint(UserRequest, UserResponse)")
+    index_content.should contain("struct UserIndexEndpoint")
+    index_content.should contain("include Azu::Endpoint(UserIndexRequest, UserIndexResponse)")
     index_content.should contain("get \"/api/user\"")
-    index_content.should contain("def index : UserResponse")
+    index_content.should contain("def call : UserIndexResponse")
 
     # Check create file content
     create_content = File.read(create_file)
-    create_content.should contain("struct UserEndpoint")
-    create_content.should contain("include Azu::Endpoint(UserRequest, UserResponse)")
+    create_content.should contain("struct UserCreateEndpoint")
+    create_content.should contain("include Azu::Endpoint(UserCreateRequest, UserCreateResponse)")
     create_content.should contain("post \"/api/user\"")
-    create_content.should contain("def create : UserResponse")
+    create_content.should contain("def call : UserCreateResponse")
 
     FileUtils.rm_rf(test_dir)
   end
@@ -115,28 +117,28 @@ describe AzuCLI::Generate::Endpoint do
     generator = AzuCLI::Generate::Endpoint.new("User", actions, "web")
     test_dir = "./tmp_test"
     FileUtils.mkdir_p(test_dir)
-    generator.render(test_dir)
+    generator.render(test_dir, interactive: false)
 
     # Check that individual action files were created
-    index_file = File.join(test_dir, "src", "endpoints", "user_index_endpoint.cr")
-    show_file = File.join(test_dir, "src", "endpoints", "user_show_endpoint.cr")
+    index_file = File.join(test_dir, "src", "endpoints","user", "user_index_endpoint.cr")
+    show_file = File.join(test_dir, "src", "endpoints", "user", "user_show_endpoint.cr")
 
     File.exists?(index_file).should be_true
     File.exists?(show_file).should be_true
 
     # Check index file content
     index_content = File.read(index_file)
-    index_content.should contain("struct UserEndpoint")
-    index_content.should contain("include Azu::Endpoint(UserContract, UserPage)")
+    index_content.should contain("struct UserIndexEndpoint")
+    index_content.should contain("include Azu::Endpoint(UserIndexContract, UserIndexPage)")
     index_content.should contain("get \"/user\"")
-    index_content.should contain("def index : UserPage")
+    index_content.should contain("def call : UserIndexPage")
 
     # Check show file content
     show_content = File.read(show_file)
-    show_content.should contain("struct UserEndpoint")
-    show_content.should contain("include Azu::Endpoint(UserContract, UserPage)")
+    show_content.should contain("struct UserShowEndpoint")
+    show_content.should contain("include Azu::Endpoint(UserShowContract, UserShowPage)")
     show_content.should contain("get \"/user/:id\"")
-    show_content.should contain("def show : UserPage")
+    show_content.should contain("def call : UserShowPage")
 
     FileUtils.rm_rf(test_dir)
   end
