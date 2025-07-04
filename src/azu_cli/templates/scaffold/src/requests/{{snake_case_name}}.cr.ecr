@@ -1,0 +1,13 @@
+struct <%= name %>Request
+  include Azu::Request
+
+  <%= getter_declarations %>
+
+<% if has_validations? %>
+  # Validations
+  <%= validation_declarations %>
+<% end %>
+
+  def initialize(<%= constructor_params %>)
+  end
+end

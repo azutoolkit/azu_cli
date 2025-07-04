@@ -1,0 +1,10 @@
+require "topia"
+require "./<%= project %>"
+require "./tasks/**"
+
+# Simple hello world
+Topia.task("hello")
+  .command("echo 'Hello from Topia!'")
+
+# Run with CLI
+Topia.cli(ARGV)

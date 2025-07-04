@@ -1,110 +1,86 @@
-require "spec"
-require "file_utils"
+require "../../spec_helper"
 require "teeplate"
-require "../../../src/azu_cli/generators/base"
-require "../../../src/azu_cli/generators/request_generator"
 
-module AzuCLI::Generators
-  describe RequestGenerator do
-    it "generates a request object with dynamic properties and validations" do
-      request_name = "user_request"
-      output_dir = "./tmp"
-      output_file = File.join(output_dir, "requests", "user_request.cr")
+describe AzuCLI::Generate::Request do
+  it "creates a request generator with attributes" do
+    attributes = {"name" => "string", "price" => "float64"}
+    generator = AzuCLI::Generate::Request.new("CreateProduct", attributes)
+    generator.name.should eq("CreateProduct")
+    generator.attributes.should eq(attributes)
+    generator.snake_case_name.should eq("create_product")
+  end
 
-      # Define properties with their types and validations
-      properties = [
-        {
-          name:        "name",
-          type:        "String",
-          default:     "\"\"",
-          validations: ["presence: true", "length: {min: 2, max: 50}"],
-        },
-        {
-          name:        "email",
-          type:        "String",
-          default:     "\"\"",
-          validations: ["presence: true", "format: /\\A[\\w+\\-.]+@[a-z\\d\\-]+(\\.[a-z\\d\\-]+)*\\.[a-z]+\\z/i"],
-        },
-        {
-          name:        "age",
-          type:        "Int32?",
-          default:     "nil",
-          validations: ["numericality: {greater_than: 0, less_than: 150}", "if: ->{ age }"],
-        },
-        {
-          name:        "profile_image",
-          type:        "Azu::Params::Multipart::File?",
-          default:     "nil",
-          validations: [] of String,
-        },
-      ]
+  it "extracts validations for string and float fields" do
+    attributes = {"name" => "string", "price" => "float64"}
+    generator = AzuCLI::Generate::Request.new("CreateProduct", attributes)
+    generator.has_validations?.should be_true
+    validations = generator.validation_declarations
+    validations.should contain("validate :name, presence: true, size: 2..100")
+    validations.should contain("validate :price, gt: 0.0, lt: 1_000_000.0")
+  end
 
-      FileUtils.mkdir_p(File.dirname(output_file))
-      File.delete(output_file) if File.exists?(output_file)
+  it "generates correct getter declarations" do
+    attributes = {"name" => "string", "price" => "float64"}
+    generator = AzuCLI::Generate::Request.new("CreateProduct", attributes)
+    getters = generator.getter_declarations
+    getters.should contain("getter name : String")
+    getters.should contain("getter price : Float64")
+  end
 
-      generator = RequestGenerator.new(request_name, properties, output_dir)
-      generated_path = generator.generate!
+  it "generates correct constructor params" do
+    attributes = {"name" => "string", "price" => "float64"}
+    generator = AzuCLI::Generate::Request.new("CreateProduct", attributes)
+    params = generator.constructor_params
+    params.should contain("@name : String")
+    params.should contain("@price : Float64")
+  end
 
-      generated_path.should eq(output_file)
-      File.exists?(output_file).should be_true
-      content = File.read(output_file)
+  it "generates a request file with correct content" do
+    attributes = {"name" => "string", "price" => "float64"}
+    generator = AzuCLI::Generate::Request.new("CreateProduct", attributes)
 
-      # Check basic structure
-      content.should contain("struct UserRequest")
-      content.should contain("include Azu::Request")
+    # Generate the file
+    test_dir = "./tmp_test"
+    FileUtils.mkdir_p(test_dir)
+    generator.render(test_dir)
 
-      # Check dynamic getter declarations
-      content.should contain("getter name : String")
-      content.should contain("getter email : String")
-      content.should contain("getter age : Int32?")
-      content.should contain("getter profile_image : Azu::Params::Multipart::File?")
+    # Read the generated file
+    generated_file = File.join(test_dir, "create_product.cr")
+    File.exists?(generated_file).should be_true
 
-      # Check initializer with defaults
-      content.should contain("def initialize(@name = \"\", @email = \"\", @age = nil, @profile_image = nil)")
+    content = File.read(generated_file)
+    content.should contain("struct CreateProductRequest")
+    content.should contain("include Azu::Request")
+    content.should contain("getter name : String")
+    content.should contain("getter price : Float64")
+    content.should contain("validate :name, presence: true, size: 2..100")
+    content.should contain("validate :price, gt: 0.0, lt: 1_000_000.0")
+    content.should contain("def initialize(@name : String, @price : Float64)")
+    content.should contain("end")
 
-      # Check validations
-      content.should contain("validate :name, presence: true")
-      content.should contain("validate :name, length: {min: 2, max: 50}")
-      content.should contain("validate :email, presence: true")
-      content.should contain("validate :age, numericality: {greater_than: 0, less_than: 150}")
-      content.should contain("validate :age, if: ->{ age }")
+    # Clean up
+    FileUtils.rm_rf(test_dir)
+  end
 
-      # Clean up
-      File.delete(output_file) if File.exists?(output_file)
-      FileUtils.rm_rf(File.dirname(output_file)) if Dir.exists?(File.dirname(output_file))
-    end
+  it "generates a request file with no attributes and empty constructor" do
+    generator = AzuCLI::Generate::Request.new("Empty", {} of String => String)
 
-    it "generates simple request with minimal properties" do
-      request_name = "search_request"
-      output_dir = "./tmp"
-      output_file = File.join(output_dir, "requests", "search_request.cr")
+    # Generate the file
+    test_dir = "./tmp_test"
+    FileUtils.mkdir_p(test_dir)
+    generator.render(test_dir)
 
-      properties = [
-        {
-          name:        "query",
-          type:        "String",
-          default:     "\"\"",
-          validations: ["presence: true"],
-        },
-      ]
+    # Read the generated file
+    generated_file = File.join(test_dir, "empty.cr")
+    File.exists?(generated_file).should be_true
 
-      FileUtils.mkdir_p(File.dirname(output_file))
-      File.delete(output_file) if File.exists?(output_file)
+    content = File.read(generated_file)
+    content.should contain("struct EmptyRequest")
+    content.should contain("include Azu::Request")
+    content.should contain("def initialize()")
+    content.should contain("end")
 
-      generator = RequestGenerator.new(request_name, properties, output_dir)
-      generated_path = generator.generate!
-
-      generated_path.should eq(output_file)
-      File.exists?(output_file).should be_true
-      content = File.read(output_file)
-
-      content.should contain("struct SearchRequest")
-      content.should contain("getter query : String")
-      content.should contain("validate :query, presence: true")
-
-      # Clean up
-      File.delete(output_file) if File.exists?(output_file)
-      FileUtils.rm_rf(File.dirname(output_file)) if Dir.exists?(File.dirname(output_file))
-    end
+    # Clean up
+    FileUtils.rm_rf(test_dir)
   end
 end

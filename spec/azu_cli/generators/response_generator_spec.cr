@@ -1,110 +1,93 @@
-require "spec"
-require "file_utils"
+require "../../spec_helper"
 require "teeplate"
-require "../../../src/azu_cli/generators/base"
-require "../../../src/azu_cli/generators/response_generator"
 
-module AzuCLI::Generators
-  describe ResponseGenerator do
-    it "generates a response with attributes and JSON serialization" do
-      response_name = "user_response"
-      output_dir = "./tmp"
-      output_file = File.join(output_dir, "responses", "user_response.cr")
+describe AzuCLI::Generate::Response do
+  it "creates a response generator with basic fields" do
+    fields = {"id" => "int64", "name" => "string"}
+    generator = AzuCLI::Generate::Response.new("User", fields)
+    generator.name.should eq("User")
+    generator.fields.should eq(fields)
+    generator.snake_case_name.should eq("user")
+    generator.struct_name.should eq("UserResponse")
+  end
 
-      # Define response attributes
-      attributes = [
-        {name: "id", type: "Int64", default: "0"},
-        {name: "name", type: "String", default: "\"\""},
-        {name: "email", type: "String", default: "\"\""},
-        {name: "created_at", type: "Time?", default: "nil"},
-      ]
+  it "generates correct getter declarations" do
+    fields = {"id" => "int64", "name" => "string", "age" => "int32?"}
+    generator = AzuCLI::Generate::Response.new("User", fields)
+    getters = generator.getter_declarations
+    getters.should contain("getter id : Int64")
+    getters.should contain("getter name : String")
+    getters.should contain("getter age : Int32?")
+  end
 
-      FileUtils.mkdir_p(File.dirname(output_file))
-      File.delete(output_file) if File.exists?(output_file)
+  it "generates correct constructor params" do
+    fields = {"id" => "int64", "name" => "string"}
+    generator = AzuCLI::Generate::Response.new("User", fields)
+    params = generator.constructor_params
+    params.should contain("@id : Int64")
+    params.should contain("@name : String")
+  end
 
-      generator = ResponseGenerator.new(response_name, attributes, include_json: true, output_dir: output_dir)
-      generated_path = generator.generate!
+  it "generates assignments from source type" do
+    fields = {"id" => "int64", "name" => "string"}
+    generator = AzuCLI::Generate::Response.new("User", fields, "User")
+    assigns = generator.assignments_from_source
+    assigns.should contain("@id = user.id")
+    assigns.should contain("@name = user.name")
+  end
 
-      generated_path.should eq(output_file)
-      File.exists?(output_file).should be_true
-      content = File.read(output_file)
+  it "generates a response file with fields and from_type" do
+    fields = {
+      "id"                => "int64",
+      "name"              => "string",
+      "email"             => "string",
+      "age"               => "int32?",
+      "profile_image_url" => "string?",
+      "created_at"        => "string",
+    }
+    generator = AzuCLI::Generate::Response.new("User", fields, "User")
+    test_dir = "./tmp_test"
+    FileUtils.mkdir_p(test_dir)
+    generator.render(test_dir)
+    generated_file = File.join(test_dir, "user.cr")
+    File.exists?(generated_file).should be_true
+    content = File.read(generated_file)
+    content.should contain("struct UserResponse")
+    content.should contain("include Azu::Response")
+    content.should contain("include JSON::Serializable")
+    content.should contain("getter id : Int64")
+    content.should contain("getter name : String")
+    content.should contain("getter email : String")
+    content.should contain("getter age : Int32?")
+    content.should contain("getter profile_image_url : String?")
+    content.should contain("getter created_at : String")
+    content.should contain("def initialize(user : User)")
+    content.should contain("@id = user.id")
+    content.should contain("@name = user.name")
+    content.should contain("@email = user.email")
+    content.should contain("@age = user.age")
+    content.should contain("@profile_image_url = user.profile_image_url")
+    content.should contain("@created_at = user.created_at")
+    content.should contain("def render")
+    content.should contain("to_json")
+    content.should contain("end")
+    FileUtils.rm_rf(test_dir)
+  end
 
-      # Check basic structure
-      content.should contain("class UserResponse")
-      content.should contain("include Response")
-      content.should contain("include JSON::Serializable")
-
-      # Check attributes
-      content.should contain("@id : Int64 = 0")
-      content.should contain("@name : String = \"\"")
-      content.should contain("@email : String = \"\"")
-      content.should contain("@created_at : Time? = nil")
-
-      # Check initializer
-      content.should contain("def initialize(@id = 0, @name = \"\", @email = \"\", @created_at = nil)")
-
-      # Clean up
-      File.delete(output_file) if File.exists?(output_file)
-      FileUtils.rm_rf(File.dirname(output_file)) if Dir.exists?(File.dirname(output_file))
-    end
-
-    it "generates response without JSON serialization when disabled" do
-      response_name = "simple_response"
-      output_dir = "./tmp"
-      output_file = File.join(output_dir, "responses", "simple_response.cr")
-
-      attributes = [
-        {name: "message", type: "String", default: "\"\""},
-        {name: "status", type: "Int32", default: "200"},
-      ]
-
-      FileUtils.mkdir_p(File.dirname(output_file))
-      File.delete(output_file) if File.exists?(output_file)
-
-      generator = ResponseGenerator.new(response_name, attributes, include_json: false, output_dir: output_dir)
-      generated_path = generator.generate!
-
-      generated_path.should eq(output_file)
-      File.exists?(output_file).should be_true
-      content = File.read(output_file)
-
-      # Check basic structure without JSON
-      content.should contain("class SimpleResponse")
-      content.should contain("include Response")
-      content.should_not contain("include JSON::Serializable")
-
-      # Check attributes
-      content.should contain("@message : String = \"\"")
-      content.should contain("@status : Int32 = 200")
-
-      # Clean up
-      File.delete(output_file) if File.exists?(output_file)
-      FileUtils.rm_rf(File.dirname(output_file)) if Dir.exists?(File.dirname(output_file))
-    end
-
-    it "generates minimal response with no attributes" do
-      response_name = "empty_response"
-      output_dir = "./tmp"
-      output_file = File.join(output_dir, "responses", "empty_response.cr")
-
-      FileUtils.mkdir_p(File.dirname(output_file))
-      File.delete(output_file) if File.exists?(output_file)
-
-      generator = ResponseGenerator.new(response_name, [] of ResponseAttribute, include_json: true, output_dir: output_dir)
-      generated_path = generator.generate!
-
-      generated_path.should eq(output_file)
-      File.exists?(output_file).should be_true
-      content = File.read(output_file)
-
-      content.should contain("class EmptyResponse")
-      content.should contain("include Response")
-      content.should contain("include JSON::Serializable")
-      content.should contain("def initialize()")
-
-      # Clean up
-      File.delete(output_file) if File.exists?(output_file)
-      FileUtils.rm_rf(File.dirname(output_file)) if Dir.exists?(File.dirname(output_file))
-    end
+  it "generates a response file with only fields" do
+    fields = {"id" => "int64", "name" => "string"}
+    generator = AzuCLI::Generate::Response.new("User", fields)
+    test_dir = "./tmp_test"
+    FileUtils.mkdir_p(test_dir)
+    generator.render(test_dir)
+    generated_file = File.join(test_dir, "user.cr")
+    File.exists?(generated_file).should be_true
+    content = File.read(generated_file)
+    content.should contain("struct UserResponse")
+    content.should contain("def initialize(@id : Int64, @name : String)")
+    content.should contain("def render")
+    content.should contain("to_json")
+    content.should contain("end")
+    FileUtils.rm_rf(test_dir)
   end
 end

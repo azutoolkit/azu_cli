@@ -58,21 +58,24 @@ module <%= @module_name %>
     c.templates.path = "./public/templates"
     # Serve static files
     c.router.get "/*", Handler::Static.new
-    c.performance_enabled = true
+    c.performance_enabled = ENV["PERFORMANCE_MONITORING"]? == "true"
     c.performance_profiling_enabled = true
     c.performance_memory_monitoring = true
 <% end -%>
   end
 
-  HANDLERS = [
-    Azu::Handler::RequestId.new,
-<% if @project_type == "web" -%>
-    Azu::Handler::DevDashboard.new,              # 👈 Full dashboard functionality
-    <%= @module_name %>.config.performance_monitor.not_nil!,  # Required for metrics
-<% end -%>
-    Azu::Handler::Rescuer.new,
-    Azu::Handler::Logger.new,
-  ]
+  def self.handlers
+    [
+      Azu::Handler::RequestId.new,
+  <% if @project_type == "web" -%>
+      Azu::Handler::DevDashboard.new,                           # 👈 Full dashboard functionality
+      <%= @module_name %>.config.performance_monitor.not_nil!,  # 👈 Required for metrics
+  <% end -%>
+      Azu::Handler::Rescuer.new,
+      Azu::Handler::Logger.new,
+    ]
+  end
+
 end
 
 # Require application files

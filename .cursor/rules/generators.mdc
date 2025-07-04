@@ -1,0 +1,104 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+
+# 🔧 Azu CLI Code Generator Prompt (.mdc)
+
+## ✅ Project Context
+
+- **Project Name**: Azu CLI Code Generator
+- **One-liner**: Generates structured Azu framework components using interactive CLI and OptionParser.
+- **Audience**: Experienced Crystal developers, backend engineers building modern apps with Azu.
+
+## 🧠 Objective
+
+Create an intelligent code generator that:
+
+- Uses Crystal and `OptionParser` for CLI interaction.
+- Outputs Crystal code using ECR templates.
+- Scaffolds endpoints, models, services, requests, responses, validators, middleware, jobs, migrations, components, templates, and channels.
+- Writes to: `src/azu_cli/templates/scaffold/src/{{name}}/`.
+
+## 💡 Generation Rules
+
+For each generator:
+
+- Follows Azu conventions (e.g., type-safe, idiomatic Crystal).
+- Accepts attributes/types/flags via CLI options.
+- Generates directory-aligned code (e.g., `src/models/user.cr`).
+- Injects correct imports, validations, and stubs.
+- Must compile successfully with `crystal build`.
+
+## 🛠️ Example Prompt
+
+```prompt
+Generate a Crystal class `Generate::Model` for the Azu CLI that:
+- Inherits from `Teeplate::FileTree`.
+- Accepts `name`, `attributes`, and `--timestamps` flags via `OptionParser`.
+- Writes ECR templates to `src/azu_cli/templates/scaffold/src/{{name}}/models/{{file}}.ecr`.
+- Supports types: `String`, `Int32`, `Bool`, `Time`, `Float64`.
+- Produces a `src/models/{{snake_case(name)}}.cr` file with a CQL::Model struct and `db_context`.
+```
+
+## Template Directory Structure
+
+```
+src/azu_cli/templates/scaffold/
+└── src/
+    └── {{name}}/
+        ├── models/
+        │   └── {{snake_case}}.ecr
+        ├── services/
+        │   └── {{snake_case}}.ecr
+        ├── endpoints/
+        │   └── {{snake_case}}.ecr
+        ├── requests/
+        │   └── {{snake_case}}.ecr
+        ├── responses/
+        │   └── {{snake_case}}.ecr
+        ├── validators/
+        │   └── {{snake_case}}.ecr
+        ├── middleware/
+        │   └── {{snake_case}}.ecr
+        ├── components/
+        │   └── {{snake_case}}.ecr
+        ├── jobs/
+        │   └── {{snake_case}}.ecr
+        ├── channels/
+        │   └── {{snake_case}}.ecr
+        └── db/
+            ├── migrations/
+            └── seeds.cr.ecr
+```
+
+## 🎯 Component-Specific Guidance
+
+Each component should:
+• Reflect Azu’s architectural style.
+• Be type-safe and idiomatic to Crystal.
+• Reference generated files when applicable (e.g., validators inside models).
+
+## 🔄 Interactive CLI Prompts
+
+Use Crystal’s OptionParser to:
+• Prompt --name, --attributes, --timestamps, --relations, etc.
+• Allow defaults and help messages.
+• E.g. azu generate model User name:String age:Int32 --timestamps
+
+## ✅ Example Use Cases
+
+1. azu generate model User name:String age:Int32
+2. azu generate endpoint CreateUser user_request user_response --method POST --path /api/users
+3. azu generate validator EmailValidator email:String
+4. azu generate service UserService
+5. azu generate component ChatComponent --props current_user:String
+
+# 🧪 Acceptance Criteria
+
+• Generated code compiles without errors.
+• Directory structure is correct.
+• Template values are correctly interpolated.
+• Imports and require directives are included.
+• CLI shows help and validations via OptionParser.

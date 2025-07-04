@@ -62,7 +62,7 @@ module AzuCLI
         when "pg"
           %(case config.env
             when "production"
-              ENV["PRODUCTION_DATABASE_URL"]? || \"postgresql://localhost/#{@project}_production\"
+              ENV["PRODUCTION_DATABASE_URL"]? || "postgresql://localhost/#{@project}_production"
             when "test"
               "postgresql://localhost/#{@project}_test"
             else # development
@@ -97,7 +97,6 @@ module AzuCLI
             end)
         end
       end
-
 
       def database_adapter_uri_prefix : String
         case @database

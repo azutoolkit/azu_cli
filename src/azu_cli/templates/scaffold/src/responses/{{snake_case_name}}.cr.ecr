@@ -1,0 +1,14 @@
+struct <%= struct_name %>
+  include Azu::Response
+  include JSON::Serializable
+
+  <%= getter_declarations %>
+
+  def initialize(<% if from_type %><%= from_var %> : <%= from_type %><% else %><%= constructor_params %><% end %>)
+<% if from_type %>
+    <%= assignments_from_source %>
+<% end %>
+  end
+
+  <%= render_method %>
+end

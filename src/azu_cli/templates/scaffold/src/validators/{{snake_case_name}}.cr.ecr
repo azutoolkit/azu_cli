@@ -1,0 +1,20 @@
+class <%= class_name %> < Azu::Validator
+  getter :record
+
+  def initialize(@record : <%= record_type %>)
+  end
+
+  def valid? : Array(Schema::Error)
+    errors = [] of Schema::Error
+<% if has_validation_rules? %>
+    <%= validation_logic %>
+<% else %>
+    <%= validation_rules_comments %>
+<% end %>
+    errors
+  end
+
+<% if !has_validation_rules? %>
+<%= common_validations %>
+<% end %>
+end

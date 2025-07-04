@@ -3,6 +3,7 @@ description:
 globs:
 alwaysApply: true
 ---
+
 # Azu CLI - Cursor Rules
 
 You are an expert Crystal developer working on the Azu CLI project, a command-line interface for the Azu Toolkit framework.
@@ -19,6 +20,7 @@ You are an expert Crystal developer working on the Azu CLI project, a command-li
 ## Crystal Language Guidelines
 
 ### Code Style
+
 - Use Crystal's built-in formatter (`crystal tool format`)
 - Follow Crystal naming conventions:
   - Classes: PascalCase (`MyClass`)
@@ -30,6 +32,7 @@ You are an expert Crystal developer working on the Azu CLI project, a command-li
 - Use meaningful variable names, avoid abbreviations
 
 ### Crystal-Specific Patterns
+
 - Leverage Crystal's type system and compile-time checks
 - Use macros for code generation when appropriate
 - Prefer `String.build` for string concatenation
@@ -38,6 +41,7 @@ You are an expert Crystal developer working on the Azu CLI project, a command-li
 - Use `#as` for type casting when necessary
 
 ### Memory Management
+
 - Prefer stack allocation over heap when possible
 - Use `StaticArray` for fixed-size arrays
 - Be mindful of string interpolation performance
@@ -46,12 +50,14 @@ You are an expert Crystal developer working on the Azu CLI project, a command-li
 ## CLI Architecture Patterns
 
 ### Command Structure
+
 - Each command should be in its own file under `src/commands/`
 - Commands should inherit from a base `Command` class if available
 - Use the Topia (Topia.cli(ARGV))
 - Structure commands as classes with `#call` or `#run` methods
 
 Example command structure:
+
 ```crystal
 class Azu::Commands::Project < Azu::Commands::Base
   def initialize(@name : String, @options : Hash(String, String))
@@ -64,6 +70,7 @@ end
 ```
 
 ### File Generation
+
 - Use ECR (Embedded Crystal) templates for code generation
 - Templates should be in `src/templates/` directory
 - Separate template logic from command logic
@@ -71,6 +78,7 @@ end
 - Create directories with `Dir.mkdir_p`
 
 ### Error Handling
+
 - Use Crystal's exception system appropriately
 - Provide meaningful error messages to users
 - Handle file system errors gracefully
@@ -80,6 +88,7 @@ end
 ## Project-Specific Guidelines
 
 ### Command Implementation
+
 - All commands should provide `--help` option
 - Validate user input before processing
 - Show progress for long-running operations
@@ -87,6 +96,7 @@ end
 - Support both long and short option formats
 
 ### Code Generation Rules
+
 - Generated code should follow Azu framework and CQL Orm conventions
 - Use proper indentation and formatting in templates
 - Include necessary imports in generated files
@@ -94,6 +104,7 @@ end
 - Add appropriate file headers and comments
 
 ### Database Integration
+
 - Use CQL ORM patterns consistently (https://github.com/azutoolkit/cql)
 - Generate proper migration files
 - Handle database connection errors
@@ -101,6 +112,7 @@ end
 - Use proper Jennifer model conventions
 
 ### Development Server
+
 - Implement file watching for auto-recompilation
 - Handle process management cleanly
 - Provide clear startup/shutdown messages
@@ -110,6 +122,7 @@ end
 ## File Organization
 
 ### AZU PROJECT Directory Structure
+
 ```
 ./src
 ├── project
@@ -162,6 +175,7 @@ end
 ```
 
 ### File Naming
+
 - Command files: `{command_name}.cr`
 - Generator files: `{resource_type}_generator.cr`
 - Template files: `{template_name}.ecr`
@@ -170,6 +184,7 @@ end
 ## Testing Guidelines
 
 ### Spec Structure
+
 - Mirror `src/` structure in `spec/`
 - Use descriptive `describe` and `it` blocks
 - Test both success and failure scenarios
@@ -177,6 +192,7 @@ end
 - Test generated code compilation
 
 ### Test Patterns
+
 ```crystal
 describe Azu::Commands::Project do
   describe "#call" do
@@ -194,12 +210,14 @@ end
 ## Dependencies and Imports
 
 ### Shard Management
+
 - Keep `shard.yml` dependencies minimal
 - Pin dependency versions for stability
 - Group dependencies logically (development, test, production)
 - Document why each dependency is needed
 
 ### Import Guidelines
+
 - Import only what you need
 - Use qualified imports when possible
 - Group imports: standard library first, then shards, then local files
@@ -208,12 +226,14 @@ end
 ## Performance Considerations
 
 ### Compilation Performance
+
 - Keep macro usage reasonable
 - Avoid deep inheritance hierarchies
 - Use generic types judiciously
 - Profile compilation times for large changes
 
 ### Runtime Performance
+
 - Use appropriate data structures (Array vs Set vs Hash)
 - Minimize string allocations in hot paths
 - Use `String::Builder` for complex string building
@@ -222,12 +242,14 @@ end
 ## Documentation Standards
 
 ### Code Documentation
+
 - Use Crystal's documentation format (`# Description`)
 - Document public methods and classes
 - Include usage examples for complex APIs
 - Document parameter types and return values
 
 ### README and Guides
+
 - Keep README concise but complete
 - Include installation instructions
 - Provide usage examples
@@ -236,12 +258,14 @@ end
 ## Error Messages and User Experience
 
 ### User-Friendly Messages
+
 - Provide clear, actionable error messages
 - Use colors for different message types (if terminal supports it)
 - Include suggestions for fixing errors
 - Show progress for long operations
 
 ### Logging
+
 - Use structured logging when available
 - Log to appropriate streams (STDOUT for output, STDERR for errors)
 - Provide verbose mode for debugging
@@ -250,12 +274,14 @@ end
 ## Build and Deployment
 
 ### Makefile Usage
+
 - Keep Makefile simple and documented
 - Support common targets: build, install, clean, test
 - Handle cross-platform differences
 - Use variables for commonly changed values
 
 ### Version Management
+
 - Use semantic versioning
 - Update version in `shard.yml` and code
 - Tag releases appropriately
@@ -264,12 +290,14 @@ end
 ## Security Considerations
 
 ### Input Validation
+
 - Validate all user inputs
 - Sanitize file paths to prevent directory traversal
 - Validate database connection parameters
 - Check file permissions before operations
 
 ### File Operations
+
 - Use secure temporary file creation
 - Set appropriate file permissions on generated files
 - Validate file extensions and types
@@ -286,12 +314,14 @@ end
 ## Debugging and Development
 
 ### Development Workflow
+
 - Use `crystal run` for development
 - Enable all compiler warnings
 - Use `crystal tool hierarchy` to understand type relationships
 - Profile memory usage for large operations
 
 ### Debugging Tools
+
 - Use `pp` for debug output
 - Leverage Crystal's built-in debugging capabilities
 - Use proper logging instead of `puts` for debugging
@@ -333,11 +363,12 @@ ation errors gracefully
 - [x] Set up testing framework for CLI commands
 
 **Acceptance Criteria:**
+
 - CLI can parse commands and subcommands
 - Configuration files are properly loaded
 - Error messages are user-friendly
 - Unit tests cover core functionality
-:::
+  :::
 
 ### 1.2 Project Management Core
 
@@ -353,29 +384,33 @@ ation errors gracefully
 - [x] Shard.yml generation and management
 
 **Acceptance Criteria:**
+
 - Can create new Azu projects from templates
 - Interactive setup guides user through configuration
 - Generated projects compile and run successfully
 - Templates are easily extensible
-:::
+  :::
 
 :::task[Code Generation System]
 **Priority:** P0
 **Dependencies:** Project templates
 
-- [x] `azu generate` command framework
-- [x] Controller generation
-- [x] Model generation
-- [x] Service generation
-- [x] Middleware generation
-- [x] Custom component templates
+- [] `azu generate` command framework
+- [] Endpoints generation
+- [] Model generation
+- [] Service generation
+- [] Middleware generation
+- [] Custom component templates
+- [] Migration generator
+
 
 **Acceptance Criteria:**
+
 - Generated components follow Azu conventions
 - Files are created in correct directory structure
 - Generated code includes proper imports and boilerplate
 - Components integrate seamlessly with existing project
-:::
+  :::
 
 ### 1.3 Database Integration (CQL)
 
@@ -391,11 +426,12 @@ ation errors gracefully
 - [x] Database configuration management
 
 **Acceptance Criteria:**
+
 - Database operations work with multiple adapters
 - Migrations can be run and rolled back
 - Seed data can be loaded consistently
 - Database state is properly managed
-:::
+  :::
 
 ## Phase 2: Development Workflow Enhancement
 
@@ -419,11 +455,12 @@ ation errors gracefully
 - [x] Error reporting and recovery
 
 **Acceptance Criteria:**
+
 - Changes trigger automatic rebuilds
 - Browser automatically refreshes on changes
 - Build errors are displayed clearly
 - Server can handle multiple environments
-:::
+  :::
 
 ### 2.2 Testing & Quality
 
@@ -439,11 +476,12 @@ ation errors gracefully
 - [ ] Integration with CI/CD
 
 **Acceptance Criteria:**
+
 - Tests run efficiently with proper reporting
 - Coverage reports are accurate and detailed
 - Continuous testing provides immediate feedback
 - Integration tests work with database
-:::
+  :::
 
 :::task[Code Quality Tools]
 **Priority:** P1
@@ -457,11 +495,12 @@ ation errors gracefully
 - [ ] Security vulnerability scanning
 
 **Acceptance Criteria:**
+
 - Code style is consistently enforced
 - Linting rules are configurable
 - Format command preserves code semantics
 - Security issues are detected and reported
-:::
+  :::
 
 ### 2.3 Interactive Development
 
@@ -477,11 +516,12 @@ ation errors gracefully
 - [ ] History and session management
 
 **Acceptance Criteria:**
+
 - REPL loads full application context
 - Can interact with models and services
 - Database queries can be tested interactively
 - Session state is preserved between commands
-:::
+  :::
 
 ## Phase 3: Advanced Features & Integrations
 
@@ -505,11 +545,12 @@ ation errors gracefully
 - [ ] Security audit tools
 
 **Acceptance Criteria:**
+
 - Authentication can be configured quickly
 - Multiple OAuth providers supported
 - JWT tokens are properly managed
 - Security best practices are enforced
-:::
+  :::
 
 ### 3.2 Job Queue Management
 
@@ -525,11 +566,12 @@ ation errors gracefully
 - [ ] Queue management tools
 
 **Acceptance Criteria:**
+
 - Background jobs can be created and managed
 - Queue monitoring provides real-time status
 - Failed jobs can be inspected and retried
 - Scheduling works reliably
-:::
+  :::
 
 ### 3.3 Deployment & Production
 
@@ -545,11 +587,12 @@ ation errors gracefully
 - [ ] Log aggregation and analysis
 
 **Acceptance Criteria:**
+
 - Production builds are optimized
 - Deployment works for major platforms
 - Environment configuration is secure
 - Health checks provide meaningful status
-:::
+  :::
 
 ### 3.4 Documentation & API Tools
 
@@ -565,11 +608,12 @@ ation errors gracefully
 - [ ] Documentation validation
 
 **Acceptance Criteria:**
+
 - Documentation is generated from code
 - API docs are interactive and comprehensive
 - Examples are validated and current
 - Documentation can be served locally
-:::
+  :::
 
 ## Phase 4: Enhanced Developer Experience
 
@@ -592,11 +636,12 @@ ation errors gracefully
 - [ ] Responsive terminal layouts
 
 **Acceptance Criteria:**
+
 - Terminal interface is visually appealing
 - Interactive elements work reliably
 - Output is color-coded and readable
 - Dashboard provides useful overview
-:::
+  :::
 
 ### 4.2 Productivity Tools
 
@@ -612,11 +657,12 @@ ation errors gracefully
 - [ ] Architecture visualization
 
 **Acceptance Criteria:**
+
 - Analysis provides actionable insights
 - Metrics track code quality over time
 - Performance issues are identified
 - Suggestions improve code quality
-:::
+  :::
 
 ### 4.3 Team Collaboration
 
@@ -632,11 +678,12 @@ ation errors gracefully
 - [ ] Team metrics dashboard
 
 **Acceptance Criteria:**
+
 - Team setup is automated and consistent
 - Configurations are shared reliably
 - Code review process is streamlined
 - Team productivity is visible
-:::
+  :::
 
 ## Phase 5: Advanced & Enterprise Features
 
@@ -660,11 +707,12 @@ ation errors gracefully
 - [ ] Automated code review
 
 **Acceptance Criteria:**
+
 - Suggestions are contextually relevant
 - Error resolution is accurate
 - Optimization suggestions improve performance
 - Natural language interface is intuitive
-:::
+  :::
 
 ### 5.2 Monitoring & Observability
 
@@ -680,11 +728,12 @@ ation errors gracefully
 - [ ] Automated performance reports
 
 **Acceptance Criteria:**
+
 - Monitoring captures relevant metrics
 - Tracing provides insight into bottlenecks
 - Alerts are timely and actionable
 - Dashboard is informative and responsive
-:::
+  :::
 
 ## Cross-Cutting Concerns
 
@@ -697,7 +746,7 @@ ation errors gracefully
 - [ ] Video tutorials and screencasts
 - [x] Community examples and patterns
 - [x] Migration guides from other tools
-:::
+      :::
 
 :::concern[Testing & Quality Assurance]
 **Throughout all phases**
@@ -708,7 +757,7 @@ ation errors gracefully
 - [ ] User acceptance testing
 - [ ] Accessibility testing
 - [ ] Cross-platform compatibility
-:::
+      :::
 
 :::concern[Configuration & Extensibility]
 **Throughout all phases**
@@ -719,29 +768,32 @@ ation errors gracefully
 - [ ] Theme and customization support
 - [ ] IDE and editor integrations
 - [ ] API for third-party tools
-:::
+      :::
 
 ## Success Metrics
 
 :::metrics[Key Performance Indicators]
 **Developer Adoption:**
+
 - CLI download and usage rates
 - Community contributions and plugins
 - Documentation engagement metrics
 - Support ticket volume and resolution time
 
 **Developer Productivity:**
+
 - Time to create new project (target: <2 minutes)
 - Build and deployment time improvements
 - Code quality metrics improvement
 - Developer satisfaction surveys
 
 **Technical Performance:**
+
 - CLI command response times (target: <500ms)
 - Memory usage optimization
 - Cross-platform compatibility score
 - Integration test coverage (target: >90%)
-:::
+  :::
 
 ## Risk Mitigation
 

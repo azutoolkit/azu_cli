@@ -1,0 +1,14 @@
+struct <%= name -%>
+  <%= include_statement -%>
+  <%= db_context_declaration -%>
+
+  <%= getter_declarations -%>
+
+<% if has_validations? -%>
+  # Custom validations with clear error messages
+  <%= validation_declarations %>
+<% end %>
+
+  def initialize(<%= constructor_params %>)
+  end
+end

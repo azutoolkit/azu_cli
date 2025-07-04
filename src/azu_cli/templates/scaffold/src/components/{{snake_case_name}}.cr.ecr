@@ -1,0 +1,23 @@
+class <%= class_name %>
+  include Azu::Component
+
+<% if has_properties? %>
+  <%= property_declarations %>
+
+<% end %>
+  def initialize(<%= constructor_params %>)
+  end
+
+  def content
+    div(class: "bg-white p-4 rounded-lg shadow-md") do
+      h3(class: "text-lg font-semibold mb-2") { text "<%= class_name %>" }
+      div(class: "p-4") do
+        text "Component content goes here"
+      end
+    end
+  end
+
+<% if has_events? %>
+<%= event_handling_method %>
+<% end %>
+end

@@ -37,7 +37,7 @@ module AzuCLI
         end
 
         generator_type = args[0]
-        valid_types = ["model", "endpoint", "service", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "request", "response"]
+        valid_types = ["model", "endpoint", "service", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "request", "response", "page_response"]
 
         unless valid_types.includes?(generator_type)
           raise ArgumentError.new("Invalid generator type: #{generator_type}. Valid types: #{valid_types.join(", ")}")

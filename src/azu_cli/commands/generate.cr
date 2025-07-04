@@ -97,8 +97,147 @@ module AzuCLI
       end
 
       private def create_generator(type : String, name : String, project_name : String, options : Hash(String, String)) : String
-        # For now, return a placeholder until individual generators are implemented
-        "Generated #{type} '#{name}' for project '#{project_name}'"
+        case type.downcase
+        when "model"
+          create_model_generator(name, project_name, options)
+        when "request"
+          create_request_generator(name, project_name, options)
+        when "component"
+          create_component_generator(name, project_name, options)
+        when "validator"
+          create_validator_generator(name, project_name, options)
+        when "response"
+          create_response_generator(name, project_name, options)
+        when "page_response"
+          create_page_response_generator(name, project_name, options)
+        else
+          "Generator type '#{type}' not yet implemented"
+        end
+      end
+
+      private def create_model_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        # Extract attributes from options
+        attributes = {} of String => String
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          attributes[key] = value
+        end
+
+        # Create model generator
+        generator = AzuCLI::Generate::Model.new(
+          name: name,
+          attributes: attributes,
+          timestamps: options["timestamps"]? == "true",
+          database: options["database"]? || "BlogDB",
+          id_type: options["id_type"]? || "UUID"
+        )
+
+        # Generate the model
+        generator.render(project_name)
+
+        "Generated model '#{name}' with #{attributes.size} attributes"
+      end
+
+      private def create_request_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        attributes = {} of String => String
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          attributes[key] = value
+        end
+
+        generator = AzuCLI::Generate::Request.new(
+          name: name,
+          attributes: attributes
+        )
+
+        generator.render(project_name)
+        "Generated request '#{name}' with #{attributes.size} attributes"
+      end
+
+      private def create_component_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        # Extract properties from options
+        properties = {} of String => String
+        events = [] of String
+
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          if key == "events"
+            events = value.split(",").map(&.strip)
+          else
+            properties[key] = value
+          end
+        end
+
+        generator = AzuCLI::Generate::Component.new(
+          name: name,
+          properties: properties,
+          events: events
+        )
+
+        generator.render(project_name)
+        "Generated component '#{name}' with #{properties.size} properties and #{events.size} events"
+      end
+
+      private def create_validator_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        # Extract validation rules and record type from options
+        validation_rules = [] of String
+        record_type = "User"
+
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          case key
+          when "rules"
+            validation_rules = value.split(",").map(&.strip)
+          when "record_type", "record"
+            record_type = value
+          else
+            # Treat other options as validation rules
+            validation_rules << value
+          end
+        end
+
+        generator = AzuCLI::Generate::Validator.new(
+          name: name,
+          record_type: record_type,
+          validation_rules: validation_rules
+        )
+
+        generator.render(project_name)
+        "Generated validator '#{name}' for #{record_type} with #{validation_rules.size} validation rules"
+      end
+
+      private def create_response_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        fields = {} of String => String
+        from_type = nil
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          if key == "from"
+            from_type = value
+          else
+            fields[key] = value
+          end
+        end
+        generator = AzuCLI::Generate::Response.new(
+          name: name,
+          fields: fields,
+          from_type: from_type
+        )
+        generator.render(project_name)
+        "Generated response '#{name}' with #{fields.size} fields#{from_type ? " from #{from_type}" : ""}"
+      end
+
+      private def create_page_response_generator(name : String, project_name : String, options : Hash(String, String)) : String
+        fields = {} of String => String
+        options.each do |key, value|
+          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
+          fields[key] = value
+        end
+        generator = AzuCLI::Generate::PageResponse.new(
+          name: name,
+          fields: fields
+        )
+        generator.render(project_name)
+        "Generated page response '#{name}' with #{fields.size} fields"
       end
 
       private def get_project_name : String

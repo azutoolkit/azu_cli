@@ -10,7 +10,7 @@ targets:
     main: src/<% if @project_type == "web" %>server.cr<% elsif @project_type == "api" %>api.cr<% elsif @project_type == "cli" %><%= @project %>.cr<% else %>server.cr<% end %>
 <% if @include_example -%>
   tasks:
-    main: tasks/taskfile.cr
+    main: src/tasks.cr
 <% end -%>
 
 dependencies:
@@ -20,8 +20,8 @@ dependencies:
   cql:
     github: azutoolkit/cql
 
-  azu_cli:
-    github: azutoolkit/azu_cli
+  topia:
+    github: azutoolkit/topia
 
 <% if @database == "postgresql" || @database == "postgres" || @database == "pg" -%>
   pg:
