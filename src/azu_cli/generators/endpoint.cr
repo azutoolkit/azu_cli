@@ -1,5 +1,6 @@
 require "teeplate"
 require "ecr"
+require "./action"
 
 module AzuCLI
   module Generate
@@ -112,7 +113,7 @@ module AzuCLI
       # Override render to create one file per action
       def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
         # Create the resource subdirectory
-        resource_dir = File.join(output_dir, OUTPUT_DIR, @snake_case_name)
+        resource_dir = File.join(output_dir, @snake_case_name)
         Dir.mkdir_p(resource_dir) unless Dir.exists?(resource_dir)
 
         @actions.each do |action|
