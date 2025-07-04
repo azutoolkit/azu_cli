@@ -1,3 +1,5 @@
+require "option_parser"
+
 module AzuCLI
   module Commands
     # Result class for command execution
@@ -28,39 +30,79 @@ module AzuCLI
       property description : String
       property options : Hash(String, String)
       property args : Array(String)
+      property all_args : Array(String)
 
       def initialize(@name : String, @description : String = "")
         @options = {} of String => String
         @args = [] of String
+        @all_args = [] of String
       end
 
       # Abstract method that all commands must implement
       abstract def execute : Result
 
-      # Parse command line arguments
+      # Parse command line arguments using Crystal's OptionParser
       def parse_args(args : Array(String))
-        @args = args
-        parse_options
-      end
+        # Reset state
+        @options.clear
+        @args.clear
+        @all_args = args.dup # Store all arguments as-is for get_args
 
-      # Parse command options
-      private def parse_options
-        # Default option parsing - can be overridden by subclasses
-        @args.each_with_index do |arg, index|
+        # Parse arguments and extract options
+        skip_next = false
+        args.each_with_index do |arg, index|
+          if skip_next
+            skip_next = false
+            next
+          end
+
           if arg.starts_with?("--")
-            if index + 1 < @args.size && !@args[index + 1].starts_with?("-")
-              @options[arg[2..-1]] = @args[index + 1]
+            if arg.includes?("=")
+              # Handle --option=value format
+              parts = arg.split("=", 2)
+              key = parts[0][2..-1] # Remove the "--"
+              value = parts[1]
+              @options[key] = value
             else
-              @options[arg[2..-1]] = "true"
+              # Handle --option format
+              key = arg[2..-1] # Remove the "--"
+              if is_boolean_flag?(key)
+                @options[key] = "true"
+              else
+                # Try to consume next argument as value
+                if index + 1 < args.size && !args[index + 1].starts_with?("-")
+                  @options[key] = args[index + 1]
+                  skip_next = true
+                else
+                  @options[key] = "true"
+                end
+              end
             end
-          elsif arg.starts_with?("-")
-            if index + 1 < @args.size && !@args[index + 1].starts_with?("-")
-              @options[arg[1..-1]] = @args[index + 1]
+          elsif arg.starts_with?("-") && !arg.starts_with?("--")
+            # Handle -o format
+            key = arg[1..-1] # Remove the "-"
+            if is_boolean_flag?(key)
+              @options[key] = "true"
             else
-              @options[arg[1..-1]] = "true"
+              # Try to consume next argument as value
+              if index + 1 < args.size && !args[index + 1].starts_with?("-")
+                @options[key] = args[index + 1]
+                skip_next = true
+              else
+                @options[key] = "true"
+              end
             end
+          else
+            # This is a regular argument
+            @args << arg
           end
         end
+      end
+
+      # Check if a flag is a boolean flag (doesn't take a value)
+      private def is_boolean_flag?(key : String) : Bool
+        boolean_flags = ["debug", "d", "help", "h", "version", "v", "verbose", "quiet", "q", "force", "f"]
+        boolean_flags.includes?(key)
       end
 
       # Get option value with default
@@ -75,12 +117,12 @@ module AzuCLI
 
       # Get argument at index
       def get_arg(index : Int32) : String?
-        @args[index]?
+        @all_args[index]?
       end
 
-      # Get all arguments
+      # Get all arguments (including flags)
       def get_args : Array(String)
-        @args
+        @all_args
       end
 
       # Success result

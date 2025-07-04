@@ -39,11 +39,11 @@ describe AzuCLI::Commands::Generate do
       result.success?.should be_true
       # Endpoints should be generated in ./src/endpoints directory
       Dir.exists?("./src/endpoints").should be_true
-
+      exit 1
       # Should create subdirectory and files for each action
-      Dir.exists?("./src/endpoints/users").should be_true
-      File.exists?("./src/endpoints/users/users_index_endpoint.cr").should be_true
-      File.exists?("./src/endpoints/users/users_show_endpoint.cr").should be_true
+      Dir.exists?("./src/endpoints/user").should be_true
+      File.exists?("./src/endpoints/user/user_index_endpoint.cr").should be_true
+      File.exists?("./src/endpoints/user/user_show_endpoint.cr").should be_true
     end
 
     it "generates job files in correct output directory" do

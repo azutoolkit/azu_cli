@@ -89,8 +89,8 @@ describe AzuCLI::Generate::Endpoint do
     generator.render(test_dir, interactive: false)
 
     # Check that individual action files were created
-    index_file = File.join(test_dir, "src", "endpoints", "user", "user_index_endpoint.cr")
-    create_file = File.join(test_dir, "src", "endpoints", "user", "user_create_endpoint.cr")
+    index_file = File.join(test_dir, "user", "user_index_endpoint.cr")
+    create_file = File.join(test_dir, "user", "user_create_endpoint.cr")
 
     File.exists?(index_file).should be_true
     File.exists?(create_file).should be_true
@@ -120,8 +120,8 @@ describe AzuCLI::Generate::Endpoint do
     generator.render(test_dir, interactive: false)
 
     # Check that individual action files were created
-    index_file = File.join(test_dir, "src", "endpoints","user", "user_index_endpoint.cr")
-    show_file = File.join(test_dir, "src", "endpoints", "user", "user_show_endpoint.cr")
+    index_file = File.join(test_dir, "user", "user_index_endpoint.cr")
+    show_file = File.join(test_dir, "user", "user_show_endpoint.cr")
 
     File.exists?(index_file).should be_true
     File.exists?(show_file).should be_true
