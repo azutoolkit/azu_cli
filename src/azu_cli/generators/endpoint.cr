@@ -111,10 +111,14 @@ module AzuCLI
 
       # Override render to create one file per action
       def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
+        # Create the resource subdirectory
+        resource_dir = File.join(output_dir, @snake_case_name)
+        Dir.mkdir_p(resource_dir) unless Dir.exists?(resource_dir)
+
         @actions.each do |action|
           # Create a temporary generator for this action
           action_generator = ActionEndpoint.new(@name, action, @endpoint_type, @snake_case_name)
-          action_generator.render(output_dir, force: force, interactive: interactive, list: list, color: color)
+          action_generator.render(resource_dir, force: force, interactive: interactive, list: list, color: color)
         end
       end
 
@@ -150,18 +154,22 @@ module AzuCLI
       def initialize(@name : String, @action : String, @endpoint_type : String, @snake_case_name : String)
       end
 
+      def name_action : String
+        "#{@name.camelcase}#{@action.camelcase}"
+      end
+
       # Convert name to endpoint struct name for this action
       def endpoint_struct_name : String
-        "#{@name.camelcase}#{@action.camelcase}Endpoint"
+        "#{name_action}Endpoint"
       end
 
       # Get the request/response or contract/page types based on endpoint type
       def request_type : String
-        @endpoint_type == "api" ? "#{@name.camelcase}Request" : "#{@name.camelcase}Contract"
+        @endpoint_type == "api" ? "#{name_action}Request" : "#{name_action}Contract"
       end
 
       def response_type : String
-        @endpoint_type == "api" ? "#{@name.camelcase}Response" : "#{@name.camelcase}Page"
+        @endpoint_type == "api" ? "#{name_action}Response" : "#{name_action}Page"
       end
 
       # Get HTTP verb for this action as a variable

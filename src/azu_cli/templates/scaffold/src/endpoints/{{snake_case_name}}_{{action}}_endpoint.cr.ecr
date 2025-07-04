@@ -3,7 +3,7 @@ struct <%= endpoint_struct_name %>
 
   <%= http_verb_action %> "<%= full_path %>"
 
-  def <%= action.downcase %> : <%= response_type %>
+  def call : <%= response_type %>
     # TODO: Implement <%= action.downcase %> action
     # Example:
     # <%= snake_case_name %> = <%= name.camelcase %>Service.<%= action.downcase %>(request)

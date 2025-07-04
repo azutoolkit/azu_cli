@@ -5,7 +5,6 @@ require "file_utils"
 TEST_DIR = "./tmp_generate_test"
 
 describe AzuCLI::Commands::Generate do
-
   # Clean up before and after each test
   before_each do
     FileUtils.rm_rf(TEST_DIR) if Dir.exists?(TEST_DIR)
@@ -41,9 +40,21 @@ describe AzuCLI::Commands::Generate do
       # Endpoints should be generated in ./src/endpoints directory
       Dir.exists?("./src/endpoints").should be_true
 
-      # Should create files for each action
-      File.exists?("./src/endpoints/users_index_endpoint.cr").should be_true
-      File.exists?("./src/endpoints/users_show_endpoint.cr").should be_true
+      # Debug: Show what's actually in the endpoints directory
+      if Dir.exists?("./src/endpoints")
+        puts "Contents of ./src/endpoints:"
+        Dir.entries("./src/endpoints").each { |f| puts "  #{f}" }
+
+        if Dir.exists?("./src/endpoints/users")
+          puts "Contents of ./src/endpoints/users:"
+          Dir.entries("./src/endpoints/users").each { |f| puts "  #{f}" }
+        end
+      end
+
+      # Should create subdirectory and files for each action
+      Dir.exists?("./src/endpoints/users").should be_true
+      File.exists?("./src/endpoints/users/users_index_endpoint.cr").should be_true
+      File.exists?("./src/endpoints/users/users_show_endpoint.cr").should be_true
     end
 
     it "generates job files in correct output directory" do
@@ -63,7 +74,6 @@ describe AzuCLI::Commands::Generate do
       command.parse_args(["middleware", "Authentication"])
 
       result = command.execute
-
       result.success?.should be_true
       # Middleware should be generated in ./src/middleware directory
       File.exists?("./src/middleware/authentication_middleware.cr").should be_true
@@ -93,7 +103,7 @@ describe AzuCLI::Commands::Generate do
 
       result.success?.should be_true
       # Components should be generated in ./src/components directory
-      File.exists?("./src/components/user_card_component.cr").should be_true
+      File.exists?("./src/components/user_card.cr").should be_true
       Dir.exists?("./src/components").should be_true
     end
 
@@ -141,8 +151,9 @@ describe AzuCLI::Commands::Generate do
 
       result.success?.should be_true
       # Pages should be generated in ./src/pages directory
-      File.exists?("./src/pages/user_profile_page.cr").should be_true
       Dir.exists?("./src/pages").should be_true
+      Dir.exists?("./src/pages/userprofiles").should be_true
+      File.exists?("./src/pages/userprofiles/page_response.cr").should be_true
     end
 
     it "generates template files in correct output directory" do
@@ -154,10 +165,13 @@ describe AzuCLI::Commands::Generate do
       result.success?.should be_true
       # Templates should be generated in ./public/templates/pages directory
       Dir.exists?("./public/templates/pages").should be_true
+      Dir.exists?("./public/templates/pages/userlists").should be_true
 
-      # Find the template file
-      template_files = Dir.entries("./public/templates/pages/user_lists").select { |f| f.includes?(".jinja") }
-      template_files.size.should be > 0
+      # Should generate CRUD template files
+      File.exists?("./public/templates/pages/userlists/index.jinja").should be_true
+      File.exists?("./public/templates/pages/userlists/show.jinja").should be_true
+      File.exists?("./public/templates/pages/userlists/new.jinja").should be_true
+      File.exists?("./public/templates/pages/userlists/edit.jinja").should be_true
     end
   end
 

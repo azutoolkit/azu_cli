@@ -136,7 +136,10 @@ module AzuCLI
           endpoint_type: endpoint_type
         )
 
-        render_generator(generator, AzuCLI::Generate::Endpoint::OUTPUT_DIR)
+        # Endpoint generator has custom render method, but use proper output directory
+        output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
+        Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
+        generator.render(output_dir)
         success("Generated endpoint #{@generator_name} successfully")
       end
 
@@ -306,7 +309,10 @@ module AzuCLI
           endpoint_type: endpoint_type,
           scaffold: true
         )
-        render_generator(endpoint_generator, AzuCLI::Generate::Endpoint::OUTPUT_DIR)
+        # Endpoint generator has custom render method, but use proper output directory
+        output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
+        Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
+        endpoint_generator.render(output_dir)
 
         # Request and Response (for API) or Contract and Page (for web)
         if @api_only
@@ -348,7 +354,6 @@ module AzuCLI
           generator.render(target_path, force: @force, interactive: false, list: false, color: true)
 
           Logger.info("✅ Generated #{@generator_type} successfully")
-
         rescue ex : Exception
           Logger.error("Failed to generate #{@generator_type}: #{ex.message}")
           raise ex
