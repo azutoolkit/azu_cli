@@ -1,0 +1,13 @@
+struct <%= endpoint_struct_name %>
+  include Azu::Endpoint(<%= request_type %>, <%= response_type %>)
+
+  <%= http_verb_action %> "<%= full_path %>"
+
+  def call : <%= response_type %>
+    # TODO: Implement <%= action.downcase %> action
+    # Example:
+    # <%= snake_case_name %> = <%= name.camelcase %>Service.<%= action.downcase %>(request)
+    # <%= response_type %>.new(<%= snake_case_name %>)
+    <%= response_type %>.new
+  end
+end

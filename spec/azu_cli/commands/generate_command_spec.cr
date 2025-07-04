@@ -40,17 +40,6 @@ describe AzuCLI::Commands::Generate do
       # Endpoints should be generated in ./src/endpoints directory
       Dir.exists?("./src/endpoints").should be_true
 
-      # Debug: Show what's actually in the endpoints directory
-      if Dir.exists?("./src/endpoints")
-        puts "Contents of ./src/endpoints:"
-        Dir.entries("./src/endpoints").each { |f| puts "  #{f}" }
-
-        if Dir.exists?("./src/endpoints/users")
-          puts "Contents of ./src/endpoints/users:"
-          Dir.entries("./src/endpoints/users").each { |f| puts "  #{f}" }
-        end
-      end
-
       # Should create subdirectory and files for each action
       Dir.exists?("./src/endpoints/users").should be_true
       File.exists?("./src/endpoints/users/users_index_endpoint.cr").should be_true
