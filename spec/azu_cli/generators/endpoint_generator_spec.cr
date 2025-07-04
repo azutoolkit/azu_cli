@@ -3,7 +3,7 @@ require "teeplate"
 
 describe AzuCLI::Generate::Endpoint do
   it "creates an endpoint generator with basic properties" do
-    generator = AzuCLI::Generate::Endpoint.new("User")
+    generator = AzuCLI::Generate::Endpoint.new("User", ["index"])
     generator.name.should eq("User")
     generator.endpoint_type.should eq("api")
     generator.snake_case_name.should eq("user")
@@ -11,7 +11,7 @@ describe AzuCLI::Generate::Endpoint do
   end
 
   it "creates an endpoint generator with web type" do
-    generator = AzuCLI::Generate::Endpoint.new("User", [] of String, "web")
+    generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
     generator.endpoint_type.should eq("web")
     generator.request_type.should eq("UserContract")
     generator.response_type.should eq("UserPage")
@@ -25,7 +25,7 @@ describe AzuCLI::Generate::Endpoint do
   end
 
   it "generates correct HTTP verbs for actions" do
-    generator = AzuCLI::Generate::Endpoint.new("User")
+    generator = AzuCLI::Generate::Endpoint.new("User", ["index"])
     generator.http_verb("index").should eq("get")
     generator.http_verb("show").should eq("get")
     generator.http_verb("create").should eq("post")
@@ -34,7 +34,7 @@ describe AzuCLI::Generate::Endpoint do
   end
 
   it "generates correct paths for actions" do
-    generator = AzuCLI::Generate::Endpoint.new("User")
+    generator = AzuCLI::Generate::Endpoint.new("User", ["index"])
     generator.action_path("index").should eq("/user")
     generator.action_path("new").should eq("/user/new")
     generator.action_path("create").should eq("/user")
@@ -45,100 +45,99 @@ describe AzuCLI::Generate::Endpoint do
   end
 
   it "generates correct API prefixes" do
-    api_generator = AzuCLI::Generate::Endpoint.new("User", [] of String, "api")
-    web_generator = AzuCLI::Generate::Endpoint.new("User", [] of String, "web")
+    api_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
+    web_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
 
     api_generator.api_prefix.should eq("/api")
     web_generator.api_prefix.should eq("")
   end
 
   it "generates correct full paths" do
-    api_generator = AzuCLI::Generate::Endpoint.new("User", [] of String, "api")
-    web_generator = AzuCLI::Generate::Endpoint.new("User", [] of String, "web")
+    api_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
+    web_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
 
     api_generator.full_path("index").should eq("/api/user")
     web_generator.full_path("index").should eq("/user")
   end
 
-  it "generates endpoint methods for actions" do
-    actions = ["index", "create"]
-    generator = AzuCLI::Generate::Endpoint.new("User", actions, "api")
-    methods = generator.endpoint_methods
-
-    methods.should contain("get \"/api/user\"")
-    methods.should contain("post \"/api/user\"")
-    methods.should contain("def index : UserResponse")
-    methods.should contain("def create : UserResponse")
-  end
-
   it "generates scaffold components for API type" do
-    generator = AzuCLI::Generate::Endpoint.new("User", [] of String, "api", true)
+    generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api", true)
     components = generator.scaffold_components
     components.should eq(["request", "response"])
   end
 
   it "generates scaffold components for Web type" do
-    generator = AzuCLI::Generate::Endpoint.new("User", [] of String, "web", true)
+    generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web", true)
     components = generator.scaffold_components
     components.should eq(["contract", "page"])
   end
 
-  it "uses default actions when none provided" do
-    generator = AzuCLI::Generate::Endpoint.new("User")
+  it "returns provided actions as effective actions" do
+    actions = ["index", "create", "update"]
+    generator = AzuCLI::Generate::Endpoint.new("User", actions)
     effective_actions = generator.effective_actions
-    effective_actions.should eq(["index", "show", "create", "update", "destroy"])
+    effective_actions.should eq(actions)
   end
 
-  it "generates an API endpoint file with actions" do
+  it "generates separate endpoint files for each action" do
     actions = ["index", "create"]
     generator = AzuCLI::Generate::Endpoint.new("User", actions, "api")
     test_dir = "./tmp_test"
     FileUtils.mkdir_p(test_dir)
     generator.render(test_dir)
-    generated_file = File.join(test_dir, "user_endpoints.cr")
-    File.exists?(generated_file).should be_true
-    content = File.read(generated_file)
-    content.should contain("struct UserEndpoint")
-    content.should contain("include Azu::Endpoint(UserRequest, UserResponse)")
-    content.should contain("get \"/api/user\"")
-    content.should contain("post \"/api/user\"")
-    content.should contain("def index : UserResponse")
-    content.should contain("def create : UserResponse")
-    content.should contain("end")
+
+    # Check that individual action files were created
+    index_file = File.join(test_dir, "src", "endpoints", "user_index_endpoint.cr")
+    create_file = File.join(test_dir, "src", "endpoints", "user_create_endpoint.cr")
+
+    File.exists?(index_file).should be_true
+    File.exists?(create_file).should be_true
+
+    # Check index file content
+    index_content = File.read(index_file)
+    index_content.should contain("struct UserEndpoint")
+    index_content.should contain("include Azu::Endpoint(UserRequest, UserResponse)")
+    index_content.should contain("get \"/api/user\"")
+    index_content.should contain("def index : UserResponse")
+
+    # Check create file content
+    create_content = File.read(create_file)
+    create_content.should contain("struct UserEndpoint")
+    create_content.should contain("include Azu::Endpoint(UserRequest, UserResponse)")
+    create_content.should contain("post \"/api/user\"")
+    create_content.should contain("def create : UserResponse")
+
     FileUtils.rm_rf(test_dir)
   end
 
-  it "generates a Web endpoint file with actions" do
+  it "generates web endpoint files with correct types" do
     actions = ["index", "show"]
     generator = AzuCLI::Generate::Endpoint.new("User", actions, "web")
     test_dir = "./tmp_test"
     FileUtils.mkdir_p(test_dir)
     generator.render(test_dir)
-    generated_file = File.join(test_dir, "user_endpoints.cr")
-    File.exists?(generated_file).should be_true
-    content = File.read(generated_file)
-    content.should contain("struct UserEndpoint")
-    content.should contain("include Azu::Endpoint(UserContract, UserPage)")
-    content.should contain("get \"/user\"")
-    content.should contain("get \"/user/:id\"")
-    content.should contain("def index : UserPage")
-    content.should contain("def show : UserPage")
-    content.should contain("end")
-    FileUtils.rm_rf(test_dir)
-  end
 
-  it "generates an endpoint file without actions" do
-    generator = AzuCLI::Generate::Endpoint.new("User", [] of String, "api")
-    test_dir = "./tmp_test"
-    FileUtils.mkdir_p(test_dir)
-    generator.render(test_dir)
-    generated_file = File.join(test_dir, "user_endpoints.cr")
-    File.exists?(generated_file).should be_true
-    content = File.read(generated_file)
-    content.should contain("struct UserEndpoint")
-    content.should contain("include Azu::Endpoint(UserRequest, UserResponse)")
-    content.should contain("# TODO: Add your endpoint actions here")
-    content.should contain("end")
+    # Check that individual action files were created
+    index_file = File.join(test_dir, "src", "endpoints", "user_index_endpoint.cr")
+    show_file = File.join(test_dir, "src", "endpoints", "user_show_endpoint.cr")
+
+    File.exists?(index_file).should be_true
+    File.exists?(show_file).should be_true
+
+    # Check index file content
+    index_content = File.read(index_file)
+    index_content.should contain("struct UserEndpoint")
+    index_content.should contain("include Azu::Endpoint(UserContract, UserPage)")
+    index_content.should contain("get \"/user\"")
+    index_content.should contain("def index : UserPage")
+
+    # Check show file content
+    show_content = File.read(show_file)
+    show_content.should contain("struct UserEndpoint")
+    show_content.should contain("include Azu::Endpoint(UserContract, UserPage)")
+    show_content.should contain("get \"/user/:id\"")
+    show_content.should contain("def show : UserPage")
+
     FileUtils.rm_rf(test_dir)
   end
 end

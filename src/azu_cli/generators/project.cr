@@ -5,6 +5,7 @@ module AzuCLI
     # Project generator that creates a new Azu project from templates
     class Project < Teeplate::FileTree
       directory "#{__DIR__}/../templates/project"
+      OUTPUT_DIR = "./"
 
       # Project configuration properties
       property project : String

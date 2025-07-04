@@ -5,6 +5,7 @@ module AzuCLI
     # Component generator that creates Azu::Component classes
     class Component < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/components"
+      OUTPUT_DIR = "./src/components"
 
       property name : String
       property properties : Hash(String, String)

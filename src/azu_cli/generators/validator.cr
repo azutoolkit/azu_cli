@@ -5,6 +5,7 @@ module AzuCLI
     # Validator generator that creates Azu::Validator classes
     class Validator < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/validators"
+      OUTPUT_DIR = "./src/validators"
 
       property name : String
       property record_type : String

@@ -1,433 +1,362 @@
 require "./base"
+require "option_parser"
+require "../logger"
+require "../generators/**"
 
 module AzuCLI
   module Commands
-    # Generate command for code generation
+    # Generate command for creating code from templates
     class Generate < Base
+      property generator_type : String = ""
+      property generator_name : String = ""
+      property attributes : Hash(String, String) = {} of String => String
+      property actions : Array(String) = [] of String
+      property options : Hash(String, String) = {} of String => String
+      property force : Bool = false
+      property api_only : Bool = false
+      property web_only : Bool = false
+      property skip_tests : Bool = false
+
       def initialize
-        super("generate", "Generate code for your Azu project")
+        super("generate", "Generate code from templates")
       end
 
       def execute : Result
-        parse_args(get_args)
+        parse_arguments
 
+        # Validate required arguments
         unless validate_required_args(2)
-          return error("Usage: azu generate <type> <name> [options] [attributes]")
+          return error("Usage: azu generate <type> <name> [attributes] [options]")
         end
 
-        generator_type = get_arg(0).not_nil!
-        name = get_arg(1).not_nil!
+        @generator_type = get_arg(0).not_nil!
+        @generator_name = get_arg(1).not_nil!
 
-        # Extract attributes from remaining arguments
-        attributes = extract_attributes
-        additional_args = extract_additional_args
+        # Parse attributes from remaining arguments
+        parse_attributes
 
-        # Create generator options
-        options = create_generator_options(attributes, additional_args)
+        # Show what we're generating
+        Logger.info("Generating #{@generator_type}: #{@generator_name}")
 
-        # Execute the appropriate generator
-        execute_generator(generator_type, name, options)
-      end
-
-      private def extract_attributes : Hash(String, String)
-        attributes = {} of String => String
-
-        get_args[2..-1].each do |arg|
-          if arg.includes?(":")
-            parts = arg.split(":", 2)
-            if parts.size == 2
-              attributes[parts[0]] = parts[1]
-            end
-          end
-        end
-
-        attributes
-      end
-
-      private def extract_additional_args : Array(String)
-        get_args[2..-1].reject { |arg| arg.includes?(":") }
-      end
-
-      private def create_generator_options(attributes : Hash(String, String), additional_args : Array(String)) : Hash(String, String)
-        options = {} of String => String
-        attributes.each { |k, v| options[k] = v }
-        additional_args.each_with_index { |arg, i| options["arg_#{i}"] = arg }
-        options["force"] = has_option?("force").to_s
-        options["skip_tests"] = has_option?("skip-tests").to_s
-
-        # Merge custom options (like --type, --api-only, etc.)
-        custom_options = extract_custom_options
-        custom_options.each { |k, v| options[k] = v }
-
-        options
-      end
-
-      private def extract_custom_options : Hash(String, String)
-        custom_options = {} of String => String
-
-        # Extract type-specific options
-        if type = get_option("type")
-          custom_options["type"] = type
-        end
-
-        if api_only = get_option("api-only")
-          custom_options["api-only"] = api_only
-        end
-
-        if web_only = get_option("web-only")
-          custom_options["web-only"] = web_only
-        end
-
-        if action = get_option("action")
-          custom_options["action"] = action
-        end
-
-        custom_options
-      end
-
-      private def execute_generator(type : String, name : String, options : Hash(String, String)) : Result
-        begin
-          # Get project name from current directory or config
-          project_name = get_project_name
-
-          # Create and execute the appropriate generator
-          result = create_generator(type, name, project_name, options)
-
-          Logger.info("✅ #{result}")
-          success(result)
-        rescue ex : ArgumentError
-          error("Invalid generator arguments: #{ex.message}")
-        rescue ex : File::Error
-          error("File operation failed: #{ex.message}")
-        rescue ex : Exception
-          error("Generation failed: #{ex.message}")
-        end
-      end
-
-      private def create_generator(type : String, name : String, project_name : String, options : Hash(String, String)) : String
-        case type.downcase
+        # Generate based on type
+        case @generator_type.downcase
         when "model"
-          create_model_generator(name, project_name, options)
-        when "migration"
-          create_migration_generator(name, project_name, options)
-        when "request"
-          create_request_generator(name, project_name, options)
-        when "component"
-          create_component_generator(name, project_name, options)
-        when "validator"
-          create_validator_generator(name, project_name, options)
-        when "response"
-          create_response_generator(name, project_name, options)
-        when "page_response"
-          create_page_response_generator(name, project_name, options)
+          generate_model
         when "endpoint"
-          create_endpoint_generator(name, project_name, options)
+          generate_endpoint
+        when "service"
+          generate_service
+        when "contract"
+          generate_contract
+        when "page"
+          generate_page
         when "job"
-          create_job_generator(name, project_name, options)
+          generate_job
         when "middleware"
-          create_middleware_generator(name, project_name, options)
+          generate_middleware
+        when "migration"
+          generate_migration
+        when "component"
+          generate_component
+        when "validator"
+          generate_validator
+        when "request"
+          generate_request
+        when "response"
+          generate_response
+        when "template"
+          generate_template
+        when "scaffold"
+          generate_scaffold
         else
-          "Generator type '#{type}' not yet implemented"
+          error("Unknown generator type: #{@generator_type}")
         end
       end
 
-      private def create_migration_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        # Extract attributes from options
-        attributes = {} of String => String
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          attributes[key] = value
+      private def parse_arguments
+        OptionParser.parse(get_args) do |parser|
+          parser.banner = "Usage: azu generate <type> <name> [attributes] [options]"
+
+          parser.on("--force", "Overwrite existing files") { @force = true }
+          parser.on("--api-only", "Generate API-only components") { @api_only = true }
+          parser.on("--web-only", "Generate web-only components") { @web_only = true }
+          parser.on("--skip-tests", "Skip test file generation") { @skip_tests = true }
+          parser.on("--help", "Show help") {
+            show_help
+            exit(0)
+          }
         end
-
-        # Create migration generator
-        generator = AzuCLI::Generate::Migration.new(
-          name: name,
-          attributes: attributes,
-          timestamps: options["timestamps"]? == "true"
-        )
-
-        # Generate the migration
-        generator.render(project_name)
-
-        "Generated migration '#{name}' with #{attributes.size} attributes"
       end
 
-      private def create_job_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        parameters = {} of String => String
-        queue = "default"
-        retries = 3
-        expires = "1.days"
+      private def parse_attributes
+        # Skip the first two arguments (type and name)
+        attribute_args = get_args[2..-1]? || [] of String
 
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          case key
-          when "queue"
-            queue = value
-          when "retries"
-            retries = value.to_i
-          when "expires"
-            expires = value
+        attribute_args.each do |arg|
+          # Skip option flags
+          next if arg.starts_with?("--")
+
+          if arg.includes?(":")
+            # Parse attribute:type format
+            parts = arg.split(":", 2)
+            @attributes[parts[0]] = parts[1]
           else
-            # Treat other options as parameters
-            parameters[key] = value
+            # Treat as action for endpoints/services
+            @actions << arg unless @actions.includes?(arg)
           end
         end
 
-        generator = AzuCLI::Generate::Job.new(
-          name: name,
-          parameters: parameters,
-          queue: queue,
-          retries: retries,
-          expires: expires
-        )
-
-        generator.render(project_name)
-        "Generated job '#{name}' with #{parameters.size} parameters (queue: #{queue}, retries: #{retries}, expires: #{expires})"
+        # Set default actions for endpoints if none provided
+        if @generator_type == "endpoint" && @actions.empty?
+          @actions = ["index", "show", "create", "update", "destroy"]
+        end
       end
 
-      private def create_endpoint_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        actions = [] of String
-        endpoint_type = "api"
-        scaffold = false
+      private def generate_model : Result
+        Logger.info("Generating model with attributes: #{@attributes}")
 
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          case key
-          when "actions"
-            actions = value.split(",").map(&.strip)
-          when "type"
-            endpoint_type = value.downcase
-          when "scaffold"
-            scaffold = value.downcase == "true"
-          else
-            # Treat other options as actions
-            actions << value
-          end
-        end
+        generator = AzuCLI::Generate::Model.new(
+          name: @generator_name,
+          attributes: @attributes,
+          generate_migration: !@skip_tests
+        )
+
+        render_generator(generator, AzuCLI::Generate::Model::OUTPUT_DIR)
+        success("Generated model #{@generator_name} successfully")
+      end
+
+      private def generate_endpoint : Result
+        Logger.info("Generating endpoint with actions: #{@actions}")
+
+        endpoint_type = @api_only ? "api" : (@web_only ? "web" : "api")
 
         generator = AzuCLI::Generate::Endpoint.new(
-          name: name,
-          actions: actions,
-          endpoint_type: endpoint_type,
-          scaffold: scaffold
+          name: @generator_name,
+          actions: @actions,
+          endpoint_type: endpoint_type
         )
 
-        generator.render(project_name)
-
-        # Generate scaffold components if requested
-        if scaffold
-          scaffold_message = generate_scaffold_components(name, endpoint_type, project_name)
-          "Generated endpoint '#{name}' with #{actions.size} actions (#{endpoint_type}) and scaffolded #{scaffold_message}"
-        else
-          "Generated endpoint '#{name}' with #{actions.size} actions (#{endpoint_type})"
-        end
+        render_generator(generator, AzuCLI::Generate::Endpoint::OUTPUT_DIR)
+        success("Generated endpoint #{@generator_name} successfully")
       end
 
-      private def generate_scaffold_components(name : String, endpoint_type : String, project_name : String) : String
-        components = [] of String
+      private def generate_service : Result
+        Logger.info("Generating service")
 
-        if endpoint_type == "api"
-          # Generate request and response
-          request_generator = AzuCLI::Generate::Request.new(name, {} of String => String)
-          request_generator.render(project_name)
-          components << "request"
-
-          response_generator = AzuCLI::Generate::Response.new(name, {} of String => String)
-          response_generator.render(project_name)
-          components << "response"
-        else
-          # Generate contract and page
-          # Note: Contract and Page generators would need to be implemented
-          components << "contract"
-          components << "page"
-        end
-
-        components.join(", ")
-      end
-
-      private def create_model_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        # Extract attributes from options
-        attributes = {} of String => String
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          attributes[key] = value
-        end
-
-        # Create model generator
-        generator = AzuCLI::Generate::Model.new(
-          name: name,
-          attributes: attributes,
-          timestamps: options["timestamps"]? == "true",
-          database: options["database"]? || "BlogDB",
-          id_type: options["id_type"]? || "UUID"
-        )
-
-        # Generate the model
-        generator.render(project_name)
-
-        "Generated model '#{name}' with #{attributes.size} attributes"
-      end
-
-      private def create_request_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        attributes = {} of String => String
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          attributes[key] = value
-        end
-
-        generator = AzuCLI::Generate::Request.new(
-          name: name,
-          attributes: attributes
-        )
-
-        generator.render(project_name)
-        "Generated request '#{name}' with #{attributes.size} attributes"
-      end
-
-      private def create_component_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        # Extract properties from options
-        properties = {} of String => String
-        events = [] of String
-
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          if key == "events"
-            events = value.split(",").map(&.strip)
-          else
-            properties[key] = value
-          end
-        end
-
+        # For now, use component generator as service base
+        # TODO: Create dedicated Service generator
         generator = AzuCLI::Generate::Component.new(
-          name: name,
-          properties: properties,
-          events: events
+          name: @generator_name,
+          properties: @attributes
         )
 
-        generator.render(project_name)
-        "Generated component '#{name}' with #{properties.size} properties and #{events.size} events"
+        render_generator(generator, AzuCLI::Generate::Component::OUTPUT_DIR)
+        success("Generated service #{@generator_name} successfully")
       end
 
-      private def create_validator_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        # Extract validation rules and record type from options
-        validation_rules = [] of String
-        record_type = "User"
+      private def generate_contract : Result
+        Logger.info("Generating contract")
 
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          case key
-          when "rules"
-            validation_rules = value.split(",").map(&.strip)
-          when "record_type", "record"
-            record_type = value
-          else
-            # Treat other options as validation rules
-            validation_rules << value
-          end
-        end
-
-        generator = AzuCLI::Generate::Validator.new(
-          name: name,
-          record_type: record_type,
-          validation_rules: validation_rules
+        # Use request generator for contracts (similar structure)
+        generator = AzuCLI::Generate::Request.new(
+          name: @generator_name,
+          attributes: @attributes
         )
 
-        generator.render(project_name)
-        "Generated validator '#{name}' for #{record_type} with #{validation_rules.size} validation rules"
+        render_generator(generator, AzuCLI::Generate::Request::OUTPUT_DIR)
+        success("Generated contract #{@generator_name} successfully")
       end
 
-      private def create_response_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        fields = {} of String => String
-        from_type = nil
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          if key == "from"
-            from_type = value
-          else
-            fields[key] = value
-          end
-        end
-        generator = AzuCLI::Generate::Response.new(
-          name: name,
-          fields: fields,
-          from_type: from_type
-        )
-        generator.render(project_name)
-        "Generated response '#{name}' with #{fields.size} fields#{from_type ? " from #{from_type}" : ""}"
-      end
+      private def generate_page : Result
+        Logger.info("Generating page with template")
 
-      private def create_page_response_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        fields = {} of String => String
-        action = "index"
-
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          case key
-          when "action"
-            action = value.downcase
-          else
-            fields[key] = value
-          end
-        end
-
-        generator = AzuCLI::Generate::PageResponse.new(
-          name: name,
-          fields: fields,
+        action = @actions.first? || "index"
+        generator = AzuCLI::Generate::Page.new(
+          name: @generator_name,
+          fields: @attributes,
           action: action
         )
-        generator.render(project_name)
-        "Generated page response '#{name}' for action '#{action}' with #{fields.size} fields"
+
+        render_generator(generator, AzuCLI::Generate::Page::OUTPUT_DIR)
+        success("Generated page #{@generator_name} successfully")
       end
 
-      private def create_middleware_generator(name : String, project_name : String, options : Hash(String, String)) : String
-        middleware_type = "authentication"
-        skip_paths = [] of String
-        context_vars = {} of String => String
+      private def generate_job : Result
+        Logger.info("Generating job")
 
-        options.each do |key, value|
-          next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          case key
-          when "type"
-            middleware_type = value
-          when "skip_paths"
-            skip_paths = value.split(",").map(&.strip)
-          else
-            # Treat other options as context variables
-            context_vars[key] = value
-          end
-        end
-
-        generator = AzuCLI::Generate::Middleware.new(
-          name: name,
-          middleware_type: middleware_type,
-          skip_paths: skip_paths,
-          context_vars: context_vars
+        generator = AzuCLI::Generate::Job.new(
+          name: @generator_name,
+          parameters: @attributes
         )
 
-        generator.render(project_name)
-        "Generated middleware '#{name}' (type: #{middleware_type}, skip_paths: #{skip_paths.size}, context_vars: #{context_vars.size})"
+        render_generator(generator, AzuCLI::Generate::Job::OUTPUT_DIR)
+        success("Generated job #{@generator_name} successfully")
       end
 
-      private def get_project_name : String
-        # Try to get project name from current directory
-        current_dir = Dir.current
-        project_name = File.basename(current_dir)
+      private def generate_middleware : Result
+        Logger.info("Generating middleware")
 
-        # If we're in a typical project structure, try to find the main file
-        if File.exists?(File.join(current_dir, "shard.yml"))
-          # Read project name from shard.yml
-          if content = File.read(File.join(current_dir, "shard.yml"))
-            if match = content.match(/name:\s*(\w+)/)
-              project_name = match[1]
-            end
+        middleware_type = @options["type"]? || "authentication"
+
+        generator = AzuCLI::Generate::Middleware.new(
+          name: @generator_name,
+          middleware_type: middleware_type
+        )
+
+        render_generator(generator, AzuCLI::Generate::Middleware::OUTPUT_DIR)
+        success("Generated middleware #{@generator_name} successfully")
+      end
+
+      private def generate_migration : Result
+        Logger.info("Generating migration")
+
+        generator = AzuCLI::Generate::Migration.new(
+          name: @generator_name,
+          attributes: @attributes
+        )
+
+        render_generator(generator, AzuCLI::Generate::Migration::OUTPUT_DIR)
+        success("Generated migration #{@generator_name} successfully")
+      end
+
+      private def generate_component : Result
+        Logger.info("Generating component")
+
+        generator = AzuCLI::Generate::Component.new(
+          name: @generator_name,
+          properties: @attributes
+        )
+
+        render_generator(generator, AzuCLI::Generate::Component::OUTPUT_DIR)
+        success("Generated component #{@generator_name} successfully")
+      end
+
+      private def generate_validator : Result
+        Logger.info("Generating validator")
+
+        record_type = @options["record"]? || "User"
+
+        generator = AzuCLI::Generate::Validator.new(
+          name: @generator_name,
+          record_type: record_type
+        )
+
+        render_generator(generator, AzuCLI::Generate::Validator::OUTPUT_DIR)
+        success("Generated validator #{@generator_name} successfully")
+      end
+
+      private def generate_request : Result
+        Logger.info("Generating request")
+
+        generator = AzuCLI::Generate::Request.new(
+          name: @generator_name,
+          attributes: @attributes
+        )
+
+        render_generator(generator, AzuCLI::Generate::Request::OUTPUT_DIR)
+        success("Generated request #{@generator_name} successfully")
+      end
+
+      private def generate_response : Result
+        Logger.info("Generating response")
+
+        from_type = @options["from"]?
+
+        generator = AzuCLI::Generate::Response.new(
+          name: @generator_name,
+          fields: @attributes,
+          from_type: from_type
+        )
+
+        render_generator(generator, AzuCLI::Generate::Response::OUTPUT_DIR)
+        success("Generated response #{@generator_name} successfully")
+      end
+
+      private def generate_template : Result
+        Logger.info("Generating template")
+
+        action = @actions.first? || "index"
+
+        generator = AzuCLI::Generate::Template.new(
+          name: @generator_name,
+          fields: @attributes,
+          action: action
+        )
+
+        render_generator(generator, AzuCLI::Generate::Template::OUTPUT_DIR)
+        success("Generated template #{@generator_name} successfully")
+      end
+
+      private def generate_scaffold : Result
+        Logger.info("Generating scaffold (complete CRUD)")
+
+        # Scaffold generates multiple components
+        # Model
+        model_generator = AzuCLI::Generate::Model.new(
+          name: @generator_name,
+          attributes: @attributes
+        )
+        render_generator(model_generator, AzuCLI::Generate::Model::OUTPUT_DIR)
+
+        # Endpoint
+        endpoint_type = @api_only ? "api" : (@web_only ? "web" : "web")
+        endpoint_generator = AzuCLI::Generate::Endpoint.new(
+          name: @generator_name,
+          actions: ["index", "show", "new", "create", "edit", "update", "destroy"],
+          endpoint_type: endpoint_type,
+          scaffold: true
+        )
+        render_generator(endpoint_generator, AzuCLI::Generate::Endpoint::OUTPUT_DIR)
+
+        # Request and Response (for API) or Contract and Page (for web)
+        if @api_only
+          request_generator = AzuCLI::Generate::Request.new(@generator_name, @attributes)
+          render_generator(request_generator, AzuCLI::Generate::Request::OUTPUT_DIR)
+
+          response_generator = AzuCLI::Generate::Response.new(@generator_name, @attributes)
+          render_generator(response_generator, AzuCLI::Generate::Response::OUTPUT_DIR)
+        else
+          # Generate contracts for each CRUD action
+          ["index", "show", "new", "create", "edit", "update", "destroy"].each do |action|
+            contract_generator = AzuCLI::Generate::Request.new("#{@generator_name}_#{action}", @attributes)
+            render_generator(contract_generator, AzuCLI::Generate::Request::OUTPUT_DIR)
+          end
+
+          # Generate pages for each CRUD action
+          ["index", "show", "new", "edit"].each do |action|
+            page_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action)
+            render_generator(page_generator, AzuCLI::Generate::Page::OUTPUT_DIR)
           end
         end
 
-        project_name
+        Logger.info("✅ Scaffold generation completed")
+        success("Generated scaffold #{@generator_name} successfully")
+      end
+
+      # Render a generator to its appropriate output directory
+      private def render_generator(generator : Teeplate::FileTree, output_dir : String)
+        begin
+          # Ensure the output directory exists
+          Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
+
+          # Determine the actual output path
+          target_path = File.expand_path(output_dir, Dir.current)
+
+          Logger.info("Generating files in: #{target_path}")
+
+          # Render the generator
+          generator.render(target_path, force: @force, interactive: false, list: false, color: true)
+
+          Logger.info("✅ Generated #{@generator_type} successfully")
+
+        rescue ex : Exception
+          Logger.error("Failed to generate #{@generator_type}: #{ex.message}")
+          raise ex
+        end
       end
 
       def show_help
-        puts "Usage: azu generate <type> <name> [options] [attributes]"
+        puts "Usage: azu generate <type> <name> [attributes] [options]"
         puts
         puts "Generate code for your Azu project."
         puts
@@ -437,33 +366,38 @@ module AzuCLI
         puts "  service <name> [methods]     Generate a service with methods"
         puts "  contract <name> [attr:type]  Generate a contract with attributes"
         puts "  page <name> [attr:type]      Generate a page with template variables"
-        puts "  page_response <name> [attr:type] [--action <action>] Generate a page response with Jinja2 template"
-        puts "  migration <name> [attr:type] Generate a database migration"
-        puts "  scaffold <name> [attr:type]  Generate a complete CRUD scaffold"
-        puts "  component <name> [attr:type] Generate a component"
+        puts "  job <name> [param:type]      Generate a background job"
         puts "  middleware <name> [type]     Generate middleware"
+        puts "  migration <name> [attr:type] Generate a database migration"
+        puts "  component <name> [attr:type] Generate a component"
         puts "  validator <name> [type]      Generate a custom validator"
-        puts "  channel <name> [events]      Generate a WebSocket channel"
-        puts "  handler <name> [type]        Generate a request handler"
         puts "  request <name> [attr:type]   Generate a request class"
         puts "  response <name> [attr:type]  Generate a response class"
+        puts "  template <name> [attr:type]  Generate a Jinja2 template"
+        puts "  scaffold <name> [attr:type]  Generate a complete CRUD scaffold"
         puts
         puts "Options:"
         puts "  --force                    Overwrite existing files"
         puts "  --skip-tests               Skip test file generation"
-        puts "  --type <type>              Generator-specific type"
         puts "  --api-only                 Generate API-only components"
         puts "  --web-only                 Generate web-only components"
+        puts
+        puts "Attribute Format:"
+        puts "  name:string email:string age:int32 published:bool"
         puts
         puts "Examples:"
         puts "  azu generate model User name:string email:string age:int32"
         puts "  azu generate endpoint Users index show create update destroy"
         puts "  azu generate scaffold Post title:string content:text published:bool"
-        puts "  azu generate service UserService create find update delete"
-        puts "  azu generate page_response Post title:string content:text --action index"
-        puts "  azu generate page_response Post title:string content:text --action new"
-        puts "  azu generate page_response Post title:string content:text --action show"
-        puts "  azu generate page_response Post title:string content:text --action edit"
+        puts "  azu generate job EmailNotification user_id:int32 template:string"
+        puts "  azu generate middleware Authentication --type auth"
+        puts "  azu generate page UserProfile name:string email:string"
+        puts
+        puts "Scaffold generates:"
+        puts "  - Model with migration"
+        puts "  - CRUD endpoints"
+        puts "  - Request/Response classes (API mode)"
+        puts "  - Contract/Page classes (Web mode)"
       end
     end
   end

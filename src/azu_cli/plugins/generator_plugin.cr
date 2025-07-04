@@ -37,7 +37,11 @@ module AzuCLI
         end
 
         generator_type = args[0]
-        valid_types = ["model", "endpoint", "service", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "request", "response", "page_response", "job", "middleware"]
+
+        # Allow help and version flags to pass through
+        return if generator_type.starts_with?("--help") || generator_type.starts_with?("--version") || generator_type.starts_with?("-h")
+
+        valid_types = ["model", "endpoint", "service", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "request", "response", "template", "job"]
 
         unless valid_types.includes?(generator_type)
           raise ArgumentError.new("Invalid generator type: #{generator_type}. Valid types: #{valid_types.join(", ")}")

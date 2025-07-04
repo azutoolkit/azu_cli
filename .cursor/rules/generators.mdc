@@ -45,7 +45,7 @@ Generate a Crystal class `Generate::Model` for the Azu CLI that:
 ## Template Directory Structure
 
 ```
-src/azu_cli/templates/scaffold/
+{project}/
 └── src/
     └── {{name}}/
         ├── models/

@@ -5,6 +5,7 @@ module AzuCLI
     # Request generator that creates request structs
     class Request < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/requests"
+      OUTPUT_DIR = "./src/requests"
 
       property name : String
       property attributes : Hash(String, String)
@@ -39,6 +40,10 @@ module AzuCLI
           validations[field] = field_validations unless field_validations.empty?
         end
         validations
+      end
+
+      def camel_case_name : String
+        @name.camelcase
       end
 
       # Get constructor parameters

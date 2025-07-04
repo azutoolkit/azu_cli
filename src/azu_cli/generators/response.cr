@@ -5,6 +5,7 @@ module AzuCLI
     # Response generator that creates Azu::Response structs
     class Response < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/responses"
+      OUTPUT_DIR = "./src/responses"
 
       property name : String
       property fields : Hash(String, String)

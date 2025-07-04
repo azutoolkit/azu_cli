@@ -5,6 +5,7 @@ module AzuCLI
     # Middleware generator that creates HTTP::Handler classes
     class Middleware < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/middleware"
+      OUTPUT_DIR = "./src/middleware"
 
       property name : String
       property middleware_type : String

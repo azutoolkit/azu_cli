@@ -5,6 +5,7 @@ module AzuCLI
     # Model generator that creates CQL::Model classes
     class Model < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/models"
+      OUTPUT_DIR = "./src/models"
 
       # Model configuration properties
       property name : String

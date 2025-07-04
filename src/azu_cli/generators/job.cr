@@ -5,6 +5,7 @@ module AzuCLI
     # Job generator that creates JoobQ::Job structs
     class Job < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/jobs"
+      OUTPUT_DIR = "./src/jobs"
 
       property name : String
       property parameters : Hash(String, String)

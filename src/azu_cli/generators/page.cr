@@ -2,36 +2,38 @@ require "teeplate"
 
 module AzuCLI
   module Generate
-    # PageResponse generator that creates Azu::Response structs and Jinja2 HTML templates for CRUD operations
-    class PageResponse < Teeplate::FileTree
+    # Page generator that creates Azu::Response structs and Jinja2 HTML templates for CRUD operations
+    class Page < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/pages"
+      OUTPUT_DIR = "./src/pages"
 
       # Also generate Jinja2 HTML templates
-      property template_generator : TemplateGenerator
+      property template_generator : Template
       property name : String
       property fields : Hash(String, String)
       property snake_case_name : String
       property action : String
       property resource_plural : String
       property resource_singular : String
+      property generate_template : Bool = true
 
       def initialize(@name : String, @fields : Hash(String, String) = {} of String => String, @action : String = "index")
         @snake_case_name = @name.underscore
         @resource_singular = @name.downcase
         @resource_plural = @resource_singular + "s"
-        @template_generator = TemplateGenerator.new(@name, @fields, @action)
+        @template_generator = Template.new(@name, @fields, @action)
       end
 
       def render(project_name : String)
         # Generate the Crystal page response struct
         super(project_name)
         # Generate the Jinja2 HTML template
-        @template_generator.render(project_name)
+        @template_generator.render(project_name) if @generate_template
       end
 
       # Convert name to page response struct name
       def struct_name : String
-        @name.camelcase + "PageResponse"
+        @name.camelcase + "Page"
       end
 
       # Get getter declarations
@@ -67,21 +69,21 @@ module AzuCLI
       def template_path : String
         case @action
         when "index"
-          "#{@resource_plural}/index.html.j2"
+          "#{@resource_plural}/index.jinja"
         when "new"
-          "#{@resource_plural}/new.html.j2"
+          "#{@resource_plural}/new.jinja"
         when "create"
-          "#{@resource_plural}/create.html.j2"
+          "#{@resource_plural}/create.jinja"
         when "show"
-          "#{@resource_plural}/show.html.j2"
+          "#{@resource_plural}/show.jinja"
         when "edit"
-          "#{@resource_plural}/edit.html.j2"
+          "#{@resource_plural}/edit.jinja"
         when "update"
-          "#{@resource_plural}/update.html.j2"
+          "#{@resource_plural}/update.jinja"
         when "delete"
-          "#{@resource_plural}/delete.html.j2"
+          "#{@resource_plural}/delete.jinja"
         else
-          "#{@resource_plural}/#{@action}.html.j2"
+          "#{@resource_plural}/#{@action}.jinja"
         end
       end
 
@@ -183,110 +185,6 @@ module AzuCLI
         cells = @fields.keys.map { |field| "{{ #{@resource_singular}.#{field} }}" }
         cells.unshift("{{ #{@resource_singular}.id }}") unless @fields.keys.includes?("id")
         cells.join("</td><td>")
-      end
-
-      # Inner class for generating Jinja2 HTML templates
-      class TemplateGenerator < Teeplate::FileTree
-        directory "#{__DIR__}/../templates/scaffold/public/templates/pages"
-
-        property name : String
-        property fields : Hash(String, String)
-        property action : String
-        property snake_case_name : String
-        property resource_plural : String
-        property resource_singular : String
-
-        def initialize(@name : String, @fields : Hash(String, String), @action : String)
-          @snake_case_name = @name.underscore
-          @resource_singular = @name.downcase
-          @resource_plural = @resource_singular + "s"
-        end
-
-        # Get page title for the action
-        def page_title : String
-          case @action
-          when "index"
-            "#{@name.camelcase} List"
-          when "new"
-            "New #{@name.camelcase}"
-          when "create"
-            "Create #{@name.camelcase}"
-          when "show"
-            "#{@name.camelcase} Details"
-          when "edit"
-            "Edit #{@name.camelcase}"
-          when "update"
-            "Update #{@name.camelcase}"
-          when "delete"
-            "Delete #{@name.camelcase}"
-          else
-            "#{@action.camelcase} #{@name.camelcase}"
-          end
-        end
-
-        # Get form action URL
-        def form_action : String
-          case @action
-          when "new"
-            "/#{@resource_plural}"
-          when "edit"
-            "/#{@resource_plural}/{{ #{@resource_singular}.id }}"
-          else
-            "/#{@resource_plural}"
-          end
-        end
-
-        # Get form method
-        def form_method : String
-          case @action
-          when "new"
-            "POST"
-          when "edit"
-            "PATCH"
-          else
-            "POST"
-          end
-        end
-
-        # Get field type for HTML input
-        def html_input_type(field_type : String) : String
-          case field_type.downcase
-          when "email"
-            "email"
-          when "password"
-            "password"
-          when "int32", "int64", "float32", "float64"
-            "number"
-          when "bool"
-            "checkbox"
-          when "time"
-            "datetime-local"
-          when "text"
-            "textarea"
-          else
-            "text"
-          end
-        end
-
-        # Get field label
-        def field_label(field_name : String) : String
-          field_name.camelcase
-        end
-
-        # Get field placeholder
-        def field_placeholder(field_name : String) : String
-          "Enter #{field_name.downcase.gsub('_', ' ')}"
-        end
-
-        # Check if field is required
-        def field_required?(field_name : String) : Bool
-          !["id", "created_at", "updated_at"].includes?(field_name)
-        end
-
-        # Get Bootstrap form classes
-        def form_classes : String
-          "needs-validation"
-        end
       end
     end
   end

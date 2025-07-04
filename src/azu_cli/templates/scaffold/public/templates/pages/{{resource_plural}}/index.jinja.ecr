@@ -31,16 +31,16 @@
   <!-- Search and Filters -->
   <div class="row mb-4">
     <div class="col-12">
-      <div class="card bg-dark border-secondary">
+      <div class="card  border-secondary">
         <div class="card-body">
           <form class="row g-3">
             <div class="col-md-4">
               <label for="search" class="form-label text-white">Search</label>
-              <input type="text" class="form-control bg-dark text-white border-secondary" id="search" placeholder="Search <%= resource_plural %>...">
+              <input type="text" class="form-control  text-white border-secondary" id="search" placeholder="Search <%= resource_plural %>...">
             </div>
             <div class="col-md-3">
               <label for="sort" class="form-label text-white">Sort By</label>
-              <select class="form-select bg-dark text-white border-secondary" id="sort">
+              <select class="form-select  text-white border-secondary" id="sort">
                 <option value="created_at">Created Date</option>
                 <option value="updated_at">Updated Date</option>
                 <% fields.keys.each do |field| %>
@@ -50,7 +50,7 @@
             </div>
             <div class="col-md-3">
               <label for="per_page" class="form-label text-white">Per Page</label>
-              <select class="form-select bg-dark text-white border-secondary" id="per_page">
+              <select class="form-select  text-white border-secondary" id="per_page">
                 <option value="10">10</option>
                 <option value="25">25</option>
                 <option value="50">50</option>
@@ -72,8 +72,8 @@
   <!-- Data Table -->
   <div class="row">
     <div class="col-12">
-      <div class="card bg-dark border-secondary">
-        <div class="card-header bg-dark border-secondary">
+      <div class="card  border-secondary">
+        <div class="card-header  border-secondary">
           <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0 text-white">
               <i class="bi bi-table me-2"></i>
@@ -207,7 +207,7 @@
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content bg-dark border-secondary">
+    <div class="modal-content  border-secondary">
       <div class="modal-header border-secondary">
         <h5 class="modal-title text-white" id="deleteModalLabel">
           <i class="bi bi-exclamation-triangle text-warning me-2"></i>
