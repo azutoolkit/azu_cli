@@ -306,7 +306,7 @@ module AzuCLI
 
         @validations.each do |field, field_validations|
           field_validations.each do |validation|
-            validations << "validates :#{field}, #{validation}"
+            validations << "validate :#{field}, #{validation}"
           end
         end
 

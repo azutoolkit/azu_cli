@@ -16,6 +16,7 @@ module AzuCLI
       property api_only : Bool = false
       property web_only : Bool = false
       property skip_tests : Bool = false
+      property skip_components : Array(String) = [] of String
 
       def initialize
         super("generate", "Generate code from templates")
@@ -60,8 +61,7 @@ module AzuCLI
           generate_component
         when "validator"
           generate_validator
-        when "request"
-          generate_request
+
         when "response"
           generate_response
         when "template"
@@ -81,6 +81,9 @@ module AzuCLI
           parser.on("--api-only", "Generate API-only components") { @api_only = true }
           parser.on("--web-only", "Generate web-only components") { @web_only = true }
           parser.on("--skip-tests", "Skip test file generation") { @skip_tests = true }
+          parser.on("--skip COMPONENTS", "Skip specific components (comma-separated): model,endpoint,contract,response,template,migration,page") do |components|
+            @skip_components = components.split(",").map(&.strip.downcase)
+          end
           parser.on("--help", "Show help") {
             show_help
             exit(0)
@@ -160,13 +163,20 @@ module AzuCLI
       private def generate_contract : Result
         Logger.info("Generating contract")
 
-        # Use request generator for contracts (similar structure)
-        generator = AzuCLI::Generate::Request.new(
-          name: @generator_name,
+        # Use the proper contract generator
+        action = @actions.first? || "index"
+
+        # Get project name from config or use default
+        project_name = "MyProject" # TODO: Get from project config
+
+        generator = AzuCLI::Generate::Contract.new(
+          project: project_name,
+          resource: @generator_name,
+          action: action,
           attributes: @attributes
         )
 
-        render_generator(generator, AzuCLI::Generate::Request::OUTPUT_DIR)
+        render_generator(generator, AzuCLI::Generate::Contract::OUTPUT_DIR)
         success("Generated contract #{@generator_name} successfully")
       end
 
@@ -248,17 +258,7 @@ module AzuCLI
         success("Generated validator #{@generator_name} successfully")
       end
 
-      private def generate_request : Result
-        Logger.info("Generating request")
 
-        generator = AzuCLI::Generate::Request.new(
-          name: @generator_name,
-          attributes: @attributes
-        )
-
-        render_generator(generator, AzuCLI::Generate::Request::OUTPUT_DIR)
-        success("Generated request #{@generator_name} successfully")
-      end
 
       private def generate_response : Result
         Logger.info("Generating response")
@@ -293,50 +293,121 @@ module AzuCLI
       private def generate_scaffold : Result
         Logger.info("Generating scaffold (complete CRUD)")
 
-        # Scaffold generates multiple components
-        # Model
-        model_generator = AzuCLI::Generate::Model.new(
-          name: @generator_name,
-          attributes: @attributes
-        )
-        render_generator(model_generator, AzuCLI::Generate::Model::OUTPUT_DIR)
+        components_generated = [] of String
+        crud_actions = ["index", "show", "new", "create", "edit", "update", "destroy"]
 
-        # Endpoint
-        endpoint_type = @api_only ? "api" : (@web_only ? "web" : "web")
-        endpoint_generator = AzuCLI::Generate::Endpoint.new(
-          name: @generator_name,
-          actions: ["index", "show", "new", "create", "edit", "update", "destroy"],
-          endpoint_type: endpoint_type,
-          scaffold: true
-        )
-        # Endpoint generator has custom render method, but use proper output directory
-        output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
-        Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
-        endpoint_generator.render(output_dir)
+        # Generate Model
+        unless should_skip_component?("model")
+          Logger.info("🔨 Generating model...")
+          model_generator = AzuCLI::Generate::Model.new(
+            name: @generator_name,
+            attributes: @attributes,
+            generate_migration: !should_skip_component?("migration") # Only generate migration with model if migration is not being skipped
+          )
+          render_generator(model_generator, AzuCLI::Generate::Model::OUTPUT_DIR)
+          components_generated << "model"
+        end
 
-        # Request and Response (for API) or Contract and Page (for web)
-        if @api_only
-          request_generator = AzuCLI::Generate::Request.new(@generator_name, @attributes)
-          render_generator(request_generator, AzuCLI::Generate::Request::OUTPUT_DIR)
-
-          response_generator = AzuCLI::Generate::Response.new(@generator_name, @attributes)
-          render_generator(response_generator, AzuCLI::Generate::Response::OUTPUT_DIR)
-        else
-          # Generate contracts for each CRUD action
-          ["index", "show", "new", "create", "edit", "update", "destroy"].each do |action|
-            contract_generator = AzuCLI::Generate::Request.new("#{@generator_name}_#{action}", @attributes)
-            render_generator(contract_generator, AzuCLI::Generate::Request::OUTPUT_DIR)
+        # Generate separate Migration if not skipped and not generated with model
+        unless should_skip_component?("migration")
+          unless should_skip_component?("model") # If model was generated, migration might already be created
+            Logger.info("🔨 Generating migration...")
+            migration_generator = AzuCLI::Generate::Migration.new(
+              name: "create_#{@generator_name.downcase}s",
+              attributes: @attributes
+            )
+            render_generator(migration_generator, AzuCLI::Generate::Migration::OUTPUT_DIR)
+            components_generated << "migration"
           end
+        end
 
-          # Generate pages for each CRUD action
+        # Generate Endpoints
+        unless should_skip_component?("endpoint")
+          Logger.info("🔨 Generating endpoints...")
+          endpoint_type = @api_only ? "api" : (@web_only ? "web" : "web")
+          endpoint_generator = AzuCLI::Generate::Endpoint.new(
+            name: @generator_name,
+            actions: crud_actions,
+            endpoint_type: endpoint_type,
+            scaffold: true
+          )
+          output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
+          Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
+          endpoint_generator.render(output_dir)
+          components_generated << "endpoint"
+        end
+
+        # Generate Contracts (both API and Web)
+        unless should_skip_component?("contract")
+          Logger.info("🔨 Generating contracts...")
+          # Get project name from config or use default
+          project_name = "MyProject" # TODO: Get from project config
+
+          # Generate contracts for each CRUD action
+          crud_actions.each do |action|
+            contract_generator = AzuCLI::Generate::Contract.new(
+              project: project_name,
+              resource: @generator_name,
+              action: action,
+              attributes: @attributes
+            )
+            render_generator(contract_generator, AzuCLI::Generate::Contract::OUTPUT_DIR)
+          end
+          components_generated << "contract"
+        end
+
+        # Generate Responses
+        unless should_skip_component?("response")
+          Logger.info("🔨 Generating responses...")
+          if @api_only
+            # Single response class for API
+            response_generator = AzuCLI::Generate::Response.new(@generator_name, @attributes)
+            render_generator(response_generator, AzuCLI::Generate::Response::OUTPUT_DIR)
+          else
+            # Generate responses for each CRUD action
+            crud_actions.each do |action|
+              response_generator = AzuCLI::Generate::Response.new("#{@generator_name}_#{action}", @attributes)
+              render_generator(response_generator, AzuCLI::Generate::Response::OUTPUT_DIR)
+            end
+          end
+          components_generated << "response"
+        end
+
+
+
+        # Generate Pages (Web mode)
+        unless should_skip_component?("page") || @api_only
+          Logger.info("🔨 Generating pages...")
           ["index", "show", "new", "edit"].each do |action|
             page_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action)
             render_generator(page_generator, AzuCLI::Generate::Page::OUTPUT_DIR)
           end
+          components_generated << "page"
+        end
+
+        # Generate Templates (Web mode)
+        unless should_skip_component?("template") || @api_only
+          Logger.info("🔨 Generating templates...")
+          ["index", "show", "new", "edit"].each do |action|
+            template_generator = AzuCLI::Generate::Template.new(@generator_name, @attributes, action)
+            render_generator(template_generator, AzuCLI::Generate::Template::OUTPUT_DIR)
+          end
+          components_generated << "template"
         end
 
         Logger.info("✅ Scaffold generation completed")
+        Logger.info("📦 Generated components: #{components_generated.join(", ")}")
+
+        if @skip_components.any?
+          Logger.info("⏭️  Skipped components: #{@skip_components.join(", ")}")
+        end
+
         success("Generated scaffold #{@generator_name} successfully")
+      end
+
+      # Helper method to check if a component should be skipped
+      private def should_skip_component?(component : String) : Bool
+        @skip_components.includes?(component.downcase)
       end
 
       # Render a generator to its appropriate output directory
@@ -363,46 +434,119 @@ module AzuCLI
       def show_help
         puts "Usage: azu generate <type> <name> [attributes] [options]"
         puts
-        puts "Generate code for your Azu project."
+        puts "Generate code for your Azu project using built-in generators."
         puts
         puts "Generator Types:"
-        puts "  model <name> [attr:type]     Generate a model with attributes"
-        puts "  endpoint <name> [actions]    Generate endpoints with actions"
-        puts "  service <name> [methods]     Generate a service with methods"
-        puts "  contract <name> [attr:type]  Generate a contract with attributes"
-        puts "  page <name> [attr:type]      Generate a page with template variables"
-        puts "  job <name> [param:type]      Generate a background job"
-        puts "  middleware <name> [type]     Generate middleware"
-        puts "  migration <name> [attr:type] Generate a database migration"
-        puts "  component <name> [attr:type] Generate a component"
-        puts "  validator <name> [type]      Generate a custom validator"
-        puts "  request <name> [attr:type]   Generate a request class"
-        puts "  response <name> [attr:type]  Generate a response class"
-        puts "  template <name> [attr:type]  Generate a Jinja2 template"
-        puts "  scaffold <name> [attr:type]  Generate a complete CRUD scaffold"
+        puts
+        puts "  model <name> [attr:type]"
+        puts "    Generate a CQL model with attributes and optional migration"
+        puts "    Example: azu generate model User name:string email:string age:int32"
+        puts
+        puts "  endpoint <name> [actions]"
+        puts "    Generate RESTful endpoints with specified actions"
+        puts "    Example: azu generate endpoint Users index show create update destroy"
+        puts
+        puts "  service <name> [methods]"
+        puts "    Generate a service class for business logic"
+        puts "    Example: azu generate service UserService register:string login:string"
+        puts
+        puts "  contract <name> [attr:type]"
+        puts "    Generate a contract class for request validation"
+        puts "    Example: azu generate contract UserContract name:string email:string"
+        puts
+        puts "  page <name> [attr:type]"
+        puts "    Generate a page response class with template variables"
+        puts "    Example: azu generate page UserProfile name:string email:string"
+        puts
+        puts "  job <name> [param:type]"
+        puts "    Generate a background job class with parameters"
+        puts "    Example: azu generate job EmailNotification user_id:int32 template:string"
+        puts
+        puts "  middleware <name> [type]"
+        puts "    Generate middleware for request/response processing"
+        puts "    Example: azu generate middleware Authentication --type auth"
+        puts
+        puts "  migration <name> [attr:type]"
+        puts "    Generate a database migration file"
+        puts "    Example: azu generate migration AddAgeToUsers age:int32"
+        puts
+        puts "  component <name> [attr:type]"
+        puts "    Generate a reusable component class"
+        puts "    Example: azu generate component UserCard name:string email:string"
+        puts
+        puts "  validator <name> [type]"
+        puts "    Generate a custom validator class"
+        puts "    Example: azu generate validator EmailValidator --record User"
+        puts
+
+        puts "  response <name> [attr:type]"
+        puts "    Generate a response class for API endpoints"
+        puts "    Example: azu generate response UserResponse name:string email:string"
+        puts
+        puts "  template <name> [attr:type]"
+        puts "    Generate a Jinja2 template file"
+        puts "    Example: azu generate template UserProfile name:string email:string"
+        puts
+        puts "  scaffold <name> [attr:type]"
+        puts "    Generate a complete CRUD scaffold with all components"
+        puts "    Example: azu generate scaffold Post title:string content:text published:bool"
         puts
         puts "Options:"
-        puts "  --force                    Overwrite existing files"
-        puts "  --skip-tests               Skip test file generation"
-        puts "  --api-only                 Generate API-only components"
-        puts "  --web-only                 Generate web-only components"
+        puts "  --force                    Overwrite existing files without prompting"
+        puts "  --skip-tests               Skip generating test files"
+        puts "  --api-only                 Generate API-only components (JSON responses)"
+        puts "  --web-only                 Generate web-only components (HTML pages)"
+        puts "  --skip COMPONENTS          Skip specific components (comma-separated)"
+        puts "                             Available components: model,endpoint,contract,response,template,migration,page"
+        puts "  --help                     Show this help message"
         puts
         puts "Attribute Format:"
-        puts "  name:string email:string age:int32 published:bool"
+        puts "  Attributes follow the pattern: name:type"
+        puts "  Supported types: string, int32, int64, float32, float64, bool, text, time"
+        puts "  Example: name:string email:string age:int32 published:bool"
         puts
-        puts "Examples:"
-        puts "  azu generate model User name:string email:string age:int32"
-        puts "  azu generate endpoint Users index show create update destroy"
-        puts "  azu generate scaffold Post title:string content:text published:bool"
-        puts "  azu generate job EmailNotification user_id:int32 template:string"
-        puts "  azu generate middleware Authentication --type auth"
-        puts "  azu generate page UserProfile name:string email:string"
+        puts "Scaffold Generator:"
+        puts "  The scaffold generator creates a complete CRUD setup with all components:"
+        puts "  - Model with attributes"
+        puts "  - Database migration file"
+        puts "  - RESTful endpoints (index, show, new, create, edit, update, destroy)"
+        puts "  - Contract classes for input validation (both API and Web)"
+        puts "  - Response classes for output formatting"
+        puts "  - Page response classes (Web mode)"
+        puts "  - Template files for web views (Web mode)"
+        puts "  - Use --skip to exclude specific components"
+        puts "  - Use --api-only for REST APIs without web interface"
+        puts "  - Use --web-only for web applications without API"
         puts
-        puts "Scaffold generates:"
-        puts "  - Model with migration"
-        puts "  - CRUD endpoints"
-        puts "  - Request/Response classes (API mode)"
-        puts "  - Contract/Page classes (Web mode)"
+        puts "Generator Output Directories:"
+        puts "  models/         - CQL model files"
+        puts "  endpoints/      - HTTP endpoint files"
+        puts "  contracts/      - Request validation files"
+        puts "  pages/          - Page response files"
+        puts "  jobs/           - Background job files"
+        puts "  middleware/     - Middleware files"
+        puts "  migrations/     - Database migration files"
+        puts "  components/     - Reusable component files"
+        puts "  validators/     - Custom validator files"
+
+        puts "  responses/      - API response files"
+        puts "  templates/      - Jinja2 template files"
+        puts
+        puts "Skip Components Examples:"
+        puts "  azu generate scaffold Post title:string content:text --skip template,page"
+        puts "    Generates everything except templates and pages"
+        puts "  azu generate scaffold User name:string email:string --skip migration"
+        puts "    Generates everything except database migration"
+        puts "  azu generate scaffold Article title:string --skip response --web-only"
+        puts "    Generates web components only, skipping API response classes"
+        puts
+        puts "Tips:"
+        puts "  - Use --force to overwrite existing files"
+        puts "  - Use --api-only for REST APIs without web interface"
+        puts "  - Use --web-only for web applications without API"
+        puts "  - Use --skip to exclude specific components from generation"
+        puts "  - Scaffold generates both API and web components by default"
+        puts "  - Generated files follow Azu framework conventions"
       end
     end
   end
