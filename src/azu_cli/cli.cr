@@ -20,18 +20,9 @@ module AzuCLI
       register_command("init", Commands::Init)
       register_command("version", Commands::Version)
       register_command("help", Commands::Help)
-
       # Code generation commands
       register_command("generate", Commands::Generate)
       register_command("g", Commands::Generate) # Alias
-
-      # Database commands
-      register_command("db", Commands::Database)
-
-      # Development commands
-      register_command("serve", Commands::Serve)
-      register_command("dev", Commands::Dev)
-
       # Plugin commands
       register_command("plugin", Commands::Plugin)
     end

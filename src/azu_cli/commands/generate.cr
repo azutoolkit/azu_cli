@@ -78,6 +78,10 @@ module AzuCLI
           custom_options["web-only"] = web_only
         end
 
+        if action = get_option("action")
+          custom_options["action"] = action
+        end
+
         custom_options
       end
 
@@ -354,16 +358,25 @@ module AzuCLI
 
       private def create_page_response_generator(name : String, project_name : String, options : Hash(String, String)) : String
         fields = {} of String => String
+        action = "index"
+
         options.each do |key, value|
           next if key.starts_with?("arg_") || key == "force" || key == "skip_tests"
-          fields[key] = value
+          case key
+          when "action"
+            action = value.downcase
+          else
+            fields[key] = value
+          end
         end
+
         generator = AzuCLI::Generate::PageResponse.new(
           name: name,
-          fields: fields
+          fields: fields,
+          action: action
         )
         generator.render(project_name)
-        "Generated page response '#{name}' with #{fields.size} fields"
+        "Generated page response '#{name}' for action '#{action}' with #{fields.size} fields"
       end
 
       private def create_middleware_generator(name : String, project_name : String, options : Hash(String, String)) : String
@@ -424,6 +437,7 @@ module AzuCLI
         puts "  service <name> [methods]     Generate a service with methods"
         puts "  contract <name> [attr:type]  Generate a contract with attributes"
         puts "  page <name> [attr:type]      Generate a page with template variables"
+        puts "  page_response <name> [attr:type] [--action <action>] Generate a page response with Jinja2 template"
         puts "  migration <name> [attr:type] Generate a database migration"
         puts "  scaffold <name> [attr:type]  Generate a complete CRUD scaffold"
         puts "  component <name> [attr:type] Generate a component"
@@ -446,6 +460,10 @@ module AzuCLI
         puts "  azu generate endpoint Users index show create update destroy"
         puts "  azu generate scaffold Post title:string content:text published:bool"
         puts "  azu generate service UserService create find update delete"
+        puts "  azu generate page_response Post title:string content:text --action index"
+        puts "  azu generate page_response Post title:string content:text --action new"
+        puts "  azu generate page_response Post title:string content:text --action show"
+        puts "  azu generate page_response Post title:string content:text --action edit"
       end
     end
   end

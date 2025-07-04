@@ -1,42 +1,221 @@
-<!doctype html>
-<html lang="en" class="h-100">
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="">
   <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
   <meta name="generator" content="Hugo 0.104.2">
-  <title>Azu · Bootstrap v5.2</title>
-  <link rel="canonical" href="https://getbootstrap.com/docs/5.2/examples/cover/">
-  <link href="/assets/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-  <!-- Favicons -->
-  <meta name="theme-color" content="#712cf9">
+  <title>{% block title %}{{ app_name | default('Azu Framework App') }}{% endblock %}</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <style>
+    :root {
+      --azu-primary: #6366f1;
+      --azu-secondary: #64748b;
+      --azu-success: #10b981;
+      --azu-danger: #ef4444;
+      --azu-warning: #f59e0b;
+      --azu-info: #3b82f6;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      color: var(--azu-primary) !important;
+    }
+
+    .btn-azu-primary {
+      background-color: var(--azu-primary);
+      border-color: var(--azu-primary);
+      color: white;
+    }
+
+    .btn-azu-primary:hover {
+      background-color: #4f46e5;
+      border-color: #4f46e5;
+      color: white;
+    }
+
+    .table-azu {
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .form-floating-azu .form-control:focus {
+      border-color: var(--azu-primary);
+      box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
+    }
+
+    .footer {
+      background-color: #f8f9fa;
+      margin-top: auto;
+    }
+  </style>
+
   {% block page_header %}{% endblock %}
-  <!-- Custom styles for this template -->
-  <link href="/assets/css/cover.css" rel="stylesheet">
 </head>
 
-<body class="d-flex h-100 text-bg-dark">
-  <div class="cover-container d-flex  h-100 p-3 mx-auto flex-column">
-    <header class="mb-auto">
-      <div>
-        <h3 class="float-md-start mb-0">My App</h3>
-        <nav class="nav nav-masthead justify-content#-center float-md-end">
-          <a class="nav-link fw-bold py-1 px-0 active" aria-current="page" href="/">Home</a>
+<body class="d-flex flex-column min-vh-100">
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+    <div class="container">
+      <a class="navbar-brand" href="/">
+        <i class="bi bi-gem me-2"></i>{{ app_name | default('My App') }}
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="/">Home</a>
+          </li>
           {% include "helpers/_nav.jinja" %}
-          <a class="nav-link fw-bold py-1 px-0" href="https://azutopia.gitbook.io/azu">Documentation</a>
-          <a class="nav-link fw-bold py-1 px-0" href="https://github.com/azutoolkit">Github</a>
-        </nav>
+        </ul>
+
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" href="https://azutopia.gitbook.io/azu">Documentation</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="https://github.com/azutoolkit">Github</a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle"></i> Account
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/profile">Profile</a></li>
+              <li><a class="dropdown-item" href="/settings">Settings</a></li>
+              <li>
+                <hr class="dropdown-divider">
+              </li>
+              <li><a class="dropdown-item" href="/logout">Logout</a></li>
+            </ul>
+          </li>
+        </ul>
       </div>
-    </header>
+    </div>
+  </nav>
 
-    <main>{% block page_body %}{% endblock %}</main>
-
-    <footer class="mt-auto text-white-50">
-      <p>Azu template by <a href="https://getbootstrap.com/" class="text-white">Bootstrap</a></p>
-    </footer>
+  <!-- Flash Messages -->
+  {% if flash_messages %}
+  <div class="container mt-3">
+    {% for message in flash_messages %}
+    <div class="alert alert-{{ message.type }} alert-dismissible fade show" role="alert">
+      <i
+        class="bi bi-{% if message.type == 'success' %}check-circle{% elif message.type == 'danger' %}exclamation-triangle{% elif message.type == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+      {{ message.text }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
   </div>
+  {% endif %}
+
+  <!-- Main Content -->
+  <main class="flex-grow-1">
+    {% block page_body %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer py-4 mt-5">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-0 text-muted">
+            &copy; {{ current_year | default('2024') }} {{ app_name | default('My App') }}.
+            Built with <i class="bi bi-heart-fill text-danger"></i> using Azu Framework.
+          </p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <a href="https://github.com/azutoolkit/azu" class="text-muted me-3" target="_blank">
+            <i class="bi bi-github"></i> Azu Framework
+          </a>
+          <a href="/docs" class="text-muted">
+            <i class="bi bi-book"></i> Documentation
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Form Validation Helper -->
+  <script>
+    // Azu Form Validation Helper
+    class AzuFormValidator {
+      constructor(formSelector) {
+        this.form = document.querySelector(formSelector);
+        this.setupValidation();
+      }
+
+      setupValidation() {
+        if (!this.form) return;
+
+        this.form.addEventListener('submit', (e) => {
+          if (!this.form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          this.form.classList.add('was-validated');
+        });
+
+        // Real-time validation
+        this.form.querySelectorAll('.form-control').forEach(input => {
+          input.addEventListener('blur', () => {
+            this.validateField(input);
+          });
+        });
+      }
+
+      validateField(field) {
+        const isValid = field.checkValidity();
+        field.classList.toggle('is-valid', isValid);
+        field.classList.toggle('is-invalid', !isValid);
+
+        // Custom validation feedback
+        const feedback = field.parentNode.querySelector('.invalid-feedback');
+        if (feedback && !isValid) {
+          feedback.textContent = field.validationMessage;
+        }
+      }
+
+      setFieldError(fieldName, message) {
+        const field = this.form.querySelector(`[name="${fieldName}"]`);
+        if (field) {
+          field.classList.add('is-invalid');
+          const feedback = field.parentNode.querySelector('.invalid-feedback');
+          if (feedback) {
+            feedback.textContent = message;
+          }
+        }
+      }
+
+      clearErrors() {
+        this.form.querySelectorAll('.is-invalid').forEach(field => {
+          field.classList.remove('is-invalid');
+        });
+      }
+    }
+
+    // Initialize form validation on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const forms = document.querySelectorAll('form[data-azu-validate]');
+      forms.forEach(form => {
+        new AzuFormValidator(`#${form.id}`);
+      });
+    });
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
 </body>
 
 </html>

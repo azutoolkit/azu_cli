@@ -1,0 +1,241 @@
+{% extends "layout.jinja" %}
+
+{% block page_header %}
+  <title><%= page_title %> - Azu App</title>
+  <meta name="description" content="Create a new <%= resource_singular %> in your Azu application">
+{% endblock %}
+
+{% block page_body %}
+<div class="container py-4">
+  <!-- Page Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a href="/<%= resource_plural %>" class="text-decoration-none">
+              <i class="bi bi-house me-1"></i>
+              <%= resource_plural.camelcase %>
+            </a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">
+            <i class="bi bi-plus-circle me-1"></i>
+            New <%= resource_singular.camelcase %>
+          </li>
+        </ol>
+      </nav>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-0 text-white">
+            <i class="bi bi-plus-circle me-2"></i>
+            <%= page_title %>
+          </h1>
+          <p class="text-muted mb-0">Fill out the form below to create a new <%= resource_singular %></p>
+        </div>
+        <div>
+          <a href="/<%= resource_plural %>" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>
+            Back to List
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card bg-dark border-secondary">
+        <div class="card-header bg-dark border-secondary">
+          <h5 class="mb-0 text-white">
+            <i class="bi bi-pencil-square me-2"></i>
+            <%= resource_singular.camelcase %> Information
+          </h5>
+        </div>
+        <div class="card-body">
+          <form action="<%= form_action %>" method="<%= form_method %>" class="<%= form_classes %>" novalidate>
+            <!-- CSRF Token -->
+            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+
+            <!-- Form Fields -->
+            <% fields.keys.each do |field| %>
+              <% next if field == "id" || field == "created_at" || field == "updated_at" %>
+              <div class="mb-3">
+                <label for="<%= field %>" class="form-label text-white">
+                  <%= field_label(field) %>
+                  <% if field_required?(field) %>
+                    <span class="text-danger">*</span>
+                  <% end %>
+                </label>
+
+                <% if html_input_type(fields[field]) == "textarea" %>
+                  <textarea
+                    class="form-control bg-dark text-white border-secondary"
+                    id="<%= field %>"
+                    name="<%= field %>"
+                    rows="4"
+                    placeholder="<%= field_placeholder(field) %>"
+                    <% if field_required?(field) %>required<% end %>
+                  >{{ form.<%= field %> if form }}</textarea>
+                <% elsif html_input_type(fields[field]) == "checkbox" %>
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      id="<%= field %>"
+                      name="<%= field %>"
+                      value="true"
+                      {% if form and form.<%= field %> %}checked{% endif %}
+                    >
+                    <label class="form-check-label text-white" for="<%= field %>">
+                      <%= field_label(field) %>
+                    </label>
+                  </div>
+                <% else %>
+                  <input
+                    type="<%= html_input_type(fields[field]) %>"
+                    class="form-control bg-dark text-white border-secondary"
+                    id="<%= field %>"
+                    name="<%= field %>"
+                    placeholder="<%= field_placeholder(field) %>"
+                    value="{{ form.<%= field %> if form }}"
+                    <% if field_required?(field) %>required<% end %>
+                  >
+                <% end %>
+
+                <div class="invalid-feedback">
+                  Please provide a valid <%= field.downcase.gsub('_', ' ') %>.
+                </div>
+
+                <!-- Field-specific help text -->
+                <% if fields[field] == "email" %>
+                  <div class="form-text text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Enter a valid email address
+                  </div>
+                <% elsif fields[field] == "password" %>
+                  <div class="form-text text-muted">
+                    <i class="bi bi-shield-lock me-1"></i>
+                    Password must be at least 8 characters long
+                  </div>
+                <% elsif fields[field] == "url" %>
+                  <div class="form-text text-muted">
+                    <i class="bi bi-link-45deg me-1"></i>
+                    Enter a valid URL (e.g., https://example.com)
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary">
+              <div>
+                <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                  <i class="bi bi-arrow-clockwise me-2"></i>
+                  Reset Form
+                </button>
+              </div>
+              <div class="btn-group" role="group">
+                <a href="/<%= resource_plural %>" class="btn btn-outline-secondary">
+                  <i class="bi bi-x-circle me-2"></i>
+                  Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-check-circle me-2"></i>
+                  Create <%= resource_singular.camelcase %>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Help Card -->
+      <div class="card bg-dark border-secondary mt-4">
+        <div class="card-header bg-dark border-secondary">
+          <h6 class="mb-0 text-white">
+            <i class="bi bi-question-circle me-2"></i>
+            Need Help?
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6 class="text-white">Form Tips:</h6>
+              <ul class="text-muted small">
+                <li>Fields marked with <span class="text-danger">*</span> are required</li>
+                <li>Use descriptive, meaningful values</li>
+                <li>Check your input before submitting</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <h6 class="text-white">Keyboard Shortcuts:</h6>
+              <ul class="text-muted small">
+                <li><kbd>Ctrl</kbd> + <kbd>S</kbd> - Save form</li>
+                <li><kbd>Ctrl</kbd> + <kbd>R</kbd> - Reset form</li>
+                <li><kbd>Esc</kbd> - Cancel and go back</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Form validation
+(function() {
+  'use strict';
+  window.addEventListener('load', function() {
+    var forms = document.getElementsByClassName('needs-validation');
+    var validation = Array.prototype.filter.call(forms, function(form) {
+      form.addEventListener('submit', function(event) {
+        if (form.checkValidity() === false) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  }, false);
+})();
+
+// Reset form functionality
+function resetForm() {
+  if (confirm('Are you sure you want to reset the form? All entered data will be lost.')) {
+    document.querySelector('form').reset();
+    document.querySelector('form').classList.remove('was-validated');
+  }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    document.querySelector('button[type="submit"]').click();
+  } else if (e.ctrlKey && e.key === 'r') {
+    e.preventDefault();
+    resetForm();
+  } else if (e.key === 'Escape') {
+    window.location.href = '/<%= resource_plural %>';
+  }
+});
+
+// Auto-save functionality (optional)
+let autoSaveTimer;
+const form = document.querySelector('form');
+const inputs = form.querySelectorAll('input, textarea, select');
+
+inputs.forEach(input => {
+  input.addEventListener('input', function() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      // Auto-save logic could be implemented here
+      console.log('Auto-saving form data...');
+    }, 2000);
+  });
+});
+</script>
+{% endblock %}
