@@ -61,7 +61,6 @@ module AzuCLI
           generate_component
         when "validator"
           generate_validator
-
         when "response"
           generate_response
         when "template"
@@ -184,10 +183,12 @@ module AzuCLI
         Logger.info("Generating page with template")
 
         action = @actions.first? || "index"
+        project_type = @api_only ? "api" : "web"
         generator = AzuCLI::Generate::Page.new(
           name: @generator_name,
           fields: @attributes,
-          action: action
+          action: action,
+          project_type: project_type
         )
 
         render_generator(generator, AzuCLI::Generate::Page::OUTPUT_DIR)
@@ -265,13 +266,15 @@ module AzuCLI
 
         from_type = @options["from"]?
 
-        generator = AzuCLI::Generate::Response.new(
+        generator = AzuCLI::Generate::Page.new(
           name: @generator_name,
           fields: @attributes,
+          action: "index",
+          project_type: "api",  # Always generate API-style responses for the response command
           from_type: from_type
         )
 
-        render_generator(generator, AzuCLI::Generate::Response::OUTPUT_DIR)
+        render_generator(generator, AzuCLI::Generate::Page::OUTPUT_DIR)
         success("Generated response #{@generator_name} successfully")
       end
 
@@ -359,16 +362,12 @@ module AzuCLI
         # Generate Responses
         unless should_skip_component?("response")
           Logger.info("🔨 Generating responses...")
-          if @api_only
-            # Single response class for API
-            response_generator = AzuCLI::Generate::Response.new(@generator_name, @attributes)
-            render_generator(response_generator, AzuCLI::Generate::Response::OUTPUT_DIR)
-          else
-            # Generate responses for each CRUD action
-            crud_actions.each do |action|
-              response_generator = AzuCLI::Generate::Response.new("#{@generator_name}_#{action}", @attributes)
-              render_generator(response_generator, AzuCLI::Generate::Response::OUTPUT_DIR)
-            end
+          project_type = @api_only ? "api" : "web"
+
+          # Generate responses for each CRUD action
+          crud_actions.each do |action|
+            response_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, project_type)
+            render_generator(response_generator, AzuCLI::Generate::Page::OUTPUT_DIR)
           end
           components_generated << "response"
         end
@@ -379,7 +378,7 @@ module AzuCLI
         unless should_skip_component?("page") || @api_only
           Logger.info("🔨 Generating pages...")
           ["index", "show", "new", "edit"].each do |action|
-            page_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action)
+            page_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, "web")
             render_generator(page_generator, AzuCLI::Generate::Page::OUTPUT_DIR)
           end
           components_generated << "page"
@@ -455,7 +454,7 @@ module AzuCLI
         puts "    Example: azu generate contract UserContract name:string email:string"
         puts
         puts "  page <name> [attr:type]"
-        puts "    Generate a page response class with template variables"
+        puts "    Generate a page response class (Web) or JSON response class (API)"
         puts "    Example: azu generate page UserProfile name:string email:string"
         puts
         puts "  job <name> [param:type]"
@@ -511,8 +510,7 @@ module AzuCLI
         puts "  - Database migration file"
         puts "  - RESTful endpoints (index, show, new, create, edit, update, destroy)"
         puts "  - Contract classes for input validation (both API and Web)"
-        puts "  - Response classes for output formatting"
-        puts "  - Page response classes (Web mode)"
+        puts "  - Response/Page classes for output formatting"
         puts "  - Template files for web views (Web mode)"
         puts "  - Use --skip to exclude specific components"
         puts "  - Use --api-only for REST APIs without web interface"
@@ -522,14 +520,12 @@ module AzuCLI
         puts "  models/         - CQL model files"
         puts "  endpoints/      - HTTP endpoint files"
         puts "  contracts/      - Request validation files"
-        puts "  pages/          - Page response files"
+        puts "  pages/          - Page response files (Web/API)"
         puts "  jobs/           - Background job files"
         puts "  middleware/     - Middleware files"
         puts "  migrations/     - Database migration files"
         puts "  components/     - Reusable component files"
         puts "  validators/     - Custom validator files"
-
-        puts "  responses/      - API response files"
         puts "  templates/      - Jinja2 template files"
         puts
         puts "Skip Components Examples:"
@@ -538,7 +534,7 @@ module AzuCLI
         puts "  azu generate scaffold User name:string email:string --skip migration"
         puts "    Generates everything except database migration"
         puts "  azu generate scaffold Article title:string --skip response --web-only"
-        puts "    Generates web components only, skipping API response classes"
+        puts "    Generates web components only, skipping response/page classes"
         puts
         puts "Tips:"
         puts "  - Use --force to overwrite existing files"

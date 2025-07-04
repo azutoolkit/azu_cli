@@ -1,6 +1,11 @@
 struct <%= struct_name %>
   include Azu::Response
+<% if web_type %>
+  include Azu::Templates::Renderable
+<% end %>
+<% if api_type %>
   include JSON::Serializable
+<% end %>
 
   <%= getter_declarations %>
 

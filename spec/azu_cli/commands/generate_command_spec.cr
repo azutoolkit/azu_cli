@@ -96,17 +96,7 @@ describe AzuCLI::Commands::Generate do
       Dir.exists?("./src/components").should be_true
     end
 
-    it "generates request files in correct output directory" do
-      command = AzuCLI::Commands::Generate.new
-      command.parse_args(["request", "UserRequest", "name:string", "email:string"])
 
-      result = command.execute
-
-      result.success?.should be_true
-      # Requests should be generated in ./src/requests directory
-      File.exists?("./src/requests/user_request.cr").should be_true
-      Dir.exists?("./src/requests").should be_true
-    end
 
     it "generates response files in correct output directory" do
       command = AzuCLI::Commands::Generate.new
@@ -115,9 +105,10 @@ describe AzuCLI::Commands::Generate do
       result = command.execute
 
       result.success?.should be_true
-      # Responses should be generated in ./src/responses directory
-      File.exists?("./src/responses/user_response.cr").should be_true
-      Dir.exists?("./src/responses").should be_true
+      # Responses should be generated in ./src/pages directory (merged with page generator)
+      Dir.exists?("./src/pages").should be_true
+      Dir.exists?("./src/pages/userresponses").should be_true
+      File.exists?("./src/pages/userresponses/user_response_index_json.cr").should be_true
     end
 
     it "generates validator files in correct output directory" do
@@ -183,7 +174,7 @@ describe AzuCLI::Commands::Generate do
       Dir.exists?("./src/endpoints").should be_true
 
       # Contracts (for web mode)
-      Dir.exists?("./src/requests").should be_true
+      Dir.exists?("./src/contracts").should be_true
 
       # Pages (for web mode)
       Dir.exists?("./src/pages").should be_true
@@ -204,13 +195,11 @@ describe AzuCLI::Commands::Generate do
       # Endpoints
       Dir.exists?("./src/endpoints").should be_true
 
-      # Requests (for API mode)
-      File.exists?("./src/requests/product.cr").should be_true
-      Dir.exists?("./src/requests").should be_true
+      # Contracts (for API mode)
+      Dir.exists?("./src/contracts").should be_true
 
-      # Responses (for API mode)
-      File.exists?("./src/responses/product.cr").should be_true
-      Dir.exists?("./src/responses").should be_true
+      # Responses (for API mode) - now generated in pages directory
+      Dir.exists?("./src/pages").should be_true
     end
   end
 
@@ -260,8 +249,6 @@ describe AzuCLI::Commands::Generate do
       AzuCLI::Generate::Middleware::OUTPUT_DIR.should eq("./src/middleware")
       AzuCLI::Generate::Migration::OUTPUT_DIR.should eq("./src/db/migrations")
       AzuCLI::Generate::Component::OUTPUT_DIR.should eq("./src/components")
-      AzuCLI::Generate::Request::OUTPUT_DIR.should eq("./src/requests")
-      AzuCLI::Generate::Response::OUTPUT_DIR.should eq("./src/responses")
       AzuCLI::Generate::Validator::OUTPUT_DIR.should eq("./src/validators")
       AzuCLI::Generate::Page::OUTPUT_DIR.should eq("./src/pages")
       AzuCLI::Generate::Template::OUTPUT_DIR.should eq("./public/templates/pages")

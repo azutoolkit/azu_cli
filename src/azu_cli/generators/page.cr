@@ -2,12 +2,12 @@ require "teeplate"
 
 module AzuCLI
   module Generate
-    # Page generator that creates Azu::Response structs and Jinja2 HTML templates for CRUD operations
+    # Page generator that creates Azu::Response structs for both Web and API projects
     class Page < Teeplate::FileTree
-      directory "#{__DIR__}/../templates/scaffold/src/pages"
-      OUTPUT_DIR = "./src/pages"
+      directory "#{__DIR__}/../templates/scaffold/src/response"
+      OUTPUT_DIR = "./src/responses"
 
-      # Also generate Jinja2 HTML templates
+      # Also generate Jinja2 HTML templates for web projects
       property template_generator : Template
       property name : String
       property fields : Hash(String, String)
@@ -15,25 +15,46 @@ module AzuCLI
       property action : String
       property resource_plural : String
       property resource_singular : String
+      property resource : String  # For template naming compatibility
       property generate_template : Bool = true
+      property project_type : String = "web"  # "web" or "api"
+      property from_type : String?
 
-      def initialize(@name : String, @fields : Hash(String, String) = {} of String => String, @action : String = "index")
+      def initialize(@name : String, @fields : Hash(String, String) = {} of String => String, @action : String = "index", @project_type : String = "web", @from_type : String? = nil)
         @snake_case_name = @name.underscore
-        @resource_singular = @name.downcase
-        @resource_plural = @resource_singular + "s"
+        @resource_singular = @name.downcase.singularize
+        @resource_plural = @name.downcase.pluralize
+        @resource = @snake_case_name  # For template naming compatibility
         @template_generator = Template.new(@name, @fields, @action)
       end
 
       def render(project_name : String)
         # Generate the Crystal page response struct
         super(project_name)
-        # Generate the Jinja2 HTML template
-        @template_generator.render(project_name) if @generate_template
+        # Generate the Jinja2 HTML template only for web projects
+        if @project_type == "web" && @generate_template
+          @template_generator.render(project_name)
+        end
       end
 
-      # Convert name to page response struct name
+      # Convert name to page response struct name based on project type
       def struct_name : String
-        @name.camelcase + "Page"
+        case @project_type
+        when "api"
+          @name.camelcase + @action.camelcase + "JSON"
+        else # web (default)
+          @name.camelcase + @action.camelcase + "Page"
+        end
+      end
+
+      # Check if this is a web project
+      def web_type : Bool
+        @project_type == "web"
+      end
+
+      # Check if this is an API project
+      def api_type : Bool
+        @project_type == "api"
       end
 
       # Get getter declarations
@@ -46,12 +67,60 @@ module AzuCLI
         @fields.map { |name, type| "@#{name} : #{crystal_type(type)}" }.join(", ")
       end
 
-      # Get Crystal type for field
-      def crystal_type(field_type : String) : String
-        field_type
+      # Get assignments from source type (e.g., User)
+      def assignments_from_source : String
+        return "" unless @from_type
+        @fields.map { |name, _| "@#{name} = #{from_var}.#{name}" }.join("\n    ")
       end
 
-      # Get view data hash for render method
+      # Get the variable name for the source type
+      def from_var : String
+        @from_type.try(&.underscore) || "source"
+      end
+
+      # Get Crystal type for field
+      def crystal_type(field_type : String) : String
+        case field_type.downcase
+        when "string"
+          "String"
+        when "int32", "integer"
+          "Int32"
+        when "int64"
+          "Int64"
+        when "float32"
+          "Float32"
+        when "float64", "float"
+          "Float64"
+        when "bool", "boolean"
+          "Bool"
+        when "time", "datetime"
+          "Time"
+        when "string?"
+          "String?"
+        when "int32?"
+          "Int32?"
+        when "int64?"
+          "Int64?"
+        when "float64?"
+          "Float64?"
+        when "bool?"
+          "Bool?"
+        else
+          "String"
+        end
+      end
+
+      # Get render method based on project type
+      def render_method : String
+        case @project_type
+        when "api"
+          "def render\n    to_json\n  end"
+        else # web (default)
+          "def render\n    view #{view_data_hash}\n  end"
+        end
+      end
+
+      # Get view data hash for render method (web projects only)
       def view_data_hash : String
         case @action
         when "index"
