@@ -165,9 +165,6 @@ module AzuCLI
         # Use the proper contract generator
         action = @actions.first? || "index"
 
-        # Get project name from config or use default
-        project_name = "MyProject" # TODO: Get from project config
-
         generator = AzuCLI::Generate::Contract.new(
           project: project_name,
           resource: @generator_name,
@@ -177,6 +174,12 @@ module AzuCLI
 
         render_generator(generator, AzuCLI::Generate::Contract::OUTPUT_DIR)
         success("Generated contract #{@generator_name} successfully")
+      end
+
+      def project_name
+        # get name from shard.yml
+        shard_yml = YAML.parse(File.read("./shard.yml"))
+        shard_yml["name"].as_s
       end
 
       private def generate_page : Result

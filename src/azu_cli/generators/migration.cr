@@ -20,7 +20,7 @@ module AzuCLI
 
       # Convert name to snake_case for file naming
       def snake_case_name : String
-        @name.underscore
+        @name.singularize.underscore
       end
 
       # Convert name to plural form for table naming
