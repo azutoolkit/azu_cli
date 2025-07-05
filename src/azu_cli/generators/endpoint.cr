@@ -75,14 +75,9 @@ module AzuCLI
         end
       end
 
-      # Get API prefix for paths
-      def api_prefix : String
-        @endpoint_type == "api" ? "/api" : ""
-      end
-
-      # Get full path with API prefix
+      # Get full path for action
       def full_path(action : String) : String
-        "#{api_prefix}#{action_path(action)}"
+        action_path(action)
       end
 
       # Get scaffold components to generate

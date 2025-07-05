@@ -71,14 +71,9 @@ module AzuCLI
         end
       end
 
-      # Get API prefix for paths
-      def api_prefix : String
-        @endpoint_type == "api" ? "/api" : ""
-      end
-
-      # Get full path with API prefix
+      # Get full path for action
       def full_path : String
-        "#{api_prefix}#{action_path}"
+        action_path
       end
     end
   end

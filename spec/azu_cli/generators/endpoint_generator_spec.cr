@@ -44,20 +44,12 @@ describe AzuCLI::Generate::Endpoint do
       generator.action_path("destroy").should eq("/users/:id")
   end
 
-  it "generates correct API prefixes" do
-    api_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
-    web_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
-
-    api_generator.api_prefix.should eq("/api")
-    web_generator.api_prefix.should eq("")
-  end
-
   it "generates correct full paths" do
     api_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
     web_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
 
-          api_generator.full_path("index").should eq("/api/users")
-          web_generator.full_path("index").should eq("/users")
+    api_generator.full_path("index").should eq("/users")
+    web_generator.full_path("index").should eq("/users")
   end
 
   it "generates scaffold components for API type" do
@@ -99,14 +91,14 @@ describe AzuCLI::Generate::Endpoint do
     index_content = File.read(index_file)
     index_content.should contain("struct UserIndexEndpoint")
     index_content.should contain("include Azu::Endpoint(UserIndexRequest, UserIndexResponse)")
-    index_content.should contain("get \"/api/users\"")
+    index_content.should contain("get \"/users\"")
     index_content.should contain("def call : UserIndexResponse")
 
     # Check create file content
     create_content = File.read(create_file)
     create_content.should contain("struct UserCreateEndpoint")
     create_content.should contain("include Azu::Endpoint(UserCreateRequest, UserCreateResponse)")
-    create_content.should contain("post \"/api/users\"")
+    create_content.should contain("post \"/users\"")
     create_content.should contain("def call : UserCreateResponse")
 
     FileUtils.rm_rf(test_dir)
