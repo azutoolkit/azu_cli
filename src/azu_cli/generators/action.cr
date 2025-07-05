@@ -8,8 +8,10 @@ module AzuCLI
       property action : String
       property endpoint_type : String
       property snake_case_name : String
+      property resource_plural : String
 
       def initialize(@name : String, @action : String, @endpoint_type : String, @snake_case_name : String)
+        @resource_plural = @name.downcase.singularize.pluralize
       end
 
       def name_action : String
@@ -48,7 +50,7 @@ module AzuCLI
 
       # Get path for this action
       def action_path : String
-        base_path = "/#{@snake_case_name}"
+        base_path = "/#{@resource_plural}"
         case @action.downcase
         when "index"
           base_path

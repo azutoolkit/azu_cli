@@ -23,7 +23,7 @@ module AzuCLI
       def initialize(@name : String, @fields : Hash(String, String) = {} of String => String, @action : String = "index", @project_type : String = "web", @from_type : String? = nil)
         @snake_case_name = @name.underscore
         @resource_singular = @name.downcase.singularize
-        @resource_plural = @name.downcase.pluralize
+        @resource_plural = @resource_singular.pluralize
         @resource = @snake_case_name  # For template naming compatibility
         @template_generator = Template.new(@name, @fields, @action)
       end

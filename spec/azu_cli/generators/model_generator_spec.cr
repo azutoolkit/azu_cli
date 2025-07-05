@@ -93,9 +93,9 @@ describe AzuCLI::Generate::Model do
     generator = AzuCLI::Generate::Model.new("Product", attributes)
 
     validations = generator.validation_declarations
-    validations.should contain("validates :name, presence: true")
-    validations.should contain("validates :name, length: {min: 2, max: 100}")
-    validations.should contain("validates :price, numericality: {greater_than: 0.0}")
+    validations.should contain("validate :name, presence: true")
+    validations.should contain("validate :name, length: {min: 2, max: 100}")
+    validations.should contain("validate :price, numericality: {greater_than: 0.0}")
   end
 
   it "generates a model file with correct content and migration by default" do
@@ -120,9 +120,9 @@ describe AzuCLI::Generate::Model do
     content.should contain("getter price : Float64")
     content.should contain("getter created_at : Time")
     content.should contain("getter updated_at : Time")
-    content.should contain("validates :name, presence: true")
-    content.should contain("validates :name, length: {min: 2, max: 100}")
-    content.should contain("validates :price, numericality: {greater_than: 0.0}")
+    content.should contain("validate :name, presence: true")
+    content.should contain("validate :name, length: {min: 2, max: 100}")
+    content.should contain("validate :price, numericality: {greater_than: 0.0}")
     content.should contain("def initialize(@name : String, @price : Float64)")
     content.should contain("end")
 

@@ -14,8 +14,8 @@ module AzuCLI
 
       def initialize(@name : String, @fields : Hash(String, String), @action : String)
         @snake_case_name = @name.underscore
-        @resource_singular = @name.downcase
-        @resource_plural = @resource_singular + "s"
+        @resource_singular = @name.downcase.singularize
+        @resource_plural = @resource_singular.pluralize
       end
 
       # Get page title for the action

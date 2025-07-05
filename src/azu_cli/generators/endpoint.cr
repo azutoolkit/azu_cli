@@ -13,10 +13,12 @@ module AzuCLI
       property actions : Array(String)
       property endpoint_type : String # "api" or "web"
       property snake_case_name : String
+      property resource_plural : String
       property scaffold : Bool
 
       def initialize(@name : String, @actions : Array(String) = [] of String, @endpoint_type : String = "api", @scaffold : Bool = false)
         @snake_case_name = @name.underscore
+        @resource_plural = @name.downcase.singularize.pluralize
         @actions = ["index"] if @actions.empty? # Ensure at least one action
       end
 
@@ -52,7 +54,7 @@ module AzuCLI
 
       # Get path for action
       def action_path(action : String) : String
-        base_path = "/#{@snake_case_name}"
+        base_path = "/#{@resource_plural}"
         case action.downcase
         when "index"
           base_path
@@ -113,7 +115,7 @@ module AzuCLI
       # Override render to create one file per action
       def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
         # Create the resource subdirectory
-        resource_dir = File.join(output_dir, @snake_case_name)
+        resource_dir = File.join(output_dir, @resource_plural)
         Dir.mkdir_p(resource_dir) unless Dir.exists?(resource_dir)
 
         @actions.each do |action|
