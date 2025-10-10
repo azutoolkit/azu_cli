@@ -1,13 +1,13 @@
-struct <%= endpoint_struct_name %>
-  include Azu::Endpoint(<%= request_type %>, <%= response_type %>)
+module <%= @module_name %>
+  struct <%= @name.camelcase %>::<%= @action.camelcase %>Endpoint
+    include Azu::Endpoint(<%= @name.camelcase %>::<%= @action.camelcase %>Contract, <%= @name.camelcase %>::<%= @action.camelcase %>Page)
 
-  <%= http_verb_action %> "<%= full_path %>"
-
-  def call : <%= response_type %>
-    # TODO: Implement <%= action.downcase %> action
-    # Example:
-    # <%= snake_case_name %> = <%= name.camelcase %>Service.<%= action.downcase %>(request)
-    # <%= response_type %>.new(<%= snake_case_name %>)
-    <%= response_type %>.new
+    # TODO: Add HTTP verb and route for <%= @action %> action
+    # Example: get "/<%= @resource_plural %>"
+    
+    def call : <%= @name.camelcase %>::<%= @action.camelcase %>Page
+      # TODO: Implement <%= @action.downcase %> action logic
+      <%= @name.camelcase %>::<%= @action.camelcase %>Page.new
+    end
   end
 end

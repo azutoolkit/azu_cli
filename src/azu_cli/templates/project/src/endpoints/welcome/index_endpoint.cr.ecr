@@ -1,16 +1,15 @@
-module <%= @project.camelcase %>
-  module Welcome
-    struct IndexEndpoint
-      include Endpoint(IndexContract, IndexPage)
+module <%= @module_name %>
+  struct Welcome::IndexEndpoint
+    include Azu::Endpoint(Welcome::IndexContract, Welcome::IndexPage)
 
-      get "/"
+    get "/"
 
-      delegate author, to: index_contract
-      delegate email, to: index_contract
-
-      def call : IndexPage
-        IndexPage.new author, email
-      end
+    def call : Welcome::IndexPage
+      Welcome::IndexPage.new(
+        csrf_token: csrf_token,
+        csrf_tag: csrf_tag,
+        csrf_metatag: csrf_metatag,
+      )
     end
   end
 end

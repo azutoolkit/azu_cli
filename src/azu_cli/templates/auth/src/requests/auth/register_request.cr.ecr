@@ -1,0 +1,58 @@
+# Registration Request
+# Validates user registration data
+
+struct RegisterRequest
+  include JSON::Serializable
+
+  property email : String
+  property password : String
+  property password_confirmation : String
+  property name : String?
+
+  property errors : Hash(String, Array(String)) = {} of String => Array(String)
+
+  def initialize(params : Hash)
+    @email = params["email"]?.to_s
+    @password = params["password"]?.to_s
+    @password_confirmation = params["password_confirmation"]?.to_s
+    @name = params["name"]?.to_s if params["name"]?
+  end
+
+  def valid? : Bool
+    @errors.clear
+
+    validate_email
+    validate_password
+    validate_password_confirmation
+
+    @errors.empty?
+  end
+
+  private def validate_email
+    if @email.empty?
+      add_error("email", "is required")
+    elsif !@email.match(/\A[^@\s]+@[^@\s]+\z/)
+      add_error("email", "is invalid")
+    end
+  end
+
+  private def validate_password
+    if @password.empty?
+      add_error("password", "is required")
+    elsif @password.size < 8
+      add_error("password", "must be at least 8 characters")
+    end
+  end
+
+  private def validate_password_confirmation
+    if @password != @password_confirmation
+      add_error("password_confirmation", "does not match password")
+    end
+  end
+
+  private def add_error(field : String, message : String)
+    @errors[field] ||= [] of String
+    @errors[field] << message
+  end
+end
+

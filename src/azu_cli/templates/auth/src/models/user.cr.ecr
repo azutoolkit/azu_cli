@@ -1,0 +1,92 @@
+# User Model
+# Authentication and authorization model
+
+require "cql"
+require "crypto/bcrypt"
+
+class User < CQL::Model(Int64)
+  db_context Schema, :users
+
+  # Columns
+  property email : String
+  property password_hash : String
+  property name : String?
+  property role : String = "user"
+  property confirmed_at : Time?
+  property locked_at : Time?
+  property created_at : Time
+  property updated_at : Time
+
+  # Virtual attribute for password (not stored in database)
+  @password : String?
+
+  # Validations
+  validates :email, presence: true, format: /\A[^@\s]+@[^@\s]+\z/
+  validates :password, presence: true, length: {minimum: 8}, on: :create
+  validates :role, inclusion: {in: ["user", "admin", "moderator"]}
+
+  # Callbacks
+  before_save :hash_password, if: :password_changed?
+  before_save :update_timestamps
+
+  # Virtual password getter/setter
+  def password
+    @password
+  end
+
+  def password=(value : String)
+    @password = value
+  end
+
+  # Authenticate user with email and password
+  def self.authenticate(email : String, password : String) : User?
+    user = find_by(email: email)
+    return nil unless user
+    return nil unless user.verify_password(password)
+    return nil if user.locked?
+    user
+  end
+
+  # Verify password
+  def verify_password(password : String) : Bool
+    Crypto::Bcrypt::Password.new(@password_hash).verify(password)
+  end
+
+  # Check if account is locked
+  def locked? : Bool
+    !@locked_at.nil?
+  end
+
+  # Check if account is confirmed
+  def confirmed? : Bool
+    !@confirmed_at.nil?
+  end
+
+  # Check if user has role
+  def has_role?(role_name : String) : Bool
+    @role == role_name
+  end
+
+  # Check if user is admin
+  def admin? : Bool
+    has_role?("admin")
+  end
+
+  private def hash_password
+    if pwd = @password
+      @password_hash = Crypto::Bcrypt::Password.create(pwd, cost: 12).to_s
+      @password = nil # Clear plaintext password
+    end
+  end
+
+  private def password_changed? : Bool
+    !@password.nil?
+  end
+
+  private def update_timestamps
+    now = Time.utc
+    @updated_at = now
+    @created_at ||= now
+  end
+end
+

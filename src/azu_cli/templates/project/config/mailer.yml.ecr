@@ -1,0 +1,45 @@
+# Carbon Mailer Configuration
+# Email delivery configuration using Carbon
+# https://github.com/luckyframework/carbon
+
+development:
+  adapter: dev
+  from_email: noreply@<%=project%>.dev
+  from_name: <%=project.camelcase%>
+  
+  # Development adapter prints emails to console
+  dev_adapter:
+    print_emails: true
+
+test:
+  adapter: dev
+  from_email: test@<%=project%>.test
+  from_name: <%=project.camelcase%> Test
+  
+  dev_adapter:
+    print_emails: false  # Don't print in tests
+
+production:
+  adapter: sendgrid
+  from_email: noreply@example.com
+  from_name: <%=project.camelcase%>
+  
+  # SendGrid adapter (default for production)
+  sendgrid:
+    api_key: YOUR_SENDGRID_API_KEY
+  
+  # SMTP adapter (alternative)
+  smtp:
+    host: smtp.gmail.com
+    port: 587
+    username: YOUR_SMTP_USERNAME
+    password: YOUR_SMTP_PASSWORD
+    tls: true
+    auth: login
+  
+  # Async delivery using JoobQ
+  async:
+    enabled: true
+    queue: mailers
+    retry: 3
+

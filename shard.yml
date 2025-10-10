@@ -25,6 +25,10 @@ dependencies:
   cql:
     github: azutoolkit/cql
 
+  redis:
+    github: stefanwille/crystal-redis
+    version: ~> 2.9.0
+
   readline:
     github: crystal-lang/crystal-readline
 

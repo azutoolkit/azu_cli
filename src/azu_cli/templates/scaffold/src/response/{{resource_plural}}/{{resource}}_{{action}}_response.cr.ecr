@@ -1,19 +1,63 @@
-struct <%= struct_name %>
-  include Azu::Response
-<% if web_type %>
-  include Azu::Templates::Renderable
-<% end %>
-<% if api_type %>
-  include JSON::Serializable
-<% end %>
+module <%= @module_name %>
+  struct <%= @name.camelcase %>::<%= @action.camelcase %>Page
+    include Azu::Response
+    include Azu::Templates::Renderable
 
-  <%= getter_declarations %>
+<% if @action == "index" -%>
+    def initialize(@<%= @resource_plural %> : Array(<%= @name.camelcase %>) = [] of <%= @name.camelcase %>,
+                   @csrf_token : String = "",
+                   @csrf_tag : String = "",
+                   @csrf_metatag : String = "")
+    end
 
-  def initialize(<% if from_type %><%= from_var %> : <%= from_type %><% else %><%= constructor_params %><% end %>)
-<% if from_type %>
-    <%= assignments_from_source %>
-<% end %>
+    def render
+      view data: {
+        "<%= @resource_plural %>"        => array_to_hash(@<%= @resource_plural %>),
+        "csrf_token"   => @csrf_token,
+        "csrf_tag"     => @csrf_tag,
+        "csrf_metatag" => @csrf_metatag,
+      }
+    end
+
+    def array_to_hash(array : Array(<%= @name.camelcase %>)) : Array(Hash(String, String))
+      array.map { |<%= @resource_singular %>| convert_to_hash(<%= @resource_singular %>) }
+    end
+
+    def convert_to_hash(<%= @resource_singular %> : <%= @name.camelcase %>) : Hash(String, String)
+      {
+<% @fields.each do |field_name, field_type| -%>
+        "<%= field_name %>" => <%= @resource_singular %>.<%= field_name %>.to_s,
+<% end -%>
+      }
+    end
+<% elsif @action == "show" || @action == "edit" -%>
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil)
+    end
+
+    def render
+      view data: {
+        "<%= @resource_singular %>" => <%= @resource_singular %>_to_hash,
+      }
+    end
+
+    def <%= @resource_singular %>_to_hash
+      return {} of String => String if @<%= @resource_singular %>.nil?
+
+      {
+<% @fields.each do |field_name, field_type| -%>
+        "<%= field_name %>" => @<%= @resource_singular %>.try(&.<%= field_name %>),
+<% end -%>
+      }
+    end
+<% else -%>
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil)
+    end
+
+    def render
+      view data: {
+        "<%= @resource_singular %>" => @<%= @resource_singular %>,
+      }
+    end
+<% end -%>
   end
-
-  <%= render_method %>
 end

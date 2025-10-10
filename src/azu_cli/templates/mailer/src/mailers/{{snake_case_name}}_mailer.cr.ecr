@@ -1,0 +1,71 @@
+# <%=camel_case_name%> Mailer
+# Email functionality for <%=name%> using Carbon
+# Carbon: https://github.com/luckyframework/carbon
+#
+# Usage:
+#   mailer = <%=camel_case_name%>Mailer.new
+#   email = mailer.welcome(to: Carbon::Address.new("user@example.com"), name: "John")
+#   email.deliver
+<%- if async %>
+#
+#   # Or send asynchronously:
+#   mailer.welcome_later(to: Carbon::Address.new("user@example.com"), name: "John")
+<%- end %>
+
+require "carbon"
+
+class <%=camel_case_name%>Mailer < Carbon::Email
+  # Configure mailer defaults
+  def from_email : String
+    ENV["MAILER_FROM_EMAIL"]? || "noreply@example.com"
+  end
+
+  def from_name : String
+    ENV["MAILER_FROM_NAME"]? || "<%=camel_case_name.split("Mailer").first%>"
+  end
+
+<%=mailer_methods%>
+
+<%=async_methods%>
+
+  # Render text template
+  private def render_text(template : String, params : NamedTuple) : String
+    # TODO: Implement text template rendering
+    # You can use ECR, Jinja, or any template engine
+    # Example with ECR:
+    # ECR.render "src/mailers/templates/#{template}.txt.ecr"
+    
+    "Text version of #{template}"
+  end
+
+  # Render HTML template
+  private def render_html(template : String, params : NamedTuple) : String
+    # TODO: Implement HTML template rendering
+    # You can use ECR, Jinja, or any template engine
+    # Example with ECR:
+    # ECR.render "src/mailers/templates/#{template}.html.ecr"
+    
+    "<html><body><h1>#{template}</h1></body></html>"
+  end
+
+  # Preview emails in development
+  # Access at: http://localhost:3000/dev/emails/<%=snake_case_name%>/preview
+  def self.preview(method_name : String)
+    mailer = new
+    case method_name
+<%- template_names.each do |method_name| %>
+    when "<%=method_name%>"
+      mailer.<%=method_name%>(
+        to: Carbon::Address.new("preview@example.com", "Preview User")
+        # Add preview params here
+      )
+<%- end %>
+    else
+      raise "Unknown method: #{method_name}"
+    end
+  end
+end
+
+# Configure Carbon adapter based on environment
+<%=adapter_config%>
+

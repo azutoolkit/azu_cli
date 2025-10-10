@@ -1,0 +1,38 @@
+require "./<%=project%>"
+require "./jobs/**"
+require "joobq"
+
+# JoobQ Worker process
+# This file is used to start background job workers
+
+# Configure JoobQ
+JoobQ.configure do |config|
+  config.redis_url = ENV["REDIS_URL"]? || "redis://localhost:6379"
+  config.queue = ENV["JOOBQ_QUEUE"]? || "default"
+  config.workers = (ENV["JOOBQ_WORKERS"]? || "4").to_i
+  config.retry_strategy = JoobQ::RetryStrategy::Exponential.new(max_retries: 3)
+end
+
+# Register job classes
+# JoobQ will automatically discover jobs in the src/jobs directory
+
+puts "🚀 Starting JoobQ workers..."
+puts "Redis: #{JoobQ.config.redis_url}"
+puts "Queue: #{JoobQ.config.queue}"
+puts "Workers: #{JoobQ.config.workers}"
+puts ""
+puts "Press Ctrl+C to stop workers"
+puts ""
+
+# Start processing jobs
+JoobQ.start
+
+# Keep process running
+Signal::INT.trap do
+  puts "\n🛑 Stopping workers..."
+  JoobQ.stop
+  exit(0)
+end
+
+sleep
+

@@ -1,0 +1,23 @@
+# <%=camel_case_name%> Service
+# Business logic for <%=name%>
+<%=usage_example%>
+
+class <%=camel_case_name%>Service
+  # Initialize service with dependencies
+  def initialize(<%=dependency_params%>)
+  end
+
+<%=method_definitions%>
+
+  private def validate_params(params : Hash) : Bool
+    # TODO: Add validation logic
+    true
+  end
+
+  private def handle_error(error : Exception)
+    # TODO: Add error handling logic
+    Log.error(exception: error) { "Service error in <%=camel_case_name%>Service" }
+    raise error
+  end
+end
+

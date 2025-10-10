@@ -1,0 +1,22 @@
+AppSchema = CQL::Schema.define(
+  :app_schema,
+  adapter: CQL::Adapter::Postgres,
+  uri: "postgres://postgres:@localhost:5432/<%= @project %>_development_db") do
+  table :cql_schema_migrations do
+    primary :id, Int32
+    text :name
+    bigint :version
+    timestamps
+  end
+
+  # Add your tables here
+  # Example:
+  # table :posts do
+  #   primary :id, Int64
+  #   text :title
+  #   text :body
+  #   boolean :published, default: "false"
+  #   timestamps
+  # end
+
+end

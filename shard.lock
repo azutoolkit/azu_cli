@@ -6,7 +6,7 @@ shards:
 
   cql:
     git: https://github.com/azutoolkit/cql.git
-    version: 0.0.410
+    version: 0.0.435
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git

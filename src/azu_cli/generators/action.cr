@@ -9,9 +9,15 @@ module AzuCLI
       property endpoint_type : String
       property snake_case_name : String
       property resource_plural : String
+      property resource_singular : String
+      property module_name : String
+      property fields : Hash(String, String)
 
       def initialize(@name : String, @action : String, @endpoint_type : String, @snake_case_name : String)
         @resource_plural = @name.downcase.singularize.pluralize
+        @resource_singular = @name.downcase.singularize
+        @module_name = "App"
+        @fields = {} of String => String
       end
 
       def name_action : String

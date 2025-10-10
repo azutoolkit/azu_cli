@@ -1,0 +1,120 @@
+# Authentication Endpoint
+# Handles user authentication (login, logout, registration)
+
+require "../models/user"
+require "../requests/auth/*"
+<%- if using_jwt? %>
+require "jwt"
+<%- end %>
+
+module <%=project.camelcase%>::Endpoints
+  class AuthEndpoint < Azu::Endpoint
+    # POST /auth/register
+    post "/auth/register" do
+      request = RegisterRequest.new(params)
+      
+      unless request.valid?
+        halt 422, {errors: request.errors}.to_json
+      end
+      
+      user = User.new(
+        email: request.email,
+        password: request.password,
+        name: request.name
+      )
+
+      if user.save
+        <%- if using_jwt? %>
+        token = generate_jwt_token(user.id)
+        json({user: user_response(user), token: token}, status: 201)
+        <%- else %>
+        session["user_id"] = user.id
+        json({user: user_response(user)}, status: 201)
+        <%- end %>
+      else
+        halt 422, {errors: user.errors}.to_json
+      end
+    end
+
+    # POST /auth/login
+    post "/auth/login" do
+      request = LoginRequest.new(params)
+      
+      unless request.valid?
+        halt 422, {errors: request.errors}.to_json
+      end
+      
+      user = User.authenticate(request.email, request.password)
+
+      unless user
+        halt 401, {error: "Invalid email or password"}.to_json
+      end
+
+      <%- if using_jwt? %>
+      token = generate_jwt_token(user.id)
+      json({user: user_response(user), token: token})
+      <%- else %>
+      session["user_id"] = user.id
+      json({user: user_response(user)})
+      <%- end %>
+    end
+
+    # POST /auth/logout
+    post "/auth/logout" do
+      <%- if using_session? %>
+      session.delete("user_id")
+      <%- end %>
+      json({message: "Logged out successfully"})
+    end
+
+    # GET /auth/me
+    get "/auth/me" do
+      halt 401, {error: "Not authenticated"}.to_json unless current_user
+      json({user: user_response(current_user.not_nil!)})
+    end
+
+    private def user_response(user : User)
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        created_at: user.created_at
+      }
+    end
+
+    <%- if using_jwt? %>
+    private def generate_jwt_token(user_id : Int64) : String
+      payload = {
+        "user_id" => user_id,
+        "exp" => (Time.utc + 24.hours).to_unix
+      }
+      JWT.encode(payload, jwt_secret, JWT::Algorithm::HS256)
+    end
+
+    private def jwt_secret : String
+      ENV["JWT_SECRET"]? || raise "JWT_SECRET not set"
+    end
+    <%- end %>
+
+    private def current_user : User?
+      <%- if using_jwt? %>
+      return @current_user if @current_user
+
+      token = request.headers["Authorization"]?.try(&.sub("Bearer ", ""))
+      return nil unless token
+
+      payload, _header = JWT.decode(token, jwt_secret, JWT::Algorithm::HS256)
+      user_id = payload["user_id"].as_i64
+      @current_user = User.find(user_id)
+      <%- else %>
+      user_id = session["user_id"]?
+      return nil unless user_id
+      @current_user ||= User.find(user_id.as(Int64))
+      <%- end %>
+    rescue
+      nil
+    end
+  end
+end
+

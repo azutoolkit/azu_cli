@@ -25,13 +25,20 @@ module AzuCLI
       def execute : Result
         parse_arguments
 
-        # Validate required arguments
-        unless validate_required_args(2)
-          return error("Usage: azu generate <type> <name> [attributes] [options]")
-        end
+        # Some generators don't require a name (like auth)
+        generators_without_name = ["auth", "authentication"]
 
-        @generator_type = get_arg(0).not_nil!
-        @generator_name = get_arg(1).not_nil!
+        @generator_type = get_arg(0) || ""
+
+        if generators_without_name.includes?(@generator_type.downcase)
+          @generator_name = "Auth"  # Default name for auth
+        else
+          # Validate required arguments for other generators
+          unless validate_required_args(2)
+            return error("Usage: azu generate <type> <name> [attributes] [options]")
+          end
+          @generator_name = get_arg(1).not_nil!
+        end
 
         # Parse attributes from remaining arguments
         parse_attributes
@@ -47,8 +54,8 @@ module AzuCLI
           generate_endpoint
         when "service"
           generate_service
-        when "contract"
-          generate_contract
+        when "contract", "request"
+          generate_request
         when "page"
           generate_page
         when "job"
@@ -67,6 +74,12 @@ module AzuCLI
           generate_template
         when "scaffold"
           generate_scaffold
+        when "mailer"
+          generate_mailer
+        when "channel"
+          generate_channel
+        when "auth", "authentication"
+          generate_auth
         else
           error("Unknown generator type: #{@generator_type}")
         end
@@ -80,8 +93,20 @@ module AzuCLI
           parser.on("--api-only", "Generate API-only components") { @api_only = true }
           parser.on("--web-only", "Generate web-only components") { @web_only = true }
           parser.on("--skip-tests", "Skip test file generation") { @skip_tests = true }
-          parser.on("--skip COMPONENTS", "Skip specific components (comma-separated): model,endpoint,contract,response,template,migration,page") do |components|
+          parser.on("--skip COMPONENTS", "Skip specific components (comma-separated): model,endpoint,request,response,template,migration,page") do |components|
             @skip_components = components.split(",").map(&.strip.downcase)
+          end
+          parser.on("--strategy STRATEGY", "Authentication strategy (jwt, session, oauth)") do |strategy|
+            @options["strategy"] = strategy
+          end
+          parser.on("--backend BACKEND", "Backend type (redis, memory, database)") do |backend|
+            @options["backend"] = backend
+          end
+          parser.on("--type TYPE", "Generator-specific type") do |type|
+            @options["type"] = type
+          end
+          parser.on("--record RECORD", "Record type for validators") do |record|
+            @options["record"] = record
           end
           parser.on("--help", "Show help") {
             show_help
@@ -148,32 +173,30 @@ module AzuCLI
       private def generate_service : Result
         Logger.info("Generating service")
 
-        # For now, use component generator as service base
-        # TODO: Create dedicated Service generator
-        generator = AzuCLI::Generate::Component.new(
+        generator = AzuCLI::Generate::Service.new(
           name: @generator_name,
-          properties: @attributes
+          methods: @attributes
         )
 
-        render_generator(generator, AzuCLI::Generate::Component::OUTPUT_DIR)
+        render_generator(generator, AzuCLI::Generate::Service::OUTPUT_DIR)
         success("Generated service #{@generator_name} successfully")
       end
 
-      private def generate_contract : Result
-        Logger.info("Generating contract")
+      private def generate_request : Result
+        Logger.info("Generating request")
 
-        # Use the proper contract generator
+        # Use the proper request generator (aligns with Azu::Request)
         action = @actions.first? || "index"
 
-        generator = AzuCLI::Generate::Contract.new(
+        generator = AzuCLI::Generate::Request.new(
           project: project_name,
           resource: @generator_name,
           action: action,
           attributes: @attributes
         )
 
-        render_generator(generator, AzuCLI::Generate::Contract::OUTPUT_DIR)
-        success("Generated contract #{@generator_name} successfully")
+        render_generator(generator, AzuCLI::Generate::Request::OUTPUT_DIR)
+        success("Generated request #{@generator_name} successfully")
       end
 
       def project_name
@@ -296,6 +319,59 @@ module AzuCLI
         success("Generated template #{@generator_name} successfully")
       end
 
+      private def generate_mailer : Result
+        Logger.info("Generating mailer")
+
+        methods = @actions.empty? ? ["welcome"] : @actions
+
+        generator = AzuCLI::Generate::Mailer.new(
+          name: @generator_name,
+          methods: methods,
+          async: !@skip_components.includes?("job")
+        )
+
+        render_generator(generator, AzuCLI::Generate::Mailer::OUTPUT_DIR)
+        success("Generated mailer #{@generator_name} successfully")
+      end
+
+      private def generate_channel : Result
+        Logger.info("Generating WebSocket channel")
+
+        actions = @actions.empty? ? ["subscribed", "unsubscribed", "receive"] : @actions
+
+        generator = AzuCLI::Generate::Channel.new(
+          name: @generator_name,
+          actions: actions
+        )
+
+        render_generator(generator, AzuCLI::Generate::Channel::OUTPUT_DIR)
+        success("Generated channel #{@generator_name} successfully")
+      end
+
+      private def generate_auth : Result
+        Logger.info("Generating authentication system")
+
+        strategy = @options["strategy"]? || "jwt"
+        proj_name = project_name
+
+        generator = AzuCLI::Generate::Auth.new(
+          project: proj_name,
+          strategy: strategy
+        )
+
+        Logger.info("Strategy: #{strategy}")
+        render_generator(generator, AzuCLI::Generate::Auth::OUTPUT_DIR)
+
+        Logger.info("✓ Authentication system generated")
+        Logger.info("")
+        Logger.info("Next steps:")
+        Logger.info("1. Run 'azu db:migrate' to create users table")
+        Logger.info("2. Set JWT_SECRET environment variable (if using JWT)")
+        Logger.info("3. Configure your application to use the auth endpoints")
+
+        success("Generated authentication system successfully")
+      end
+
       private def generate_scaffold : Result
         Logger.info("Generating scaffold (complete CRUD)")
 
@@ -343,23 +419,23 @@ module AzuCLI
           components_generated << "endpoint"
         end
 
-        # Generate Contracts (both API and Web)
-        unless should_skip_component?("contract")
-          Logger.info("🔨 Generating contracts...")
+        # Generate Requests (both API and Web) - aligns with Azu::Request
+        unless should_skip_component?("request") || should_skip_component?("contract")
+          Logger.info("🔨 Generating requests...")
           # Get project name from config or use default
-          project_name = "MyProject" # TODO: Get from project config
+          proj_name = project_name
 
-          # Generate contracts for each CRUD action
+          # Generate requests for each CRUD action
           crud_actions.each do |action|
-            contract_generator = AzuCLI::Generate::Contract.new(
-              project: project_name,
+            request_generator = AzuCLI::Generate::Request.new(
+              project: proj_name,
               resource: @generator_name,
               action: action,
               attributes: @attributes
             )
-            render_generator(contract_generator, AzuCLI::Generate::Contract::OUTPUT_DIR)
+            render_generator(request_generator, AzuCLI::Generate::Request::OUTPUT_DIR)
           end
-          components_generated << "contract"
+          components_generated << "request"
         end
 
         # Generate Responses
@@ -448,13 +524,16 @@ module AzuCLI
         puts "    Generate RESTful endpoints with specified actions"
         puts "    Example: azu generate endpoint Users index show create update destroy"
         puts
-        puts "  service <name> [methods]"
+        puts "  service <name> [method:return_type]"
         puts "    Generate a service class for business logic"
-        puts "    Example: azu generate service UserService register:string login:string"
+        puts "    Example: azu generate service UserService create:User update:User"
+        puts
+        puts "  request <name> [attr:type]"
+        puts "    Generate a request class for request validation (aligns with Azu::Request)"
+        puts "    Example: azu generate request UserRequest name:string email:string"
         puts
         puts "  contract <name> [attr:type]"
-        puts "    Generate a contract class for request validation"
-        puts "    Example: azu generate contract UserContract name:string email:string"
+        puts "    Alias for 'request' (deprecated, use 'request' instead)"
         puts
         puts "  page <name> [attr:type]"
         puts "    Generate a page response class (Web) or JSON response class (API)"
@@ -493,13 +572,25 @@ module AzuCLI
         puts "    Generate a complete CRUD scaffold with all components"
         puts "    Example: azu generate scaffold Post title:string content:text published:bool"
         puts
+        puts "  mailer <name> [methods]"
+        puts "    Generate a mailer class for sending emails"
+        puts "    Example: azu generate mailer UserMailer welcome password_reset"
+        puts
+        puts "  channel <name> [actions]"
+        puts "    Generate a WebSocket channel for real-time communication"
+        puts "    Example: azu generate channel ChatChannel subscribed receive"
+        puts
+        puts "  auth [--strategy jwt|session|oauth]"
+        puts "    Generate complete authentication system"
+        puts "    Example: azu generate auth --strategy jwt"
+        puts
         puts "Options:"
         puts "  --force                    Overwrite existing files without prompting"
         puts "  --skip-tests               Skip generating test files"
         puts "  --api-only                 Generate API-only components (JSON responses)"
         puts "  --web-only                 Generate web-only components (HTML pages)"
         puts "  --skip COMPONENTS          Skip specific components (comma-separated)"
-        puts "                             Available components: model,endpoint,contract,response,template,migration,page"
+        puts "                             Available components: model,endpoint,request,response,template,migration,page"
         puts "  --help                     Show this help message"
         puts
         puts "Attribute Format:"

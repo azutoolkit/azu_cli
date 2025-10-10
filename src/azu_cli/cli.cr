@@ -20,9 +20,41 @@ module AzuCLI
       register_command("init", Commands::Init)
       register_command("version", Commands::Version)
       register_command("help", Commands::Help)
+
       # Code generation commands
       register_command("generate", Commands::Generate)
       register_command("g", Commands::Generate) # Alias
+
+      # Database commands
+      register_command("db:create", Commands::DB::Create)
+      register_command("db:drop", Commands::DB::Drop)
+      register_command("db:migrate", Commands::DB::Migrate)
+      register_command("db:rollback", Commands::DB::Rollback)
+      register_command("db:seed", Commands::DB::Seed)
+      register_command("db:reset", Commands::DB::Reset)
+      register_command("db:status", Commands::DB::Status)
+      register_command("db:setup", Commands::DB::Setup)
+
+      # Development server command
+      register_command("serve", Commands::Serve)
+      register_command("server", Commands::Serve) # Alias
+      register_command("s", Commands::Serve) # Short alias
+
+      # Job queue commands
+      register_command("jobs:worker", Commands::Jobs::Worker)
+      register_command("jobs:status", Commands::Jobs::Status)
+      register_command("jobs:clear", Commands::Jobs::Clear)
+      register_command("jobs:retry", Commands::Jobs::Retry)
+      register_command("jobs:ui", Commands::Jobs::UI)
+
+      # Session commands
+      register_command("session:setup", Commands::Session::Setup)
+      register_command("session:clear", Commands::Session::Clear)
+
+      # Testing command
+      register_command("test", Commands::Test)
+      register_command("t", Commands::Test) # Alias
+
       # Plugin commands
       register_command("plugin", Commands::Plugin)
     end

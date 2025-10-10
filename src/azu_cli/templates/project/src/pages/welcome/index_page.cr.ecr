@@ -1,13 +1,19 @@
-module <%= @project.camelcase %>
+module <%= @module_name %>
   struct Welcome::IndexPage
-    include Response
-    include Templates::Renderable
+    include Azu::Response
+    include Azu::Templates::Renderable
 
-    def initialize(@author : String, @email : String)
+    def initialize(@csrf_token : String = "",
+                   @csrf_tag : String = "",
+                   @csrf_metatag : String = "")
     end
 
     def render
-      view data: {"author" => @author, "email" => @email}
+      view data: {
+        "csrf_token"   => @csrf_token,
+        "csrf_tag"     => @csrf_tag,
+        "csrf_metatag" => @csrf_metatag,
+      }
     end
   end
 end

@@ -39,6 +39,7 @@ end
 <% else -%>
 require "azu"
 require "./initializers/**"
+require "./db/**"
 
 # Azu Framework Application
 # Docs: https://azutoolkit.org
@@ -58,31 +59,35 @@ module <%= @module_name %>
     c.templates.path = "./public/templates"
     # Serve static files
     c.router.get "/*", Handler::Static.new
-    c.performance_enabled = ENV["PERFORMANCE_MONITORING"]? == "true"
-    c.performance_profiling_enabled = true
-    c.performance_memory_monitoring = true
 <% end -%>
   end
 
+<% if @project_type == "web" -%>
+  Azu::Handler::CSRF.configure do |csrf|
+    csrf.strategy = Azu::Handler::CSRF::Strategy::SignedDoubleSubmit
+    csrf.secret_key = "1234567890"
+  end
+
+<% end -%>
   def self.handlers
     [
+<% if @project_type == "web" -%>
+      Azu::Handler::CSRF.new,
+<% end -%>
       Azu::Handler::RequestId.new,
-  <% if @project_type == "web" -%>
-      Azu::Handler::DevDashboard.new,                           # 👈 Full dashboard functionality
-      <%= @module_name %>.config.performance_monitor.not_nil!,  # 👈 Required for metrics
-  <% end -%>
+<% if @project_type == "web" -%>
+      Azu::Handler::DevDashboard.new,               # 👈 Full dashboard functionality
+      <%= @module_name %>::CONFIG.performance_monitor.not_nil!, # 👈 Required for metrics
+<% end -%>
       Azu::Handler::Rescuer.new,
       Azu::Handler::Logger.new,
     ]
   end
-
 end
 
-# Require application files
-require "./contracts/**"
-<% if @project_type == "web" -%>
-require "./pages/**"
-<% end -%>
+require "./schemas/**"
 require "./models/**"
+require "./responses/**"
+require "./contracts/**"
 require "./endpoints/**"
 <% end -%>

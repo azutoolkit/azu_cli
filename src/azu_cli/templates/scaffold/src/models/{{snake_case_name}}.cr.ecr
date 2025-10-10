@@ -1,24 +1,55 @@
 require "cql"
 
-class <%= name %>
-  <%= include_statement %>
-  <%= db_context_declaration -%>
+class <%= @name.camelcase %>
+  include CQL::ActiveRecord::Model(Int64)
+  db_context AppSchema, :<%= @resource_plural %>
 
   # Attribute accessors
-  <%= getter_declarations -%>
+<% @fields.each do |field_name, field_type| -%>
+  getter <%= field_name %> : <%= crystal_type(field_type) %>
+<% end -%>
+<% if @fields.has_key?("created_at") -%>
+  getter created_at : Time
+<% end -%>
+<% if @fields.has_key?("updated_at") -%>
+  getter updated_at : Time
+<% end -%>
 
 <% if has_validations? -%>
   # Validations
-  <%= validation_declarations %>
+<% @fields.each do |field_name, field_type| -%>
+<% next if field_name == "id" || field_name == "created_at" || field_name == "updated_at" -%>
+  validate :<%= field_name %>, presence: true, message: "<%= field_name.camelcase %> is required"
+<% if field_type == "string" -%>
+  validate :<%= field_name %>, size: 2..100, message: "<%= field_name.camelcase %> must be between 2 and 100 characters"
+<% end -%>
+<% end -%>
 <% end %>
 
   # Constructor
-  def initialize(<%= constructor_params %>)
+  def initialize(
+<% @fields.each do |field_name, field_type| -%>
+    @<%= field_name %> : <%= crystal_type(field_type) %><% if field_name == "id" %> = nil<% elsif field_type == "bool" %> = false<% elsif field_type == "string" %> = ""<% elsif field_type == "time" %> = Time.utc<% end %>,
+<% end -%>
+<% if @fields.has_key?("created_at") -%>
+    @created_at : Time = Time.utc,
+<% end -%>
+<% if @fields.has_key?("updated_at") -%>
+    @updated_at : Time = Time.utc,
+<% end -%>
+  )
   end
 
 <% if has_scopes? -%>
   # Scopes
-  <%= scope_declarations %>
+<% @fields.each do |field_name, field_type| -%>
+<% if field_type == "string" -%>
+  scope :by_<%= field_name %>, ->(value : String) { where("<%= field_name %> ILIKE ?", "%" + value + "%") }
+<% end -%>
+<% end -%>
+<% if @fields.has_key?("published") -%>
+  scope :published, -> { where(published: true) }
+<% end -%>
 <% end %>
 
 <% if has_associations? -%>

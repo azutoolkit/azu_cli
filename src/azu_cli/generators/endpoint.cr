@@ -11,14 +11,21 @@ module AzuCLI
 
       property name : String
       property actions : Array(String)
+      property action : String = ""
       property endpoint_type : String # "api" or "web"
       property snake_case_name : String
       property resource_plural : String
+      property resource_singular : String
+      property module_name : String
+      property fields : Hash(String, String)
       property scaffold : Bool
 
       def initialize(@name : String, @actions : Array(String) = [] of String, @endpoint_type : String = "api", @scaffold : Bool = false)
         @snake_case_name = @name.underscore
         @resource_plural = @name.downcase.singularize.pluralize
+        @resource_singular = @name.downcase.singularize
+        @module_name = "App"
+        @fields = {} of String => String
         @actions = ["index"] if @actions.empty? # Ensure at least one action
       end
 

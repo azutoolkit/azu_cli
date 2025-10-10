@@ -1,833 +1,129 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Azu Framework</title>
-  <meta name="description" content="A modern, high-performance web framework for Crystal">
-
-  <!-- Google Fonts for better typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
-
-  <!-- Prism.js CSS for GitHub-style syntax highlighting -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-github.min.css" rel="stylesheet" />
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css"
-    rel="stylesheet" />
-  <style>
-    :root {
-      --background: 220 24% 6%;
-      --foreground: 210 40% 98%;
-      --card: 220 22% 8%;
-      --card-foreground: 210 40% 98%;
-      --popover: 220 22% 8%;
-      --popover-foreground: 210 40% 98%;
-      --primary: 267 100% 70%;
-      --primary-foreground: 220 24% 6%;
-      --primary-glow: 267 100% 80%;
-      --secondary: 220 18% 12%;
-      --secondary-foreground: 210 40% 98%;
-      --muted: 220 18% 12%;
-      --muted-foreground: 215.4 16.3% 65%;
-      --accent: 195 100% 65%;
-      --accent-foreground: 220 24% 6%;
-      --destructive: 0 84.2% 60.2%;
-      --destructive-foreground: 210 40% 98%;
-      --border: 220 18% 15%;
-      --input: 220 18% 15%;
-      --ring: 267 100% 70%;
-      --radius: 0.75rem;
-
-      /* Azu Brand Colors */
-      --crystal: 195 100% 65%;
-      --crystal-foreground: 220 24% 6%;
-      --performance: 120 100% 60%;
-      --safety: 267 100% 70%;
-
-      /* Gradients */
-      --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--crystal)));
-      --gradient-hero: linear-gradient(135deg, hsl(var(--primary) / 0.9), hsl(var(--crystal) / 0.7));
-      --gradient-card: linear-gradient(145deg, hsl(var(--card) / 0.5), hsl(var(--card) / 0.8));
-
-      /* Shadows */
-      --shadow-glow: 0 0 40px hsl(var(--primary) / 0.3);
-      --shadow-card: 0 8px 32px hsl(220 24% 3% / 0.4);
-
-      /* Animations */
-      --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: hsl(var(--background));
-      color: hsl(var(--foreground));
-      line-height: 1.6;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 2rem;
-    }
-
-    /* Hero Section */
-    .hero {
-      position: relative;
-      overflow: hidden;
-      padding: 2rem 0;
-      text-align: center;
-    }
-
-    .hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%238b5cf6" fill-opacity="0.05"><polygon points="0,0 60,0 60,60 0,60"/></g></svg>');
-      z-index: -1;
-    }
-
-    .hero h1 {
-      font-size: 4rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-      background: var(--gradient-primary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero p {
-      font-size: 1.25rem;
-      color: hsl(var(--muted-foreground));
-      margin-bottom: 2rem;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .hero .highlight {
-      color: hsl(var(--crystal));
-      font-weight: 600;
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 2rem;
-      margin: 0.5rem;
-      border: none;
-      border-radius: var(--radius);
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      cursor: pointer;
-    }
-
-    .btn-primary {
-      background: var(--gradient-primary);
-      color: hsl(var(--primary-foreground));
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 40px rgba(139, 92, 246, 0.3);
-    }
-
-    .btn-outline {
-      background: transparent;
-      color: hsl(var(--foreground));
-      border: 2px solid hsl(var(--border));
-    }
-
-    .btn-outline:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    /* Features Section */
-    .features {
-      padding: 5rem 0;
-    }
-
-    .features h2 {
-      text-align: center;
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .features .subtitle {
-      text-align: center;
-      color: hsl(var(--muted-foreground));
-      margin-bottom: 3rem;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-      gap: 2rem;
-      margin-bottom: 4rem;
-    }
-
-    .feature-card {
-      background: hsl(var(--card));
-      border: 1px solid hsl(var(--border));
-      border-radius: var(--radius);
-      padding: 2rem;
-      transition: all 0.3s ease;
-    }
-
-    .feature-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-card);
-    }
-
-    .feature-badge {
-      display: inline-block;
-      padding: 0.25rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-    }
-
-    .badge-safety {
-      background: rgba(139, 92, 246, 0.2);
-      color: hsl(var(--safety));
-      border: 1px solid rgba(139, 92, 246, 0.3);
-    }
-
-    .badge-performance {
-      background: rgba(16, 185, 129, 0.2);
-      color: hsl(var(--performance));
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .badge-crystal {
-      background: rgba(6, 182, 212, 0.2);
-      color: hsl(var(--crystal));
-      border: 1px solid rgba(6, 182, 212, 0.3);
-    }
-
-    .feature-card h3 {
-      font-size: 1.5rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .feature-card p {
-      color: hsl(var(--muted-foreground));
-      margin-bottom: 1.5rem;
-    }
-
-    /* GitHub-style syntax highlighting */
-    .code-toolbar {
-      position: relative;
-      margin: 0;
-    }
-
-    pre[class*="language-"] {
-      position: relative;
-      background: #0d1117 !important;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 16px;
-      font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-      font-size: 14px;
-      line-height: 1.45;
-      overflow-x: auto;
-      color: #f0f6fc !important;
-      margin: 0;
-    }
-
-    code[class*="language-"] {
-      font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-      font-size: 14px;
-      color: #f0f6fc !important;
-    }
-
-    /* GitHub-style token colors */
-    .token.comment,
-    .token.prolog,
-    .token.doctype,
-    .token.cdata {
-      color: #8b949e;
-      font-style: italic;
-    }
-
-    .token.punctuation {
-      color: #f0f6fc;
-    }
-
-    .token.property,
-    .token.tag,
-    .token.boolean,
-    .token.number,
-    .token.constant,
-    .token.symbol,
-    .token.deleted {
-      color: #79c0ff;
-    }
-
-    .token.selector,
-    .token.attr-name,
-    .token.string,
-    .token.char,
-    .token.builtin,
-    .token.inserted {
-      color: #a5d6ff;
-    }
-
-    .token.operator,
-    .token.entity,
-    .token.url,
-    .language-css .token.string,
-    .style .token.string {
-      color: #ff7b72;
-    }
-
-    .token.atrule,
-    .token.attr-value,
-    .token.keyword {
-      color: #ff7b72;
-    }
-
-    .token.function,
-    .token.class-name {
-      color: #d2a8ff;
-    }
-
-    .token.regex,
-    .token.important,
-    .token.variable {
-      color: #ffa657;
-    }
-
-    .token.important,
-    .token.bold {
-      font-weight: bold;
-    }
-
-    .token.italic {
-      font-style: italic;
-    }
-
-    .token.entity {
-      cursor: help;
-    }
-
-    /* Toolbar styles */
-    .toolbar {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      z-index: 10;
-      display: flex;
-      gap: 4px;
-    }
-
-    .toolbar-item button {
-      background: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #f0f6fc;
-      cursor: pointer;
-      font-size: 12px;
-      padding: 4px 8px;
-      transition: all 0.2s ease;
-    }
-
-    .toolbar-item button:hover {
-      background: #30363d;
-      border-color: #484f58;
-    }
-
-    /* Copy button specific styling */
-    .copy-to-clipboard-button {
-      background: #238636 !important;
-      border-color: #2ea043 !important;
-      color: white !important;
-    }
-
-    .copy-to-clipboard-button:hover {
-      background: #2ea043 !important;
-      border-color: #46954a !important;
-    }
-
-    /* Architecture Section */
-    .architecture {
-      text-align: center;
-      margin-bottom: 4rem;
-    }
-
-    .architecture h3 {
-      font-size: 2rem;
-      margin-bottom: 2rem;
-    }
-
-    .arch-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 2rem;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 2rem;
-      background: hsl(var(--card));
-      border-radius: var(--radius);
-      border: 1px solid hsl(var(--border));
-    }
-
-    .arch-item {
-      text-align: center;
-    }
-
-    .arch-icon {
-      width: 4rem;
-      height: 4rem;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1rem;
-      font-size: 1.5rem;
-    }
-
-    .arch-icon.safety {
-      background: rgba(139, 92, 246, 0.2);
-    }
-
-    .arch-icon.crystal {
-      background: rgba(6, 182, 212, 0.2);
-    }
-
-    .arch-icon.performance {
-      background: rgba(16, 185, 129, 0.2);
-    }
-
-    /* Quick Start */
-    .quick-start {
-      text-align: center;
-    }
-
-    .quick-start h3 {
-      font-size: 2rem;
-      margin-bottom: 2rem;
-    }
-
-    .terminal {
-      max-width: 600px;
-      margin: 0 auto 2rem;
-      background: hsl(var(--secondary));
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      font-family: 'Monaco', 'Consolas', monospace;
-      text-align: left;
-    }
-
-    .terminal .comment {
-      color: hsl(var(--muted-foreground));
-      font-size: 0.875rem;
-    }
-
-    .terminal .command {
-      color: hsl(var(--crystal));
-      margin: 0.5rem 0;
-    }
-
-    /* Footer */
-    .footer {
-      border-top: 1px solid hsl(var(--border));
-      padding: 3rem 0;
-      text-align: center;
-      color: hsl(var(--muted-foreground));
-    }
-
-    .footer .crystal {
-      color: hsl(var(--crystal));
-      font-weight: 600;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      .hero h1 {
-        font-size: 2.5rem;
-      }
-
-      .hero p {
-        font-size: 1rem;
-      }
-
-      .container {
-        padding: 0 1rem;
-      }
-
-      .feature-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
-</head>
-
-<body>
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="container">
-      <h1>Welcome to Azu</h1>
-      <p>
-        A modern, high-performance web framework for Crystal that emphasizes
-        <span class="highlight">type safety</span>,
-        <span class="highlight">modularity</span>, and
-        <span class="highlight">real-time capabilities</span>.
-      </p>
-      <div>
-        <a href="https://azutopia.gitbook.io/azu/getting-started" class="btn btn-primary">Get Started</a>
-        <a href="https://github.com/azutoolkit/azu" class="btn btn-outline">View on GitHub</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Features Section -->
-  <section class="features">
-    <div class="container">
-      <h2>Built for Modern Web Development</h2>
-      <p class="subtitle">
-        Azu leverages Crystal's powerful static type system and compile-time optimizations
-        to deliver unmatched performance and developer experience.
-      </p>
-
-      <div class="feature-grid">
-        <div class="feature-card">
-          <div class="feature-badge badge-safety">Type Safety</div>
-          <h3>Contract-Driven Design</h3>
-          <p>Every request and response is governed by explicit contracts with compile-time validation.</p>
-          <pre><code class="language-crystal">struct UserRequest
-  include Azu::Request
-
-  @name : String
-  @email : String
-  @age : Int32?
-
-  validate :name, presence: true
-  validate :email, format: /@/
-end</code></pre>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-badge badge-performance">Performance</div>
-          <h3>Lightning Fast</h3>
-          <p>Built on Crystal's compile-time optimizations for maximum performance and minimal resource usage.</p>
-          <div
-            style="background: rgba(255, 255, 255, 0.05); border-radius: var(--radius); padding: 1.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem;">
-            <div style="color: hsl(var(--performance)); margin-bottom: 0.5rem;">Response Time: &lt; 1ms</div>
-            <div style="color: hsl(var(--crystal)); margin-bottom: 0.5rem;">Memory Usage: ~2MB</div>
-            <div style="color: hsl(var(--performance)); margin-bottom: 1rem;">Concurrent Connections: 100k+</div>
-            <div style="color: hsl(var(--muted-foreground)); margin-bottom: 0.5rem; font-weight: 600;">Benchmark
-              Results:</div>
-            <div style="color: hsl(var(--muted-foreground)); font-size: 0.8rem; line-height: 1.4;">
-              - 50,000 req/sec average<br>
-              - 99th percentile: 5ms<br>
-              - Zero memory leaks
-            </div>
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-badge badge-crystal">Real-time</div>
-          <h3>WebSocket Ready</h3>
-          <p>Built-in WebSocket support for real-time applications with type-safe message handling.</p>
-          <pre><code class="language-crystal">class ChatEndpoint < Azu::Endpoint
-  on_message do |message|
-    broadcast message.to_json
-  end
-
-  on_connect do
-    join_room "global"
-  end
-end</code></pre>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-badge badge-crystal">Architecture</div>
-          <h3>Modular Design</h3>
-          <p>Clean separation of concerns with reusable components and middleware.</p>
-          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <div style="width: 0.75rem; height: 0.75rem; background: hsl(var(--crystal)); border-radius: 50%;"></div>
-              <span style="font-size: 0.875rem;">Middleware Pipeline</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <div style="width: 0.75rem; height: 0.75rem; background: hsl(var(--performance)); border-radius: 50%;">
-              </div>
-              <span style="font-size: 0.875rem;">Service Components</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <div style="width: 0.75rem; height: 0.75rem; background: hsl(var(--safety)); border-radius: 50%;"></div>
-              <span style="font-size: 0.875rem;">Repository Pattern</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-badge badge-performance">Security</div>
-          <h3>Built-in Protection</h3>
-          <p>Comprehensive security features with CSRF, rate limiting, and input sanitization.</p>
-          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.875rem; color: hsl(var(--muted-foreground));">CSRF Protection</span>
-              <span style="color: hsl(var(--performance)); font-weight: 600;">✓</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.875rem; color: hsl(var(--muted-foreground));">Rate Limiting</span>
-              <span style="color: hsl(var(--performance)); font-weight: 600;">✓</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.875rem; color: hsl(var(--muted-foreground));">Input Validation</span>
-              <span style="color: hsl(var(--performance)); font-weight: 600;">✓</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-badge badge-performance">Scalability</div>
-          <h3>Production Ready</h3>
-          <p>Built for scale with connection pooling, caching, and horizontal scaling support.</p>
-          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.875rem; color: hsl(var(--muted-foreground));">Connection Pooling</span>
-              <span style="color: hsl(var(--performance)); font-weight: 600;">Auto</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.875rem; color: hsl(var(--muted-foreground));">Load Balancing</span>
-              <span style="color: hsl(var(--performance)); font-weight: 600;">Native</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.875rem; color: hsl(var(--muted-foreground));">Caching</span>
-              <span style="color: hsl(var(--performance)); font-weight: 600;">Redis</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Performance Monitoring Dashboard -->
-      <div style="text-align: center; margin-bottom: 3rem;">
-        <h3 style="font-size: 2rem; margin-bottom: 1.5rem;">Built-in Performance Monitoring</h3>
-        <p
-          style="font-size: 1.125rem; color: hsl(var(--muted-foreground)); margin-bottom: 2rem; max-width: 48rem; margin-left: auto; margin-right: auto;">
-          Real-time insights and comprehensive metrics to keep your application running at peak performance.
+{% extends "layout.jinja" %}
+
+{% block page_header %}
+<title>Welcome to {{ project.camelcase }} - Azu App</title>
+<meta name="description" content="Welcome to your new Azu application">
+{{ csrf_metatag }}
+{% endblock %}
+
+{% block page_body %}
+<div class="container-lg py-4">
+  <!-- Page Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="text-center">
+        <h1 class="h1 mb-3">
+          <i class="bi bi-gem me-3"></i>
+          Welcome to {{ project.camelcase }}
+        </h1>
+        <p class="lead text-muted">
+          Your new Azu application is ready to go!
         </p>
-        <div
-          style="max-width: 72rem; margin: 0 auto; background: var(--gradient-card); border-radius: var(--radius); padding: 2rem; border: 1px solid hsl(var(--border));">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-            <div style="background: rgba(255, 255, 255, 0.05); border-radius: var(--radius); padding: 1.5rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                <div style="width: 0.75rem; height: 0.75rem; background: hsl(var(--performance)); border-radius: 50%;">
-                </div>
-                <h4 style="font-weight: 600;">Application Status</h4>
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.875rem;">
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">Response Time</span>
-                  <span style="color: hsl(var(--performance)); font-weight: 600;">396.86ms</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">Memory Usage</span>
-                  <span style="color: hsl(var(--crystal)); font-weight: 600;">2.61MB</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">Requests/Second</span>
-                  <span style="color: hsl(var(--performance)); font-weight: 600;">12,419</span>
-                </div>
-              </div>
-            </div>
-
-            <div style="background: rgba(255, 255, 255, 0.05); border-radius: var(--radius); padding: 1.5rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                <div style="width: 0.75rem; height: 0.75rem; background: hsl(var(--crystal)); border-radius: 50%;">
-                </div>
-                <h4 style="font-weight: 600;">Cache Metrics</h4>
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.875rem;">
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">Hit Rate</span>
-                  <span style="color: hsl(var(--performance)); font-weight: 600;">96.67%</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">GET Operations</span>
-                  <span style="color: hsl(var(--crystal)); font-weight: 600;">15</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">Processing Time</span>
-                  <span style="color: hsl(var(--safety)); font-weight: 600;">2.65ms</span>
-                </div>
-              </div>
-            </div>
-
-            <div style="background: rgba(255, 255, 255, 0.05); border-radius: var(--radius); padding: 1.5rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                <div style="width: 0.75rem; height: 0.75rem; background: hsl(var(--safety)); border-radius: 50%;"></div>
-                <h4 style="font-weight: 600;">System Health</h4>
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.875rem;">
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">Crystal Version</span>
-                  <span style="color: hsl(var(--crystal)); font-weight: 600;">1.16.3</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">GC Heap Size</span>
-                  <span style="color: hsl(var(--performance)); font-weight: 600;">2.61MB</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: hsl(var(--muted-foreground));">Components</span>
-                  <span style="color: hsl(var(--safety)); font-weight: 600;">42</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            style="margin-top: 2rem; background: rgba(139, 92, 246, 0.1); border-radius: var(--radius); padding: 1.5rem; border: 1px solid rgba(139, 92, 246, 0.2);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-              <h4 style="font-weight: 600; font-size: 1.125rem;">Test Coverage Dashboard</h4>
-              <div
-                style="background: rgba(16, 185, 129, 0.2); color: hsl(var(--performance)); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600;">
-                87.5% Coverage
-              </div>
-            </div>
-            <div
-              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; font-size: 0.875rem;">
-              <div style="text-align: center;">
-                <div style="font-size: 2rem; font-weight: bold; color: hsl(var(--crystal));">156</div>
-                <div style="color: hsl(var(--muted-foreground));">Total Tests</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 2rem; font-weight: bold; color: hsl(var(--performance));">2</div>
-                <div style="color: hsl(var(--muted-foreground));">Failed Tests</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 2rem; font-weight: bold; color: hsl(var(--performance));">45.2s</div>
-                <div style="color: hsl(var(--muted-foreground));">Suite Time</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 2rem; font-weight: bold; color: hsl(var(--safety));">12.3s</div>
-                <div style="color: hsl(var(--muted-foreground));">Build Time</div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Architecture Overview -->
-      <div class="architecture">
-        <h3>Simple, Powerful Architecture</h3>
-        <div class="arch-grid">
-          <div class="arch-item">
-            <div class="arch-icon safety">📋</div>
-            <h4>Request Contracts</h4>
-            <p>Type-safe input validation</p>
-          </div>
-          <div class="arch-item">
-            <div class="arch-icon crystal">⚡</div>
-            <h4>Endpoints</h4>
-            <p>Self-contained request handlers</p>
-          </div>
-          <div class="arch-item">
-            <div class="arch-icon performance">📤</div>
-            <h4>Response Objects</h4>
-            <p>Structured output handling</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Start -->
-      <div class="quick-start">
-        <h3>Ready to Build?</h3>
-        <div class="terminal">
-          <div class="comment"># Install Azu</div>
-          <div class="command">$ shards install</div>
-          <div class="comment"># Create your first endpoint</div>
-          <div class="command">$ azu generate endpoint welcome</div>
-          <div class="comment"># Start your application</div>
-          <div class="command">$ crystal run src/app.cr</div>
-        </div>
-        <div>
-          <a href="https://github.com/azutoolkit/azu" class="btn btn-primary">View on GitHub</a>
-          <a href="https://azutopia.gitbook.io/azu/" class="btn btn-outline">Read the Docs</a>
+  <!-- Welcome Cards -->
+  <div class="row">
+    <div class="col-md-4 mb-4">
+      <div class="card border-secondary h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-lightning-charge display-4 text-primary mb-3"></i>
+          <h5 class="card-title">Fast & Efficient</h5>
+          <p class="card-text">Built with Crystal for maximum performance and type safety.</p>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <p>
-        Built with ❤️ by the Crystal community • <a href="https://crystal-lang.org" class="crystal">Powered by
-          Crystal</a>
-      </p>
-      <p style="margin-top: 0.5rem; font-size: 0.875rem;">
-        Azu Framework v1.0.0 • Development Environment
-      </p>
+    <div class="col-md-4 mb-4">
+      <div class="card border-secondary h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-shield-check display-4 text-success mb-3"></i>
+          <h5 class="card-title">Type Safe</h5>
+          <p class="card-text">Compile-time guarantees ensure your code is robust and reliable.</p>
+        </div>
+      </div>
     </div>
-  </footer>
 
-  <!-- Prism.js JavaScript for syntax highlighting -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <div class="col-md-4 mb-4">
+      <div class="card border-secondary h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-gear display-4 text-info mb-3"></i>
+          <h5 class="card-title">Easy to Use</h5>
+          <p class="card-text">Simple, intuitive API that makes development a pleasure.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <script>
-    // Configure Prism.js for GitHub-style highlighting
-    document.addEventListener('DOMContentLoaded', function () {
-      // Smooth scroll behavior for anchor links
-      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-          e.preventDefault();
-          const target = document.querySelector(this.getAttribute('href'));
-          if (target) {
-            target.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start'
-            });
-          }
-        });
-      });
+  <!-- Getting Started -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-secondary">
+        <div class="card-header border-secondary">
+          <h5 class="mb-0">
+            <i class="bi bi-rocket me-2"></i>
+            Getting Started
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6>Next Steps:</h6>
+              <ul class="list-unstyled">
+                <li class="mb-2">
+                  <i class="bi bi-check-circle text-success me-2"></i>
+                  Create your first model
+                </li>
+                <li class="mb-2">
+                  <i class="bi bi-check-circle text-success me-2"></i>
+                  Generate endpoints and views
+                </li>
+                <li class="mb-2">
+                  <i class="bi bi-check-circle text-success me-2"></i>
+                  Set up your database
+                </li>
+                <li class="mb-2">
+                  <i class="bi bi-check-circle text-success me-2"></i>
+                  Start building your features
+                </li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <h6>Useful Commands:</h6>
+              <div class="bg-light p-3 rounded">
+                <code class="text-dark">
+                  $ azu generate model User<br>
+                  $ azu generate scaffold Post<br>
+                  $ azu db migrate<br>
+                  $ crystal run src/server.cr
+                </code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      // Add subtle animation to feature cards
-      const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-      };
-
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-          }
-        });
-      }, observerOptions);
-
-      // Apply animation to feature cards
-      document.querySelectorAll('.feature-card').forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transition = `opacity 0.6s ease ${index * 0.1}s, transform 0.6s ease ${index * 0.1}s`;
-        observer.observe(card);
-      });
-    });
-  </script>
-</body>
-
-</html>
+  <!-- Documentation Links -->
+  <div class="row mt-4">
+    <div class="col-12 text-center">
+      <div class="btn-group" role="group">
+        <a href="https://azutoolkit.org" class="btn btn-outline-primary">
+          <i class="bi bi-book me-2"></i>
+          Documentation
+        </a>
+        <a href="https://github.com/azutoolkit/azu" class="btn btn-outline-secondary">
+          <i class="bi bi-github me-2"></i>
+          GitHub
+        </a>
+        <a href="https://crystal-lang.org" class="btn btn-outline-info">
+          <i class="bi bi-gem me-2"></i>
+          Crystal Lang
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

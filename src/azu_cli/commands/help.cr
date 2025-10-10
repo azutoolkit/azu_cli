@@ -24,33 +24,54 @@ module AzuCLI
         puts
         puts "Usage: azu <command> [options] [arguments]"
         puts
-        puts "Commands:"
+        puts "Project Commands:"
         puts "  new <project-name>     Create a new Azu project"
         puts "  init                   Initialize Azu in existing project"
         puts "  generate <type> <name> Generate code (alias: g)"
-        puts "  db <operation>         Database operations"
-        puts "  serve                  Start development server"
-        puts "  dev                    Development mode with hot reload"
+        puts
+        puts "Database Commands:"
+        puts "  db:create              Create the database"
+        puts "  db:migrate             Run pending migrations"
+        puts "  db:rollback            Rollback migrations"
+        puts "  db:seed                Seed the database with data"
+        puts "  db:reset               Reset database (drop, create, migrate)"
+        puts "  db:status              Show migration status"
+        puts "  db:setup               Setup database (create and migrate)"
+        puts "  db:drop                Drop the database"
+        puts
+        puts "Development Commands:"
+        puts "  serve                  Start development server with hot reload (alias: s)"
+        puts "  test                   Run application tests (alias: t)"
+        puts
+        puts "Job Queue Commands:"
+        puts "  jobs:worker            Start background job workers"
+        puts "  jobs:status            Show job queue status"
+        puts "  jobs:clear             Clear job queues"
+        puts "  jobs:retry             Retry failed jobs"
+        puts "  jobs:ui                Start JoobQUI web interface"
+        puts
+        puts "Session Commands:"
+        puts "  session:setup          Setup session management"
+        puts "  session:clear          Clear all sessions"
+        puts
+        puts "Other Commands:"
         puts "  plugin <operation>     Plugin management"
         puts "  version                Show version information"
         puts "  help [command]         Show this help or command help"
         puts
         puts "Generator Types:"
-        puts "  model, endpoint, service, contract, page, migration"
-        puts "  scaffold, component, middleware, validator, channel"
-        puts "  handler, request, response"
-        puts
-        puts "Database Operations:"
-        puts "  create, migrate, seed, reset, rollback"
-        puts
-        puts "Plugin Operations:"
-        puts "  list, install, uninstall, enable, disable"
+        puts "  model, endpoint, service, request, page, migration, scaffold"
+        puts "  component, middleware, validator, job, mailer, channel, auth"
         puts
         puts "Examples:"
         puts "  azu new my-app"
         puts "  azu generate model User name:string email:string"
-        puts "  azu db migrate"
+        puts "  azu generate auth --strategy jwt"
+        puts "  azu db:create"
+        puts "  azu db:migrate"
         puts "  azu serve"
+        puts "  azu test --watch"
+        puts "  azu jobs:worker --workers 4"
         puts
         puts "For more information, visit: https://azutopia.gitbook.io/azu"
       end
@@ -65,6 +86,12 @@ module AzuCLI
           show_db_help
         when "serve"
           show_serve_help
+        when "test"
+          show_test_help
+        when "jobs"
+          show_jobs_help
+        when "session"
+          show_session_help
         when "plugin"
           show_plugin_help
         else
@@ -99,7 +126,7 @@ module AzuCLI
         puts "  model <name> [attr:type]     Generate a model with attributes"
         puts "  endpoint <name> [actions]    Generate endpoints with actions"
         puts "  service <name> [methods]     Generate a service with methods"
-        puts "  contract <name> [attr:type]  Generate a contract with attributes"
+        puts "  request <name> [attr:type]   Generate a request with attributes"
         puts "  page <name> [attr:type]      Generate a page with template variables"
         puts "  migration <name> [attr:type] Generate a database migration"
         puts "  scaffold <name> [attr:type]  Generate a complete CRUD scaffold"
@@ -164,6 +191,63 @@ module AzuCLI
         puts "  azu serve"
         puts "  azu serve --port 4000"
         puts "  azu serve --host 0.0.0.0 --port 8080"
+      end
+
+      private def show_test_help
+        puts "Usage: azu test [files] [options]"
+        puts
+        puts "Run application tests with Crystal spec."
+        puts
+        puts "Options:"
+        puts "  --watch, -w              Run tests in watch mode"
+        puts "  --coverage, -c           Enable coverage reporting"
+        puts "  --verbose, -v            Enable verbose output"
+        puts "  --parallel, -p           Run tests in parallel"
+        puts "  --filter, -f <pattern>   Run tests matching pattern"
+        puts
+        puts "Examples:"
+        puts "  azu test"
+        puts "  azu test spec/models/"
+        puts "  azu test --watch"
+        puts "  azu test --filter User"
+      end
+
+      private def show_jobs_help
+        puts "Usage: azu jobs:<command> [options]"
+        puts
+        puts "Background job management with JoobQ."
+        puts
+        puts "Commands:"
+        puts "  jobs:worker              Start job workers"
+        puts "  jobs:status              Show queue status and statistics"
+        puts "  jobs:clear               Clear job queues"
+        puts "  jobs:retry               Retry failed jobs"
+        puts "  jobs:ui                  Start JoobQUI web interface"
+        puts
+        puts "Examples:"
+        puts "  azu jobs:worker --workers 4"
+        puts "  azu jobs:status"
+        puts "  azu jobs:clear --failed"
+        puts "  azu jobs:retry --all"
+        puts "  azu jobs:ui --port 4000"
+      end
+
+      private def show_session_help
+        puts "Usage: azu session:<command> [options]"
+        puts
+        puts "Session management for the application."
+        puts
+        puts "Commands:"
+        puts "  session:setup            Setup session management"
+        puts "  session:clear            Clear all sessions"
+        puts
+        puts "Options (for setup):"
+        puts "  --backend <type>         Session backend (redis, memory, database)"
+        puts "  --force                  Overwrite existing configuration"
+        puts
+        puts "Examples:"
+        puts "  azu session:setup --backend redis"
+        puts "  azu session:clear"
       end
 
       private def show_plugin_help

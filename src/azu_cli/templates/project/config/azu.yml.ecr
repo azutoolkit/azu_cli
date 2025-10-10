@@ -1,0 +1,33 @@
+# Azu CLI Configuration
+version: "1.0.0"
+
+# Project settings
+project:
+  name: "<%= @project %>"
+  type: "<%= @project_type %>"
+
+# Database configuration
+database:
+  adapter: "postgresql"
+  url: "${DATABASE_URL}"
+  host: "localhost"
+  port: 5432
+  database: "<%= @project %>_development"
+  username: "postgres"
+  password: ""
+
+# Server configuration
+server:
+  host: "localhost"
+  port: 3000
+  environment: "development"
+  reload: true
+
+# Generator configuration
+generators:
+  templates_path: "src/azu_cli/templates"
+  output_path: "src"
+  test_output_path: "spec"
+
+# Plugin configuration
+plugins: {}

@@ -1,0 +1,47 @@
+# <%=camel_case_name%> Mailer Job
+# Background job for async email delivery
+# This job is automatically generated when using --async flag
+
+require "../mailers/<%=snake_case_name%>_mailer"
+require "joobq"
+
+struct <%=camel_case_name%>MailerJob
+  include JoobQ::Job
+
+  @queue = "mailers"
+  @retries = 3
+  @expires = 1.hour.total_seconds.to_i
+
+  def initialize(@action : String, @to : String, @params : Hash(String, String))
+  end
+
+  def perform
+    mailer = <%=camel_case_name%>Mailer.new
+    email_address = Carbon::Address.new(@to)
+
+    # Call the appropriate mailer method
+    email = case @action
+<%- template_names.each do |method_name| %>
+            when "<%=method_name%>"
+              mailer.<%=method_name%>(to: email_address, **named_tuple_from_params)
+<%- end %>
+            else
+              raise "Unknown mailer action: #{@action}"
+            end
+
+    # Deliver the email
+    email.deliver
+
+    Log.info { "Email sent: #{@action} to #{@to}" }
+  rescue ex
+    Log.error(exception: ex) { "Failed to send email: #{@action} to #{@to}" }
+    raise ex # Let JoobQ handle retries
+  end
+
+  private def named_tuple_from_params : NamedTuple
+    # Convert Hash to NamedTuple for mailer methods
+    # This is a simple implementation - you may need to adjust based on your needs
+    {} of Symbol => String
+  end
+end
+

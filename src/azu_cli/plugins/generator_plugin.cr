@@ -41,7 +41,7 @@ module AzuCLI
         # Allow help and version flags to pass through
         return if generator_type.starts_with?("--help") || generator_type.starts_with?("--version") || generator_type.starts_with?("-h")
 
-        valid_types = ["model", "endpoint", "service", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "request", "response", "template", "job"]
+        valid_types = ["model", "endpoint", "service", "request", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "response", "template", "job", "mailer", "auth", "authentication"]
 
         unless valid_types.includes?(generator_type)
           raise ArgumentError.new("Invalid generator type: #{generator_type}. Valid types: #{valid_types.join(", ")}")

@@ -1,0 +1,70 @@
+require "session"
+<%- if backend == "redis" %>
+require "redis"
+<%- end %>
+
+# Session configuration
+# Configure session handling for the application
+# Documentation: https://crystaldoc.info/github/azutoolkit/session
+
+module <%=project.camelcase%>
+  class Application
+    # Configure session store
+    def self.configure_session : Session::Session
+      # Create session store based on backend
+      store = create_session_store
+
+      # Create session with store
+      session = Session::Session.new(
+        store: store,
+        secret: ENV["SESSION_SECRET"]? || "<%=secret%>",
+        cookie_name: "<%=project%>_session"
+      )
+
+      # Configure session options
+      session.cookie_domain = ENV["SESSION_DOMAIN"]?
+      session.cookie_path = "/"
+      session.cookie_secure = ENV["AZU_ENV"]? == "production"
+      session.cookie_http_only = true
+      session.cookie_same_site = Session::SameSite::Lax
+      session.ttl = 24.hours  # Session expiration
+
+      session
+    end
+
+    private def self.create_session_store : Session::Store
+<%- if backend == "redis" %>
+      # Redis session store
+      redis = Redis.new(url: ENV["REDIS_URL"]? || "redis://localhost:6379")
+      Session::RedisStore.new(
+        redis: redis,
+        key_prefix: "<%=project%>:session:",
+        ttl: 24.hours
+      )
+<%- elsif backend == "memory" %>
+      # Memory session store (development/testing only)
+      Session::MemoryStore.new(
+        ttl: 24.hours,
+        cleanup_interval: 1.hour
+      )
+<%- elsif backend == "database" %>
+      # Database session store
+      # Requires sessions table migration
+      Session::DatabaseStore.new(
+        table_name: "sessions",
+        ttl: 24.hours
+      )
+<%- else %>
+      # Default to memory store
+      Session::MemoryStore.new(ttl: 24.hours)
+<%- end %>
+    end
+  end
+end
+
+# Initialize and expose session globally
+SESSION = <%=project.camelcase%>::Application.configure_session
+
+# Add session middleware to Azu
+Azu.use Session::Middleware.new(SESSION)
+

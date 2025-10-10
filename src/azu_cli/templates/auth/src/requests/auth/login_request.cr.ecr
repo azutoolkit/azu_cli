@@ -1,0 +1,43 @@
+# Login Request
+# Validates user login data
+
+struct LoginRequest
+  include JSON::Serializable
+
+  property email : String
+  property password : String
+
+  property errors : Hash(String, Array(String)) = {} of String => Array(String)
+
+  def initialize(params : Hash)
+    @email = params["email"]?.to_s
+    @password = params["password"]?.to_s
+  end
+
+  def valid? : Bool
+    @errors.clear
+
+    validate_email
+    validate_password
+
+    @errors.empty?
+  end
+
+  private def validate_email
+    if @email.empty?
+      add_error("email", "is required")
+    end
+  end
+
+  private def validate_password
+    if @password.empty?
+      add_error("password", "is required")
+    end
+  end
+
+  private def add_error(field : String, message : String)
+    @errors[field] ||= [] of String
+    @errors[field] << message
+  end
+end
+

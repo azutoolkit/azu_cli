@@ -16,6 +16,7 @@ module AzuCLI
       property resource_plural : String
       property resource_singular : String
       property resource : String  # For template naming compatibility
+      property module_name : String
       property generate_template : Bool = true
       property project_type : String = "web"  # "web" or "api"
       property from_type : String?
@@ -25,6 +26,7 @@ module AzuCLI
         @resource_singular = @name.downcase.singularize
         @resource_plural = @resource_singular.pluralize
         @resource = @snake_case_name  # For template naming compatibility
+        @module_name = "App"
         @template_generator = Template.new(@name, @fields, @action)
       end
 

@@ -1,0 +1,52 @@
+# JoobQ Configuration
+# Configuration for background job processing
+
+development:
+  redis_url: redis://localhost:6379/0
+  default_queue: default
+  workers: 4
+  retry_strategy: exponential
+  max_retries: 3
+  timeout: 300 # 5 minutes
+
+  # Queue priorities (higher number = higher priority)
+  queues:
+    critical: 10
+    default: 5
+    low: 1
+
+  # Failed job retention (in seconds)
+  failed_retention: 604800 # 7 days
+
+  # Enable job UI
+  ui_enabled: true
+  ui_port: 4000
+  ui_host: localhost
+
+test:
+  redis_url: redis://localhost:6379/1
+  default_queue: test
+  workers: 2
+  retry_strategy: none
+  max_retries: 0
+  timeout: 60
+
+production:
+  redis_url: <%= ENV["REDIS_URL"]? || "redis://localhost:6379/0" %>
+  default_queue: default
+  workers: <%= ENV["JOOBQ_WORKERS"]? || "8" %>
+  retry_strategy: exponential
+  max_retries: 5
+  timeout: 600 # 10 minutes
+
+  queues:
+    critical: 10
+    default: 5
+    low: 1
+    mailers: 3
+
+  failed_retention: 2592000 # 30 days
+
+  # Disable UI in production by default
+  ui_enabled: false
+

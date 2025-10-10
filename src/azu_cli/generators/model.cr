@@ -10,11 +10,13 @@ module AzuCLI
       # Model configuration properties
       property name : String
       property attributes : Hash(String, String)
+      property fields : Hash(String, String)
       property timestamps : Bool
       property database : String
       property id_type : String
       property validations : Hash(String, Array(String))
       property snake_case_name : String
+      property resource_plural : String
       property associations : Hash(String, String)
       property scopes : Array(String)
       property generate_migration : Bool = true
@@ -22,6 +24,8 @@ module AzuCLI
       def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true,
                      @database : String = "BlogDB", @id_type : String = "UUID", @generate_migration : Bool = true)
         @snake_case_name = @name.underscore
+        @resource_plural = @snake_case_name.pluralize
+        @fields = @attributes
         @validations = extract_validations(@attributes)
         @associations = extract_associations(@attributes)
         @scopes = generate_scopes(@attributes)

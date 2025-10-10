@@ -1,8 +1,0 @@
-module <%= @project.camelcase %>
-  struct Welcome::IndexContract
-    include Azu::Request
-
-    getter author : String = "<%= @author %>"
-    getter email : String = "<%= @email %>"
-  end
-end
