@@ -31,6 +31,8 @@ azu new my_web_app --type web
 
 # API-only application
 azu new my_api --type api
+# or use the shorthand:
+azu new my_api --api
 
 # CLI application
 azu new my_cli_tool --type cli

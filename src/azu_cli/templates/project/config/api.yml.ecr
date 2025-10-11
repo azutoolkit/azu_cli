@@ -1,0 +1,50 @@
+# API Configuration for <%= @project %>
+api:
+  version: v1
+  base_path: /api/v1
+  
+  # CORS settings
+  cors:
+    enabled: true
+    allowed_origins:
+      - http://localhost:3000
+      - http://localhost:8080
+    allowed_methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed_headers:
+      - Content-Type
+      - Authorization
+      - Accept
+    allow_credentials: true
+    max_age: 3600
+
+  # Rate limiting
+  rate_limit:
+    enabled: false
+    requests_per_minute: 60
+    requests_per_hour: 1000
+
+  # Pagination defaults
+  pagination:
+    default_page_size: 25
+    max_page_size: 100
+
+  # OpenAPI documentation
+  openapi:
+    enabled: true
+    path: /api/docs
+    spec_path: /api/openapi.json
+    ui_path: /api/docs/ui
+
+  # API versioning
+  versioning:
+    enabled: true
+    default_version: v1
+    supported_versions:
+      - v1
+

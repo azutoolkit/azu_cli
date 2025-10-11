@@ -55,6 +55,10 @@ module AzuCLI
       register_command("test", Commands::Test)
       register_command("t", Commands::Test) # Alias
 
+      # OpenAPI commands
+      register_command("openapi:generate", Commands::OpenAPI::Generate)
+      register_command("openapi:export", Commands::OpenAPI::Export)
+
       # Plugin commands
       register_command("plugin", Commands::Plugin)
     end

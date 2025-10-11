@@ -78,6 +78,7 @@ module AzuCLI
           parser.on("--email EMAIL", "Author email") { |email| @email = email }
           parser.on("--license LICENSE", "License (MIT, Apache-2.0, GPL-3.0, etc.)") { |license| @license = license }
           parser.on("--type TYPE", "Project type (web, api, cli)") { |type| @project_type = type }
+          parser.on("--api", "Create API project (shorthand for --type api)") { @project_type = "api" }
           parser.on("--db DATABASE", "Database adapter (postgresql, mysql, sqlite)") { |db| @database = db }
           parser.on("--test TEST", "Test framework (spec, minitest)") { |test| @test_framework = test }
           parser.on("--ci CI", "CI setup (\"GitHub Actions\", \"GitLab CI\", \"None\")") { |ci| @ci_setup = ci }
@@ -430,6 +431,7 @@ module AzuCLI
         puts "  --email EMAIL             Author email"
         puts "  --license LICENSE         License (MIT, Apache-2.0, GPL-3.0, etc.)"
         puts "  --type TYPE               Project type (web, api, cli) [default: web]"
+        puts "  --api                     Create API project (shorthand for --type api)"
         puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: postgresql]"
         puts "  --test TEST               Test framework (spec, minitest) [default: spec]"
         puts "  --ci CI                   CI setup (\"GitHub Actions\", \"GitLab CI\", \"None\") [default: GitHub Actions]"

@@ -34,6 +34,7 @@ Create a new Azu project with interactive prompts or command-line options.
 **Options:**
 
 - `--type <type>` - Project type (web, api, cli) [default: web]
+- `--api` - Create API project (shorthand for --type api)
 - `--database <db>` - Database (postgresql, mysql, sqlite) [default: postgresql]
 - `--joobq` - Include JoobQ for background jobs [default: yes]
 - `--no-joobq` - Skip JoobQ integration
@@ -52,7 +53,10 @@ Create a new Azu project with interactive prompts or command-line options.
 azu new blog
 
 # API service with background jobs
-azu new api-service --type api --database mysql --joobq
+azu new api-service --api --database mysql --joobq
+
+# API project (shorthand)
+azu new my-api --api
 
 # Web app without background jobs
 azu new simple-site --type web --no-joobq
@@ -603,6 +607,68 @@ Generate a custom validator.
 
 ```bash
 azu generate validator EmailValidator --record User
+```
+
+#### `azu generate api_resource <name> [attr:type...] [options]`
+
+Generate complete REST API resource (API-only).
+
+**Options:**
+
+- `--force` - Overwrite existing files
+- `--skip COMPONENTS` - Skip specific components (comma-separated)
+
+**Example:**
+
+```bash
+azu generate api_resource Post title:string content:text published:bool
+azu generate api_resource User name:string email:string --skip migration
+```
+
+**Generated:**
+
+- Model with JSON serialization
+- Database migration
+- REST endpoints (index, show, create, update, destroy)
+- Request validators
+- JSON response classes
+
+### OpenAPI Commands
+
+#### `azu openapi:generate <spec_path> [options]`
+
+Generate code from OpenAPI 3.1 specification.
+
+**Options:**
+
+- `--force` - Overwrite existing files
+- `--models-only` - Generate only models
+- `--endpoints-only` - Generate only endpoints
+
+**Example:**
+
+```bash
+azu openapi:generate openapi.yaml
+azu openapi:generate api-spec.json --force
+azu openapi:generate spec.yaml --models-only
+```
+
+#### `azu openapi:export [options]`
+
+Export OpenAPI specification from code.
+
+**Options:**
+
+- `--output PATH` - Output file path [default: openapi.yaml]
+- `--format FORMAT` - Output format: yaml or json [default: yaml]
+- `--version VERSION` - API version [default: 1.0.0]
+
+**Example:**
+
+```bash
+azu openapi:export
+azu openapi:export --output docs/api.json --format json
+azu openapi:export --version 2.0.0
 ```
 
 ### Other Commands

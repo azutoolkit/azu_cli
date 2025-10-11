@@ -2,6 +2,7 @@ require "./base"
 require "option_parser"
 require "../logger"
 require "../generators/**"
+require "../config/**"
 
 module AzuCLI
   module Commands
@@ -24,6 +25,13 @@ module AzuCLI
 
       def execute : Result
         parse_arguments
+
+        # Detect project type and auto-set API mode
+        detector = ProjectDetector.new
+        if detector.api_project? && !@web_only
+          @api_only = true
+          Logger.debug("API project detected, using API-only mode")
+        end
 
         # Some generators don't require a name (like auth)
         generators_without_name = ["auth", "authentication"]
@@ -82,9 +90,16 @@ module AzuCLI
           generate_channel
         when "auth", "authentication"
           generate_auth
+        when "api_resource", "api-resource"
+          generate_api_resource
         else
           error("Unknown generator type: #{@generator_type}")
         end
+      end
+
+      # Check if current project is API-only
+      private def api_project? : Bool
+        ProjectDetector.new.api_project?
       end
 
       private def parse_arguments
@@ -426,6 +441,18 @@ module AzuCLI
         success("Generated authentication system successfully")
       end
 
+      private def generate_api_resource : Result
+        Logger.info("Generating API resource (complete REST API)")
+
+        # Force API-only mode
+        @api_only = true
+        @skip_components << "template" unless @skip_components.includes?("template")
+        @skip_components << "page" unless @skip_components.includes?("page")
+
+        # Use scaffold generation with API mode
+        generate_scaffold
+      end
+
       private def generate_scaffold : Result
         Logger.info("Generating scaffold (complete CRUD)")
 
@@ -639,6 +666,10 @@ module AzuCLI
         puts "  auth [--strategy jwt|session|oauth]"
         puts "    Generate complete authentication system"
         puts "    Example: azu generate auth --strategy jwt"
+        puts
+        puts "  api_resource <name> [attr:type]"
+        puts "    Generate complete REST API resource (API-only)"
+        puts "    Example: azu generate api_resource Post title:string content:text"
         puts
         puts "Options:"
         puts "  --force                    Overwrite existing files without prompting"

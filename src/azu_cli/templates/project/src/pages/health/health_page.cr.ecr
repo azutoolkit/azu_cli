@@ -1,0 +1,17 @@
+require "json"
+
+struct Health::HealthPage < Azu::Page
+  include JSON::Serializable
+
+  getter status : String
+  getter version : String
+  getter timestamp : Time
+
+  def initialize(@status : String, @version : String, @timestamp : Time)
+  end
+
+  def render : String
+    to_json
+  end
+end
+

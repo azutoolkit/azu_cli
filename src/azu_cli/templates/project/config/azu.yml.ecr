@@ -5,6 +5,10 @@ version: "1.0.0"
 project:
   name: "<%= @project %>"
   type: "<%= @project_type %>"
+<% if api_project? %>
+  api_version: "v1"
+  openapi_enabled: true
+<% end %>
 
 # Database configuration
 database:

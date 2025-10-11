@@ -1,5 +1,50 @@
 require "./<%= @project %>"
 
+# Configure CORS middleware for API
+class CORSMiddleware
+  include Azu::Handler
+
+  def call(context : HTTP::Server::Context) : HTTP::Server::Context
+    # Allow CORS for API endpoints
+    context.response.headers["Access-Control-Allow-Origin"] = "*"
+    context.response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    context.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
+    context.response.headers["Access-Control-Max-Age"] = "3600"
+    
+    # Handle preflight requests
+    if context.request.method == "OPTIONS"
+      context.response.status = HTTP::Status::NO_CONTENT
+      return context
+    end
+    
+    call_next(context)
+  end
+end
+
+# Configure JSON error handler for API
+class JSONErrorHandler
+  include Azu::Handler
+
+  def call(context : HTTP::Server::Context) : HTTP::Server::Context
+    begin
+      call_next(context)
+    rescue ex : Exception
+      context.response.status = HTTP::Status::INTERNAL_SERVER_ERROR
+      context.response.content_type = "application/json"
+      context.response.print({
+        error: ex.message,
+        status: 500
+      }.to_json)
+      context
+    end
+  end
+end
+
+# Add API-specific handlers
+<%= @module_name %>.handlers do
+  plug CORSMiddleware.new
+  plug JSONErrorHandler.new
+end
+
 # Start your API server
-# Add API handlers to your server
-<%= @module_name %>.start <%= @module_name %>::HANDLERS
+<%= @module_name %>.start <%= @module_name %>.handlers

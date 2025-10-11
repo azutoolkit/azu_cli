@@ -237,20 +237,44 @@ module AzuCLI
         @include_joobq && (@project_type == "web" || @project_type == "api")
       end
 
-      # Override filter method to conditionally exclude JoobQ files
+      # Override filter method to conditionally exclude files based on project type
       def filter(entries)
         entries.reject do |entry|
           path = entry.path.to_s
 
           # Skip JoobQ-related files if not included
           if !has_joobq?
-            path.ends_with?("jobs.yml.ecr") ||
-            path.ends_with?("joobq.cr.ecr") ||
-            path.ends_with?("worker.cr.ecr") ||
-            path.ends_with?(".gitkeep.ecr")
-          else
-            false
+            next true if path.ends_with?("jobs.yml.ecr") ||
+                        path.ends_with?("joobq.cr.ecr") ||
+                        path.ends_with?("worker.cr.ecr") ||
+                        path.ends_with?(".gitkeep.ecr")
           end
+
+          # Skip web-specific files for API projects
+          if api_project?
+            next true if path.includes?("public/templates/") && !path.includes?("swagger-ui.html")
+            next true if path.ends_with?("server.cr.ecr")
+            next true if path.includes?("pages/welcome/")
+            next true if path.includes?("public/assets/css/") && !path.ends_with?("cover.css")
+            next true if path.includes?("public/assets/js/")
+          end
+
+          # Skip API-specific files for web/cli projects
+          if !api_project?
+            next true if path.includes?("endpoints/health/")
+            next true if path.includes?("endpoints/api/")
+            next true if path.includes?("public/api/")
+            next true if path.ends_with?("openapi.yml.ecr")
+            next true if path.ends_with?("api.yml.ecr")
+            next true if path.ends_with?("api.cr.ecr")
+          end
+
+          # Skip server.cr for API projects (they use api.cr instead)
+          if api_project? && path.ends_with?("server.cr.ecr")
+            next true
+          end
+
+          false
         end
       end
     end
