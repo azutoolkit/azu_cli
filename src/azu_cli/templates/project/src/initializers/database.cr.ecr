@@ -39,27 +39,10 @@ CQL.configure do |config|
                      else Log::Severity::Debug
                      end
 
-  # Performance monitoring (enable in development and production)
-  config.monitor_performance = ENV["CRYSTAL_ENV"]? != "test"
-
-  # CQL Performance Monitor configuration (matches PerformanceConfig struct)
-  config.performance.plan_analysis_enabled = (ENV["CQL_PLAN_ANALYSIS"]? || (config.env == "development").to_s) == "true"
-  config.performance.n_plus_one_detection_enabled = (ENV["CQL_N_PLUS_ONE_DETECTION"]? || (config.env == "development").to_s) == "true"
-  config.performance.query_profiling_enabled = (ENV["CQL_QUERY_PROFILING"]? || (config.env == "development").to_s) == "true"
-  config.performance.auto_analyze_slow_queries = (ENV["CQL_AUTO_ANALYZE_SLOW"]? || (config.env == "development").to_s) == "true"
-  config.performance.context_tracking_enabled = (ENV["CQL_CONTEXT_TRACKING"]? || (config.env != "test").to_s) == "true"
-  config.performance.endpoint_tracking_enabled = (ENV["CQL_ENDPOINT_TRACKING"]? || "false") == "true"
-  config.performance.async_processing = (ENV["CQL_ASYNC_PROCESSING"]? || (config.env == "production").to_s) == "true"
-
-  # Optional performance context (can be set by application)
-  config.performance.current_endpoint = ENV["CQL_CURRENT_ENDPOINT"]?
-  config.performance.current_user_id = ENV["CQL_CURRENT_USER_ID"]?
-
-  # SQL logging configuration
-  config.sql_logging.enabled = config.env == "development"
-  config.sql_logging.colorize_output = true
-  config.sql_logging.include_parameters = true
-  config.sql_logging.pretty_format = true
+  # SQL logging configuration (available in CQL)
+  config.sql_logging = config.env == "development"
+  config.sql_logging_colorize = true
+  config.sql_logging_async = false
 
   # Cache configuration
   config.cache.on = ENV["ENABLE_CACHE"]? == "true" || config.env == "production"

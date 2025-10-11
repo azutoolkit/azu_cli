@@ -1,75 +1,21 @@
-# Carbon Mailer Configuration
-# Configure email delivery using Carbon
-# https://github.com/luckyframework/carbon
+# Mailer Configuration
+# Uncomment and configure your mailer adapter when ready
+# Popular options:
+# - Carbon: https://github.com/luckyframework/carbon
+# - Email: https://github.com/arcage/crystal-email
 
-require "carbon"
+# Example Carbon configuration:
+# require "carbon"
+#
+# Carbon.configure do |settings|
+#   case ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
+#   when "development", "test"
+#     settings.adapter = Carbon::DevAdapter.new
+#   when "production"
+#     # Configure your production adapter
+#     # settings.adapter = Carbon::SendGridAdapter.new(api_key: ENV["SENDGRID_API_KEY"])
+#   end
+# end
 
-# Load mailer configuration
-config_path = File.expand_path("../../config/mailer.yml", __DIR__)
-if File.exists?(config_path)
-  require "yaml"
-  config = YAML.parse(File.read(config_path))
-  env = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
-  mailer_config = config[env]
-else
-  # Fallback to environment variables
-  mailer_config = nil
-end
-
-# Configure Carbon based on environment
-case ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
-when "development"
-  # Development: Print emails to console for debugging
-  Carbon::DevAdapter.configure do |settings|
-    settings.print_emails = true
-  end
-  
-  Carbon.configure do |settings|
-    settings.adapter = Carbon::DevAdapter.new
-  end
-
-when "test"
-  # Test: Use dev adapter without printing
-  Carbon::DevAdapter.configure do |settings|
-    settings.print_emails = false
-  end
-  
-  Carbon.configure do |settings|
-    settings.adapter = Carbon::DevAdapter.new
-  end
-
-when "production"
-  # Production: Use SendGrid or SMTP
-  adapter_type = ENV["MAILER_ADAPTER"]? || "sendgrid"
-  
-  case adapter_type
-  when "sendgrid"
-    Carbon::SendGridAdapter.configure do |settings|
-      settings.api_key = ENV["SENDGRID_API_KEY"]? || raise "SENDGRID_API_KEY not set"
-    end
-    
-    Carbon.configure do |settings|
-      settings.adapter = Carbon::SendGridAdapter.new
-    end
-  
-  when "smtp"
-    Carbon::SmtpAdapter.configure do |settings|
-      settings.host = ENV["SMTP_HOST"]? || "smtp.gmail.com"
-      settings.port = (ENV["SMTP_PORT"]? || "587").to_i
-      settings.username = ENV["SMTP_USERNAME"]? || raise "SMTP_USERNAME not set"
-      settings.password = ENV["SMTP_PASSWORD"]? || raise "SMTP_PASSWORD not set"
-      settings.tls = true
-      settings.auth = "login"
-    end
-    
-    Carbon.configure do |settings|
-      settings.adapter = Carbon::SmtpAdapter.new
-    end
-  
-  else
-    raise "Unknown mailer adapter: #{adapter_type}"
-  end
-end
-
-Log.info { "✓ Carbon mailer configured" }
+Log.info { "✓ Mailer configuration loaded" }
 

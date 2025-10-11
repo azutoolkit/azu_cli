@@ -1,0 +1,22 @@
+Place your response objects here.
+
+Response objects are used to format API responses consistently.
+
+Example:
+```crystal
+module YourApp
+  module Responses
+    struct UserResponse
+      include JSON::Serializable
+
+      property id : Int64
+      property email : String
+      property name : String
+
+      def initialize(@id, @email, @name)
+      end
+    end
+  end
+end
+```
+

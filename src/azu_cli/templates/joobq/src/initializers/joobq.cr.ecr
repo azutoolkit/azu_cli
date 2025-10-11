@@ -1,0 +1,48 @@
+require "joobq"
+# Optional: Uncomment if using JoobQPro
+# require "joobq_pro"
+
+# Require all job classes
+require "../jobs/**"
+
+# Register job types with QueueFactory before loading configuration
+<% if create_example_job %>
+JoobQ::QueueFactory.register_job_type(<%= example_job_name %>)
+<% end %>
+# Add your job classes here as you create them
+# Example:
+# JoobQ::QueueFactory.register_job_type(EmailJob)
+# JoobQ::QueueFactory.register_job_type(TestJob)
+
+# Initialize JoobQ configuration from YAML file
+# This will load the configuration from config/joobq.yml based on the environment
+environment = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
+config_file = "config/joobq.#{environment}.yml"
+
+if File.exists?(config_file)
+  JoobQ.initialize_config_with(:file, config_file)
+  Log.info { "JoobQ initialized with config: #{config_file}" }
+else
+  Log.warn { "JoobQ config file not found: #{config_file}, using defaults" }
+
+  # Fallback to manual configuration if no config file exists
+  JoobQ.configure do |config|
+    config.redis_url = ENV["REDIS_URL"]? || "<%= redis_url %>"
+    config.default_queue = "<%= default_queue %>"
+    config.retries = 5
+    config.timeout = 30.seconds
+    config.timezone = Time::Location.load("UTC")
+    config.worker_batch_size = 50
+    config.rest_api_enabled = true
+  end
+end
+
+# Optional: Add JoobQPro middleware for enhanced features
+# JoobQ.config.middlewares << JoobQPro::Middleware::Metrics.instance
+
+# Disable REST API for worker processes
+if ARGV.includes?("--worker")
+  JoobQ.config.rest_api_enabled = false
+  Log.info { "JoobQ REST API disabled for worker process" }
+end
+

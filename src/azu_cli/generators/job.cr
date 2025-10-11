@@ -3,6 +3,7 @@ require "teeplate"
 module AzuCLI
   module Generate
     # Job generator that creates JoobQ::Job structs
+    # Generates background job classes with modern JoobQ API support
     class Job < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/jobs"
       OUTPUT_DIR = "./src/jobs"
@@ -20,7 +21,9 @@ module AzuCLI
 
       # Convert name to job struct name
       def job_struct_name : String
-        @name.camelcase + "Job"
+        # Ensure Job suffix is added if not present
+        name_str = @name.camelcase
+        name_str.ends_with?("Job") ? name_str : name_str + "Job"
       end
 
       # Get constructor parameters

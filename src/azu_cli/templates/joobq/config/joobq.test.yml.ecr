@@ -1,0 +1,53 @@
+# JoobQ Test Configuration
+# Modern JoobQ YAML-based configuration for test environment
+
+joobq:
+  settings:
+    default_queue: "test"
+    retries: 1  # Minimal retries in tests
+    timeout: "5 seconds"  # Short timeout for tests
+    timezone: "UTC"
+    worker_batch_size: 10
+
+  # Queue configurations
+  queues:
+    test:
+      job_class: "TestJob"
+      workers: 1
+
+    <%= default_queue %>:
+      job_class: "<%= example_job_name %>"
+      workers: 1
+
+  # Minimal middleware for tests
+  middlewares:
+    - type: "timeout"
+
+  # Error monitoring (minimal in tests)
+  error_monitoring:
+    alert_thresholds:
+      error: 100
+      warn: 200
+      info: 500
+    time_window: "10 minutes"
+    max_recent_errors: 50
+
+  # Feature flags
+  features:
+    rest_api: false  # Disabled in tests
+    stats: false
+
+  # Redis connection configuration for tests
+  redis:
+    host: "localhost"
+    port: 6379
+    password: ""
+    pool_size: 10    # Smaller pool for tests
+    pool_timeout: 1.0
+
+  # Pipeline configuration
+  pipeline:
+    batch_size: 50
+    timeout: 1.0
+    max_commands: 100
+

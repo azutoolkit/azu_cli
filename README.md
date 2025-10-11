@@ -97,8 +97,11 @@ The `azu` command will be available system-wide.
 ## Quick Start
 
 ```bash
-# Create a new project
+# Create a new project (interactive mode asks about JoobQ and other options)
 azu new my-app
+
+# Or create with specific options
+azu new my-app --type web --database postgresql --joobq
 
 # Navigate to project
 cd my-app
@@ -123,11 +126,13 @@ azu test --watch
 ## Available Commands
 
 ### Project Management
+
 - `azu new <name>` - Create a new Azu project
 - `azu init` - Initialize Azu in existing project
 - `azu generate <type> <name>` - Generate code from templates
 
 ### Database Commands (Rails-Like)
+
 - `azu db:create` - Create the database
 - `azu db:drop` - Drop the database
 - `azu db:migrate` - Run pending migrations
@@ -138,10 +143,12 @@ azu test --watch
 - `azu db:setup` - Setup database (create and migrate)
 
 ### Development Commands
+
 - `azu serve` - Start development server with hot reload
 - `azu test [--watch]` - Run application tests
 
 ### Job Queue Commands (JoobQ)
+
 - `azu jobs:worker` - Start background job workers
 - `azu jobs:status` - Show queue status and statistics
 - `azu jobs:clear` - Clear job queues
@@ -149,12 +156,15 @@ azu test --watch
 - `azu jobs:ui` - Start JoobQUI web interface
 
 ### Session Commands
+
 - `azu session:setup` - Setup session management (Redis/Memory/Database)
 - `azu session:clear` - Clear all sessions
 
 ### Code Generators
+
 - `model` - CQL database models
 - `service` - Business logic services
+- `joobq` - JoobQ background job infrastructure setup
 - `job` - Background jobs (JoobQ)
 - `mailer` - Email functionality
 - `channel` - WebSocket channels
@@ -221,6 +231,7 @@ azu jobs:worker --workers 4 &
 ## Documentation
 
 For complete documentation, see:
+
 - **CLI Reference:** [CLI_REFERENCE.md](CLI_REFERENCE.md)
 - **Test Report:** [TEST_VALIDATION_REPORT.md](TEST_VALIDATION_REPORT.md)
 - **Implementation:** [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
@@ -240,4 +251,7 @@ For complete documentation, see:
 ## Contributors
 
 - [Elias J. Perez](https://github.com/eliasjpr) - creator and maintainer
-````
+
+```
+
+```

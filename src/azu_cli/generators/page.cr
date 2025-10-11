@@ -5,7 +5,7 @@ module AzuCLI
     # Page generator that creates Azu::Response structs for both Web and API projects
     class Page < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/response"
-      OUTPUT_DIR = "./src/responses"
+      OUTPUT_DIR = "./src/pages"  # Default to pages, but can be overridden
 
       # Also generate Jinja2 HTML templates for web projects
       property template_generator : Template
@@ -30,13 +30,30 @@ module AzuCLI
         @template_generator = Template.new(@name, @fields, @action)
       end
 
-      def render(project_name : String)
-        # Generate the Crystal page response struct
-        super(project_name)
+      def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
+        # Create the resource subdirectory
+        resource_dir = File.join(output_dir, @resource_plural)
+        Dir.mkdir_p(resource_dir) unless Dir.exists?(resource_dir)
+
+        # Determine the correct file extension based on project type
+        file_suffix = @project_type == "api" ? "response" : "page"
+        output_file = File.join(resource_dir, "#{@action}_#{file_suffix}.cr")
+
+        # Generate the file content using ECR
+        content = ECR.render("#{__DIR__}/../templates/scaffold/src/response/{{resource_plural}}/{{action}}_page.cr.ecr")
+
+        # Write the file
+        File.write(output_file, content)
+
         # Generate the Jinja2 HTML template only for web projects
         if @project_type == "web" && @generate_template
-          @template_generator.render(project_name)
+          @template_generator.render("#{output_dir}/../public")
         end
+      end
+
+      # Get the appropriate output directory based on project type
+      def self.output_dir_for_type(project_type : String) : String
+        project_type == "api" ? "./src/responses" : "./src/pages"
       end
 
       # Convert name to page response struct name based on project type

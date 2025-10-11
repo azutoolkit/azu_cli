@@ -34,9 +34,9 @@ module AzuCLI
         @name.camelcase + "Endpoint"
       end
 
-      # Get the request/response or contract/page types based on endpoint type
+      # Get the request/response types based on endpoint type
       def request_type : String
-        @endpoint_type == "api" ? "#{@name.camelcase}Request" : "#{@name.camelcase}Contract"
+        "#{@name.camelcase}Request"
       end
 
       def response_type : String
@@ -97,7 +97,7 @@ module AzuCLI
           components << "request"
           components << "response"
         else
-          components << "contract"
+          components << "request"
           components << "page"
         end
 

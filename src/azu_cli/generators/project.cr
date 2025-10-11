@@ -20,13 +20,14 @@ module AzuCLI
       property docker_support : Bool
       property git_init : Bool
       property include_example : Bool
+      property include_joobq : Bool
       property github_name : String
 
       def initialize(@project : String, @module_name : String, @author : String, @email : String,
                      @license : String = "MIT", @project_type : String = "web",
                      @database : String = "postgresql", @test_framework : String = "spec",
                      @ci_setup : String = "GitHub Actions", @docker_support : Bool = false,
-                     @git_init : Bool = true, @include_example : Bool = true)
+                     @git_init : Bool = true, @include_example : Bool = true, @include_joobq : Bool = true)
         # Extract GitHub username from email or use author name
         @github_name = extract_github_name(@email, @author)
       end
@@ -228,6 +229,28 @@ module AzuCLI
           "version and help commands"
         else
           "welcome endpoint"
+        end
+      end
+
+      # Check if JoobQ should be included
+      def has_joobq? : Bool
+        @include_joobq && (@project_type == "web" || @project_type == "api")
+      end
+
+      # Override filter method to conditionally exclude JoobQ files
+      def filter(entries)
+        entries.reject do |entry|
+          path = entry.path.to_s
+
+          # Skip JoobQ-related files if not included
+          if !has_joobq?
+            path.ends_with?("jobs.yml.ecr") ||
+            path.ends_with?("joobq.cr.ecr") ||
+            path.ends_with?("worker.cr.ecr") ||
+            path.ends_with?(".gitkeep.ecr")
+          else
+            false
+          end
         end
       end
     end

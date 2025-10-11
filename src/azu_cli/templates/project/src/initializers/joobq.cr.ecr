@@ -1,0 +1,42 @@
+require "joobq"
+# Optional: Uncomment if using JoobQPro
+# require "joobq_pro"
+
+# Require all job classes (uncomment when you have jobs)
+# The jobs directory is created when you generate your first job
+# Example: azu generate job SendEmail to:string subject:string
+# require "../jobs/**"
+
+# Register job types with QueueFactory before loading configuration
+# Uncomment and add your job classes here as you create them
+# Example:
+# JoobQ::QueueFactory.register_job_type(EmailJob)
+# JoobQ::QueueFactory.register_job_type(TestJob)
+
+# Initialize JoobQ configuration
+# Configure JoobQ for background job processing
+JoobQ.configure do |config|
+  # Queue settings
+  config.default_queue = "default"
+  config.retries = 3
+  config.timeout = 30.seconds
+  config.expires = 1.day
+
+  # Enable REST API for development (disable in production)
+  config.rest_api_enabled = ENV["AZU_ENV"]? != "production"
+
+  # Enable statistics tracking
+  config.stats_enabled = true
+end
+
+Log.info { "JoobQ initialized successfully" }
+
+# Optional: Add JoobQPro middleware for enhanced features
+# JoobQ.config.middlewares << JoobQPro::Middleware::Metrics.instance
+
+# Disable REST API for worker processes
+if ARGV.includes?("--worker")
+  JoobQ.config.rest_api_enabled = false
+  Log.info { "JoobQ REST API disabled for worker process" }
+end
+

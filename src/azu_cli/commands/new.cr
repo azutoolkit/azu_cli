@@ -19,6 +19,7 @@ module AzuCLI
       property docker_support : Bool = false
       property git_init : Bool = true
       property include_example : Bool = true
+      property include_joobq : Bool = true
       property non_interactive : Bool = false
 
       def initialize
@@ -86,6 +87,8 @@ module AzuCLI
           parser.on("--no-git", "Skip Git initialization") { @git_init = false }
           parser.on("--example", "Include example code") { @include_example = true }
           parser.on("--no-example", "Skip example code") { @include_example = false }
+          parser.on("--joobq", "Include JoobQ for background jobs") { @include_joobq = true }
+          parser.on("--no-joobq", "Skip JoobQ integration") { @include_joobq = false }
           parser.on("--yes", "Non-interactive mode (use defaults)") { @non_interactive = true }
           parser.on("--help", "Show help") {
             puts parser
@@ -165,6 +168,11 @@ module AzuCLI
         @docker_support = prompt_boolean("Include Docker support?", @docker_support)
         @git_init = prompt_boolean("Initialize Git repository?", @git_init)
         @include_example = prompt_boolean("Include example #{get_example_description}?", @include_example)
+
+        # Ask about background jobs (only for web/api projects)
+        unless @project_type == "cli"
+          @include_joobq = prompt_boolean("Include JoobQ for background job processing?", @include_joobq)
+        end
 
         Logger.step(8, 9, "Additional options configured")
         Logger.step(9, 9, "Configuration complete")
@@ -258,6 +266,7 @@ module AzuCLI
         puts "  Docker support:   #{@docker_support ? "Yes" : "No"}"
         puts "  Git repository:   #{@git_init ? "Yes" : "No"}"
         puts "  Include example:  #{@include_example ? "Yes" : "No"}"
+        puts "  Background jobs:  #{@include_joobq ? "Yes (JoobQ)" : "No"}" unless @project_type == "cli"
         puts
       end
 
@@ -278,17 +287,46 @@ module AzuCLI
             ci_setup: @ci_setup,
             docker_support: @docker_support,
             git_init: @git_init,
-            include_example: @include_example
+            include_example: @include_example,
+            include_joobq: @include_joobq
           )
 
           # Generate the project in the target directory
           generator.render(@project_name, force: false, interactive: false, list: false, color: true)
+
+          # Remove JoobQ files if not included
+          unless @include_joobq
+            remove_joobq_files
+          end
 
           Logger.progress_done(true)
         rescue ex : Exception
           Logger.progress_done(false)
           Logger.exception(ex, "Failed to generate project files")
           raise ex
+        end
+      end
+
+      private def remove_joobq_files
+        Dir.cd(@project_name) do
+          # Remove JoobQ-related files
+          File.delete("config/jobs.yml") if File.exists?("config/jobs.yml")
+          File.delete("src/initializers/joobq.cr") if File.exists?("src/initializers/joobq.cr")
+          File.delete("src/worker.cr") if File.exists?("src/worker.cr")
+
+          # Remove jobs directory if it exists and is empty
+          if Dir.exists?("src/jobs")
+            begin
+              Dir.children("src/jobs").each do |file|
+                File.delete(File.join("src/jobs", file))
+              end
+              Dir.delete("src/jobs")
+            rescue
+              # Directory not empty or other error - skip
+            end
+          end
+        rescue ex
+          # Silently ignore errors - files may not exist
         end
       end
 
@@ -351,12 +389,27 @@ module AzuCLI
         when "web"
           puts "  3. Run: azu serve"
           puts "  4. Visit: http://localhost:3000"
+          if @include_joobq
+            puts "  5. Start background workers: azu jobs:worker"
+          end
         when "api"
           puts "  3. Run: azu serve"
           puts "  4. Test: curl http://localhost:3000/health"
+          if @include_joobq
+            puts "  5. Start background workers: azu jobs:worker"
+          end
         when "cli"
           puts "  3. Run: crystal build src/#{@project_name}.cr"
           puts "  4. Run: ./#{@project_name} --help"
+        end
+
+        if @include_joobq && (@project_type == "web" || @project_type == "api")
+          puts
+          Logger.info("📦 JoobQ Integration:")
+          puts "  - Configuration: config/jobs.yml"
+          puts "  - Initializer: src/initializers/joobq.cr"
+          puts "  - Worker: src/worker.cr"
+          puts "  - Generate jobs: azu generate job <name> [params]"
         end
 
         puts
@@ -386,6 +439,8 @@ module AzuCLI
         puts "  --no-git                  Skip Git initialization"
         puts "  --example                 Include example code [default]"
         puts "  --no-example              Skip example code"
+        puts "  --joobq                   Include JoobQ for background jobs [default]"
+        puts "  --no-joobq                Skip JoobQ integration"
         puts "  --yes                     Non-interactive mode (use defaults)"
         puts "  --help                    Show this help message"
         puts

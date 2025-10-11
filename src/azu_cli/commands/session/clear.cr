@@ -101,14 +101,14 @@ module AzuCLI
 
         private def clear_database_sessions
           Logger.info("Clearing database sessions...")
-          
+
           # This is a simplified version - in production you'd want to use
           # the actual session model/repository
           db_url = ENV["DATABASE_URL"]?
           unless db_url
             raise "DATABASE_URL not set"
           end
-          
+
           ::DB.open(db_url) do |db|
             result = db.exec("DELETE FROM sessions")
             Logger.info("Cleared #{result.rows_affected} session(s)")

@@ -1,38 +1,31 @@
 require "./<%=project%>"
-require "./jobs/**"
-require "joobq"
+require "./initializers/joobq"
 
-# JoobQ Worker process
-# This file is used to start background job workers
+# JoobQ Worker Process
+# This file starts the background job worker processes
+# Run with: crystal run src/worker.cr -- --worker
+# Or use: azu jobs:worker
 
-# Configure JoobQ
-JoobQ.configure do |config|
-  config.redis_url = ENV["REDIS_URL"]? || "redis://localhost:6379"
-  config.queue = ENV["JOOBQ_QUEUE"]? || "default"
-  config.workers = (ENV["JOOBQ_WORKERS"]? || "4").to_i
-  config.retry_strategy = JoobQ::RetryStrategy::Exponential.new(max_retries: 3)
-end
+Log.info { "🚀 Starting JoobQ workers..." }
+Log.info { "Redis: #{JoobQ.config.redis_url}" }
+Log.info { "Default Queue: #{JoobQ.config.default_queue}" }
+Log.info { "Worker Batch Size: #{JoobQ.config.worker_batch_size}" }
+Log.info { "Retries: #{JoobQ.config.retries}" }
+Log.info { "" }
+Log.info { "Press Ctrl+C to stop workers" }
+Log.info { "" }
 
-# Register job classes
-# JoobQ will automatically discover jobs in the src/jobs directory
+# Start the JoobQ forge (worker processes)
+# The forge will process jobs from all configured queues
+JoobQ.forge
 
-puts "🚀 Starting JoobQ workers..."
-puts "Redis: #{JoobQ.config.redis_url}"
-puts "Queue: #{JoobQ.config.queue}"
-puts "Workers: #{JoobQ.config.workers}"
-puts ""
-puts "Press Ctrl+C to stop workers"
-puts ""
-
-# Start processing jobs
-JoobQ.start
-
-# Keep process running
+# Handle graceful shutdown
 Signal::INT.trap do
-  puts "\n🛑 Stopping workers..."
-  JoobQ.stop
+  Log.info { "\n🛑 Gracefully stopping workers..." }
+  # JoobQ automatically handles cleanup
   exit(0)
 end
 
+# Keep the process running
 sleep
 

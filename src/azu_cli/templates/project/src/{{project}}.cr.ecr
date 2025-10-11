@@ -75,10 +75,6 @@ module <%= @module_name %>
       Azu::Handler::CSRF.new,
 <% end -%>
       Azu::Handler::RequestId.new,
-<% if @project_type == "web" -%>
-      Azu::Handler::DevDashboard.new,               # 👈 Full dashboard functionality
-      <%= @module_name %>::CONFIG.performance_monitor.not_nil!, # 👈 Required for metrics
-<% end -%>
       Azu::Handler::Rescuer.new,
       Azu::Handler::Logger.new,
     ]
@@ -88,6 +84,9 @@ end
 require "./schemas/**"
 require "./models/**"
 require "./responses/**"
-require "./contracts/**"
+<% if @project_type == "web" -%>
+require "./pages/**"
+<% end -%>
+require "./requests/**"
 require "./endpoints/**"
 <% end -%>

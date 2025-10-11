@@ -49,14 +49,14 @@ module AzuCLI
           if generator.needs_migration?
             Logger.info("2. Run 'azu db:migrate' to create sessions table")
           end
-          
+
           Logger.info("#{generator.needs_migration? ? "3" : "2"}. Configure SESSION_SECRET environment variable")
           Logger.info("#{generator.needs_migration? ? "4" : "3"}. Require session initializer in your application:")
           Logger.info("     require \"./initializers/session\"")
-          
+
           puts ""
           Logger.info("Session backend: #{@backend}")
-          
+
           case @backend
           when "redis"
             Logger.info("Redis URL: Set REDIS_URL environment variable (default: redis://localhost:6379)")

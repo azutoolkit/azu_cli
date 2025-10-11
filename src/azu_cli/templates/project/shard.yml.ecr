@@ -19,19 +19,22 @@ dependencies:
 
   cql:
     github: azutoolkit/cql
-  
+
   session:
     github: azutoolkit/session
-  
-  carbon:
-    github: luckyframework/carbon
-  
+
+  # Optional: Uncomment if you need email functionality
+  # carbon:
+  #   github: luckyframework/carbon
+
+<% if has_joobq? -%>
   joobq:
     github: azutoolkit/joobq
-  
+
   redis:
     github: stefanwille/crystal-redis
 
+<% end -%>
   topia:
     github: azutoolkit/topia
 

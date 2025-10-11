@@ -12,11 +12,11 @@ module <%=project.camelcase%>::Endpoints
     # POST /auth/register
     post "/auth/register" do
       request = RegisterRequest.new(params)
-      
+
       unless request.valid?
         halt 422, {errors: request.errors}.to_json
       end
-      
+
       user = User.new(
         email: request.email,
         password: request.password,
@@ -39,11 +39,11 @@ module <%=project.camelcase%>::Endpoints
     # POST /auth/login
     post "/auth/login" do
       request = LoginRequest.new(params)
-      
+
       unless request.valid?
         halt 422, {errors: request.errors}.to_json
       end
-      
+
       user = User.authenticate(request.email, request.password)
 
       unless user

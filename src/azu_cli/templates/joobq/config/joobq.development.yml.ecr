@@ -4,7 +4,7 @@
 
 joobq:
   settings:
-    default_queue: "default"
+    default_queue: "<%= default_queue %>"
     retries: 5
     timeout: "30 seconds"
     timezone: "UTC"
@@ -13,9 +13,9 @@ joobq:
   # Queue configurations
   # Define job queues with their specific job classes and worker counts
   queues:
-    default:
-      job_class: "DefaultJob"
-      workers: 3
+    <%= default_queue %>:
+      job_class: "<%= example_job_name %>"
+      workers: <%= workers %>
 
     # Example: Email queue
     # email:
@@ -23,9 +23,9 @@ joobq:
     #   workers: 3
 
     # Example: Mailer queue
-    # mailer:
-    #   job_class: "MailerJob"
-    #   workers: 2
+    mailers:
+      job_class: "MailerJob"
+      workers: 2
 
   # Middleware configuration
   # Available middleware: throttle, retry, timeout
@@ -61,3 +61,4 @@ joobq:
     batch_size: 500
     timeout: 2.0
     max_commands: 2000
+

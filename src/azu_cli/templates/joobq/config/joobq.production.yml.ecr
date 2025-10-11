@@ -1,0 +1,68 @@
+# JoobQ Production Configuration
+# Modern JoobQ YAML-based configuration for production environment
+
+joobq:
+  settings:
+    default_queue: "<%= default_queue %>"
+    retries: 5
+    timeout: "60 seconds"  # Longer timeout for production
+    timezone: "UTC"
+    worker_batch_size: 100  # Higher batch size for production
+
+  # Queue configurations
+  # Define job queues with their specific job classes and worker counts
+  queues:
+    <%= default_queue %>:
+      job_class: "<%= example_job_name %>"
+      workers: <%= workers * 2 %>  # More workers in production
+
+    # Email queue
+    email:
+      job_class: "EmailJob"
+      workers: 5
+
+    # Mailer queue
+    mailers:
+      job_class: "MailerJob"
+      workers: 3
+
+    # High priority queue
+    critical:
+      job_class: "CriticalJob"
+      workers: 5
+
+  # Middleware configuration
+  middlewares:
+    - type: "throttle"
+    - type: "retry"
+    - type: "timeout"
+
+  # Error monitoring configuration (stricter in production)
+  error_monitoring:
+    alert_thresholds:
+      error: 5    # Alert sooner in production
+      warn: 25
+      info: 50
+    time_window: "5 minutes"
+    max_recent_errors: 500
+
+  # Feature flags
+  features:
+    rest_api: false  # Disabled in production for security
+    stats: true
+
+  # Redis connection configuration
+  # Use environment variables for sensitive data
+  redis:
+    host: "${REDIS_HOST:localhost}"
+    port: ${REDIS_PORT:6379}
+    password: "${REDIS_PASSWORD:}"
+    pool_size: 500    # Larger pool for production
+    pool_timeout: 5.0
+
+  # Pipeline configuration for batch operations
+  pipeline:
+    batch_size: 1000
+    timeout: 5.0
+    max_commands: 5000
+

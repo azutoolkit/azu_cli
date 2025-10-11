@@ -125,7 +125,7 @@ module AzuCLI
         )
 
         # Give server a moment to start
-        sleep 0.5
+        sleep 0.5.seconds
 
         if process = @server_process
           if process.exists?
@@ -143,7 +143,7 @@ module AzuCLI
           if process.exists?
             Logger.info("🛑 Stopping server (PID: #{process.pid})...")
             process.terminate
-            sleep 0.5
+            sleep 0.5.seconds
             process.signal(Signal::KILL) if process.exists?
             process.wait rescue nil
           end
@@ -168,7 +168,7 @@ module AzuCLI
 
         loop do
           begin
-            sleep 0.5
+            sleep 0.5.seconds
 
             changed_files = detect_changes(file_mtimes)
 
@@ -195,7 +195,7 @@ module AzuCLI
             end
           rescue ex
             Logger.error("File watcher error: #{ex.message}")
-            sleep 1
+            sleep 1.second
           end
         end
       end

@@ -60,6 +60,8 @@ module AzuCLI
           generate_page
         when "job"
           generate_job
+        when "joobq"
+          generate_joobq_setup
         when "middleware"
           generate_middleware
         when "migration"
@@ -217,7 +219,8 @@ module AzuCLI
           project_type: project_type
         )
 
-        render_generator(generator, AzuCLI::Generate::Page::OUTPUT_DIR)
+        output_dir = AzuCLI::Generate::Page.output_dir_for_type(project_type)
+        render_generator(generator, output_dir)
         success("Generated page #{@generator_name} successfully")
       end
 
@@ -231,6 +234,55 @@ module AzuCLI
 
         render_generator(generator, AzuCLI::Generate::Job::OUTPUT_DIR)
         success("Generated job #{@generator_name} successfully")
+      end
+
+      private def generate_joobq_setup : Result
+        Logger.info("Setting up JoobQ integration")
+
+        # Get project name from current directory or options
+        project_name = @options["project"]? || Dir.current.split("/").last
+        redis_url = @options["redis"]? || "redis://localhost:6379"
+        create_example = !@options.has_key?("no-example")
+
+        generator = AzuCLI::Generate::JoobQ.new(
+          project_name: project_name,
+          redis_url: redis_url,
+          create_example_job: create_example
+        )
+
+        # Create necessary directories
+        Dir.mkdir_p("config") unless Dir.exists?("config")
+        Dir.mkdir_p("src/initializers") unless Dir.exists?("src/initializers")
+        Dir.mkdir_p("src/jobs") unless Dir.exists?("src/jobs")
+
+        # Render the generator files
+        generator.render(".")
+
+        Logger.success("✓ JoobQ configuration created: config/joobq.development.yml")
+        Logger.success("✓ JoobQ initializer created: src/initializers/joobq.cr")
+        if create_example
+          Logger.success("✓ Example job created: src/jobs/example_job.cr")
+        end
+
+        Logger.info("")
+        Logger.info("Next steps:")
+        Logger.info("1. Add joobq and redis to your shard.yml dependencies:")
+        Logger.info("   dependencies:")
+        Logger.info("     joobq:")
+        Logger.info("       github: azutoolkit/joobq")
+        Logger.info("     redis:")
+        Logger.info("       github: stefanwille/crystal-redis")
+        Logger.info("")
+        Logger.info("2. Require the initializer in your main app file:")
+        Logger.info("   require \"./initializers/joobq\"")
+        Logger.info("")
+        Logger.info("3. Start a worker process:")
+        Logger.info("   azu jobs:worker")
+        Logger.info("")
+        Logger.info("4. Create jobs with:")
+        Logger.info("   azu generate job YourJobName param:type")
+
+        success("JoobQ setup completed successfully")
       end
 
       private def generate_middleware : Result
@@ -291,16 +343,18 @@ module AzuCLI
         Logger.info("Generating response")
 
         from_type = @options["from"]?
+        project_type = "api"  # Always generate API-style responses for the response command
 
         generator = AzuCLI::Generate::Page.new(
           name: @generator_name,
           fields: @attributes,
           action: "index",
-          project_type: "api",  # Always generate API-style responses for the response command
+          project_type: project_type,
           from_type: from_type
         )
 
-        render_generator(generator, AzuCLI::Generate::Page::OUTPUT_DIR)
+        output_dir = AzuCLI::Generate::Page.output_dir_for_type(project_type)
+        render_generator(generator, output_dir)
         success("Generated response #{@generator_name} successfully")
       end
 
@@ -442,11 +496,12 @@ module AzuCLI
         unless should_skip_component?("response")
           Logger.info("🔨 Generating responses...")
           project_type = @api_only ? "api" : "web"
+          output_dir = AzuCLI::Generate::Page.output_dir_for_type(project_type)
 
           # Generate responses for each CRUD action
           crud_actions.each do |action|
             response_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, project_type)
-            render_generator(response_generator, AzuCLI::Generate::Page::OUTPUT_DIR)
+            render_generator(response_generator, output_dir)
           end
           components_generated << "response"
         end
@@ -456,9 +511,10 @@ module AzuCLI
         # Generate Pages (Web mode)
         unless should_skip_component?("page") || @api_only
           Logger.info("🔨 Generating pages...")
+          output_dir = AzuCLI::Generate::Page.output_dir_for_type("web")
           ["index", "show", "new", "edit"].each do |action|
             page_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, "web")
-            render_generator(page_generator, AzuCLI::Generate::Page::OUTPUT_DIR)
+            render_generator(page_generator, output_dir)
           end
           components_generated << "page"
         end
@@ -603,7 +659,7 @@ module AzuCLI
         puts "  - Model with attributes"
         puts "  - Database migration file"
         puts "  - RESTful endpoints (index, show, new, create, edit, update, destroy)"
-        puts "  - Contract classes for input validation (both API and Web)"
+        puts "  - Request classes for input validation (Azu::Request)"
         puts "  - Response/Page classes for output formatting"
         puts "  - Template files for web views (Web mode)"
         puts "  - Use --skip to exclude specific components"
@@ -613,7 +669,7 @@ module AzuCLI
         puts "Generator Output Directories:"
         puts "  models/         - CQL model files"
         puts "  endpoints/      - HTTP endpoint files"
-        puts "  contracts/      - Request validation files"
+        puts "  requests/       - Request validation files (Azu::Request)"
         puts "  pages/          - Page response files (Web/API)"
         puts "  jobs/           - Background job files"
         puts "  middleware/     - Middleware files"

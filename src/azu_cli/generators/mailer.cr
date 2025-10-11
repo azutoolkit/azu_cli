@@ -67,17 +67,17 @@ module AzuCLI
           # Configure Carbon email adapter
           # Default: Development adapter (prints to console)
           # Production: Use SendGrid, SMTP, or custom adapter
-          
+
           # Development: Print emails to console
           Carbon::DevAdapter.configure do |settings|
             settings.print_emails = true
           end
-          
+
           # Production example (SendGrid):
           # Carbon::SendGridAdapter.configure do |settings|
           #   settings.api_key = ENV["SENDGRID_API_KEY"]
           # end
-          
+
           # Production example (SMTP):
           # Carbon::SmtpAdapter.configure do |settings|
           #   settings.host = ENV["SMTP_HOST"]

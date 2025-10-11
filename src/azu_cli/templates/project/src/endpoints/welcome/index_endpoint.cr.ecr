@@ -1,6 +1,6 @@
 module <%= @module_name %>
   struct Welcome::IndexEndpoint
-    include Azu::Endpoint(Welcome::IndexContract, Welcome::IndexPage)
+    include Azu::Endpoint(Welcome::IndexRequest, Welcome::IndexPage)
 
     get "/"
 

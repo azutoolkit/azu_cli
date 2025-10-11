@@ -29,20 +29,36 @@ azu test --watch
 
 #### `azu new <name> [options]`
 
-Create a new Azu project.
+Create a new Azu project with interactive prompts or command-line options.
 
 **Options:**
 
 - `--type <type>` - Project type (web, api, cli) [default: web]
 - `--database <db>` - Database (postgresql, mysql, sqlite) [default: postgresql]
+- `--joobq` - Include JoobQ for background jobs [default: yes]
+- `--no-joobq` - Skip JoobQ integration
+- `--example` - Include example code [default: yes]
+- `--no-example` - Skip example code
+- `--docker` - Include Docker support
+- `--no-docker` - Skip Docker support
+- `--git` - Initialize Git repository [default: yes]
 - `--skip-git` - Skip git initialization
-- `--skip-install` - Skip dependency installation
+- `--yes` - Non-interactive mode (use defaults)
 
 **Example:**
 
 ```bash
+# Interactive mode (asks about JoobQ and other options)
 azu new blog
-azu new api-service --type api --database mysql
+
+# API service with background jobs
+azu new api-service --type api --database mysql --joobq
+
+# Web app without background jobs
+azu new simple-site --type web --no-joobq
+
+# Non-interactive with defaults
+azu new my-app --yes
 ```
 
 #### `azu init`
@@ -383,16 +399,58 @@ azu generate service UserService create:User update:User delete:Bool
 azu generate service PaymentService process:Payment refund:Bool
 ```
 
+#### `azu generate joobq [options]`
+
+Setup JoobQ background job processing infrastructure.
+
+**Options:**
+
+- `--project <name>` - Project name (defaults to current directory)
+- `--redis <url>` - Redis connection URL [default: redis://localhost:6379]
+- `--no-example` - Skip creating example job
+
+**Example:**
+
+```bash
+# Basic setup with defaults
+azu generate joobq
+
+# Custom Redis URL
+azu generate joobq --redis redis://localhost:6380
+
+# Without example job
+azu generate joobq --no-example
+```
+
+**Generated:**
+
+- `config/joobq.development.yml` - JoobQ configuration
+- `config/joobq.production.yml` - Production configuration
+- `config/joobq.test.yml` - Test configuration
+- `src/initializers/joobq.cr` - JoobQ initializer
+- `src/jobs/example_job.cr` - Example job (optional)
+
 #### `azu generate job <name> [param:type...] [options]`
 
 Generate a background job.
+
+**Options:**
+
+- `--queue <name>` - Queue name [default: default]
+- `--retries <count>` - Number of retries [default: 3]
+- `--expires <duration>` - Job expiration time [default: 1.days]
 
 **Example:**
 
 ```bash
 azu generate job EmailNotification user_id:int32 template:string
 azu generate job ProcessPayment amount:float64 user_id:int64
+azu generate job ImportData file_path:string --queue=imports --retries=5
 ```
+
+**Generated:**
+
+- `src/jobs/<snake_case_name>_job.cr` - Job struct with JoobQ integration
 
 #### `azu generate mailer <name> [methods...] [options]`
 

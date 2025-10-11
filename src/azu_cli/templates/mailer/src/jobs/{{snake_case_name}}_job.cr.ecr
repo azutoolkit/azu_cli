@@ -1,25 +1,39 @@
 # <%=camel_case_name%> Mailer Job
 # Background job for async email delivery
 # This job is automatically generated when using --async flag
+#
+# To enqueue this job:
+#   <%=camel_case_name%>MailerJob.enqueue(action: "welcome", to: "user@example.com", params: {...})
+#
+# To schedule this job:
+#   <%=camel_case_name%>MailerJob.schedule(in: 5.minutes, action: "welcome", to: "user@example.com", params: {...})
 
 require "../mailers/<%=snake_case_name%>_mailer"
-require "joobq"
 
 struct <%=camel_case_name%>MailerJob
   include JoobQ::Job
 
+  # Queue configuration for mailer jobs
   @queue = "mailers"
+  # Retry failed emails up to 3 times
   @retries = 3
+  # Expire after 1 hour
   @expires = 1.hour.total_seconds.to_i
 
-  def initialize(@action : String, @to : String, @params : Hash(String, String))
+  # Job parameters
+  property action : String
+  property to : String
+  property params : Hash(String, String)
+
+  def initialize(@action : String, @to : String, @params : Hash(String, String) = {} of String => String)
   end
 
+  # Perform the email delivery
   def perform
     mailer = <%=camel_case_name%>Mailer.new
     email_address = Carbon::Address.new(@to)
 
-    # Call the appropriate mailer method
+    # Call the appropriate mailer method based on action
     email = case @action
 <%- template_names.each do |method_name| %>
             when "<%=method_name%>"
@@ -32,12 +46,13 @@ struct <%=camel_case_name%>MailerJob
     # Deliver the email
     email.deliver
 
-    Log.info { "Email sent: #{@action} to #{@to}" }
-  rescue ex
-    Log.error(exception: ex) { "Failed to send email: #{@action} to #{@to}" }
-    raise ex # Let JoobQ handle retries
+    Log.info { "✓ Email sent: #{@action} to #{@to}" }
+  rescue ex : Exception
+    Log.error(exception: ex) { "✗ Failed to send email: #{@action} to #{@to}" }
+    raise ex # Re-raise for JoobQ's retry mechanism
   end
 
+  # Convert params hash to named tuple for mailer methods
   private def named_tuple_from_params : NamedTuple
     # Convert Hash to NamedTuple for mailer methods
     # This is a simple implementation - you may need to adjust based on your needs
@@ -45,3 +60,5 @@ struct <%=camel_case_name%>MailerJob
   end
 end
 
+# Add this job to the registry in src/initializers/joobq.cr:
+# JoobQ::QueueFactory.register_job_type(<%=camel_case_name%>MailerJob)

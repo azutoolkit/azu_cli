@@ -1,0 +1,19 @@
+# Jobs Directory
+#
+# This directory contains background job definitions for JoobQ.
+#
+# To create a new job:
+#   azu generate job YourJobName param1:type param2:type
+#
+# Example:
+#   azu generate job SendEmail to:string subject:string body:string
+#
+# After generating jobs:
+# 1. Uncomment the require line in src/initializers/joobq.cr:
+#    require "../jobs/**"
+#
+# 2. Register your job types in src/initializers/joobq.cr:
+#    JoobQ::QueueFactory.register_job_type(SendEmailJob)
+#
+# See: <%= project %> documentation for more information
+
