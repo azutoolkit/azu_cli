@@ -1,12 +1,13 @@
 require "../database"
+require "cql"
 
 module AzuCLI
   module Commands
     module DB
-      # Rollback database migrations
+      # Rollback database migrations using CQL's Migrator
       class Rollback < Database
         property steps : Int32 = 1
-        property version : String?
+        property version : Int64?
         property verbose : Bool = false
 
         def initialize
@@ -28,35 +29,33 @@ module AzuCLI
             return error("Database '#{db_name}' does not exist")
           end
 
-          applied = get_applied_migrations
+          ensure_migrations_dir
 
-          if applied.empty?
-            Logger.info("No migrations to rollback")
-            return success("No migrations to rollback")
+          # Check if migrations exist
+          unless has_migrations?
+            return error("No migration files found")
           end
 
-          if @version
-            # Rollback to specific version
-            migrations_to_rollback = applied.select { |m| m > @version.not_nil! }.reverse!
-          else
-            # Rollback last N steps
-            migrations_to_rollback = applied.last(@steps).reverse
-          end
+          # Create a temporary migration runner script
+          runner_script = create_migration_runner_script("down", version, steps)
 
-          if migrations_to_rollback.empty?
-            Logger.info("No migrations to rollback")
-            return success("No migrations to rollback")
-          end
-
-          Logger.info("Rolling back #{migrations_to_rollback.size} migration(s)...")
+          Logger.info("Rolling back #{@steps} migration(s)...")
           show_database_info if @verbose
 
-          migrations_to_rollback.each do |migration|
-            rollback_migration(migration)
-          end
+          # Execute the runner script
+          result = execute_runner_script(runner_script)
 
-          Logger.info("✓ Rollback completed successfully")
-          success("Rollback completed")
+          # Clean up the temporary script
+          File.delete(runner_script) if File.exists?(runner_script)
+
+          if result
+            Logger.info("✓ Rollback completed successfully")
+            success("Rollback completed")
+          else
+            error("Rollback failed")
+          end
+        rescue ex : Exception
+          error("Rollback failed: #{ex.message}")
         end
 
         private def parse_options
@@ -64,11 +63,11 @@ module AzuCLI
           args.each_with_index do |arg, index|
             case arg
             when "--steps", "-s"
-              if s = args[index + 1]?.try(&.to_i)
+              if s = args[index + 1]?.try(&.to_i32?)
                 @steps = s
               end
             when "--version", "-v"
-              if v = args[index + 1]?
+              if v = args[index + 1]?.try(&.to_i64?)
                 @version = v
               end
             when "--verbose"
@@ -81,34 +80,58 @@ module AzuCLI
           end
         end
 
-        private def get_applied_migrations : Array(String)
-          migrations = [] of String
-          query_database("SELECT version FROM schema_migrations ORDER BY version") do |rs|
-            rs.each do
-              migrations << rs.read(String)
-            end
-          end
-          migrations
-        rescue
-          [] of String
+        # Check if migrations directory has migration files
+        private def has_migrations? : Bool
+          return false unless Dir.exists?(migrations_dir)
+          !Dir.glob("#{migrations_dir}/*.cr").empty?
         end
 
-        private def rollback_migration(migration_name : String)
-          Logger.info("== #{migration_name}: reverting ==")
-          start_time = Time.monotonic
+        # Create a temporary migration runner script
+        private def create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
+          script_path = File.tempname("azu_rollback", ".cr")
 
-          # In a real implementation, you'd load the migration class and call its down method
-          # For now, just remove from schema_migrations
+          script_content = String.build do |io|
+            io << "require \"cql\"\n"
+            io << "require \"./src/db/schema\"\n"
+            io << "require \"./src/db/migrations/*\"\n\n"
+            io << "config = CQL::MigratorConfig.new(\n"
+            io << "  schema_file_path: \"src/db/schema.cr\",\n"
+            io << "  schema_name: :AppSchema,\n"
+            io << "  schema_symbol: :app_schema,\n"
+            io << "  auto_sync: true\n"
+            io << ")\n\n"
+            io << "migrator = AppSchema.migrator(config)\n\n"
 
-          execute_on_database(
-            "DELETE FROM schema_migrations WHERE version = '#{migration_name}'"
-          )
+            case action
+            when "up"
+              if ver = version
+                io << "migrator.up_to(#{ver}_i64)\n"
+              elsif st = steps
+                io << "migrator.up(#{st})\n"
+              else
+                io << "migrator.up\n"
+              end
+            when "down"
+              if ver = version
+                io << "migrator.down_to(#{ver}_i64)\n"
+              elsif st = steps
+                io << "migrator.rollback(#{st})\n"
+              else
+                io << "migrator.rollback(#{st || 1})\n"
+              end
+            when "redo"
+              io << "migrator.redo\n"
+            end
+          end
 
-          duration = (Time.monotonic - start_time).total_seconds
-          Logger.info("== #{migration_name}: reverted (#{duration.round(4)}s) ==")
-        rescue ex
-          Logger.error("== #{migration_name}: rollback failed ==")
-          raise "Rollback failed: #{ex.message}"
+          File.write(script_path, script_content)
+          script_path
+        end
+
+        # Execute the migration runner script
+        private def execute_runner_script(script_path : String) : Bool
+          success = system("crystal run #{script_path}")
+          success
         end
       end
     end

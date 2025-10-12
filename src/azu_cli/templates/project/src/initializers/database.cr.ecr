@@ -20,8 +20,8 @@ CQL.configure do |config|
   config.pool.use_prepared_statements = (ENV["DB_USE_PREPARED_STATEMENTS"]? || "true") == "true"
 
   # Schema and migration settings
-  config.schema_dir = "src/schemas"
-  config.schema_file = "app_schema.cr"
+  config.schema_dir = "src/db"
+  config.schema_file = "schema.cr"
   config.schema_class = :AppSchema
   config.schema_name = :app_schema
   config.migrations_table = :schema_migrations

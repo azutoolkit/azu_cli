@@ -228,11 +228,54 @@ azu serve &
 azu jobs:worker --workers 4 &
 ```
 
+## Migration System
+
+Azu CLI uses CQL's powerful migration system with automatic schema synchronization:
+
+```bash
+# Generate a migration
+azu generate migration CreateUsers name:string email:string age:int32
+
+# Migrations use CQL Schema DSL
+class CreateUsers < CQL::Migration(20240115103045_i64)
+  def up
+    schema.table :users do
+      primary :id, Int64
+      column :name, String
+      column :email, String, unique: true
+      timestamps
+    end
+    schema.users.create!
+  end
+
+  def down
+    schema.users.drop!
+  end
+end
+
+# Run migrations (automatically updates src/db/schema.cr)
+azu db:migrate
+
+# Rollback migrations
+azu db:rollback --steps 2
+```
+
+**Key Features:**
+
+- ✅ Uses CQL's built-in `Migrator` class
+- ✅ Automatic schema file synchronization
+- ✅ Type-safe Crystal migrations
+- ✅ Pretty-printed migration status
+- ✅ Supports PostgreSQL, MySQL, and SQLite
+
+See [MIGRATION_FIXES_SUMMARY.md](MIGRATION_FIXES_SUMMARY.md) for detailed migration guide.
+
 ## Documentation
 
 For complete documentation, see:
 
 - **CLI Reference:** [CLI_REFERENCE.md](CLI_REFERENCE.md)
+- **Migration Guide:** [MIGRATION_FIXES_SUMMARY.md](MIGRATION_FIXES_SUMMARY.md)
 - **Test Report:** [TEST_VALIDATION_REPORT.md](TEST_VALIDATION_REPORT.md)
 - **Implementation:** [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
 - **Azu Framework:** https://azutopia.gitbook.io/azu/

@@ -1,6 +1,8 @@
 require "json"
 
-struct Health::HealthPage < Azu::Page
+struct Health::HealthPage
+  include Azu::Response
+  include Azu::Templates::Renderable
   include JSON::Serializable
 
   getter status : String

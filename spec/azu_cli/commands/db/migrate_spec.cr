@@ -21,6 +21,12 @@ describe AzuCLI::Commands::DB::Migrate do
       command = AzuCLI::Commands::DB::Migrate.new
       command.dry_run.should be_false
     end
+
+    it "has dump_schema method available" do
+      command = AzuCLI::Commands::DB::Migrate.new
+      # Test that method exists by calling it
+      command.dump_schema
+    end
   end
 
   describe "option parsing" do
@@ -73,6 +79,27 @@ describe AzuCLI::Commands::DB::Migrate do
       command.verbose.should be_true
       command.dry_run.should be_true
       command.environment.should eq("test")
+    end
+  end
+
+  describe "schema dump integration" do
+    it "has access to schema_file_path method" do
+      command = AzuCLI::Commands::DB::Migrate.new
+      command.schema_file_path.should eq("./src/db/schema.cr")
+    end
+
+    it "has access to map_adapter_to_cql method" do
+      command = AzuCLI::Commands::DB::Migrate.new
+      command.adapter = "postgres"
+      command.map_adapter_to_cql.should eq(CQL::Adapter::Postgres)
+    end
+
+    it "can call dump_schema without raising errors" do
+      command = AzuCLI::Commands::DB::Migrate.new
+      # Should not raise error even if db doesn't exist
+      expect_raises?(Exception) do
+        command.dump_schema
+      end.should be_nil
     end
   end
 end

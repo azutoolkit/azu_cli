@@ -1,4 +1,5 @@
-struct Health::HealthRequest < Azu::Request
+struct Health::HealthRequest
+  include Azu::Request
   # No parameters needed for health check
 end
 

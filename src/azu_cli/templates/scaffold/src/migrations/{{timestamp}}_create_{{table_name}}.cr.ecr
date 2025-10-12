@@ -1,31 +1,51 @@
 require "cql"
 
-class Create<%= name.pluralize %> < CQL::Migration(<%= timestamp %>)
+# Migration to create <%= table_name %> table
+# Generated at <%= Time.utc %>
+class Create<%= name.pluralize %> < CQL::Migration(<%= timestamp.to_i64 %>)
   def up
-    create_table :<%= table_name %> do |t|
+    # Create <%= table_name %> table
+    schema.table :<%= table_name %> do
+      primary :id, Int64
 <% attributes.each do |field, type| -%>
 <% next if type.downcase == "references" || type.downcase == "belongs_to" -%>
-      t.<%= migration_field_type(type) %> :<%= field %><%= migration_field_options(type, field) %>
+      column :<%= field %>, <%= crystal_type(type) %><% if type.downcase == "bool" || type.downcase == "boolean" %>, default: false<% end %>
+<% end -%>
+<% attributes.each do |field, type| -%>
+<% if type.downcase == "references" || type.downcase == "belongs_to" -%>
+      column :<%= field %>, Int64
+<% end -%>
 <% end -%>
 <% if timestamps -%>
-      t.timestamps
+      timestamps
+<% end -%>
+<% attributes.each do |field, type| -%>
+<% if type.downcase == "references" || type.downcase == "belongs_to" -%>
+
+      # Foreign key constraint for <%= field %>
+      foreign_key [:<%= field %>], references: :<%= field.gsub(/_id$/, "").pluralize %>, references_columns: [:id]
+<% end -%>
 <% end -%>
     end
 
-<% attributes.each do |field, type| -%>
-<% if type.downcase == "references" || type.downcase == "belongs_to" -%>
-    add_foreign_key :<%= table_name %>, :<%= field.gsub(/_id$/, "").pluralize %>, column: :<%= field %>, on_delete: :cascade
-<% end -%>
-<% end -%>
+    # Create the table in the database
+    schema.<%= table_name %>.create!
+<% has_indexes = attributes.any? { |field, type| should_add_index?(type, field) } -%>
+<% if has_indexes -%>
 
+    # Add indexes
+    schema.alter :<%= table_name %> do
 <% attributes.each do |field, type| -%>
 <% if should_add_index?(type, field) -%>
-    add_index :<%= table_name %>, :<%= field %><%= index_options(type, field) %>
+      create_index :<%= field %>_idx, [:<%= field %>]<% if type.downcase == "email" || field.includes?("slug") %>, unique: true<% end %>
 <% end -%>
+<% end -%>
+    end
 <% end -%>
   end
 
   def down
-    drop_table :<%= table_name %>
+    # Drop <%= table_name %> table
+    schema.<%= table_name %>.drop!
   end
 end

@@ -4,11 +4,11 @@ require "cql"
 module AzuCLI
   module Commands
     module DB
-      # Run database migrations
+      # Run database migrations using CQL's Migrator
       class Migrate < Database
-        property version : String?
+        property version : Int64?
         property verbose : Bool = false
-        property dry_run : Bool = false
+        property steps : Int32?
 
         def initialize
           super("db:migrate", "Run pending database migrations")
@@ -30,25 +30,32 @@ module AzuCLI
           end
 
           ensure_migrations_dir
-          ensure_schema_migrations_table
 
-          migrations = load_migrations
-          pending = get_pending_migrations(migrations)
-
-          if pending.empty?
-            Logger.info("No pending migrations")
-            return success("All migrations up to date")
+          # Check if migrations exist
+          unless has_migrations?
+            return error("No migration files found. Create migrations using 'azu generate migration NAME'")
           end
 
-          Logger.info("Running #{pending.size} pending migration(s)...")
+          # Create a temporary migration runner script
+          runner_script = create_migration_runner_script("up", version, steps)
+
+          Logger.info("Running migrations...")
           show_database_info if @verbose
 
-          pending.each do |migration|
-            run_migration(migration)
-          end
+          # Execute the runner script
+          result = execute_runner_script(runner_script)
 
-          Logger.info("✓ All migrations completed successfully")
-          success("Migrations completed")
+          # Clean up the temporary script
+          File.delete(runner_script) if File.exists?(runner_script)
+
+          if result
+            Logger.info("✓ Migrations completed successfully")
+            success("Migrations completed")
+          else
+            error("Migration failed")
+          end
+        rescue ex : Exception
+          error("Migration command failed: #{ex.message}")
         end
 
         private def parse_options
@@ -56,13 +63,15 @@ module AzuCLI
           args.each_with_index do |arg, index|
             case arg
             when "--version", "-v"
-              if v = args[index + 1]?
+              if v = args[index + 1]?.try(&.to_i64?)
                 @version = v
+              end
+            when "--steps", "-s"
+              if s = args[index + 1]?.try(&.to_i32?)
+                @steps = s
               end
             when "--verbose"
               @verbose = true
-            when "--dry-run"
-              @dry_run = true
             when "--env", "-e"
               if env = args[index + 1]?
                 @environment = env
@@ -71,90 +80,58 @@ module AzuCLI
           end
         end
 
-        private def ensure_schema_migrations_table
-          create_table_sql = case @adapter
-                             when "postgres", "postgresql"
-                               <<-SQL
-              CREATE TABLE IF NOT EXISTS schema_migrations (
-                version VARCHAR(255) PRIMARY KEY,
-                migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-              )
-            SQL
-                             when "mysql"
-                               <<-SQL
-              CREATE TABLE IF NOT EXISTS schema_migrations (
-                version VARCHAR(255) PRIMARY KEY,
-                migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-              )
-            SQL
-                             when "sqlite", "sqlite3"
-                               <<-SQL
-              CREATE TABLE IF NOT EXISTS schema_migrations (
-                version TEXT PRIMARY KEY,
-                migrated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-              )
-            SQL
-                             else
-                               raise "Unsupported adapter: #{@adapter}"
-                             end
-
-          execute_on_database(create_table_sql)
-        rescue ex
-          raise "Failed to create schema_migrations table: #{ex.message}"
+        # Check if migrations directory has migration files
+        private def has_migrations? : Bool
+          return false unless Dir.exists?(migrations_dir)
+          !Dir.glob("#{migrations_dir}/*.cr").empty?
         end
 
-        private def load_migrations : Array(String)
-          return [] of String unless Dir.exists?(migrations_dir)
+        # Create a temporary migration runner script
+        private def create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
+          script_path = File.tempname("azu_migrate", ".cr")
 
-          Dir.glob("#{migrations_dir}/*.cr")
-            .map { |path| File.basename(path, ".cr") }
-            .select(&.matches?(/^\d+_.*$/))
-            .sort!
-        end
+          script_content = String.build do |io|
+            io << "require \"cql\"\n"
+            io << "require \"./src/db/schema\"\n"
+            io << "require \"./src/db/migrations/*\"\n\n"
+            io << "config = CQL::MigratorConfig.new(\n"
+            io << "  schema_file_path: \"src/db/schema.cr\",\n"
+            io << "  schema_name: :AppSchema,\n"
+            io << "  schema_symbol: :app_schema,\n"
+            io << "  auto_sync: true\n"
+            io << ")\n\n"
+            io << "migrator = AppSchema.migrator(config)\n\n"
 
-        private def get_pending_migrations(all_migrations : Array(String)) : Array(String)
-          applied = get_applied_migrations
-          all_migrations.reject { |m| applied.includes?(m) }
-        end
-
-        private def get_applied_migrations : Array(String)
-          migrations = [] of String
-          query_database("SELECT version FROM schema_migrations ORDER BY version") do |rs|
-            rs.each do
-              migrations << rs.read(String)
+            case action
+            when "up"
+              if ver = version
+                io << "migrator.up_to(#{ver}_i64)\n"
+              elsif st = steps
+                io << "migrator.up(#{st})\n"
+              else
+                io << "migrator.up\n"
+              end
+            when "down"
+              if ver = version
+                io << "migrator.down_to(#{ver}_i64)\n"
+              elsif st = steps
+                io << "migrator.rollback(#{st})\n"
+              else
+                io << "migrator.rollback\n"
+              end
+            when "redo"
+              io << "migrator.redo\n"
             end
           end
-          migrations
-        rescue
-          [] of String
+
+          File.write(script_path, script_content)
+          script_path
         end
 
-        private def run_migration(migration_name : String)
-          if @dry_run
-            Logger.info("[DRY RUN] Would run migration: #{migration_name}")
-            return
-          end
-
-          Logger.info("== #{migration_name}: migrating ==")
-          start_time = Time.monotonic
-
-          # Load and execute migration file
-          migration_file = "#{migrations_dir}/#{migration_name}.cr"
-
-          # For now, we'll execute the SQL directly
-          # In a real implementation, you'd want to load the Crystal migration class
-          # and call its up method
-
-          # Record migration
-          execute_on_database(
-            "INSERT INTO schema_migrations (version) VALUES ('#{migration_name}')"
-          )
-
-          duration = (Time.monotonic - start_time).total_seconds
-          Logger.info("== #{migration_name}: migrated (#{duration.round(4)}s) ==")
-        rescue ex
-          Logger.error("== #{migration_name}: failed ==")
-          raise "Migration failed: #{ex.message}"
+        # Execute the migration runner script
+        private def execute_runner_script(script_path : String) : Bool
+          success = system("crystal run #{script_path}")
+          success
         end
       end
     end

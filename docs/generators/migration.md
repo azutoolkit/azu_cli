@@ -1,71 +1,97 @@
 # Migration Generator
 
-The Migration Generator creates database migration files that define schema changes for your Azu application's database.
+The Migration Generator creates CQL-based database migration files that use type-safe Schema DSL for defining schema changes.
 
 ## Usage
 
 ```bash
-azu generate migration MIGRATION_NAME [OPTIONS]
+azu generate migration MIGRATION_NAME [attributes] [OPTIONS]
 ```
 
 ## Description
 
-Migrations in Azu applications provide a way to version control your database schema changes. They allow you to define, modify, and rollback database structure changes in a systematic way. Migrations are essential for maintaining database consistency across different environments and team members.
+Migrations in Azu applications use CQL's powerful migration system to version control database schema changes. They provide:
+
+- **Type-Safe Migrations**: Crystal classes with compile-time type checking
+- **Automatic Schema Sync**: Schema file automatically updates after migrations
+- **CQL Schema DSL**: Expressive syntax for defining tables, columns, and indexes
+- **Version Tracking**: Int64 timestamp-based version numbers
+- **Rollback Support**: Reversible migrations with `up` and `down` methods
+
+Migrations inherit from `CQL::Migration(VERSION)` and use CQL's Schema DSL for all database operations.
 
 ## Options
 
 - `MIGRATION_NAME` - Name of the migration to generate (required)
-- `-d, --description DESCRIPTION` - Description of the migration
-- `-t, --template TEMPLATE` - Template to use (default: basic)
+- `attributes` - Column definitions in `name:type` format (optional)
+- `--timestamps` - Add timestamps (default: true)
 - `-f, --force` - Overwrite existing files
 - `-h, --help` - Show help message
 
 ## Examples
 
-### Generate a basic migration
+### Generate a migration with attributes
 
 ```bash
-azu generate migration CreateUsers
+azu generate migration CreateUsers name:string email:string age:int32
 ```
 
 This creates:
 
-- `src/db/migrations/TIMESTAMP_create_users.cr` - The migration file
+- `src/db/migrations/20240115103045_create_users.cr` - The migration file
 
-### Generate a migration with description
+### Generate a simple migration
 
 ```bash
-azu generate migration AddEmailToUsers --description "Add email column to users table"
+azu generate migration AddIndexToUsers
 ```
 
-### Generate specific migration types
+### Generate migration with foreign keys
 
 ```bash
-azu generate migration CreatePosts --template table
-azu generate migration AddIndexToUsers --template index
+azu generate migration CreatePosts title:string content:text user_id:references
+```
+
+### Generate migration with various types
+
+```bash
+azu generate migration CreateProducts name:string price:float64 active:bool published_at:datetime
 ```
 
 ## Generated Files
 
-### Migration File (`src/db/migrations/TIMESTAMP_MIGRATION_NAME.cr`)
+### Migration File (`src/db/migrations/TIMESTAMP_create_table_name.cr`)
+
+The generator creates a properly formatted CQL migration using the Schema DSL:
 
 ```crystal
-# <%= @description || @name.underscore.humanize %> migration
-class <%= @name.underscore.camelcase %> < CQL::Migration
+require "cql"
+
+# Migration to create users table
+# Generated at 2024-01-15 10:30:45 UTC
+class CreateUsers < CQL::Migration(20240115103045_i64)
   def up
-    # Add your migration logic here
-    # Example:
-    # create_table :users do |t|
-    #   t.string :name
-    #   t.string :email
-    #   t.timestamps
-    # end
+    # Create users table
+    schema.table :users do
+      primary :id, Int64
+      column :name, String
+      column :email, String
+      column :age, Int32
+      timestamps
+    end
+
+    # Create the table in the database
+    schema.users.create!
+
+    # Add indexes (automatically generated for email fields, etc.)
+    schema.alter :users do
+      create_index :email_idx, [:email], unique: true
+    end
   end
 
   def down
-    # Add your rollback logic here
-    # Example:
-    # drop_table :users
+    # Drop users table
+    schema.users.drop!
   end
 end
 ```
@@ -75,19 +101,27 @@ end
 ### Create Table Migration
 
 ```crystal
-class CreateUsers < CQL::Migration
+class CreateUsers < CQL::Migration(20240115103045_i64)
   def up
-    create_table :users do |t|
-      t.string :name, null: false
-      t.string :email, null: false, unique: true
-      t.string :password_digest, null: false
-      t.boolean :active, default: true
-      t.timestamps
+    schema.table :users do
+      primary :id, Int64
+      column :name, String
+      column :email, String
+      column :password_digest, String
+      column :active, Bool, default: false
+      timestamps
+    end
+
+    schema.users.create!
+
+    # Add unique index for email
+    schema.alter :users do
+      create_index :email_idx, [:email], unique: true
     end
   end
 
   def down
-    drop_table :users
+    schema.users.drop!
   end
 end
 ```
@@ -95,15 +129,23 @@ end
 ### Add Column Migration
 
 ```crystal
-class AddEmailToUsers < CQL::Migration
+class AddEmailToUsers < CQL::Migration(20240115104530_i64)
   def up
-    add_column :users, :email, :string, null: false, unique: true
-    add_index :users, :email
+    schema.alter :users do
+      add_column :email, String
+    end
+
+    # Add index for the new column
+    schema.alter :users do
+      create_index :email_idx, [:email], unique: true
+    end
   end
 
   def down
-    remove_index :users, :email
-    remove_column :users, :email
+    schema.alter :users do
+      drop_index :email_idx
+      drop_column :email
+    end
   end
 end
 ```
@@ -111,31 +153,53 @@ end
 ### Create Index Migration
 
 ```crystal
-class AddIndexToUsers < CQL::Migration
+class AddIndexesToUsers < CQL::Migration(20240115105020_i64)
   def up
-    add_index :users, :email, unique: true
-    add_index :users, :created_at
-    add_index :users, [:name, :email]
+    schema.alter :users do
+      create_index :email_idx, [:email], unique: true
+      create_index :created_at_idx, [:created_at]
+      create_index :name_email_idx, [:name, :email]
+    end
   end
 
   def down
-    remove_index :users, [:name, :email]
-    remove_index :users, :created_at
-    remove_index :users, :email
+    schema.alter :users do
+      drop_index :name_email_idx
+      drop_index :created_at_idx
+      drop_index :email_idx
+    end
   end
 end
 ```
 
-### Modify Column Migration
+### Create Table with Foreign Key
 
 ```crystal
-class ModifyUserEmail < CQL::Migration
+class CreatePosts < CQL::Migration(20240115110000_i64)
   def up
-    change_column :users, :email, :string, null: false, limit: 255
+    schema.table :posts do
+      primary :id, Int64
+      column :title, String
+      column :content, String
+      column :user_id, Int64
+      column :published, Bool, default: false
+      timestamps
+
+      # Foreign key constraint
+      foreign_key [:user_id], references: :users, references_columns: [:id]
+    end
+
+    schema.posts.create!
+
+    # Add indexes
+    schema.alter :posts do
+      create_index :user_id_idx, [:user_id]
+      create_index :published_idx, [:published]
+    end
   end
 
   def down
-    change_column :users, :email, :string, null: true, limit: nil
+    schema.posts.drop!
   end
 end
 ```
@@ -143,78 +207,99 @@ end
 ### Create Join Table Migration
 
 ```crystal
-class CreateUsersPosts < CQL::Migration
+class CreateUsersPostsJoin < CQL::Migration(20240115111530_i64)
   def up
-    create_table :users_posts, id: false do |t|
-      t.integer :user_id, null: false
-      t.integer :post_id, null: false
-      t.timestamps
+    schema.table :users_posts do
+      column :user_id, Int64
+      column :post_id, Int64
+      timestamps
+
+      foreign_key [:user_id], references: :users, references_columns: [:id]
+      foreign_key [:post_id], references: :posts, references_columns: [:id]
     end
 
-    add_index :users_posts, :user_id
-    add_index :users_posts, :post_id
-    add_index :users_posts, [:user_id, :post_id], unique: true
+    schema.users_posts.create!
+
+    schema.alter :users_posts do
+      create_index :user_id_idx, [:user_id]
+      create_index :post_id_idx, [:post_id]
+      create_index :user_post_idx, [:user_id, :post_id], unique: true
+    end
   end
 
   def down
-    drop_table :users_posts
+    schema.users_posts.drop!
   end
 end
 ```
 
 ## Column Types
 
-### Supported Column Types
+### Supported Column Types (CQL Schema DSL)
+
+The generator supports the following attribute type mappings:
+
+| Generator Type     | Crystal Type | Usage                                    |
+| ------------------ | ------------ | ---------------------------------------- |
+| `string`, `text`   | `String`     | Text data                                |
+| `int32`, `integer` | `Int32`      | 32-bit integers                          |
+| `int64`            | `Int64`      | 64-bit integers (default for primary)    |
+| `float32`          | `Float32`    | 32-bit floating point                    |
+| `float64`, `float` | `Float64`    | 64-bit floating point                    |
+| `bool`, `boolean`  | `Bool`       | Boolean values (true/false)              |
+| `datetime`, `time` | `Time`       | Date and time                            |
+| `date`             | `Date`       | Date only                                |
+| `email`            | `String`     | Email (with unique index auto-generated) |
+| `url`              | `String`     | URL string                               |
+| `json`             | `JSON::Any`  | JSON data                                |
+| `uuid`             | `UUID`       | UUID values                              |
+| `references`       | `Int64`      | Foreign key reference                    |
+
+### CQL Schema DSL Syntax
 
 ```crystal
-# String columns
-t.string :name, null: false, limit: 255
-t.text :description, null: true
+schema.table :users do
+  # Primary key (Int64 by default)
+  primary :id, Int64
 
-# Numeric columns
-t.integer :age, null: true
-t.bigint :user_id, null: false
-t.float :price, null: false
-t.decimal :amount, precision: 10, scale: 2
+  # String columns
+  column :name, String
+  column :email, String
 
-# Boolean columns
-t.boolean :active, default: true
-t.boolean :verified, null: false
+  # Numeric columns
+  column :age, Int32
+  column :user_id, Int64
+  column :price, Float64
 
-# Date/Time columns
-t.datetime :created_at, null: false
-t.date :birth_date, null: true
-t.time :start_time, null: true
+  # Boolean columns (with default)
+  column :active, Bool, default: false
+  column :verified, Bool, default: false
 
-# Binary columns
-t.binary :avatar, null: true
-t.blob :document, null: true
+  # Time columns
+  timestamps  # Adds created_at and updated_at
 
-# JSON columns
-t.json :metadata, null: true
-t.jsonb :settings, null: true
+  # Foreign keys (defined inline)
+  foreign_key [:user_id], references: :users, references_columns: [:id]
+end
 ```
 
-### Column Options
+### Adding Indexes
+
+Indexes are added using `schema.alter`:
 
 ```crystal
-create_table :users do |t|
-  # Basic options
-  t.string :name, null: false
-  t.string :email, unique: true
-  t.string :code, limit: 10
+schema.alter :users do
+  # Single column index
+  create_index :email_idx, [:email]
 
-  # Default values
-  t.boolean :active, default: true
-  t.integer :count, default: 0
-  t.string :status, default: "pending"
+  # Unique index
+  create_index :email_idx, [:email], unique: true
 
-  # Indexes
-  t.string :username, index: true
-  t.string :email, unique: true
+  # Composite index
+  create_index :name_email_idx, [:name, :email]
 
-  # Timestamps
-  t.timestamps
+  # Drop index
+  drop_index :email_idx
 end
 ```
 
@@ -262,31 +347,55 @@ add_index :users, :email, unique: true, where: "deleted_at IS NULL"
 
 ```bash
 azu db:migrate
+# Running migrations...
+# ✓ All migrations completed successfully
+# ✓ Schema file updated: src/db/schema.cr
 ```
 
-### Run Specific Migration
+### Run Specific Number of Migrations
 
 ```bash
-azu db:migrate VERSION=20240115000000
+azu db:migrate --steps 2
+```
+
+### Migrate to Specific Version
+
+```bash
+azu db:migrate --version 20240115103045
 ```
 
 ### Rollback Migrations
 
 ```bash
+# Rollback last migration
 azu db:rollback
+
+# Rollback multiple migrations
+azu db:rollback --steps 3
+
+# Rollback to specific version
+azu db:rollback --version 20240115103045
 ```
 
-### Rollback Specific Migration
+### View Verbose Output
 
 ```bash
-azu db:rollback VERSION=20240115000000
+azu db:migrate --verbose
+# Shows detailed migration information
 ```
 
-### Check Migration Status
+### How Migrations Run
 
-```bash
-azu db:migrate:status
-```
+When you execute `azu db:migrate`, the CLI:
+
+1. Creates a temporary Crystal script
+2. Loads `src/db/schema.cr` and all migration files from `src/db/migrations/*.cr`
+3. Initializes CQL's `Migrator` with auto-sync enabled
+4. Runs pending migrations using `migrator.up`
+5. Automatically updates `src/db/schema.cr` to reflect current database state
+6. Cleans up temporary files
+
+The schema file (`src/db/schema.cr`) is always kept in sync with your database!
 
 ## Best Practices
 
@@ -530,21 +639,64 @@ end
 - `azu db:migrate` - Run database migrations
 - `azu db:rollback` - Rollback database migrations
 - `azu db:create` - Create the database
+- `azu db:drop` - Drop the database
 - `azu db:reset` - Reset the database
-- `azu generate model` - Generate data models
+- `azu db:setup` - Setup database (create and migrate)
+- `azu generate model` - Generate CQL data models
+- `azu generate scaffold` - Generate full CRUD scaffold
 
-## Templates
+## Key Differences from Other ORMs
 
-The migration generator supports different templates:
+### CQL vs ActiveRecord/Eloquent
 
-- `basic` - Simple migration with basic structure
-- `table` - Table creation migration template
-- `add_column` - Add column migration template
-- `add_index` - Add index migration template
-- `foreign_key` - Foreign key migration template
+**Traditional ORMs:**
 
-To use a specific template:
-
-```bash
-azu generate migration CreatePosts --template table
+```ruby
+# ActiveRecord style
+class CreateUsers < ActiveRecord::Migration
+  def change
+    create_table :users do |t|
+      t.string :name
+      t.string :email
+      t.timestamps
+    end
+  end
+end
 ```
+
+**CQL Migrations:**
+
+```crystal
+# CQL Schema DSL style
+class CreateUsers < CQL::Migration(20240115103045_i64)
+  def up
+    schema.table :users do
+      primary :id, Int64
+      column :name, String
+      column :email, String
+      timestamps
+    end
+    schema.users.create!
+  end
+
+  def down
+    schema.users.drop!
+  end
+end
+```
+
+**Key Benefits:**
+
+- ✅ Type-safe at compile time
+- ✅ Automatic schema file synchronization
+- ✅ Int64 timestamp versions (no collisions)
+- ✅ Crystal's performance benefits
+- ✅ Explicit `up`/`down` methods (no magic `change`)
+
+## Additional Resources
+
+- **Migration System Guide**: [../../MIGRATION_FIXES_SUMMARY.md](../../MIGRATION_FIXES_SUMMARY.md)
+- **CQL Documentation**: [../integration/cql-orm.md](../integration/cql-orm.md)
+- **Database Commands**: [../commands/database.md](../commands/database.md)
+- **CQL GitHub**: https://github.com/azutoolkit/cql
+- **CQL Examples**: https://github.com/azutoolkit/cql/tree/master/examples/migrations

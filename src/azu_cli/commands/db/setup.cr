@@ -40,7 +40,7 @@ module AzuCLI
             return result unless result.success?
           end
 
-          # Run migrations
+          # Run migrations (schema file will be automatically updated by CQL Migrator)
           Logger.info("Running migrations...")
           migrate_cmd = Migrate.new
           migrate_cmd.database_name = @database_name

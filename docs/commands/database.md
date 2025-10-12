@@ -146,13 +146,23 @@ azu db reset --force
 
 ## azu db migrate
 
-Runs pending database migrations to update the database schema.
+Runs pending database migrations using CQL's built-in Migrator to update the database schema.
+
+**Key Features:**
+
+- Uses CQL's `Migrator` class for type-safe migrations
+- Automatically updates `src/db/schema.cr` after running migrations
+- Tracks migrations in `cql_schema_migrations` table
+- Generates temporary Crystal script for execution
 
 ### Basic Usage
 
 ```bash
 # Run all pending migrations
 azu db migrate
+
+# Run specific number of migrations
+azu db migrate --steps 2
 
 # Run with verbose output
 azu db migrate --verbose
@@ -164,36 +174,61 @@ azu db migrate --verbose
 | --------------------- | --------------------------- | ----------- |
 | `--env <environment>` | Target environment          | development |
 | `--version <version>` | Migrate to specific version | latest      |
+| `--steps <number>`    | Number of migrations to run | all         |
 | `--verbose`           | Show detailed output        | false       |
-| `--dry-run`           | Show what would be migrated | false       |
 
 ### Examples
 
 ```bash
 # Run all pending migrations
 azu db migrate
-# == 20231201000001 CreateUsers: migrating ========================
-# -- create_table(:users)
-#    -> 0.1234s
-# == 20231201000001 CreateUsers: migrated (0.1234s) ===============
+# Running migrations...
+# ✓ All migrations completed successfully
+# ✓ Schema file updated: src/db/schema.cr
 
-# Run to specific version
-azu db migrate --version 20231201000001
+# Run specific number of migrations
+azu db migrate --steps 2
 
-# Check migration status
-azu db status
+# Migrate to specific version
+azu db migrate --version 20240115103045
 
-# Output:
-# Status   Migration ID    Migration Name
-# ------------------------------------------------------------
-# up       20231201000001  CreateUsers
-# up       20231201000002  AddEmailToUsers
-# down     20231201000003  CreatePosts
+# View migration status with verbose output
+azu db migrate --verbose
+```
+
+### How It Works
+
+1. CLI generates a temporary Crystal script
+2. Script loads `src/db/schema.cr` and all migrations
+3. CQL Migrator runs pending migrations in order
+4. Schema file is automatically updated
+5. Pretty-printed status table shows results
+
+### Migration File Example
+
+```crystal
+require "cql"
+
+class CreateUsers < CQL::Migration(20240115103045_i64)
+  def up
+    schema.table :users do
+      primary :id, Int64
+      column :name, String
+      column :email, String
+      timestamps
+    end
+    schema.users.create!
+  end
+
+  def down
+    schema.users.drop!
+  end
+end
 ```
 
 ## azu db rollback
 
-Rolls back the last migration or a specified number of migrations.
+Rolls back database migrations using CQL's Migrator. Automatically updates the schema file after rollback.
 
 ### Basic Usage
 
@@ -203,28 +238,43 @@ azu db rollback
 
 # Rollback multiple migrations
 azu db rollback --steps 3
+
+# Rollback to specific version
+azu db rollback --version 20240115103045
 ```
 
 ### Options
 
-| Option             | Description                      | Default |
-| ------------------ | -------------------------------- | ------- |
-| `--steps <number>` | Number of migrations to rollback | 1       |
-| `--verbose`        | Show detailed output             | false   |
+| Option                | Description                      | Default |
+| --------------------- | -------------------------------- | ------- |
+| `--steps <number>`    | Number of migrations to rollback | 1       |
+| `--version <version>` | Rollback to specific version     | -       |
+| `--verbose`           | Show detailed output             | false   |
 
 ### Examples
 
 ```bash
 # Rollback last migration
 azu db rollback
-# == 20231201000002 AddEmailToUsers: reverting ===================
-# -- remove_column(:users, :email)
-#    -> 0.0456s
-# == 20231201000002 AddEmailToUsers: reverted (0.0456s) ==========
+# Rolling back 1 migration(s)...
+# ✓ Rollback completed successfully
+# ✓ Schema file updated: src/db/schema.cr
 
-# Rollback 3 migrations
+# Rollback last 3 migrations
 azu db rollback --steps 3
+
+# Rollback to specific version (all migrations after this version)
+azu db rollback --version 20240115103045
 ```
+
+### How It Works
+
+1. CLI generates a temporary Crystal script
+2. Script loads schema and all migration files
+3. CQL Migrator executes the `down` method for each migration
+4. Removes migration records from `cql_schema_migrations` table
+5. Schema file is automatically synchronized
+6. Temporary script is cleaned up
 
 ## azu db reset
 
@@ -313,31 +363,65 @@ puts "Created admin user: #{admin.email}"
 end
 ```
 
-## azu db new_migration
+## azu generate migration
 
-Creates a new migration file.
+Creates a new CQL migration file with proper Schema DSL syntax.
 
 ### Basic Usage
 
 ```bash
-# Create new migration
-azu db new_migration create_users_table
+# Generate a migration
+azu generate migration CreateUsers name:string email:string
 
-# Create migration with timestamp
-azu db new_migration add_email_to_users
+# Generate a simple migration
+azu generate migration AddIndexToUsers
 ```
 
 ### Examples
 
 ```bash
-# Create migration file
-azu db new_migration create_users_table
-# Created migration: src/db/migrations/20240115000000_create_users_table.cr
+# Generate migration with attributes
+azu generate migration CreateUsers name:string email:string age:int32
+# Created: src/db/migrations/20240115103045_create_users.cr
 
-# Migration content will include:
-# - up method for applying changes
-# - down method for rolling back changes
+# Generated content uses CQL Schema DSL:
+require "cql"
+
+class CreateUsers < CQL::Migration(20240115103045_i64)
+  def up
+    schema.table :users do
+      primary :id, Int64
+      column :name, String
+      column :email, String
+      column :age, Int32
+      timestamps
+    end
+    schema.users.create!
+
+    # Indexes automatically added if needed
+    schema.alter :users do
+      create_index :email_idx, [:email], unique: true
+    end
+  end
+
+  def down
+    schema.users.drop!
+  end
+end
 ```
+
+### Supported Attribute Types
+
+- `string`, `text` → `String`
+- `int32`, `integer` → `Int32`
+- `int64` → `Int64`
+- `float`, `float64` → `Float64`
+- `bool`, `boolean` → `Bool`
+- `datetime`, `time` → `Time`
+- `date` → `Date`
+- `json` → `JSON::Any`
+- `uuid` → `UUID`
+- `references`, `belongs_to` → Foreign key (Int64)
 
 ## azu db status
 

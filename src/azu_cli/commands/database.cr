@@ -2,6 +2,7 @@ require "./base"
 require "db"
 require "pg"
 require "uri"
+require "cql"
 
 module AzuCLI
   module Commands
@@ -178,6 +179,46 @@ module AzuCLI
         Logger.info("Adapter: #{@adapter}")
         Logger.info("Host: #{@host}:#{@port}")
         Logger.info("Environment: #{@environment}")
+      end
+
+      # Get schema file path
+      def schema_file_path : String
+        "./src/db/schema.cr"
+      end
+
+      # Map adapter string to CQL::Adapter enum
+      def map_adapter_to_cql
+        case @adapter
+        when "postgres", "postgresql"
+          CQL::Adapter::Postgres
+        when "mysql"
+          CQL::Adapter::MySql
+        when "sqlite", "sqlite3"
+          CQL::Adapter::SQLite
+        else
+          raise "Unsupported adapter: #{@adapter}"
+        end
+      end
+
+      # Dump current database schema to file
+      def dump_schema
+        return unless Dir.exists?("./src/db")
+
+        begin
+          Logger.debug("Updating schema file...")
+
+          cql_adapter = map_adapter_to_cql
+          connection_url = database_connection_url
+
+          dumper = CQL::SchemaDump.new(cql_adapter, connection_url)
+          dumper.dump_to_file(schema_file_path, :AppSchema, :app_schema)
+          dumper.close
+
+          Logger.info("✓ Schema file updated: #{schema_file_path}")
+        rescue ex
+          Logger.warn("Failed to dump schema: #{ex.message}")
+          # Don't fail the migration if schema dump fails
+        end
       end
     end
   end

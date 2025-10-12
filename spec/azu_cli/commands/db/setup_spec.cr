@@ -40,4 +40,25 @@ describe AzuCLI::Commands::DB::Setup do
       command.with_seed.should be_false
     end
   end
+
+  describe "schema dump integration" do
+    it "has dump_schema method available" do
+      command = AzuCLI::Commands::DB::Setup.new
+      # Test that method exists by calling it
+      command.dump_schema
+    end
+
+    it "has access to schema_file_path method" do
+      command = AzuCLI::Commands::DB::Setup.new
+      command.schema_file_path.should eq("./src/db/schema.cr")
+    end
+
+    it "can call dump_schema without raising errors" do
+      command = AzuCLI::Commands::DB::Setup.new
+      # Should not raise error even if db doesn't exist
+      expect_raises?(Exception) do
+        command.dump_schema
+      end.should be_nil
+    end
+  end
 end
