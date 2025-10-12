@@ -91,4 +91,3 @@ describe AzuCLI::OpenAPI::SpecBuilder do
     end
   end
 end
-

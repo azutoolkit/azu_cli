@@ -95,12 +95,12 @@ module AzuCLI
 
         if status.success?
           Logger.info("✅ Compilation successful! (#{duration.round(2)}s)")
-          return true
+          true
         else
           Logger.error("❌ Compilation failed!")
           puts ""
           puts error.to_s
-          return false
+          false
         end
       rescue ex
         Logger.error("Compilation error: #{ex.message}")
@@ -111,10 +111,10 @@ module AzuCLI
         stop_server if @server_process
 
         env = {
-          "PORT" => @port.to_s,
-          "HOST" => @host,
+          "PORT"        => @port.to_s,
+          "HOST"        => @host,
           "CRYSTAL_ENV" => @environment,
-          "AZU_ENV" => @environment,
+          "AZU_ENV"     => @environment,
         }
 
         @server_process = Process.new(
@@ -249,4 +249,3 @@ module AzuCLI
     end
   end
 end
-

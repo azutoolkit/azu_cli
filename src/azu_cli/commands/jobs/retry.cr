@@ -8,9 +8,16 @@ module AzuCLI
       class Retry < AzuCLI::Commands::Jobs::Base
         property all : Bool = false
         property limit : Int32?
+        property verbose : Bool = false
 
         def initialize
-          super("jobs:retry", "Retry failed jobs")
+          super("jobs:retry", "retry failed jobs")
+        end
+
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
         end
 
         def execute : Result
@@ -57,6 +64,8 @@ module AzuCLI
               @all = true
             when "--limit", "-l"
               @limit = args[index + 1]?.try(&.to_i) if index + 1 < args.size
+            when "--verbose", "-v"
+              @verbose = true
             when "--queue", "-q"
               @queue = args[index + 1]? || @queue if index + 1 < args.size
             end
@@ -66,4 +75,3 @@ module AzuCLI
     end
   end
 end
-

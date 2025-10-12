@@ -13,6 +13,12 @@ module AzuCLI
           super("db:rollback", "Rollback the last migration(s)")
         end
 
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
+        end
+
         def execute : Result
           parse_options
 
@@ -31,7 +37,7 @@ module AzuCLI
 
           if @version
             # Rollback to specific version
-            migrations_to_rollback = applied.select { |m| m > @version.not_nil! }.reverse
+            migrations_to_rollback = applied.select { |m| m > @version.not_nil! }.reverse!
           else
             # Rollback last N steps
             migrations_to_rollback = applied.last(@steps).reverse
@@ -108,4 +114,3 @@ module AzuCLI
     end
   end
 end
-

@@ -59,11 +59,11 @@ module AzuCLI
       # Create schema properties from a hash of field definitions
       def self.properties_to_schemas(properties : Hash(String, String)) : Hash(String, Schema)
         result = {} of String => Schema
-        
+
         properties.each do |name, type|
           result[name] = to_schema(type)
         end
-        
+
         result
       end
 
@@ -74,4 +74,3 @@ module AzuCLI
     end
   end
 end
-

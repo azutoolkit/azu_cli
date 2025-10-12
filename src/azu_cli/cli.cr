@@ -38,7 +38,7 @@ module AzuCLI
       # Development server command
       register_command("serve", Commands::Serve)
       register_command("server", Commands::Serve) # Alias
-      register_command("s", Commands::Serve) # Short alias
+      register_command("s", Commands::Serve)      # Short alias
 
       # Job queue commands
       register_command("jobs:worker", Commands::Jobs::Worker)

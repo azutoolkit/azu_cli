@@ -14,6 +14,12 @@ module AzuCLI
           super("db:migrate", "Run pending database migrations")
         end
 
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
+        end
+
         def execute : Result
           parse_options
 
@@ -67,30 +73,30 @@ module AzuCLI
 
         private def ensure_schema_migrations_table
           create_table_sql = case @adapter
-          when "postgres", "postgresql"
-            <<-SQL
+                             when "postgres", "postgresql"
+                               <<-SQL
               CREATE TABLE IF NOT EXISTS schema_migrations (
                 version VARCHAR(255) PRIMARY KEY,
                 migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
               )
             SQL
-          when "mysql"
-            <<-SQL
+                             when "mysql"
+                               <<-SQL
               CREATE TABLE IF NOT EXISTS schema_migrations (
                 version VARCHAR(255) PRIMARY KEY,
                 migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
               )
             SQL
-          when "sqlite", "sqlite3"
-            <<-SQL
+                             when "sqlite", "sqlite3"
+                               <<-SQL
               CREATE TABLE IF NOT EXISTS schema_migrations (
                 version TEXT PRIMARY KEY,
                 migrated_at DATETIME DEFAULT CURRENT_TIMESTAMP
               )
             SQL
-          else
-            raise "Unsupported adapter: #{@adapter}"
-          end
+                             else
+                               raise "Unsupported adapter: #{@adapter}"
+                             end
 
           execute_on_database(create_table_sql)
         rescue ex
@@ -102,8 +108,8 @@ module AzuCLI
 
           Dir.glob("#{migrations_dir}/*.cr")
             .map { |path| File.basename(path, ".cr") }
-            .select { |name| name.matches?(/^\d+_.*$/) }
-            .sort
+            .select(&.matches?(/^\d+_.*$/))
+            .sort!
         end
 
         private def get_pending_migrations(all_migrations : Array(String)) : Array(String)
@@ -154,4 +160,3 @@ module AzuCLI
     end
   end
 end
-

@@ -39,11 +39,10 @@ describe AzuCLI::Commands::Generate do
       result.success?.should be_true
       # Endpoints should be generated in ./src/endpoints directory
       Dir.exists?("./src/endpoints").should be_true
-      exit 1
-      # Should create subdirectory and files for each action
-      Dir.exists?("./src/endpoints/user").should be_true
-      File.exists?("./src/endpoints/user/user_index_endpoint.cr").should be_true
-      File.exists?("./src/endpoints/user/user_show_endpoint.cr").should be_true
+      # Should create subdirectory and files for each action (using plural form)
+      Dir.exists?("./src/endpoints/users").should be_true
+      File.exists?("./src/endpoints/users/user_index_endpoint.cr").should be_true
+      File.exists?("./src/endpoints/users/user_show_endpoint.cr").should be_true
     end
 
     it "generates job files in correct output directory" do
@@ -80,7 +79,7 @@ describe AzuCLI::Commands::Generate do
       Dir.exists?("./src/db/migrations").should be_true
 
       # Find the migration file (it has a timestamp prefix)
-      migration_files = Dir.entries("./src/db/migrations").select { |f| f.includes?("create_users") }
+      migration_files = Dir.entries("./src/db/migrations").select(&.includes?("create_users"))
       migration_files.size.should be > 0
     end
 
@@ -95,8 +94,6 @@ describe AzuCLI::Commands::Generate do
       File.exists?("./src/components/user_card.cr").should be_true
       Dir.exists?("./src/components").should be_true
     end
-
-
 
     it "generates response files in correct output directory" do
       command = AzuCLI::Commands::Generate.new
@@ -133,7 +130,7 @@ describe AzuCLI::Commands::Generate do
       # Pages should be generated in ./src/pages directory
       Dir.exists?("./src/pages").should be_true
       Dir.exists?("./src/pages/userprofiles").should be_true
-      File.exists?("./src/pages/userprofiles/page_response.cr").should be_true
+      File.exists?("./src/pages/userprofiles/index_page.cr").should be_true
     end
 
     it "generates template files in correct output directory" do
@@ -173,8 +170,8 @@ describe AzuCLI::Commands::Generate do
       # Endpoints
       Dir.exists?("./src/endpoints").should be_true
 
-      # Contracts (for web mode)
-      Dir.exists?("./src/contracts").should be_true
+      # Requests (for web mode) - generated in requests directory, not contracts
+      Dir.exists?("./src/requests").should be_true
 
       # Pages (for web mode)
       Dir.exists?("./src/pages").should be_true
@@ -195,8 +192,8 @@ describe AzuCLI::Commands::Generate do
       # Endpoints
       Dir.exists?("./src/endpoints").should be_true
 
-      # Contracts (for API mode)
-      Dir.exists?("./src/contracts").should be_true
+      # Requests (for API mode) - generated in requests directory, not contracts
+      Dir.exists?("./src/requests").should be_true
 
       # Responses (for API mode) - now generated in pages directory
       Dir.exists?("./src/pages").should be_true

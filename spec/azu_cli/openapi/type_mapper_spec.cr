@@ -112,4 +112,3 @@ describe AzuCLI::OpenAPI::TypeMapper do
     end
   end
 end
-

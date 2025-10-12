@@ -78,4 +78,3 @@ describe AzuCLI::OpenAPI::EndpointExtractor do
     end
   end
 end
-

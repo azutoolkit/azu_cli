@@ -36,7 +36,7 @@ module AzuCLI
 
       # Get the request/response types based on endpoint type
       def request_type : String
-        "#{@name.camelcase}Request"
+        @endpoint_type == "web" ? "#{@name.camelcase}Contract" : "#{@name.camelcase}Request"
       end
 
       def response_type : String
@@ -97,7 +97,7 @@ module AzuCLI
           components << "request"
           components << "response"
         else
-          components << "request"
+          components << "contract"
           components << "page"
         end
 
@@ -116,13 +116,13 @@ module AzuCLI
 
       # Override render to create one file per action
       def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
-        # Create the resource subdirectory
+        # Create the resource subdirectory (use plural form per memory)
         resource_dir = File.join(output_dir, @resource_plural)
         Dir.mkdir_p(resource_dir) unless Dir.exists?(resource_dir)
 
         @actions.each do |action|
-          # Create a temporary generator for this action
-          action_generator = ActionEndpoint.new(@name, action, @endpoint_type, @snake_case_name)
+          # Create a temporary generator for this action (use singular form for file naming)
+          action_generator = ActionEndpoint.new(@name, action, @endpoint_type, @resource_singular)
           action_generator.render(resource_dir, force: force, interactive: interactive, list: list, color: color)
         end
       end

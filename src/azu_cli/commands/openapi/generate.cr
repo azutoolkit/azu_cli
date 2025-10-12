@@ -16,6 +16,12 @@ module AzuCLI
           super("openapi:generate", "Generate code from OpenAPI specification")
         end
 
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_arguments
+        end
+
         def execute : Result
           parse_arguments
 
@@ -104,4 +110,3 @@ module AzuCLI
     end
   end
 end
-

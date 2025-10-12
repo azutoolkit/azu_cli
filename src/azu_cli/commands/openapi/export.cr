@@ -18,6 +18,12 @@ module AzuCLI
           super("openapi:export", "Export OpenAPI specification from code")
         end
 
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_arguments
+        end
+
         def execute : Result
           parse_arguments
 
@@ -47,11 +53,16 @@ module AzuCLI
         end
 
         private def parse_arguments
+          format_explicitly_set = false
+
           OptionParser.parse(get_args) do |parser|
             parser.banner = "Usage: azu openapi:export [options]"
 
             parser.on("--output PATH", "Output file path") { |path| @output_path = path }
-            parser.on("--format FORMAT", "Output format (yaml, json)") { |fmt| @format = fmt.downcase }
+            parser.on("--format FORMAT", "Output format (yaml, json)") { |fmt|
+              @format = fmt.downcase
+              format_explicitly_set = true
+            }
             parser.on("--project NAME", "Project name") { |name| @project_name = name }
             parser.on("--version VERSION", "API version") { |ver| @version = ver }
             parser.on("--help", "Show help") {
@@ -60,11 +71,13 @@ module AzuCLI
             }
           end
 
-          # Auto-detect format from file extension if not specified
-          if @output_path.ends_with?(".json")
-            @format = "json"
-          elsif @output_path.ends_with?(".yaml") || @output_path.ends_with?(".yml")
-            @format = "yaml"
+          # Auto-detect format from file extension only if not explicitly specified
+          unless format_explicitly_set
+            if @output_path.ends_with?(".json")
+              @format = "json"
+            elsif @output_path.ends_with?(".yaml") || @output_path.ends_with?(".yml")
+              @format = "yaml"
+            end
           end
         end
 
@@ -120,4 +133,3 @@ module AzuCLI
     end
   end
 end
-

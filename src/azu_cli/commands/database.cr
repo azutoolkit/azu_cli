@@ -119,7 +119,7 @@ module AzuCLI
       end
 
       # Query database and return results
-      protected def query_database(sql : String, db_name : String? = nil)
+      protected def query_database(sql : String, db_name : String? = nil, &)
         ::DB.open(database_connection_url(db_name)) do |db|
           db.query(sql) do |rs|
             yield rs
@@ -182,4 +182,3 @@ module AzuCLI
     end
   end
 end
-

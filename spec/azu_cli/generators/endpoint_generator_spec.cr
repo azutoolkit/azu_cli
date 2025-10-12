@@ -35,13 +35,13 @@ describe AzuCLI::Generate::Endpoint do
 
   it "generates correct paths for actions" do
     generator = AzuCLI::Generate::Endpoint.new("User", ["index"])
-          generator.action_path("index").should eq("/users")
-          generator.action_path("new").should eq("/users/new")
-      generator.action_path("create").should eq("/users")
-      generator.action_path("show").should eq("/users/:id")
-      generator.action_path("edit").should eq("/users/:id/edit")
-      generator.action_path("update").should eq("/users/:id")
-      generator.action_path("destroy").should eq("/users/:id")
+    generator.action_path("index").should eq("/users")
+    generator.action_path("new").should eq("/users/new")
+    generator.action_path("create").should eq("/users")
+    generator.action_path("show").should eq("/users/:id")
+    generator.action_path("edit").should eq("/users/:id/edit")
+    generator.action_path("update").should eq("/users/:id")
+    generator.action_path("destroy").should eq("/users/:id")
   end
 
   it "generates correct full paths" do

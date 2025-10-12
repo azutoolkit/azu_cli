@@ -14,8 +14,8 @@ module AzuCLI
           load_job_config
         end
 
-      # Load job configuration from environment
-      private def load_job_config
+        # Load job configuration from environment
+        private def load_job_config
           @redis_url = ENV["REDIS_URL"]? || ENV["JOOBQ_REDIS_URL"]? || @redis_url
           @queue = ENV["JOOBQ_QUEUE"]? || @queue
         end
@@ -34,4 +34,3 @@ module AzuCLI
     end
   end
 end
-

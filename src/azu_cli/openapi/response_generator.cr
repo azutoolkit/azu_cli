@@ -94,4 +94,3 @@ module AzuCLI
     end
   end
 end
-

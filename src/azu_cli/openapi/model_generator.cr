@@ -46,7 +46,7 @@ module AzuCLI
         property_defs = properties.map do |prop_name, prop_schema|
           crystal_type = SchemaMapper.to_crystal_type(prop_schema)
           is_required = required_fields.includes?(prop_name)
-          
+
           # Make non-required fields nullable
           unless is_required
             crystal_type = "#{crystal_type}?" unless crystal_type.ends_with?("?")
@@ -100,4 +100,3 @@ module AzuCLI
     end
   end
 end
-

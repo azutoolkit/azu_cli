@@ -145,4 +145,3 @@ describe AzuCLI::OpenAPI::Parser do
     end
   end
 end
-

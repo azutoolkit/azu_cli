@@ -19,6 +19,7 @@ cd blog_api
 ```
 
 This creates an API-only project with:
+
 - OpenAPI configuration
 - Health check endpoint
 - CORS middleware
@@ -144,23 +145,23 @@ require "cql"
 
 struct User < CQL::Record(Int64)
   include CQL::Timestamps
-  
+
   property name : String
   property email : String
   property password_hash : String
   property bio : String?
   property avatar_url : String?
-  
+
   timestamps
-  
+
   # Relations
   has_many :posts, Post, foreign_key: :author_id
   has_many :comments, Comment, foreign_key: :author_id
-  
+
   # Validations
   validates :email, presence: true, format: /\A[^@\s]+@[^@\s]+\z/
   validates :name, presence: true, length: {minimum: 2, maximum: 100}
-  
+
   # Methods
   def posts_count : Int64
     Post.where(author_id: id).count
@@ -177,7 +178,7 @@ require "cql"
 
 struct Post < CQL::Record(Int64)
   include CQL::Timestamps
-  
+
   property title : String
   property slug : String
   property content : String
@@ -186,25 +187,25 @@ struct Post < CQL::Record(Int64)
   property published_at : Time?
   property author_id : Int64
   property view_count : Int32
-  
+
   timestamps
-  
+
   # Relations
   belongs_to :author, User, foreign_key: :author_id
   has_many :comments, Comment, foreign_key: :post_id
-  
+
   # Scopes
   scope :published, -> { where(published: true) }
   scope :recent, -> { order_by(published_at: :desc) }
-  
+
   # Before callbacks
   before_save :generate_slug
   before_save :set_published_at
-  
+
   private def generate_slug
     self.slug = title.downcase.gsub(/[^a-z0-9]+/, "-") if slug.empty?
   end
-  
+
   private def set_published_at
     self.published_at = Time.utc if published && published_at.nil?
   end
@@ -220,18 +221,18 @@ require "cql"
 
 struct Comment < CQL::Record(Int64)
   include CQL::Timestamps
-  
+
   property body : String
   property author_id : Int64
   property post_id : Int64
   property approved : Bool
-  
+
   timestamps
-  
+
   # Relations
   belongs_to :author, User, foreign_key: :author_id
   belongs_to :post, Post, foreign_key: :post_id
-  
+
   # Scopes
   scope :approved, -> { where(approved: true) }
 end
@@ -244,35 +245,35 @@ Edit `src/endpoints/posts/posts_index_endpoint.cr`:
 ```crystal
 struct Posts::PostsIndexEndpoint
   include Azu::Endpoint(Posts::PostsIndexRequest, Posts::PostsIndexPage)
-  
+
   get "/posts"
-  
+
   def call : Posts::PostsIndexPage
     # Pagination
     page = request.page || 1
     per_page = [request.per_page || 25, 100].min
-    
+
     # Build query
     query = Post.query
-    
+
     # Filter by published status
     query = query.where(published: true) if request.published_only
-    
+
     # Filter by author
     query = query.where(author_id: request.author_id) if request.author_id
-    
+
     # Search
     if search = request.search
       query = query.where("title LIKE ? OR content LIKE ?", "%#{search}%", "%#{search}%")
     end
-    
+
     # Order
     query = query.order_by(created_at: :desc)
-    
+
     # Execute with pagination
     posts = query.limit(per_page).offset((page - 1) * per_page).to_a
     total = query.count
-    
+
     Posts::PostsIndexPage.new(
       posts: posts,
       page: page,
@@ -295,7 +296,7 @@ struct Posts::PostsIndexRequest < Azu::Request
   property published_only : Bool?
   property author_id : Int64?
   property search : String?
-  
+
   # Validation
   validates :page, numericality: {greater_than: 0}, allow_nil: true
   validates :per_page, numericality: {greater_than: 0, less_than_or_equal_to: 100}, allow_nil: true
@@ -311,22 +312,22 @@ require "json"
 
 struct Posts::PostsIndexPage < Azu::Page
   include JSON::Serializable
-  
+
   property data : Array(PostSummary)
   property meta : Metadata
-  
+
   def initialize(posts : Array(Post), page : Int32, per_page : Int32, total : Int64, total_pages : Int32)
     @data = posts.map { |p| PostSummary.from_post(p) }
     @meta = Metadata.new(page, per_page, total, total_pages)
   end
-  
+
   def render : String
     to_json
   end
-  
+
   struct PostSummary
     include JSON::Serializable
-    
+
     property id : Int64
     property title : String
     property slug : String
@@ -336,7 +337,7 @@ struct Posts::PostsIndexPage < Azu::Page
     property author : AuthorInfo
     property view_count : Int32
     property created_at : Time
-    
+
     def self.from_post(post : Post) : PostSummary
       author = User.find(post.author_id)
       new(
@@ -352,26 +353,26 @@ struct Posts::PostsIndexPage < Azu::Page
       )
     end
   end
-  
+
   struct AuthorInfo
     include JSON::Serializable
-    
+
     property id : Int64
     property name : String
     property avatar_url : String?
-    
+
     def initialize(@id, @name, @avatar_url)
     end
   end
-  
+
   struct Metadata
     include JSON::Serializable
-    
+
     property page : Int32
     property per_page : Int32
     property total : Int64
     property total_pages : Int32
-    
+
     def initialize(@page, @per_page, @total, @total_pages)
     end
   end
@@ -389,14 +390,14 @@ Add authentication to endpoints:
 ```crystal
 struct Posts::PostsCreateEndpoint
   include Azu::Endpoint(Posts::PostsCreateRequest, Posts::PostsCreatePage)
-  
+
   post "/posts"
   authenticate! # Requires authentication
-  
+
   def call : Posts::PostsCreatePage
     # Get current user from JWT token
     author_id = current_user.id
-    
+
     post = Post.create(
       title: request.title,
       content: request.content,
@@ -406,7 +407,7 @@ struct Posts::PostsCreateEndpoint
       author_id: author_id,
       view_count: 0
     )
-    
+
     Posts::PostsCreatePage.new(post: post)
   end
 end
@@ -437,7 +438,7 @@ paths:
       tags:
         - Health
       responses:
-        '200':
+        "200":
           description: Successful response
   /posts:
     get:
@@ -455,7 +456,7 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Successful response
 components:
   schemas:
@@ -491,6 +492,7 @@ curl http://localhost:3000/health
 ```
 
 Response:
+
 ```json
 {
   "status": "ok",
@@ -530,4 +532,3 @@ curl http://localhost:3000/posts/1
 - [API Resource Generator](../generators/api-resource.md)
 - [New Command](../commands/new.md)
 - [Authentication Guide](../integration/authentication.md)
-

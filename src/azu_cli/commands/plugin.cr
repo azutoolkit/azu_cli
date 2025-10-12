@@ -5,7 +5,7 @@ module AzuCLI
     # Plugin command for plugin management
     class Plugin < Base
       def initialize
-        super("plugin", "Plugin management")
+        super("plugin", "Plugin management for Azu CLI plugins")
       end
 
       def execute : Result

@@ -39,7 +39,7 @@ module AzuCLI
         private def get_queues(redis : Redis) : Array(String)
           # Get all JoobQ queues from Redis
           keys = redis.keys("joobq:queue:*")
-          keys.as(Array).map { |k| k.to_s.split(":").last }.uniq
+          keys.as(Array).map(&.to_s.split(":").last).uniq!
         rescue
           [@queue]
         end
@@ -73,4 +73,3 @@ module AzuCLI
     end
   end
 end
-

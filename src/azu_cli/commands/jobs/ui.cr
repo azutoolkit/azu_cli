@@ -12,6 +12,12 @@ module AzuCLI
           super("jobs:ui", "Start JoobQUI web interface")
         end
 
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
+        end
+
         def execute : Result
           parse_options
 
@@ -60,7 +66,7 @@ module AzuCLI
           puts ""
 
           env = {
-            "REDIS_URL" => @redis_url,
+            "REDIS_URL"    => @redis_url,
             "JOOBQUI_PORT" => @port.to_s,
             "JOOBQUI_HOST" => @host,
           }
@@ -87,4 +93,3 @@ module AzuCLI
     end
   end
 end
-

@@ -2,13 +2,13 @@ require "cql"
 
 class Create<%= name.pluralize %> < CQL::Migration(<%= timestamp %>)
   def up
-    schema.table :<%= table_name %> do
+    create_table :<%= table_name %> do |t|
 <% attributes.each do |field, type| -%>
 <% next if type.downcase == "references" || type.downcase == "belongs_to" -%>
-      <%= migration_field_type(type) %> :<%= field %><%= migration_field_options(type, field) %>
+      t.<%= migration_field_type(type) %> :<%= field %><%= migration_field_options(type, field) %>
 <% end -%>
 <% if timestamps -%>
-      timestamps
+      t.timestamps
 <% end -%>
     end
 

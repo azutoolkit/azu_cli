@@ -13,6 +13,12 @@ module AzuCLI
           super("jobs:worker", "Start job workers to process queued jobs")
         end
 
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
+        end
+
         def execute : Result
           parse_options
 
@@ -53,8 +59,8 @@ module AzuCLI
 
           # Set environment variables for worker
           env = {
-            "REDIS_URL" => @redis_url,
-            "JOOBQ_QUEUES" => @queues.join(","),
+            "REDIS_URL"     => @redis_url,
+            "JOOBQ_QUEUES"  => @queues.join(","),
             "JOOBQ_WORKERS" => @workers.to_s,
           }
 
@@ -79,4 +85,3 @@ module AzuCLI
     end
   end
 end
-

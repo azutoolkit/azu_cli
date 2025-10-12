@@ -47,7 +47,7 @@ module AzuCLI
       private def extract_action_from_operation(op_info : Parser::OperationInfo) : String
         # Try to extract from operation ID or path
         operation_id = op_info.operation_id.underscore
-        
+
         # Common patterns
         if operation_id.includes?("get") && op_info.path.includes?("{")
           "show"
@@ -93,4 +93,3 @@ module AzuCLI
     end
   end
 end
-

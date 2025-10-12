@@ -173,4 +173,3 @@ describe AzuCLI::OpenAPI::SchemaMapper do
     end
   end
 end
-

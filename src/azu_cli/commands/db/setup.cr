@@ -11,7 +11,13 @@ module AzuCLI
         property with_seed : Bool = false
 
         def initialize
-          super("db:setup", "Create the database, load the schema, and seed data")
+          super("db:setup", "setup database (create, migrate, seed)")
+        end
+
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
         end
 
         def execute : Result
@@ -23,15 +29,15 @@ module AzuCLI
           show_database_info
 
           # Create database if it doesn't exist
-          unless database_exists?(db_name)
+          if database_exists?(db_name)
+            Logger.info("Database already exists")
+          else
             Logger.info("Creating database...")
             create_cmd = Create.new
             create_cmd.database_name = @database_name
             create_cmd.environment = @environment
             result = create_cmd.execute
             return result unless result.success?
-          else
-            Logger.info("Database already exists")
           end
 
           # Run migrations
@@ -75,4 +81,3 @@ module AzuCLI
     end
   end
 end
-

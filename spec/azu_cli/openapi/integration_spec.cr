@@ -168,4 +168,3 @@ describe "OpenAPI Integration" do
     end
   end
 end
-

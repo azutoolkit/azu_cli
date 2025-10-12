@@ -19,24 +19,24 @@ module AzuCLI
       # Generate all code from OpenAPI spec
       def generate_all
         Logger.info("Generating code from OpenAPI specification...")
-        
+
         # Generate models from schemas
         generate_models
-        
+
         # Generate endpoints from paths
         generate_endpoints
-        
+
         Logger.success("✓ Code generation completed successfully")
       end
 
       # Generate models from component schemas
       def generate_models
         schemas = @parser.schemas
-        
+
         return if schemas.empty?
-        
+
         Logger.info("Generating #{schemas.size} model(s)...")
-        
+
         schemas.each do |name, schema|
           generator = ModelGenerator.new(name, schema, @parser)
           generator.generate(@force)
@@ -46,16 +46,16 @@ module AzuCLI
       # Generate endpoints from paths
       def generate_endpoints
         operations = @parser.operations
-        
+
         return if operations.empty?
-        
+
         Logger.info("Generating #{operations.size} endpoint(s)...")
-        
+
         # Group operations by resource
         operations_by_resource = operations.group_by do |op|
           extract_resource_name(op.path)
         end
-        
+
         operations_by_resource.each do |resource, resource_operations|
           generator = EndpointGenerator.new(resource, resource_operations, @parser)
           generator.generate(@force)
@@ -68,13 +68,12 @@ module AzuCLI
         # /users/{id} -> users
         # /api/v1/posts -> posts
         parts = path.split("/").reject(&.empty?)
-        
+
         # Skip common prefixes like "api", "v1", "v2", etc.
         resource = parts.find { |p| !p.match(/^(api|v\d+)$/) && !p.starts_with?("{") }
-        
+
         resource || "default"
       end
     end
   end
 end
-

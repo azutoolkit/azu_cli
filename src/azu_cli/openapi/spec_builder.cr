@@ -105,7 +105,7 @@ module AzuCLI
 
       # Build tags from endpoints
       private def build_tags(endpoints : Array(EndpointExtractor::EndpointInfo)) : Array(Tag)
-        tag_names = endpoints.map { |e| extract_tag(e.path) }.uniq
+        tag_names = endpoints.map { |e| extract_tag(e.path) }.uniq!
 
         tag_names.map do |name|
           Tag.new(name, "#{name} operations")
@@ -182,4 +182,3 @@ module AzuCLI
     end
   end
 end
-

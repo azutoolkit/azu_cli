@@ -18,13 +18,13 @@ module AzuCLI
       # Analyze the project and extract all information
       def analyze
         Logger.info("Analyzing project structure...")
-        
+
         endpoints = @endpoint_extractor.extract
         models = @model_extractor.extract
-        
+
         Logger.info("Found #{endpoints.size} endpoint(s)")
         Logger.info("Found #{models.size} model(s)")
-        
+
         {endpoints: endpoints, models: models}
       end
 
@@ -40,4 +40,3 @@ module AzuCLI
     end
   end
 end
-

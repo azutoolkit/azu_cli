@@ -31,7 +31,7 @@ module AzuCLI
 
       # Get the request/response types based on endpoint type
       def request_type : String
-        "#{name_action}Request"
+        @endpoint_type == "web" ? "#{name_action}Contract" : "#{name_action}Request"
       end
 
       def response_type : String

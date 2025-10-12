@@ -26,6 +26,12 @@ module AzuCLI
         super("new", "Create a new Azu project")
       end
 
+      # Override parse_args to also trigger custom parsing
+      def parse_args(args : Array(String))
+        super(args)
+        parse_arguments
+      end
+
       def execute : Result
         parse_arguments
 
@@ -191,7 +197,7 @@ module AzuCLI
       private def prompt_choice(question : String, choices : Array(String), default : String) : String
         puts
         Logger.prompt("#{question}:")
-        choices.each_with_index do |choice, index|
+        choices.each_with_index do |choice, _|
           marker = choice == default ? "●" : "○"
           puts "  #{marker} #{choice}"
         end
@@ -202,7 +208,7 @@ module AzuCLI
         return default if response.nil? || response.strip.empty?
 
         selected = response.strip.downcase
-        choice = choices.find { |c| c.downcase.starts_with?(selected) }
+        choice = choices.find(&.downcase.starts_with?(selected))
         choice || default
       end
 

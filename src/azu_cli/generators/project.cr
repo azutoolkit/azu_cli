@@ -245,9 +245,9 @@ module AzuCLI
           # Skip JoobQ-related files if not included
           if !has_joobq?
             next true if path.ends_with?("jobs.yml.ecr") ||
-                        path.ends_with?("joobq.cr.ecr") ||
-                        path.ends_with?("worker.cr.ecr") ||
-                        path.ends_with?(".gitkeep.ecr")
+                         path.ends_with?("joobq.cr.ecr") ||
+                         path.ends_with?("worker.cr.ecr") ||
+                         path.ends_with?(".gitkeep.ecr")
           end
 
           # Skip web-specific files for API projects

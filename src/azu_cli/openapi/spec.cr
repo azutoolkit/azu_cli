@@ -246,7 +246,7 @@ module AzuCLI
       property type : String # "apiKey", "http", "oauth2", "openIdConnect"
       property description : String?
       property name : String?
-      property in : String? # "query", "header", "cookie"
+      property in : String?     # "query", "header", "cookie"
       property scheme : String? # "bearer", "basic"
       property bearerFormat : String?
     end
@@ -263,4 +263,3 @@ module AzuCLI
     end
   end
 end
-

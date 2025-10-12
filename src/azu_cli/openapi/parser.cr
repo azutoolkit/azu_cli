@@ -16,7 +16,7 @@ module AzuCLI
       # Parse OpenAPI spec from file (YAML or JSON)
       private def parse_file(path : String) : Spec
         content = File.read(path)
-        
+
         if path.ends_with?(".json")
           Spec.from_json(content)
         elsif path.ends_with?(".yaml") || path.ends_with?(".yml")
@@ -46,20 +46,20 @@ module AzuCLI
       # Get all operations from all paths
       def operations : Array(OperationInfo)
         ops = [] of OperationInfo
-        
+
         paths.each do |path, path_item|
           {"get", "post", "put", "patch", "delete", "options", "head", "trace"}.each do |method|
             operation = case method
-                       when "get" then path_item.get
-                       when "post" then path_item.post
-                       when "put" then path_item.put
-                       when "patch" then path_item.patch
-                       when "delete" then path_item.delete
-                       when "options" then path_item.options
-                       when "head" then path_item.head
-                       when "trace" then path_item.trace
-                       end
-            
+                        when "get"     then path_item.get
+                        when "post"    then path_item.post
+                        when "put"     then path_item.put
+                        when "patch"   then path_item.patch
+                        when "delete"  then path_item.delete
+                        when "options" then path_item.options
+                        when "head"    then path_item.head
+                        when "trace"   then path_item.trace
+                        end
+
             if operation
               ops << OperationInfo.new(
                 path: path,
@@ -70,7 +70,7 @@ module AzuCLI
             end
           end
         end
-        
+
         ops
       end
 
@@ -79,7 +79,7 @@ module AzuCLI
         # $ref format: #/components/schemas/SchemaName
         parts = ref.split("/")
         return nil unless parts.size == 4 && parts[0] == "#" && parts[1] == "components" && parts[2] == "schemas"
-        
+
         schema_name = parts[3]
         schemas[schema_name]?
       end
@@ -89,7 +89,7 @@ module AzuCLI
         # Convert /users/{id} to getUsersById
         parts = path.split("/").reject(&.empty?)
         action = method.downcase
-        
+
         resource = parts.map do |part|
           if part.starts_with?("{") && part.ends_with?("}")
             "By" + part[1..-2].camelcase
@@ -97,7 +97,7 @@ module AzuCLI
             part.camelcase
           end
         end.join
-        
+
         action + resource
       end
 
@@ -114,4 +114,3 @@ module AzuCLI
     end
   end
 end
-

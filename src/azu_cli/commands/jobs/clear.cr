@@ -11,7 +11,13 @@ module AzuCLI
         property force : Bool = false
 
         def initialize
-          super("jobs:clear", "Clear job queues")
+          super("jobs:clear", "clear job queues")
+        end
+
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
         end
 
         def execute : Result
@@ -99,4 +105,3 @@ module AzuCLI
     end
   end
 end
-

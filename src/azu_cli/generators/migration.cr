@@ -12,21 +12,28 @@ module AzuCLI
       property timestamps : Bool
       property snake_case_name : String
       property timestamp : String
+      property table_name : String
 
       def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true)
-        @snake_case_name = @name.underscore
+        @snake_case_name = to_snake_case(@name)
         @timestamp = generate_timestamp
+        @table_name = @snake_case_name.singularize.pluralize
       end
 
       # Convert name to snake_case for file naming
       def snake_case_name : String
-        @name.singularize.underscore
+        # Convert to snake_case first, then singularize to avoid singularize lowercasing issues
+        to_snake_case(@name).singularize
       end
 
-      # Convert name to plural form for table naming
-      def table_name : String
-        snake_case_name.pluralize
+      # Convert a string to snake_case
+      private def to_snake_case(str : String) : String
+        str.gsub(/([A-Z\d]+)([A-Z][a-z])/) { "#{$1}_#{$2}" }
+           .gsub(/([a-z\d])([A-Z])/) { "#{$1}_#{$2}" }
+           .tr("-", "_")
+           .downcase
       end
+
 
       # Generate timestamp for migration filename
       private def generate_timestamp : String

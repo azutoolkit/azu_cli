@@ -9,7 +9,14 @@ module AzuCLI
           super("db:status", "Show migration status")
         end
 
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
+        end
+
         def execute : Result
+          parse_options
           db_name = @database_name || infer_database_name
 
           unless database_exists?(db_name)
@@ -46,13 +53,25 @@ module AzuCLI
           success("Status displayed")
         end
 
+        private def parse_options
+          args = get_args
+          args.each_with_index do |arg, index|
+            case arg
+            when "--env", "-e"
+              if env = args[index + 1]?
+                @environment = env
+              end
+            end
+          end
+        end
+
         private def load_migrations : Array(String)
           return [] of String unless Dir.exists?(migrations_dir)
 
           Dir.glob("#{migrations_dir}/*.cr")
             .map { |path| File.basename(path, ".cr") }
-            .select { |name| name.matches?(/^\d+_.*$/) }
-            .sort
+            .select(&.matches?(/^\d+_.*$/))
+            .sort!
         end
 
         private def get_applied_migrations : Array(String)
@@ -70,4 +89,3 @@ module AzuCLI
     end
   end
 end
-

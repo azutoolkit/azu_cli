@@ -9,7 +9,13 @@ module AzuCLI
         property verbose : Bool = false
 
         def initialize
-          super("db:seed", "Seed the database with initial data")
+          super("db:seed", "seed the database with initial data")
+        end
+
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
         end
 
         def execute : Result
@@ -83,4 +89,3 @@ module AzuCLI
     end
   end
 end
-

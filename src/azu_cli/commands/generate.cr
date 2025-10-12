@@ -39,7 +39,7 @@ module AzuCLI
         @generator_type = get_arg(0) || ""
 
         if generators_without_name.includes?(@generator_type.downcase)
-          @generator_name = "Auth"  # Default name for auth
+          @generator_name = "Auth" # Default name for auth
         else
           # Validate required arguments for other generators
           unless validate_required_args(2)
@@ -218,8 +218,11 @@ module AzuCLI
 
       def project_name
         # get name from shard.yml
+        return "app" unless File.exists?("./shard.yml")
         shard_yml = YAML.parse(File.read("./shard.yml"))
         shard_yml["name"].as_s
+      rescue
+        "app"
       end
 
       private def generate_page : Result
@@ -352,13 +355,11 @@ module AzuCLI
         success("Generated validator #{@generator_name} successfully")
       end
 
-
-
       private def generate_response : Result
         Logger.info("Generating response")
 
         from_type = @options["from"]?
-        project_type = "api"  # Always generate API-style responses for the response command
+        project_type = "api" # Always generate API-style responses for the response command
 
         generator = AzuCLI::Generate::Page.new(
           name: @generator_name,
@@ -533,8 +534,6 @@ module AzuCLI
           components_generated << "response"
         end
 
-
-
         # Generate Pages (Web mode)
         unless should_skip_component?("page") || @api_only
           Logger.info("🔨 Generating pages...")
@@ -573,23 +572,21 @@ module AzuCLI
 
       # Render a generator to its appropriate output directory
       private def render_generator(generator : Teeplate::FileTree, output_dir : String)
-        begin
-          # Ensure the output directory exists
-          Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
+        # Ensure the output directory exists
+        Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
 
-          # Determine the actual output path
-          target_path = File.expand_path(output_dir, Dir.current)
+        # Determine the actual output path
+        target_path = File.expand_path(output_dir, Dir.current)
 
-          Logger.info("Generating files in: #{target_path}")
+        Logger.info("Generating files in: #{target_path}")
 
-          # Render the generator
-          generator.render(target_path, force: @force, interactive: false, list: false, color: true)
+        # Render the generator
+        generator.render(target_path, force: @force, interactive: false, list: false, color: true)
 
-          Logger.info("✅ Generated #{@generator_type} successfully")
-        rescue ex : Exception
-          Logger.error("Failed to generate #{@generator_type}: #{ex.message}")
-          raise ex
-        end
+        Logger.info("✅ Generated #{@generator_type} successfully")
+      rescue ex : Exception
+        Logger.error("Failed to generate #{@generator_type}: #{ex.message}")
+        raise ex
       end
 
       def show_help

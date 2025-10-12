@@ -13,7 +13,13 @@ module AzuCLI
         property with_seed : Bool = true
 
         def initialize
-          super("db:reset", "Drop, create, and migrate the database")
+          super("db:reset", "reset database (drop, create, migrate)")
+        end
+
+        # Override parse_args to also trigger custom parsing
+        def parse_args(args : Array(String))
+          super(args)
+          parse_options
         end
 
         def execute : Result
@@ -94,4 +100,3 @@ module AzuCLI
     end
   end
 end
-

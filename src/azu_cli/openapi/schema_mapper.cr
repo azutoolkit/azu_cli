@@ -16,21 +16,21 @@ module AzuCLI
         nullable = schema.nullable || false
 
         crystal_type = case type
-                      when "string"
-                        map_string_type(format)
-                      when "integer"
-                        map_integer_type(format)
-                      when "number"
-                        map_number_type(format)
-                      when "boolean"
-                        "Bool"
-                      when "array"
-                        map_array_type(schema)
-                      when "object"
-                        map_object_type(schema)
-                      else
-                        "String" # Default to String for unknown types
-                      end
+                       when "string"
+                         map_string_type(format)
+                       when "integer"
+                         map_integer_type(format)
+                       when "number"
+                         map_number_type(format)
+                       when "boolean"
+                         "Bool"
+                       when "array"
+                         map_array_type(schema)
+                       when "object"
+                         map_object_type(schema)
+                       else
+                         "String" # Default to String for unknown types
+                       end
 
         nullable ? "#{crystal_type}?" : crystal_type
       end
@@ -182,4 +182,3 @@ module AzuCLI
     end
   end
 end
-

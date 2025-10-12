@@ -193,4 +193,3 @@ describe AzuCLI::ProjectDetector do
     end
   end
 end
-

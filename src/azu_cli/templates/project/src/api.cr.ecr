@@ -10,13 +10,13 @@ class CORSMiddleware
     context.response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     context.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
     context.response.headers["Access-Control-Max-Age"] = "3600"
-    
+
     # Handle preflight requests
     if context.request.method == "OPTIONS"
       context.response.status = HTTP::Status::NO_CONTENT
       return context
     end
-    
+
     call_next(context)
   end
 end

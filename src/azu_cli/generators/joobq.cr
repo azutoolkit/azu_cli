@@ -18,7 +18,7 @@ module AzuCLI
         @redis_url : String = "redis://localhost:6379",
         @default_queue : String = "default",
         @workers : Int32 = 3,
-        @create_example_job : Bool = true
+        @create_example_job : Bool = true,
       )
       end
 
@@ -49,4 +49,3 @@ module AzuCLI
     end
   end
 end
-

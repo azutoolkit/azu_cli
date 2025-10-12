@@ -32,6 +32,7 @@ azu generate api_resource Post title:string content:text published:bool
 ```
 
 Generates:
+
 - `src/models/post.cr` - CQL model with attributes
 - `src/migrations/TIMESTAMP_create_posts.cr` - Database migration
 - `src/endpoints/posts/*_endpoint.cr` - REST endpoints (index, show, create, update, destroy)
@@ -73,11 +74,11 @@ require "cql"
 
 struct Post < CQL::Record(Int64)
   include CQL::Timestamps
-  
+
   property title : String
   property content : String
   property published : Bool
-  
+
   timestamps
 end
 ```
@@ -97,7 +98,7 @@ class CreatePosts < CQL::Migration
       timestamps
     end
   end
-  
+
   def down
     schema.drop :posts
   end
@@ -109,12 +110,13 @@ end
 Generated in `src/endpoints/<plural>/<name>_<action>_endpoint.cr`:
 
 **Index** (GET /posts):
+
 ```crystal
 struct Posts::PostsIndexEndpoint
   include Azu::Endpoint(Posts::PostsIndexRequest, Posts::PostsIndexPage)
-  
+
   get "/posts"
-  
+
   def call : Posts::PostsIndexPage
     posts = Post.all
     Posts::PostsIndexPage.new(posts: posts)
@@ -123,12 +125,13 @@ end
 ```
 
 **Show** (GET /posts/:id):
+
 ```crystal
 struct Posts::PostsShowEndpoint
   include Azu::Endpoint(Posts::PostsShowRequest, Posts::PostsShowPage)
-  
+
   get "/posts/:id"
-  
+
   def call : Posts::PostsShowPage
     post = Post.find(request.id)
     Posts::PostsShowPage.new(post: post)
@@ -137,12 +140,13 @@ end
 ```
 
 **Create** (POST /posts):
+
 ```crystal
 struct Posts::PostsCreateEndpoint
   include Azu::Endpoint(Posts::PostsCreateRequest, Posts::PostsCreatePage)
-  
+
   post "/posts"
-  
+
   def call : Posts::PostsCreatePage
     post = Post.create(
       title: request.title,
@@ -155,12 +159,13 @@ end
 ```
 
 **Update** (PATCH /posts/:id):
+
 ```crystal
 struct Posts::PostsUpdateEndpoint
   include Azu::Endpoint(Posts::PostsUpdateRequest, Posts::PostsUpdatePage)
-  
+
   patch "/posts/:id"
-  
+
   def call : Posts::PostsUpdatePage
     post = Post.find(request.id)
     post.update(
@@ -174,12 +179,13 @@ end
 ```
 
 **Destroy** (DELETE /posts/:id):
+
 ```crystal
 struct Posts::PostsDestroyEndpoint
   include Azu::Endpoint(Posts::PostsDestroyRequest, Posts::PostsDestroyPage)
-  
+
   delete "/posts/:id"
-  
+
   def call : Posts::PostsDestroyPage
     post = Post.find(request.id)
     post.destroy
@@ -209,9 +215,9 @@ require "json"
 
 struct Posts::PostsIndexPage < Azu::Page
   include JSON::Serializable
-  
+
   property posts : Array(Post)
-  
+
   def render : String
     to_json
   end
@@ -220,16 +226,16 @@ end
 
 ## Supported Attribute Types
 
-| Type | Description | Database Type |
-|------|-------------|---------------|
-| `string` | String values | VARCHAR/TEXT |
-| `text` | Long text | TEXT |
-| `int32` | 32-bit integer | INTEGER |
-| `int64` | 64-bit integer | BIGINT |
-| `float32` | 32-bit float | REAL |
-| `float64` | 64-bit float | DOUBLE PRECISION |
-| `bool` | Boolean | BOOLEAN |
-| `time` | Timestamp | TIMESTAMP |
+| Type      | Description    | Database Type    |
+| --------- | -------------- | ---------------- |
+| `string`  | String values  | VARCHAR/TEXT     |
+| `text`    | Long text      | TEXT             |
+| `int32`   | 32-bit integer | INTEGER          |
+| `int64`   | 64-bit integer | BIGINT           |
+| `float32` | 32-bit float   | REAL             |
+| `float64` | 64-bit float   | DOUBLE PRECISION |
+| `bool`    | Boolean        | BOOLEAN          |
+| `time`    | Timestamp      | TIMESTAMP        |
 
 ## Best Practices
 
@@ -265,12 +271,14 @@ end
 The `api_resource` generator is optimized for API-only projects:
 
 **API Resource:**
+
 - Generates JSON responses
 - Skips Jinja templates
 - Skips page views
 - Focuses on REST endpoints
 
 **Scaffold (Web):**
+
 - Generates HTML pages
 - Includes Jinja templates
 - Includes forms
@@ -311,16 +319,16 @@ Implement pagination in index endpoints:
 ```crystal
 struct Posts::PostsIndexEndpoint
   include Azu::Endpoint(Posts::PostsIndexRequest, Posts::PostsIndexPage)
-  
+
   get "/posts"
-  
+
   def call : Posts::PostsIndexPage
     page = request.page || 1
     per_page = request.per_page || 25
-    
+
     posts = Post.all.limit(per_page).offset((page - 1) * per_page)
     total = Post.count
-    
+
     Posts::PostsIndexPage.new(
       posts: posts,
       page: page,
@@ -333,17 +341,17 @@ end
 
 ## Comparison with Scaffold
 
-| Feature | api_resource | scaffold |
-|---------|--------------|----------|
-| Models | ✓ | ✓ |
-| Migrations | ✓ | ✓ |
-| REST Endpoints | ✓ | ✓ |
-| Request Classes | ✓ | ✓ |
-| JSON Responses | ✓ | ✓ |
-| HTML Pages | ✗ | ✓ |
-| Jinja Templates | ✗ | ✓ |
-| Forms | ✗ | ✓ |
-| Use Case | APIs | Web Apps |
+| Feature         | api_resource | scaffold |
+| --------------- | ------------ | -------- |
+| Models          | ✓            | ✓        |
+| Migrations      | ✓            | ✓        |
+| REST Endpoints  | ✓            | ✓        |
+| Request Classes | ✓            | ✓        |
+| JSON Responses  | ✓            | ✓        |
+| HTML Pages      | ✗            | ✓        |
+| Jinja Templates | ✗            | ✓        |
+| Forms           | ✗            | ✓        |
+| Use Case        | APIs         | Web Apps |
 
 ## See Also
 
@@ -352,4 +360,3 @@ end
 - [Endpoint Generator](./endpoint.md) - Generate endpoints only
 - [OpenAPI Commands](../commands/openapi.md) - OpenAPI integration
 - [REST API Example](../examples/rest-api.md) - Complete example
-

@@ -71,4 +71,3 @@ describe AzuCLI::OpenAPI::ModelExtractor do
     end
   end
 end
-
