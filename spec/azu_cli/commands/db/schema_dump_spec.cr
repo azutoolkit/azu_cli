@@ -376,4 +376,3 @@ describe "Schema dump file validation" do
     end
   end
 end
-

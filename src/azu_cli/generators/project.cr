@@ -58,48 +58,6 @@ module AzuCLI
         end
       end
 
-      # Generate database URL based on environment
-      def database_env_url : String
-        case database_adapter
-        when "pg"
-          %(case config.env
-            when "production"
-              ENV["PRODUCTION_DATABASE_URL"]? || "postgresql://localhost/#{@project}_production"
-            when "test"
-              "postgresql://localhost/#{@project}_test"
-            else # development
-              "postgresql://localhost/#{@project}_development"
-            end)
-        when "mysql"
-          %(case config.env
-            when "production"
-              ENV["PRODUCTION_DATABASE_URL"]? || "mysql://localhost/#{@project}_production"
-            when "test"
-              "mysql://localhost/#{@project}_test"
-            else # development
-              "mysql://localhost/#{@project}_development"
-            end)
-        when "sqlite3"
-          %(case config.env
-            when "production"
-              ENV["PRODUCTION_DATABASE_URL"]? || "sqlite3://./db/#{@project}_production.db"
-            when "test"
-              "sqlite3://./db/#{@project}_test.db"
-            else # development
-              "sqlite3://./db/#{@project}_development.db"
-            end)
-        else
-          %(case config.env
-            when "production"
-              ENV["PRODUCTION_DATABASE_URL"]? || "postgresql://localhost/#{@project}_production"
-            when "test"
-              "postgresql://localhost/#{@project}_test"
-            else # development
-              "postgresql://localhost/#{@project}_development"
-            end)
-        end
-      end
-
       def database_adapter_uri_prefix : String
         case @database
         when "postgresql", "postgres", "pg"

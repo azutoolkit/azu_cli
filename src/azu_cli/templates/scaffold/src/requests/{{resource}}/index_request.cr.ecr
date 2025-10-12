@@ -1,5 +1,15 @@
 module <%= @module_name %>
   struct <%= @name.camelcase %>::IndexRequest
-    include Request
+    include Azu::Request
+
+    # Pagination and filtering parameters
+    property page : Int32 = 1
+    property per_page : Int32 = 20
+    property sort_by : String?
+    property order : String = "asc"
+
+<% @fields.common_fields.select { |f| f.original_type.downcase.in?("string", "text", "bool", "boolean") }.each do |field| -%>
+    property <%= field.field_name %> : <%= field.cr_type %>?
+<% end -%>
   end
 end

@@ -1,5 +1,7 @@
 module <%= @module_name %>
   struct <%= @name.camelcase %>::NewRequest
-    include Request
+    include Azu::Request
+
+    # No fields needed - renders empty form
   end
 end

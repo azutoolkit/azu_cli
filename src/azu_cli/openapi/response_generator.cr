@@ -64,7 +64,8 @@ module AzuCLI
 
           # Response class for #{@action} action
           # Generated from OpenAPI specification
-          struct #{response_class} < Azu::Page
+          struct #{response_class}
+            include Azu::Response
             include JSON::Serializable
 
           #{property_defs}
@@ -81,7 +82,8 @@ module AzuCLI
 
           # Response class for #{@action} action
           # Generated from OpenAPI specification
-          struct #{response_class} < Azu::Page
+          struct #{response_class}
+            include Azu::Response
             include JSON::Serializable
 
             def render : String

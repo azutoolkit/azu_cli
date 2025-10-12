@@ -1,5 +1,12 @@
 module <%= @module_name %>
   struct <%= @name.camelcase %>::CreateRequest
-    include Request
+    include Azu::Request
+
+<% @fields.common_fields.each do |field| -%>
+    property <%= field.field_name %> : <%= field.cr_type %>
+<% end -%>
+<% @fields.references.each do |field| -%>
+    property <%= field.field_name %> : <%= field.cr_type %>
+<% end -%>
   end
 end

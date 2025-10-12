@@ -1,5 +1,7 @@
 module <%= @module_name %>
   struct <%= @name.camelcase %>::ShowRequest
-    include Request
+    include Azu::Request
+
+    property id : Int64
   end
 end

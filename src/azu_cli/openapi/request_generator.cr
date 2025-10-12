@@ -62,7 +62,8 @@ module AzuCLI
           <<-REQUEST
           # Request class for #{@action} action
           # Generated from OpenAPI specification
-          struct #{request_class} < Azu::Request
+          struct #{request_class}
+            include Azu::Request
           #{property_defs}
           end
           REQUEST
@@ -71,7 +72,8 @@ module AzuCLI
           <<-REQUEST
           # Request class for #{@action} action
           # Generated from OpenAPI specification
-          struct #{request_class} < Azu::Request
+          struct #{request_class}
+            include Azu::Request
           end
           REQUEST
         end

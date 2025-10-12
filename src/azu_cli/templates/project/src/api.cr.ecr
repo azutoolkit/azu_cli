@@ -40,11 +40,5 @@ class JSONErrorHandler
   end
 end
 
-# Add API-specific handlers
-<%= @module_name %>.handlers do
-  plug CORSMiddleware.new
-  plug JSONErrorHandler.new
-end
-
-# Start your API server
+# Start your API server with handlers
 <%= @module_name %>.start <%= @module_name %>.handlers

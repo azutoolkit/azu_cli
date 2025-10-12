@@ -50,7 +50,8 @@ module <%= @module_name %>
   configure do |c|
 <% if @project_type == "api" -%>
     # API Configuration
-    c.router.before "*", Handler::CORS.new
+    # Uncomment to enable CORS
+    # c.router.before "*", Handler::CORS.new
 <% else -%>
     # Web Application Configuration
     # Uncomment to enable Spark real time apps
@@ -81,12 +82,8 @@ module <%= @module_name %>
   end
 end
 
-require "./schemas/**"
 require "./models/**"
-require "./responses/**"
-<% if @project_type == "web" -%>
-require "./pages/**"
-<% end -%>
 require "./requests/**"
+require "./pages/**"
 require "./endpoints/**"
 <% end -%>
