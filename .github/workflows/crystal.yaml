@@ -22,8 +22,10 @@ jobs:
       image: crystallang/crystal:1.17.1
     steps:
       - uses: actions/checkout@v4
-      - name: Update package list and install SQLite and development files
-        run: apt-get update
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev
       - name: Install shards
         run: shards install --ignore-crystal-version
       - name: Check formatting
