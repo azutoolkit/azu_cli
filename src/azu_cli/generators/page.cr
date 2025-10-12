@@ -266,7 +266,7 @@ module AzuCLI
 
       # Get table headers for index page
       def table_headers : String
-        headers = @fields.keys.map { |field| field.camelcase }
+        headers = @fields.keys.map(&.camelcase)
         headers.unshift("ID") unless headers.includes?("Id")
         headers.join("</th><th>")
       end
