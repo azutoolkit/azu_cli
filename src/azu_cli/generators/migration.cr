@@ -29,11 +29,10 @@ module AzuCLI
       # Convert a string to snake_case
       private def to_snake_case(str : String) : String
         str.gsub(/([A-Z\d]+)([A-Z][a-z])/) { "#{$1}_#{$2}" }
-           .gsub(/([a-z\d])([A-Z])/) { "#{$1}_#{$2}" }
-           .tr("-", "_")
-           .downcase
+          .gsub(/([a-z\d])([A-Z])/) { "#{$1}_#{$2}" }
+          .tr("-", "_")
+          .downcase
       end
-
 
       # Generate timestamp for migration filename
       private def generate_timestamp : String
