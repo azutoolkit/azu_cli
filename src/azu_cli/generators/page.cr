@@ -26,8 +26,19 @@ module AzuCLI
         @resource_singular = @name.downcase.singularize
         @resource_plural = @resource_singular.pluralize
         @resource = @snake_case_name # For template naming compatibility
-        @module_name = "App"
+        # Get module name from project
+        @module_name = get_project_module_name
         @template_generator = Template.new(@name, @fields, @action)
+      end
+
+      # Get project module name from shard.yml
+      private def get_project_module_name : String
+        return "App" unless File.exists?("./shard.yml")
+        shard_yml = YAML.parse(File.read("./shard.yml"))
+        project_name = shard_yml["name"].as_s
+        project_name.split(/[-_]/).map(&.capitalize).join
+      rescue
+        "App"
       end
 
       # Filter which template files to render based on project type

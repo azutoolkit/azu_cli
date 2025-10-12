@@ -13,10 +13,9 @@ module AzuCLI
       property module_name : String
       property fields : Hash(String, String)
 
-      def initialize(@name : String, @action : String, @endpoint_type : String, @snake_case_name : String)
+      def initialize(@name : String, @action : String, @endpoint_type : String, @snake_case_name : String, @module_name : String = "App")
         @resource_plural = @name.downcase.singularize.pluralize
         @resource_singular = @name.downcase.singularize
-        @module_name = "App"
         @fields = {} of String => String
       end
 

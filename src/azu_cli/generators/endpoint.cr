@@ -20,13 +20,24 @@ module AzuCLI
       property fields : Hash(String, String)
       property scaffold : Bool
 
-      def initialize(@name : String, @actions : Array(String) = [] of String, @endpoint_type : String = "api", @scaffold : Bool = false)
+      def initialize(@name : String, @actions : Array(String) = [] of String, @endpoint_type : String = "api", @scaffold : Bool = false, module_name : String? = nil)
         @snake_case_name = @name.underscore
         @resource_plural = @name.downcase.singularize.pluralize
         @resource_singular = @name.downcase.singularize
-        @module_name = "App"
+        # Get module name from parameter or project
+        @module_name = module_name || get_project_module_name
         @fields = {} of String => String
         @actions = ["index"] if @actions.empty? # Ensure at least one action
+      end
+
+      # Get project module name from shard.yml
+      private def get_project_module_name : String
+        return "App" unless File.exists?("./shard.yml")
+        shard_yml = YAML.parse(File.read("./shard.yml"))
+        project_name = shard_yml["name"].as_s
+        project_name.split(/[-_]/).map(&.capitalize).join
+      rescue
+        "App"
       end
 
       # Convert name to endpoint struct name
@@ -122,7 +133,7 @@ module AzuCLI
 
         @actions.each do |action|
           # Create a temporary generator for this action (use singular form for file naming)
-          action_generator = ActionEndpoint.new(@name, action, @endpoint_type, @resource_singular)
+          action_generator = ActionEndpoint.new(@name, action, @endpoint_type, @resource_singular, @module_name)
           action_generator.render(resource_dir, force: force, interactive: interactive, list: list, color: color)
         end
       end
