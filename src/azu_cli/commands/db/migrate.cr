@@ -92,11 +92,12 @@ module AzuCLI
         # Create a temporary migration runner script
         private def create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
           script_path = File.tempname("azu_migrate", ".cr")
+          project_root = Dir.current
 
           script_content = String.build do |io|
             io << "require \"cql\"\n"
-            io << "require \"./src/db/schema\"\n"
-            io << "require \"./src/db/migrations/*\"\n\n"
+            io << "require \"#{project_root}/src/db/schema\"\n"
+            io << "require \"#{project_root}/src/db/migrations/*\"\n\n"
             io << "config = CQL::MigratorConfig.new(\n"
             io << "  schema_file_path: \"src/db/schema.cr\",\n"
             io << "  schema_name: :AppSchema,\n"
@@ -135,6 +136,11 @@ module AzuCLI
         private def execute_runner_script(script_path : String) : Bool
           success = system("crystal run #{script_path}")
           success
+        end
+
+        # Public test helper to access private method for testing
+        def test_create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
+          create_migration_runner_script(action, version, steps)
         end
       end
     end

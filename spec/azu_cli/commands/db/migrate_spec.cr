@@ -101,4 +101,84 @@ describe AzuCLI::Commands::DB::Migrate do
       command.dump_schema
     end
   end
+
+  describe "migration script generation" do
+    it "generates script with absolute paths" do
+      command = AzuCLI::Commands::DB::Migrate.new
+      project_root = Dir.current
+
+      # Call the test helper method
+      script_path = command.test_create_migration_runner_script("up", nil, nil)
+
+      # Read the generated script
+      script_content = File.read(script_path)
+
+      # Verify it contains absolute paths with project root
+      script_content.should contain("require \"#{project_root}/src/db/schema\"")
+      script_content.should contain("require \"#{project_root}/src/db/migrations/*\"")
+
+      # Verify it doesn't contain relative paths
+      script_content.should_not contain("require \"./src/db/schema\"")
+      script_content.should_not contain("require \"./src/db/migrations/*\"")
+
+      # Clean up
+      File.delete(script_path) if File.exists?(script_path)
+    end
+
+    it "generates script with correct CQL configuration" do
+      command = AzuCLI::Commands::DB::Migrate.new
+
+      script_path = command.test_create_migration_runner_script("up", nil, nil)
+      script_content = File.read(script_path)
+
+      # Verify CQL configuration is present
+      script_content.should contain("CQL::MigratorConfig.new")
+      script_content.should contain("schema_file_path: \"src/db/schema.cr\"")
+      script_content.should contain("schema_name: :AppSchema")
+      script_content.should contain("schema_symbol: :app_schema")
+      script_content.should contain("auto_sync: true")
+
+      # Clean up
+      File.delete(script_path) if File.exists?(script_path)
+    end
+
+    it "generates script with version migration command" do
+      command = AzuCLI::Commands::DB::Migrate.new
+
+      script_path = command.test_create_migration_runner_script("up", 20241013000000_i64, nil)
+      script_content = File.read(script_path)
+
+      # Verify version-specific migration command
+      script_content.should contain("migrator.up_to(20241013000000_i64)")
+
+      # Clean up
+      File.delete(script_path) if File.exists?(script_path)
+    end
+
+    it "generates script with steps migration command" do
+      command = AzuCLI::Commands::DB::Migrate.new
+
+      script_path = command.test_create_migration_runner_script("up", nil, 3)
+      script_content = File.read(script_path)
+
+      # Verify steps migration command
+      script_content.should contain("migrator.up(3)")
+
+      # Clean up
+      File.delete(script_path) if File.exists?(script_path)
+    end
+
+    it "generates script with basic up migration command" do
+      command = AzuCLI::Commands::DB::Migrate.new
+
+      script_path = command.test_create_migration_runner_script("up", nil, nil)
+      script_content = File.read(script_path)
+
+      # Verify basic up command
+      script_content.should contain("migrator.up\n")
+
+      # Clean up
+      File.delete(script_path) if File.exists?(script_path)
+    end
+  end
 end
