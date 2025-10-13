@@ -8,6 +8,7 @@ module AzuCLI
       class Migrate < Database
         property version : Int64?
         property verbose : Bool = false
+        property dry_run : Bool = false
         property steps : Int32?
 
         def initialize
@@ -72,6 +73,8 @@ module AzuCLI
               end
             when "--verbose"
               @verbose = true
+            when "--dry-run"
+              @dry_run = true
             when "--env", "-e"
               if env = args[index + 1]?
                 @environment = env

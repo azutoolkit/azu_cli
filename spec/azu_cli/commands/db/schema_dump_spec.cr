@@ -78,9 +78,8 @@ describe AzuCLI::Commands::Database, "schema dumping" do
         command.database_name = "test_db"
 
         # This will fail to connect but should not raise
-        expect_raises?(Exception) do
-          command.dump_schema
-        end.should be_nil
+        # This is a smoke test to verify the method exists and handles errors gracefully
+        command.dump_schema
       end
     end
 
@@ -305,9 +304,8 @@ describe "Schema dump error handling" do
     command.database_name = "nonexistent_db"
 
     # Should not raise error
-    expect_raises?(Exception) do
-      command.dump_schema
-    end.should be_nil
+    # This is a smoke test to verify the method handles errors gracefully
+    command.dump_schema
   end
 
   it "logs warning when schema dump fails" do
@@ -316,9 +314,8 @@ describe "Schema dump error handling" do
     command.adapter = "invalid_adapter"
 
     # Should handle gracefully
-    expect_raises?(Exception) do
-      command.dump_schema
-    end.should be_nil
+    # This is a smoke test to verify the method handles errors gracefully
+    command.dump_schema
   end
 
   it "returns early when src/db does not exist" do

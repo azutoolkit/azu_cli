@@ -34,14 +34,14 @@ describe AzuCLI::Commands::DB::Migrate do
       command = AzuCLI::Commands::DB::Migrate.new
       command.parse_args(["--version", "20241011000000"])
 
-      command.version.should eq("20241011000000")
+      command.version.should eq(20241011000000_i64)
     end
 
     it "parses -v short option" do
       command = AzuCLI::Commands::DB::Migrate.new
       command.parse_args(["-v", "12345"])
 
-      command.version.should eq("12345")
+      command.version.should eq(12345_i64)
     end
 
     it "parses --verbose option" do
@@ -97,9 +97,8 @@ describe AzuCLI::Commands::DB::Migrate do
     it "can call dump_schema without raising errors" do
       command = AzuCLI::Commands::DB::Migrate.new
       # Should not raise error even if db doesn't exist
-      expect_raises?(Exception) do
-        command.dump_schema
-      end.should be_nil
+      # This is a smoke test to verify the method exists and can be called
+      command.dump_schema
     end
   end
 end

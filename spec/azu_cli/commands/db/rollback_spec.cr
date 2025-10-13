@@ -63,9 +63,8 @@ describe AzuCLI::Commands::DB::Rollback do
     it "can call dump_schema without raising errors" do
       command = AzuCLI::Commands::DB::Rollback.new
       # Should not raise error even if db doesn't exist
-      expect_raises?(Exception) do
-        command.dump_schema
-      end.should be_nil
+      # This is a smoke test to verify the method exists and can be called
+      command.dump_schema
     end
   end
 end
