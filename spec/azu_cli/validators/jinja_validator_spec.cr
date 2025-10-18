@@ -108,7 +108,7 @@ describe AzuCLI::Validators::JinjaValidator do
       # Create temporary template files
       temp_files = [
         "/tmp/test1.jinja",
-        "/tmp/test2.jinja"
+        "/tmp/test2.jinja",
       ]
 
       File.write(temp_files[0], "{{ user.name if user.name }}")
