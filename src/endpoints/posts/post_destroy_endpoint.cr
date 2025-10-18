@@ -14,5 +14,3 @@ module AzuCli::Post
     end
   end
 end
-
-

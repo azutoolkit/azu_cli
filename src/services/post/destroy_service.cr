@@ -4,7 +4,7 @@ module Post
   class DestroyService
     def call(id : UUID | Int64) : Services::Result(Post::PostModel)
       post = Post::PostModel.find(id)
-      
+
       if post.delete
         Services::Result.success(post)
       else

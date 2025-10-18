@@ -3,7 +3,7 @@ module AzuCli
     include Azu::Response
     include Azu::Templates::Renderable
 
-      def initialize(@posts : Array(Post::PostModel) = [] of Post::PostModel,
+    def initialize(@posts : Array(Post::PostModel) = [] of Post::PostModel,
                    @csrf_token : String = "",
                    @csrf_tag : String = "",
                    @csrf_metatag : String = "")
@@ -24,9 +24,9 @@ module AzuCli
 
     def convert_to_hash(post : Post::PostModel) : Hash(String, String)
       {
-        "name" => post.name.to_s,
+        "name"    => post.name.to_s,
         "content" => post.content.to_s,
       }
     end
-    end
+  end
 end

@@ -101,7 +101,7 @@ module AzuCLI
             # Fall through to default
           end
         end
-        
+
         # Check shard.yml for UUID-related dependencies or settings
         if File.exists?("./shard.yml")
           begin
@@ -114,7 +114,7 @@ module AzuCLI
             # Fall through to default
           end
         end
-        
+
         # Default to Int64 for maximum compatibility
         "Int64"
       end
@@ -176,19 +176,19 @@ CRYSTAL
         return if File.exists?(service_file) && !force
 
         service_content = case @action
-        when "create"
-          generate_create_service_content
-        when "index"
-          generate_index_service_content
-        when "show"
-          generate_show_service_content
-        when "update"
-          generate_update_service_content
-        when "destroy"
-          generate_destroy_service_content
-        else
-          ""
-        end
+                          when "create"
+                            generate_create_service_content
+                          when "index"
+                            generate_index_service_content
+                          when "show"
+                            generate_show_service_content
+                          when "update"
+                            generate_update_service_content
+                          when "destroy"
+                            generate_destroy_service_content
+                          else
+                            ""
+                          end
 
         File.write(service_file, service_content)
       end

@@ -3,7 +3,7 @@ module AzuCli
     include Azu::Response
     include Azu::Templates::Renderable
 
-      def initialize(@post : Post::PostModel? = nil,
+    def initialize(@post : Post::PostModel? = nil,
                    @csrf_token : String = "",
                    @csrf_tag : String = "",
                    @csrf_metatag : String = "")
@@ -11,7 +11,7 @@ module AzuCli
 
     def render
       view data: {
-        "post" => post_to_hash,
+        "post"         => post_to_hash,
         "csrf_token"   => @csrf_token,
         "csrf_tag"     => @csrf_tag,
         "csrf_metatag" => @csrf_metatag,
@@ -23,7 +23,7 @@ module AzuCli
 
       resource = @post.not_nil!
       {
-        "name" => safe_to_s(resource.name),
+        "name"    => safe_to_s(resource.name),
         "content" => safe_to_s(resource.content),
       }
     end
@@ -48,5 +48,5 @@ module AzuCli
     private def safe_to_s(value) : String
       value.to_s
     end
-    end
+  end
 end

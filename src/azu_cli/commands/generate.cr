@@ -625,7 +625,7 @@ module AzuCLI
         template_dirs = [
           "./public/templates",
           "./src/templates",
-          "./templates"
+          "./templates",
         ]
 
         template_files = [] of String

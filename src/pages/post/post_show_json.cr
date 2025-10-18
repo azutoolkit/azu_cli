@@ -3,7 +3,7 @@ module AzuCli
     include Azu::Response
     include Azu::Templates::Renderable
 
-      def initialize(@post : Post::PostModel? = nil)
+    def initialize(@post : Post::PostModel? = nil)
     end
 
     def render
@@ -16,9 +16,9 @@ module AzuCli
       return {} of String => String if @post.nil?
 
       {
-        "name" => @post.try(&.name),
+        "name"    => @post.try(&.name),
         "content" => @post.try(&.content),
       }
     end
-    end
+  end
 end

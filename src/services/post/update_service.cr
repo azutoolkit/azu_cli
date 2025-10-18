@@ -4,7 +4,7 @@ module Post
   class UpdateService
     def call(id : UUID | Int64, name : String, content : String) : Services::Result(Post::PostModel)
       post = Post::PostModel.find(id)
-      
+
       if post.update({name: name, content: content})
         Services::Result.success(post)
       else
