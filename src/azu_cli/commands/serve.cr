@@ -85,8 +85,8 @@ module AzuCLI
         start_time = Time.monotonic
 
         status = Process.run(
-          "crystal",
-          ["build", "src/server.cr", "-o", "bin/server"],
+          "shards",
+          ["build", "--production"],
           output: output,
           error: error
         )
@@ -117,8 +117,9 @@ module AzuCLI
           "AZU_ENV"     => @environment,
         }
 
+        binary_name = get_binary_name
         @server_process = Process.new(
-          "./bin/server",
+          "./bin/#{binary_name}",
           env: env,
           output: @verbose ? Process::Redirect::Inherit : Process::Redirect::Pipe,
           error: @verbose ? Process::Redirect::Inherit : Process::Redirect::Pipe
@@ -244,6 +245,25 @@ module AzuCLI
       private def wait_for_server
         if process = @server_process
           process.wait
+        end
+      end
+
+      private def get_binary_name : String
+        return "server" unless File.exists?("./shard.yml")
+
+        begin
+          shard_yml = YAML.parse(File.read("./shard.yml"))
+          targets = shard_yml["targets"]?
+
+          if targets && targets.is_a?(YAML::Any)
+            # Get the first (and typically only) target name
+            first_key = targets.as_h.keys.first?
+            first_key ? first_key.as_s : "server"
+          else
+            "server"
+          end
+        rescue
+          "server"
         end
       end
     end
