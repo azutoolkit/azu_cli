@@ -134,8 +134,8 @@ describe AzuCLI::Commands::DB::Migrate do
       # Verify CQL configuration is present
       script_content.should contain("CQL::MigratorConfig.new")
       script_content.should contain("schema_file_path: \"src/db/schema.cr\"")
-      script_content.should contain("schema_name: :AppSchema")
-      script_content.should contain("schema_symbol: :app_schema")
+      script_content.should contain("schema_name: :")  # Schema name is dynamic
+      script_content.should contain("schema_symbol: :") # Schema symbol is dynamic
       script_content.should contain("auto_sync: true")
 
       # Clean up

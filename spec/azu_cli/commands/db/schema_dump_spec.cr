@@ -18,6 +18,51 @@ describe AzuCLI::Commands::Database, "schema dumping" do
     File.delete(schema_path) if File.exists?(schema_path)
   end
 
+  describe "#detect_schema_info" do
+    it "detects BlogDB schema correctly" do
+      # Create a test schema file with BlogDB
+      File.write(schema_path, "BlogDB = CQL::Schema.define(\n  :blog_db,\n  adapter: CQL::Adapter::Postgres,\n  uri: \"postgres://localhost/blog\") do\nend")
+      
+      command = AzuCLI::Commands::DB::Migrate.new
+      schema_name, schema_symbol = command.test_detect_schema_info
+      
+      schema_name.should eq("BlogDB")
+      schema_symbol.should eq("blog_db")
+    end
+
+    it "detects MyBlogDB schema correctly" do
+      # Create a test schema file with MyBlogDB
+      File.write(schema_path, "MyBlogDB = CQL::Schema.define(\n  :my_blog_db,\n  adapter: CQL::Adapter::Postgres,\n  uri: \"postgres://localhost/my_blog\") do\nend")
+      
+      command = AzuCLI::Commands::DB::Migrate.new
+      schema_name, schema_symbol = command.test_detect_schema_info
+      
+      schema_name.should eq("MyBlogDB")
+      schema_symbol.should eq("my_blog_db")
+    end
+
+    it "falls back to AppSchema when file doesn't exist" do
+      File.delete(schema_path) if File.exists?(schema_path)
+      
+      command = AzuCLI::Commands::DB::Migrate.new
+      schema_name, schema_symbol = command.test_detect_schema_info
+      
+      schema_name.should eq("AppSchema")
+      schema_symbol.should eq("app_schema")
+    end
+
+    it "falls back to AppSchema when pattern doesn't match" do
+      # Create a schema file without the expected pattern
+      File.write(schema_path, "# Invalid schema file")
+      
+      command = AzuCLI::Commands::DB::Migrate.new
+      schema_name, schema_symbol = command.test_detect_schema_info
+      
+      schema_name.should eq("AppSchema")
+      schema_symbol.should eq("app_schema")
+    end
+  end
+
   describe "#schema_file_path" do
     it "returns correct schema file path" do
       command = AzuCLI::Commands::DB::Migrate.new
@@ -133,8 +178,8 @@ describe "Schema dump integration tests" do
 
   describe "schema file content structure" do
     sample_schema_content = <<-CRYSTAL
-      AppSchema = CQL::Schema.define(
-        :app_schema,
+      BlogDB = CQL::Schema.define(
+        :blog_db,
         adapter: CQL::Adapter::Postgres,
         uri: "postgres://postgres:@localhost:5432/test_db") do
         table :users do
@@ -146,8 +191,8 @@ describe "Schema dump integration tests" do
       end
       CRYSTAL
 
-    it "contains AppSchema constant definition" do
-      sample_schema_content.should contain("AppSchema")
+    it "contains schema constant definition with DB suffix" do
+      sample_schema_content.should contain("DB")
     end
 
     it "contains CQL::Schema.define call" do
@@ -155,7 +200,7 @@ describe "Schema dump integration tests" do
     end
 
     it "contains schema symbol" do
-      sample_schema_content.should contain(":app_schema")
+      sample_schema_content.should contain(":blog_db")
     end
 
     it "contains adapter configuration" do
@@ -173,8 +218,8 @@ describe "Schema dump integration tests" do
 
   describe "schema file content validation" do
     valid_schema_with_table = <<-CRYSTAL
-      AppSchema = CQL::Schema.define(
-        :app_schema,
+      TestDB = CQL::Schema.define(
+        :test_db,
         adapter: CQL::Adapter::Postgres,
         uri: "postgres://localhost/testdb") do
         table :posts do
@@ -330,16 +375,16 @@ end
 
 describe "Schema dump file validation" do
   describe "generated schema structure" do
-    it "validates AppSchema constant name" do
-      # Schema should use AppSchema as constant
-      schema_name = :AppSchema
-      schema_name.should eq(:AppSchema)
+    it "validates schema constant name has DB suffix" do
+      # Schema should use {ProjectName}DB as constant
+      schema_name = "BlogDB"
+      schema_name.should contain("DB")
     end
 
-    it "validates app_schema symbol name" do
-      # Schema should use :app_schema as symbol
-      schema_symbol = :app_schema
-      schema_symbol.should eq(:app_schema)
+    it "validates schema symbol name has db suffix" do
+      # Schema should use :{project_name}_db as symbol
+      schema_symbol = :blog_db
+      schema_symbol.to_s.should contain("_db")
     end
 
     it "validates schema file extension" do

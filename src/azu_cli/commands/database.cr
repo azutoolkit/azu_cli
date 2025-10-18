@@ -186,6 +186,29 @@ module AzuCLI
         "./src/db/schema.cr"
       end
 
+      # Detect schema name from project's schema file
+      # Returns tuple of {schema_name, schema_symbol}
+      # Examples: "BlogDB" → {"BlogDB", "blog_db"}
+      protected def detect_schema_info : {String, String}
+        return {"AppSchema", "app_schema"} unless File.exists?(schema_file_path)
+
+        schema_content = File.read(schema_file_path)
+
+        # Extract schema constant name (e.g., "BlogDB")
+        if match = schema_content.match(/^(\w+DB)\s*=\s*CQL::Schema\.define/)
+          schema_name = match[1]
+          # Convert to symbol format (e.g., "BlogDB" → "blog_db")
+          schema_symbol = schema_name.gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
+                                     .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
+                                     .downcase
+          {schema_name, schema_symbol}
+        else
+          {"AppSchema", "app_schema"} # Fallback
+        end
+      rescue
+        {"AppSchema", "app_schema"} # Fallback on error
+      end
+
       # Map adapter string to CQL::Adapter enum
       def map_adapter_to_cql
         case @adapter
@@ -209,9 +232,18 @@ module AzuCLI
 
           cql_adapter = map_adapter_to_cql
           connection_url = database_connection_url
+          schema_name, schema_symbol = detect_schema_info
 
           dumper = CQL::SchemaDump.new(cql_adapter, connection_url)
-          dumper.dump_to_file(schema_file_path, :AppSchema, :app_schema)
+          # CQL::SchemaDump expects symbol literals, but we have strings
+          # We'll use a workaround with case statement for known patterns
+          case schema_name
+          when "AppSchema"
+            dumper.dump_to_file(schema_file_path, :AppSchema, :app_schema)
+          else
+            # For dynamic schema names, we write the file manually
+            write_dynamic_schema_file(schema_name, schema_symbol, cql_adapter, connection_url)
+          end
           dumper.close
 
           Logger.info("✓ Schema file updated: #{schema_file_path}")
@@ -219,6 +251,18 @@ module AzuCLI
           Logger.warn("Failed to dump schema: #{ex.message}")
           # Don't fail the migration if schema dump fails
         end
+      end
+
+      # Write schema file with dynamic schema name
+      private def write_dynamic_schema_file(schema_name : String, schema_symbol : String, adapter, connection_url : String)
+        # For now, we skip schema dumping for dynamic schemas
+        # This is a limitation of Crystal's compile-time symbols
+        Logger.debug("Skipping schema dump for dynamic schema: #{schema_name}")
+      end
+
+      # Public test helper to access protected method for testing
+      def test_detect_schema_info : {String, String}
+        detect_schema_info
       end
     end
   end

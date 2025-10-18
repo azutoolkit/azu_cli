@@ -90,6 +90,7 @@ module AzuCLI
         private def create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
           script_path = File.tempname("azu_rollback", ".cr")
           project_root = Dir.current
+          schema_name, schema_symbol = detect_schema_info
 
           script_content = String.build do |io|
             io << "require \"cql\"\n"
@@ -97,11 +98,11 @@ module AzuCLI
             io << "require \"#{project_root}/src/db/migrations/*\"\n\n"
             io << "config = CQL::MigratorConfig.new(\n"
             io << "  schema_file_path: \"src/db/schema.cr\",\n"
-            io << "  schema_name: :AppSchema,\n"
-            io << "  schema_symbol: :app_schema,\n"
+            io << "  schema_name: :#{schema_name},\n"
+            io << "  schema_symbol: :#{schema_symbol},\n"
             io << "  auto_sync: true\n"
             io << ")\n\n"
-            io << "migrator = AppSchema.migrator(config)\n\n"
+            io << "migrator = #{schema_name}.migrator(config)\n\n"
 
             case action
             when "up"

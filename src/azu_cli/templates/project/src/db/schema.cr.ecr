@@ -1,5 +1,5 @@
-AppSchema = CQL::Schema.define(
-  :app_schema,
+<%= schema_name %> = CQL::Schema.define(
+  :<%= schema_symbol %>,
   adapter: CQL::Adapter::Postgres,
   uri: "postgres://postgres:@localhost:5432/<%= @project %>_development_db") do
   table :cql_schema_migrations do

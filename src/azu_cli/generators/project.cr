@@ -195,6 +195,18 @@ module AzuCLI
         @include_joobq && (@project_type == "web" || @project_type == "api")
       end
 
+      # Generate schema class name from project name
+      # Examples: "blog" → "BlogDB", "my_blog" → "MyBlogDB"
+      def schema_name : String
+        @module_name + "DB"
+      end
+
+      # Generate schema symbol from project name
+      # Examples: "blog" → "blog_db", "my_blog" → "my_blog_db"
+      def schema_symbol : String
+        @project.downcase + "_db"
+      end
+
       # Override filter method to conditionally exclude files based on project type
       def filter(entries)
         entries.reject do |entry|
