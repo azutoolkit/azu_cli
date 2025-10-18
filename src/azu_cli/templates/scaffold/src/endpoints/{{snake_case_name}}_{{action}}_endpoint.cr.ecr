@@ -6,6 +6,10 @@ module <%= @module_name %>::<%= @name.camelcase %>
 
     def call : <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>
       # TODO: Implement <%= @action.downcase %> action logic
+      # Example usage:
+      # model = <%= @name.camelcase %>::<%= @name.camelcase %>Model.new(...)
+      # model.save
+      # <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>.new
       <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>.new
     end
   end

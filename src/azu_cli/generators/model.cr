@@ -46,6 +46,21 @@ module AzuCLI
         @database
       end
 
+      # Get the resource module name (for nesting the model)
+      def resource_module_name : String
+        @name.camelcase
+      end
+
+      # Get the model class name (e.g., "PostModel")
+      def model_class_name : String
+        "#{@name.camelcase}Model"
+      end
+
+      # Get the full model name with module (e.g., "Post::PostModel")
+      def full_model_name : String
+        "#{resource_module_name}::#{model_class_name}"
+      end
+
       # Extract validations from attributes
       private def extract_validations(attributes : Hash(String, String)) : Hash(String, Array(String))
         validations = {} of String => Array(String)

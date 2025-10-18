@@ -7,7 +7,7 @@ module <%= @module_name %>
 
 <% if @project_type == "api" -%>
   <% if @action == "index" -%>
-    def initialize(@<%= @resource_plural %> : Array(<%= @name.camelcase %>) = [] of <%= @name.camelcase %>)
+    def initialize(@<%= @resource_plural %> : Array(<%= @name.camelcase %>::<%= @name.camelcase %>Model) = [] of <%= @name.camelcase %>::<%= @name.camelcase %>Model)
     end
 
     def render
@@ -16,14 +16,14 @@ module <%= @module_name %>
       }.to_json
     end
   <% elsif @action == "show" -%>
-    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>)
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>::<%= @name.camelcase %>Model)
     end
 
     def render
       @<%= @resource_singular %>.to_json
     end
   <% else -%>
-    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil, @message : String = "")
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>::<%= @name.camelcase %>Model? = nil, @message : String = "")
     end
 
     def render
@@ -35,7 +35,7 @@ module <%= @module_name %>
   <% end -%>
 <% else -%>
   <% if @action == "index" -%>
-    def initialize(@<%= @resource_plural %> : Array(<%= @name.camelcase %>) = [] of <%= @name.camelcase %>,
+    def initialize(@<%= @resource_plural %> : Array(<%= @name.camelcase %>::<%= @name.camelcase %>Model) = [] of <%= @name.camelcase %>::<%= @name.camelcase %>Model,
                    @csrf_token : String = "",
                    @csrf_tag : String = "",
                    @csrf_metatag : String = "")
@@ -50,11 +50,11 @@ module <%= @module_name %>
       }
     end
 
-    def array_to_hash(array : Array(<%= @name.camelcase %>)) : Array(Hash(String, String))
+    def array_to_hash(array : Array(<%= @name.camelcase %>::<%= @name.camelcase %>Model)) : Array(Hash(String, String))
       array.map { |<%= @resource_singular %>| convert_to_hash(<%= @resource_singular %>) }
     end
 
-    def convert_to_hash(<%= @resource_singular %> : <%= @name.camelcase %>) : Hash(String, String)
+    def convert_to_hash(<%= @resource_singular %> : <%= @name.camelcase %>::<%= @name.camelcase %>Model) : Hash(String, String)
       {
 <% @fields.each do |field_name, field_type| -%>
         "<%= field_name %>" => <%= @resource_singular %>.<%= field_name %>.to_s,
@@ -62,7 +62,7 @@ module <%= @module_name %>
       }
     end
   <% elsif @action == "show" || @action == "edit" -%>
-    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil)
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>::<%= @name.camelcase %>Model? = nil)
     end
 
     def render
@@ -81,7 +81,7 @@ module <%= @module_name %>
       }
     end
   <% else -%>
-    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil)
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>::<%= @name.camelcase %>Model? = nil)
     end
 
     def render

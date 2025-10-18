@@ -1,35 +1,37 @@
 require "cql"
 
-class <%= @name.camelcase %>
-  <%= include_statement %>
-  <%= db_context_declaration %>
+module <%= @name.camelcase %>
+  class <%= model_class_name %>
+    <%= include_statement %>
+    <%= db_context_declaration %>
 
-  # Attribute accessors
-  <%= getter_declarations %>
+    # Attribute accessors
+    <%= getter_declarations %>
 
 <% if has_validations? -%>
-  # Validations
-  <%= validation_declarations %>
+    # Validations
+    <%= validation_declarations %>
 <% end %>
 
-  # Constructor
-  def initialize(<% @fields.reject { |k, v| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |(field_name, field_type), i| %>@<%= field_name %> : <%= crystal_type(field_type) %><% unless i == @fields.reject { |k, v| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>, <% end %><% end %>)
-  end
+    # Constructor
+    def initialize(<% @fields.reject { |k, v| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |(field_name, field_type), i| %>@<%= field_name %> : <%= crystal_type(field_type) %><% unless i == @fields.reject { |k, v| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>, <% end %><% end %>)
+    end
 
 <% if has_scopes? -%>
-  # Scopes
+    # Scopes
 <% @fields.each do |field_name, field_type| -%>
 <% if field_type == "string" -%>
-  scope :by_<%= field_name %>, ->(value : String) { where("<%= field_name %> ILIKE ?", "%" + value + "%") }
+    scope :by_<%= field_name %>, ->(value : String) { where("<%= field_name %> ILIKE ?", "%" + value + "%") }
 <% end -%>
 <% end -%>
 <% if @fields.has_key?("published") -%>
-  scope :published, -> { where(published: true) }
+    scope :published, -> { where(published: true) }
 <% end -%>
 <% end %>
 
 <% if has_associations? -%>
-  # Associations
-  <%= association_declarations %>
+    # Associations
+    <%= association_declarations %>
 <% end %>
+  end
 end
