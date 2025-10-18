@@ -8,7 +8,7 @@ module AzuCLI
       OUTPUT_DIR = "./src/pages" # Default to pages, but can be overridden
 
       # Also generate Jinja2 HTML templates for web projects
-      property template_generator : Template
+      property template_generator : AzuCLI::Generate::Template
       property name : String
       property fields : Hash(String, String)
       property snake_case_name : String
@@ -28,7 +28,7 @@ module AzuCLI
         @resource = @snake_case_name # For template naming compatibility
         # Get module name from project
         @module_name = get_project_module_name
-        @template_generator = Template.new(@name, @fields, @action)
+        @template_generator = AzuCLI::Generate::Template.new(@name, @fields, @action, @module_name)
       end
 
       # Get project module name from shard.yml
@@ -167,26 +167,26 @@ module AzuCLI
         end
       end
 
-      # Get template path for the action
-      def template_path : String
-        case @action
-        when "index"
-          "#{@resource_plural}/index.jinja"
-        when "new"
-          "#{@resource_plural}/new.jinja"
-        when "create"
-          "#{@resource_plural}/create.jinja"
-        when "show"
-          "#{@resource_plural}/show.jinja"
-        when "edit"
-          "#{@resource_plural}/edit.jinja"
-        when "update"
-          "#{@resource_plural}/update.jinja"
-        when "delete"
-          "#{@resource_plural}/delete.jinja"
+      # Get module path from class name for template directory structure
+      def module_path : String
+        # Extract module path from full class name
+        # Blog::Post::IndexPage → "blog/post"
+        parts = @module_name.split("::")
+        if parts.size > 1
+          parts[0..-1].map(&.underscore).join("/")
         else
-          "#{@resource_plural}/#{@action}.jinja"
+          @snake_case_name
         end
+      end
+
+      # Get template filename for the action
+      def template_filename : String
+        "#{@action}_page.jinja"
+      end
+
+      # Get full template path matching Azu framework expectations
+      def template_path : String
+        "#{module_path}/#{template_filename}"
       end
 
       # Get page title for the action

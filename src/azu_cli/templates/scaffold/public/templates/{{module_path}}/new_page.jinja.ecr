@@ -56,7 +56,7 @@
         <div class="card-body">
           <form action="<%= form_action %>" method="<%= form_method %>" class="<%= form_classes %>" novalidate>
             <!-- CSRF Token -->
-            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="_token" value="{{ csrf_token }}">
 
             <!-- Form Fields -->
             <% fields.keys.each do |field| %>
@@ -77,7 +77,7 @@
                     rows="4"
                     placeholder="<%= field_placeholder(field) %>"
                     <% if field_required?(field) %>required<% end %>
-                  >{{ form.<%= field %> if form }}</textarea>
+                  >{% if form %}{{ form.<%= field %> }}{% endif %}</textarea>
                 <% elsif html_input_type(fields[field]) == "checkbox" %>
                   <div class="form-check">
                     <input
@@ -99,7 +99,7 @@
                     id="<%= field %>"
                     name="<%= field %>"
                     placeholder="<%= field_placeholder(field) %>"
-                    value="{{ form.<%= field %> if form }}"
+                    value="{% if form %}{{ form.<%= field %> }}{% endif %}"
                     <% if field_required?(field) %>required<% end %>
                   >
                 <% end %>

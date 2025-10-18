@@ -193,14 +193,14 @@
               <small class="text-muted">Created</small>
               <div class="text-white">
                 <i class="bi bi-calendar-plus me-1"></i>
-                {{ <%= resource_singular %>.created_at|datetime if <%= resource_singular %>.created_at }}
+                {% if <%= resource_singular %>.created_at %}{{ <%= resource_singular %>.created_at|datetime }}{% endif %}
               </div>
             </div>
             <div class="col-12">
               <small class="text-muted">Last Updated</small>
               <div class="text-white">
                 <i class="bi bi-calendar-check me-1"></i>
-                {{ <%= resource_singular %>.updated_at|datetime if <%= resource_singular %>.updated_at }}
+                {% if <%= resource_singular %>.updated_at %}{{ <%= resource_singular %>.updated_at|datetime }}{% endif %}
               </div>
             </div>
           </div>

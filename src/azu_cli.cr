@@ -19,6 +19,7 @@ require "./azu_cli/commands/**"
 require "./azu_cli/cli"
 require "./azu_cli/plugins/**"
 require "./azu_cli/middleware/**"
+require "./azu_cli/validators/**"
 
 module AzuCLI
   VERSION = "0.0.1"

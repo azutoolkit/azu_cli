@@ -1,9 +1,11 @@
+require "teeplate"
+
 module AzuCLI
   module Generate
     # Inner class for generating Jinja2 HTML templates
     class Template < Teeplate::FileTree
-      directory "#{__DIR__}/../templates/scaffold/public/templates/pages"
-      OUTPUT_DIR = "./public/templates/pages"
+      directory "#{__DIR__}/../templates/scaffold/public/templates"
+      OUTPUT_DIR = "./public/templates"
 
       property name : String
       property fields : Hash(String, String)
@@ -11,11 +13,48 @@ module AzuCLI
       property snake_case_name : String
       property resource_plural : String
       property resource_singular : String
+      property module_name : String
+      property module_path : String
+      property resource : String
 
-      def initialize(@name : String, @fields : Hash(String, String), @action : String)
+      def initialize(@name : String, @fields : Hash(String, String), @action : String, @module_name : String = "App")
         @snake_case_name = @name.underscore
         @resource_singular = @name.downcase.singularize
         @resource_plural = @resource_singular.pluralize
+        @resource = @snake_case_name
+        @module_path = calculate_module_path
+      end
+
+      # Calculate module path from class name for template directory structure
+      private def calculate_module_path : String
+        # Extract module path from full class name
+        # Blog::Post::IndexPage → "blog/post"
+        parts = @module_name.split("::")
+        if parts.size > 1
+          parts[0..-1].map(&.underscore).join("/")
+        else
+          @snake_case_name
+        end
+      end
+
+      # Get template filename for the action
+      def template_filename : String
+        "#{@action}_page.jinja"
+      end
+
+      # Get full template path matching Azu framework expectations
+      def template_path : String
+        "#{@module_path}/#{template_filename}"
+      end
+
+      # Override render to create proper directory structure
+      def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
+        # Create the full module path directory
+        full_path = File.join(output_dir, @module_path)
+        Dir.mkdir_p(full_path) unless Dir.exists?(full_path)
+
+        # Use Teeplate's render method with the correct output directory
+        super(full_path, force: force, interactive: interactive, list: list, color: color)
       end
 
       # Get page title for the action

@@ -121,12 +121,18 @@ module <%= @module_name %>
       value.to_s
     end
   <% elsif @action == "show" || @action == "edit" -%>
-    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil)
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil,
+                   @csrf_token : String = "",
+                   @csrf_tag : String = "",
+                   @csrf_metatag : String = "")
     end
 
     def render
       view data: {
         "<%= @resource_singular %>" => <%= @resource_singular %>_to_hash,
+        "csrf_token"   => @csrf_token,
+        "csrf_tag"     => @csrf_tag,
+        "csrf_metatag" => @csrf_metatag,
       }
     end
 
@@ -162,12 +168,18 @@ module <%= @module_name %>
       value.to_s
     end
   <% else -%>
-    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil)
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>? = nil,
+                   @csrf_token : String = "",
+                   @csrf_tag : String = "",
+                   @csrf_metatag : String = "")
     end
 
     def render
       view data: {
         "<%= @resource_singular %>" => @<%= @resource_singular %>,
+        "csrf_token"   => @csrf_token,
+        "csrf_tag"     => @csrf_tag,
+        "csrf_metatag" => @csrf_metatag,
       }
     end
   <% end -%>

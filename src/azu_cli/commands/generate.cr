@@ -33,13 +33,13 @@ module AzuCLI
           Logger.debug("API project detected, using API-only mode")
         end
 
-        # Some generators don't require a name (like auth)
-        generators_without_name = ["auth", "authentication"]
+        # Some generators don't require a name (like auth, validate)
+        generators_without_name = ["auth", "authentication", "validate"]
 
         @generator_type = get_arg(0) || ""
 
         if generators_without_name.includes?(@generator_type.downcase)
-          @generator_name = "Auth" # Default name for auth
+          @generator_name = @generator_type == "validate" ? "Templates" : "Auth" # Default name for auth
         else
           # Validate required arguments for other generators
           unless validate_required_args(2)
@@ -92,6 +92,8 @@ module AzuCLI
           generate_auth
         when "api_resource", "api-resource"
           generate_api_resource
+        when "validate"
+          validate_templates
         else
           error("Unknown generator type: #{@generator_type}")
         end
@@ -589,6 +591,68 @@ module AzuCLI
         raise ex
       end
 
+      # Validate Jinja templates
+      private def validate_templates : Result
+        Logger.info("Validating Jinja templates")
+
+        # Look for template files in the project
+        template_dirs = [
+          "./public/templates",
+          "./src/templates",
+          "./templates"
+        ]
+
+        template_files = [] of String
+        template_dirs.each do |dir|
+          if Dir.exists?(dir)
+            files = Dir.glob(File.join(dir, "**", "*.jinja"))
+            template_files.concat(files)
+          end
+        end
+
+        if template_files.empty?
+          Logger.warn("No Jinja template files found in common directories")
+          Logger.info("Searched in: #{template_dirs.join(", ")}")
+          return success("No templates to validate")
+        end
+
+        Logger.info("Found #{template_files.size} template files to validate")
+
+        # Validate all template files
+        results = AzuCLI::Validators::JinjaValidator.validate_files(template_files)
+
+        # Count results
+        valid_files = results.count { |_, result| result.valid }
+        error_count = results.sum { |_, result| result.errors.size }
+        warning_count = results.sum { |_, result| result.warnings.size }
+
+        # Display results
+        puts AzuCLI::Validators::JinjaValidator.summary(results)
+        puts
+
+        # Show detailed results for files with issues
+        results.each do |file_path, result|
+          unless result.valid || !result.warnings.empty?
+            next
+          end
+
+          puts "File: #{file_path}"
+          puts result.to_s
+          puts
+        end
+
+        if error_count > 0
+          Logger.error("Template validation failed with #{error_count} errors")
+          return error("Template validation failed")
+        elsif warning_count > 0
+          Logger.warn("Template validation completed with #{warning_count} warnings")
+          return success("Template validation completed with warnings")
+        else
+          Logger.info("All templates are valid")
+          return success("Template validation passed")
+        end
+      end
+
       def show_help
         puts "Usage: azu generate <type> <name> [attributes] [options]"
         puts
@@ -667,6 +731,10 @@ module AzuCLI
         puts "  api_resource <name> [attr:type]"
         puts "    Generate complete REST API resource (API-only)"
         puts "    Example: azu generate api_resource Post title:string content:text"
+        puts
+        puts "  validate"
+        puts "    Validate Jinja template syntax in the project"
+        puts "    Example: azu generate validate"
         puts
         puts "Options:"
         puts "  --force                    Overwrite existing files without prompting"
