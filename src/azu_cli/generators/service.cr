@@ -88,6 +88,37 @@ module AzuCLI
         end
       end
 
+      # Determine ID type based on database configuration or default to Int64
+      def id_type : String
+        # Check if database.yml exists and has uuid primary keys configured
+        if File.exists?("config/database.yml")
+          begin
+            db_config = YAML.parse(File.read("config/database.yml"))
+            if db_config.dig?("default", "primary_key_type").try(&.to_s) == "uuid"
+              return "UUID"
+            end
+          rescue
+            # Fall through to default
+          end
+        end
+        
+        # Check shard.yml for UUID-related dependencies or settings
+        if File.exists?("./shard.yml")
+          begin
+            shard_content = File.read("./shard.yml")
+            # If project uses UUID in dependencies or name, assume UUID IDs
+            if shard_content.includes?("uuid") || shard_content.includes?("UUID")
+              return "UUID"
+            end
+          rescue
+            # Fall through to default
+          end
+        end
+        
+        # Default to Int64 for maximum compatibility
+        "Int64"
+      end
+
       # Override render to generate one file per action + Result concern
       def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
         # Create resource subdirectory
@@ -203,7 +234,7 @@ require "../result"
 
 module #{@module_name}
   class ShowService
-    def call(id : UUID | Int64) : Services::Result(#{model_class})
+    def call(id : #{id_type}) : Services::Result(#{model_class})
       #{@snake_case_name} = #{model_class}.find(id)
       Services::Result.success(#{@snake_case_name})
     rescue CQL::RecordNotFound
@@ -222,9 +253,9 @@ require "../result"
 
 module #{@module_name}
   class UpdateService
-    def call(id : UUID | Int64, #{param_list}) : Services::Result(#{model_class})
+    def call(id : #{id_type}, #{param_list}) : Services::Result(#{model_class})
       #{@snake_case_name} = #{model_class}.find(id)
-
+      
       if #{@snake_case_name}.update(#{update_params})
         Services::Result.success(#{@snake_case_name})
       else
@@ -246,9 +277,9 @@ require "../result"
 
 module #{@module_name}
   class DestroyService
-    def call(id : UUID | Int64) : Services::Result(#{model_class})
+    def call(id : #{id_type}) : Services::Result(#{model_class})
       #{@snake_case_name} = #{model_class}.find(id)
-
+      
       if #{@snake_case_name}.delete
         Services::Result.success(#{@snake_case_name})
       else

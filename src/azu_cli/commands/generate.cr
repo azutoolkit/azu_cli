@@ -503,6 +503,7 @@ module AzuCLI
             endpoint_type: endpoint_type,
             scaffold: true
           )
+          endpoint_generator.fields = @attributes
           output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
           Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
           endpoint_generator.render(output_dir)

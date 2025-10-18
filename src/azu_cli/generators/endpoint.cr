@@ -133,7 +133,7 @@ module AzuCLI
 
         @actions.each do |action|
           # Create a temporary generator for this action (use singular form for file naming)
-          action_generator = ActionEndpoint.new(@name, action, @endpoint_type, @resource_singular, @module_name)
+          action_generator = ActionEndpoint.new(@name, action, @endpoint_type, @resource_singular, @module_name, @fields, @scaffold)
           action_generator.render(resource_dir, force: force, interactive: interactive, list: list, color: color)
         end
       end

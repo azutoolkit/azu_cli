@@ -5,14 +5,141 @@ module <%= @module_name %>::<%= @name.camelcase %>
     <%= http_verb_action %> "<%= action_path %>"
 
     def call : <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>
+<% if @scaffold -%>
+<% case @action.downcase -%>
+<% when "create" -%>
+      service = <%= @module_name %>::CreateService.new
+      result = service.call(<%= request_params %>)
+
+      if result.success?
+<% if @endpoint_type == "api" -%>
+        <%= @name.camelcase %>::<%= @action.camelcase %>Response.new(
+          <%= @resource_singular %>: result.data,
+          message: "<%= @name.camelcase %> created successfully",
+          success: true
+        )
+<% else -%>
+        redirect "/<%= @resource_plural %>/#{result.data.not_nil!.id}"
+<% end -%>
+      else
+<% if @endpoint_type == "api" -%>
+        error("Failed to create <%= @resource_singular %>", 422, format_errors(result.errors).values.flatten)
+<% else -%>
+        flash["error"] = "Failed to create <%= @resource_singular %>: #{format_error_messages(result.errors)}"
+        redirect "/<%= @resource_plural %>/new"
+<% end -%>
+      end
+<% when "index" -%>
+      service = <%= @module_name %>::IndexService.new
+      result = service.call
+
+      if result.success?
+        <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>.new(
+          <%= @resource_plural %>: result.data.not_nil!
+        )
+      else
+<% if @endpoint_type == "api" -%>
+        error("Failed to fetch <%= @resource_plural %>", 422, format_errors(result.errors).values.flatten)
+<% else -%>
+        flash["error"] = "Failed to fetch <%= @resource_plural %>"
+        <%= @name.camelcase %>::<%= @action.camelcase %>Page.new(<%= @resource_plural %>: [] of <%= @module_name %>::<%= @module_name %>Model)
+<% end -%>
+      end
+<% when "show" -%>
+      service = <%= @module_name %>::ShowService.new
+      result = service.call(@request.id)
+
+      if result.success?
+        <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>.new(
+          <%= @resource_singular %>: result.data.not_nil!
+        )
+      else
+<% if @endpoint_type == "api" -%>
+        error("<%= @name.camelcase %> not found", 404, format_errors(result.errors).values.flatten)
+<% else -%>
+        flash["error"] = "<%= @name.camelcase %> not found"
+        redirect "/<%= @resource_plural %>"
+<% end -%>
+      end
+<% when "update" -%>
+      service = <%= @module_name %>::UpdateService.new
+      result = service.call(@request.id, <%= request_params %>)
+
+      if result.success?
+<% if @endpoint_type == "api" -%>
+        <%= @name.camelcase %>::<%= @action.camelcase %>Response.new(
+          <%= @resource_singular %>: result.data,
+          message: "<%= @name.camelcase %> updated successfully",
+          success: true
+        )
+<% else -%>
+        flash["success"] = "<%= @name.camelcase %> updated successfully"
+        redirect "/<%= @resource_plural %>/#{result.data.not_nil!.id}"
+<% end -%>
+      else
+<% if @endpoint_type == "api" -%>
+        error("Failed to update <%= @resource_singular %>", 422, format_errors(result.errors).values.flatten)
+<% else -%>
+        flash["error"] = "Failed to update <%= @resource_singular %>: #{format_error_messages(result.errors)}"
+        redirect "/<%= @resource_plural %>/#{@request.id}/edit"
+<% end -%>
+      end
+<% when "destroy" -%>
+      service = <%= @module_name %>::DestroyService.new
+      result = service.call(@request.id)
+
+      if result.success?
+<% if @endpoint_type == "api" -%>
+        <%= @name.camelcase %>::<%= @action.camelcase %>Response.new(
+          message: "<%= @name.camelcase %> deleted successfully",
+          success: true
+        )
+<% else -%>
+        flash["success"] = "<%= @name.camelcase %> deleted successfully"
+        redirect "/<%= @resource_plural %>"
+<% end -%>
+      else
+<% if @endpoint_type == "api" -%>
+        error("Failed to delete <%= @resource_singular %>", 422, format_errors(result.errors).values.flatten)
+<% else -%>
+        flash["error"] = "Failed to delete <%= @resource_singular %>: #{format_error_messages(result.errors)}"
+        redirect "/<%= @resource_plural %>"
+<% end -%>
+      end
+<% when "new", "edit" -%>
+      # Render form pages
+      <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+<% else -%>
+      # TODO: Implement <%= @action.downcase %> action logic
+      <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+<% end -%>
+<% else -%>
       # TODO: Implement <%= @action.downcase %> action logic
       # Example usage:
       # model = <%= @name.camelcase %>::<%= @name.camelcase %>Model.new(...)
       # model.save
       # <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>.new
       <%= @name.camelcase %>::<%= @action.camelcase %><%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+<% end -%>
     end
+<% if @scaffold -%>
+
+    # Convert CQL errors to hash format for JSON responses
+    private def format_errors(errors : CQL::ActiveRecord::Validations::Errors) : Hash(String, Array(String))
+      result = {} of String => Array(String)
+      errors.each do |error|
+        field = error.field.to_s
+        result[field] ||= [] of String
+        result[field] << error.message
+      end
+      result
+    end
+
+    # Convert CQL errors to readable string for flash messages
+    private def format_error_messages(errors : CQL::ActiveRecord::Validations::Errors) : String
+      errors.map { |error| "#{error.field}: #{error.message}" }.join(", ")
+    end
+<% end -%>
   end
 end
-
 

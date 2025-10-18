@@ -13,10 +13,11 @@ module AzuCLI
       property module_name : String
       property fields : Hash(String, String)
 
-      def initialize(@name : String, @action : String, @endpoint_type : String, @snake_case_name : String, @module_name : String = "App")
+      property scaffold : Bool = false
+
+      def initialize(@name : String, @action : String, @endpoint_type : String, @snake_case_name : String, @module_name : String = "App", @fields : Hash(String, String) = {} of String => String, @scaffold : Bool = false)
         @resource_plural = @name.downcase.singularize.pluralize
         @resource_singular = @name.downcase.singularize
-        @fields = {} of String => String
       end
 
       def name_action : String
@@ -79,6 +80,18 @@ module AzuCLI
       # Get full path for action
       def full_path : String
         action_path
+      end
+
+      # Generate request parameters for service call
+      def request_params : String
+        # For create/update actions, extract fields from request
+        case @action.downcase
+        when "create", "update"
+          return "" if @fields.empty?
+          @fields.keys.map { |field| "@request.#{field}" }.join(", ")
+        else
+          ""
+        end
       end
     end
   end
