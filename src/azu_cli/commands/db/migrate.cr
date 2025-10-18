@@ -91,14 +91,15 @@ module AzuCLI
 
         # Create a temporary migration runner script
         private def create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
-          script_path = File.tempname("azu_migrate", ".cr")
           project_root = Dir.current
+          script_path = File.join(project_root, "tmp_migrate_#{Time.utc.to_unix}.cr")
           schema_name, schema_symbol = detect_schema_info
 
           script_content = String.build do |io|
             io << "require \"cql\"\n"
-            io << "require \"#{project_root}/src/db/schema\"\n"
-            io << "require \"#{project_root}/src/db/migrations/*\"\n\n"
+            io << "require \"pg\"\n"
+            io << "require \"./src/db/schema.cr\"\n"
+            io << "require \"./src/db/migrations/*\"\n\n"
             io << "config = CQL::MigratorConfig.new(\n"
             io << "  schema_file_path: \"src/db/schema.cr\",\n"
             io << "  schema_name: :#{schema_name},\n"

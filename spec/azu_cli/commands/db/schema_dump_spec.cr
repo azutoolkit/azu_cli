@@ -22,10 +22,10 @@ describe AzuCLI::Commands::Database, "schema dumping" do
     it "detects BlogDB schema correctly" do
       # Create a test schema file with BlogDB
       File.write(schema_path, "BlogDB = CQL::Schema.define(\n  :blog_db,\n  adapter: CQL::Adapter::Postgres,\n  uri: \"postgres://localhost/blog\") do\nend")
-      
+
       command = AzuCLI::Commands::DB::Migrate.new
       schema_name, schema_symbol = command.test_detect_schema_info
-      
+
       schema_name.should eq("BlogDB")
       schema_symbol.should eq("blog_db")
     end
@@ -33,20 +33,20 @@ describe AzuCLI::Commands::Database, "schema dumping" do
     it "detects MyBlogDB schema correctly" do
       # Create a test schema file with MyBlogDB
       File.write(schema_path, "MyBlogDB = CQL::Schema.define(\n  :my_blog_db,\n  adapter: CQL::Adapter::Postgres,\n  uri: \"postgres://localhost/my_blog\") do\nend")
-      
+
       command = AzuCLI::Commands::DB::Migrate.new
       schema_name, schema_symbol = command.test_detect_schema_info
-      
+
       schema_name.should eq("MyBlogDB")
       schema_symbol.should eq("my_blog_db")
     end
 
     it "falls back to AppSchema when file doesn't exist" do
       File.delete(schema_path) if File.exists?(schema_path)
-      
+
       command = AzuCLI::Commands::DB::Migrate.new
       schema_name, schema_symbol = command.test_detect_schema_info
-      
+
       schema_name.should eq("AppSchema")
       schema_symbol.should eq("app_schema")
     end
@@ -54,10 +54,10 @@ describe AzuCLI::Commands::Database, "schema dumping" do
     it "falls back to AppSchema when pattern doesn't match" do
       # Create a schema file without the expected pattern
       File.write(schema_path, "# Invalid schema file")
-      
+
       command = AzuCLI::Commands::DB::Migrate.new
       schema_name, schema_symbol = command.test_detect_schema_info
-      
+
       schema_name.should eq("AppSchema")
       schema_symbol.should eq("app_schema")
     end

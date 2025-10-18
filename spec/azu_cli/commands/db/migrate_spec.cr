@@ -103,9 +103,8 @@ describe AzuCLI::Commands::DB::Migrate do
   end
 
   describe "migration script generation" do
-    it "generates script with absolute paths" do
+    it "generates script with relative paths" do
       command = AzuCLI::Commands::DB::Migrate.new
-      project_root = Dir.current
 
       # Call the test helper method
       script_path = command.test_create_migration_runner_script("up", nil, nil)
@@ -113,13 +112,25 @@ describe AzuCLI::Commands::DB::Migrate do
       # Read the generated script
       script_content = File.read(script_path)
 
-      # Verify it contains absolute paths with project root
-      script_content.should contain("require \"#{project_root}/src/db/schema\"")
-      script_content.should contain("require \"#{project_root}/src/db/migrations/*\"")
+      # Verify it contains relative paths
+      script_content.should contain("require \"./src/db/schema.cr\"")
+      script_content.should contain("require \"./src/db/migrations/*\"")
 
-      # Verify it doesn't contain relative paths
-      script_content.should_not contain("require \"./src/db/schema\"")
-      script_content.should_not contain("require \"./src/db/migrations/*\"")
+      # Clean up
+      File.delete(script_path) if File.exists?(script_path)
+    end
+
+    it "generates script with PostgreSQL driver requirement" do
+      command = AzuCLI::Commands::DB::Migrate.new
+
+      # Call the test helper method
+      script_path = command.test_create_migration_runner_script("up", nil, nil)
+
+      # Read the generated script
+      script_content = File.read(script_path)
+
+      # Verify it contains PostgreSQL driver requirement
+      script_content.should contain("require \"pg\"")
 
       # Clean up
       File.delete(script_path) if File.exists?(script_path)
@@ -134,7 +145,7 @@ describe AzuCLI::Commands::DB::Migrate do
       # Verify CQL configuration is present
       script_content.should contain("CQL::MigratorConfig.new")
       script_content.should contain("schema_file_path: \"src/db/schema.cr\"")
-      script_content.should contain("schema_name: :")  # Schema name is dynamic
+      script_content.should contain("schema_name: :")   # Schema name is dynamic
       script_content.should contain("schema_symbol: :") # Schema symbol is dynamic
       script_content.should contain("auto_sync: true")
 

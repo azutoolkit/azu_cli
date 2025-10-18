@@ -199,8 +199,8 @@ module AzuCLI
           schema_name = match[1]
           # Convert to symbol format (e.g., "BlogDB" → "blog_db")
           schema_symbol = schema_name.gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
-                                     .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
-                                     .downcase
+            .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
+            .downcase
           {schema_name, schema_symbol}
         else
           {"AppSchema", "app_schema"} # Fallback
