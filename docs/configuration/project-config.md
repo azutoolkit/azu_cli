@@ -84,7 +84,7 @@ development:
     - node_modules/
     - .crystal/
     - bin/
-  port: 3000
+  port: 4000
   host: localhost
 
 # Testing configuration
@@ -500,7 +500,7 @@ project:
 
 development:
   auto_reload: true
-  port: 3000
+  port: 4000
   host: localhost
 
 build:

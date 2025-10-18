@@ -169,7 +169,7 @@ Starts the development server with hot reloading.
 **Quick Examples:**
 
 ```bash
-# Start on default port (3000)
+# Start on default port (4000)
 azu serve
 
 # Start on custom port

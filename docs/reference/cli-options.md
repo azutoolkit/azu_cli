@@ -474,7 +474,7 @@ azu serve [options]
 | Option       | Description       | Default       | Example                            |
 | ------------ | ----------------- | ------------- | ---------------------------------- |
 | `--host`     | Server host       | `localhost`   | `--host=0.0.0.0`                   |
-| `--port`     | Server port       | `3000`        | `--port=8080`                      |
+| `--port`     | Server port       | `4000`        | `--port=8080`                      |
 | `--workers`  | Number of workers | `1`           | `--workers=4`                      |
 | `--reload`   | Enable hot reload | `false`       | `--reload`                         |
 | `--watch`    | Watch directories | `src/`        | `--watch=src/endpoints,src/models` |
@@ -662,7 +662,7 @@ azu version [options]
 | Variable             | Description       | Default     |
 | -------------------- | ----------------- | ----------- |
 | `AZU_SERVER_HOST`    | Server host       | `localhost` |
-| `AZU_SERVER_PORT`    | Server port       | `3000`      |
+| `AZU_SERVER_PORT`    | Server port       | `4000`      |
 | `AZU_SERVER_WORKERS` | Number of workers | `1`         |
 | `AZU_SERVER_RELOAD`  | Enable hot reload | `false`     |
 

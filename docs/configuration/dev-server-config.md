@@ -22,7 +22,7 @@ development:
   # Server settings
   server:
     host: <%= ENV["AZU_HOST"] || "localhost" %>
-    port: <%= ENV["AZU_PORT"] || 3000 %>
+    port: <%= ENV["AZU_PORT"] || 4000 %>
     workers: 1
     backlog: 1024
 
@@ -85,7 +85,7 @@ development:
   server:
     # Network settings
     host: localhost
-    port: 3000
+    port: 4000
     workers: 1
     backlog: 1024
 
@@ -601,7 +601,7 @@ development:
 development:
   server:
     host: localhost
-    port: 3000
+    port: 4000
 
   hot_reload:
     enabled: true
@@ -720,7 +720,7 @@ azu dev tools
 ```bash
 # Server settings
 export AZU_HOST="localhost"
-export AZU_PORT="3000"
+export AZU_PORT="4000"
 export AZU_WORKERS="1"
 
 # Hot reloading

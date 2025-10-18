@@ -213,7 +213,7 @@ Start development server with hot reloading.
 
 **Options:**
 
-- `--port, -p <port>` - Server port [default: 3000]
+- `--port, -p <port>` - Server port [default: 4000]
 - `--host, -h <host>` - Server host [default: localhost]
 - `--env, -e <env>` - Environment [default: development]
 - `--no-watch` - Disable file watching

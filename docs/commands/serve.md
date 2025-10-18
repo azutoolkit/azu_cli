@@ -13,7 +13,7 @@ azu serve [options]
 ### Start Development Server
 
 ```bash
-# Start server on default port (3000)
+# Start server on default port (4000)
 azu serve
 
 # Start on custom port
@@ -44,7 +44,7 @@ azu serve
 
 | Option          | Description           | Default   |
 | --------------- | --------------------- | --------- |
-| `--port <port>` | Server port           | 3000      |
+| `--port <port>` | Server port           | 4000      |
 | `--host <host>` | Server host           | localhost |
 | `--no-watch`    | Disable file watching | false     |
 | `--verbose`     | Enable verbose output | false     |
@@ -210,7 +210,7 @@ Azu.configure do |config|
   config.debug = true
   config.log_level = :debug
   config.host = "localhost"
-  config.port = 3000
+  config.port = 4000
   config.reload_templates = true
   config.cache_templates = false
 end
@@ -260,7 +260,7 @@ azu serve --ssl --port 443
 
 ```bash
 # Share server on network
-azu serve --host 0.0.0.0 --port 3000
+azu serve --host 0.0.0.0 --port 4000
 
 # Multiple developers can access:
 # http://your-ip:3000
@@ -270,7 +270,7 @@ azu serve --host 0.0.0.0 --port 3000
 
 ```bash
 # Access from mobile devices
-azu serve --host 0.0.0.0 --port 3000
+azu serve --host 0.0.0.0 --port 4000
 
 # Find your IP address
 ifconfig | grep "inet " | grep -v 127.0.0.1
@@ -382,7 +382,7 @@ azu serve --workers 1 --memory-limit 256MB
 # Use reverse proxy (nginx, etc.)
 
 # For development sharing
-azu serve --host 0.0.0.0 --port 3000
+azu serve --host 0.0.0.0 --port 4000
 ```
 
 ### 5. Monitoring

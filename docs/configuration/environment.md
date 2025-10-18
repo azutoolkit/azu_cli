@@ -60,7 +60,7 @@ AZU_DATABASE_URL=postgresql://user:pass@localhost/db
 | Variable              | Description          | Default     | Example             |
 | --------------------- | -------------------- | ----------- | ------------------- |
 | `AZU_SERVER_HOST`     | Server host          | `localhost` | `0.0.0.0`           |
-| `AZU_SERVER_PORT`     | Server port          | `3000`      | `8080`              |
+| `AZU_SERVER_PORT`     | Server port          | `4000`      | `8080`              |
 | `AZU_SERVER_WORKERS`  | Number of workers    | `1`         | `4`                 |
 | `AZU_SERVER_RELOAD`   | Enable auto-reload   | `true`      | `true`, `false`     |
 | `AZU_SERVER_SSL`      | Enable SSL           | `false`     | `true`, `false`     |
