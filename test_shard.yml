@@ -1,5 +1,0 @@
-name: test-app
-version: 0.1.0
-targets:
-  test_app:
-    main: src/server.cr

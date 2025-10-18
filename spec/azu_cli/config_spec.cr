@@ -9,7 +9,7 @@ describe AzuCLI::Config do
       config.environment.should eq("development")
       config.debug_mode.should be_true # development mode sets debug to true
       config.database_adapter.should eq("postgresql")
-      config.dev_server_port.should eq(3000)
+      config.dev_server_port.should eq(4000)
       config.colored_output.should be_true
     end
 

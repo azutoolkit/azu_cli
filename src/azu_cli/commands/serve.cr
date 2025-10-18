@@ -5,7 +5,7 @@ module AzuCLI
   module Commands
     # Development server with hot reloading
     class Serve < Base
-      property port : Int32 = 3000
+      property port : Int32 = 4000
       property host : String = "localhost"
       property environment : String = "development"
       property watch : Bool = true
@@ -99,11 +99,28 @@ module AzuCLI
         else
           Logger.error("❌ Compilation failed!")
           puts ""
+          puts "=" * 60
+          puts "COMPILATION ERROR DETAILS:"
+          puts "=" * 60
           puts error.to_s
+          puts "=" * 60
+          puts ""
           false
         end
       rescue ex
-        Logger.error("Compilation error: #{ex.message}")
+        Logger.error("❌ Compilation error: #{ex.message}")
+        puts ""
+        puts "=" * 60
+        puts "COMPILATION EXCEPTION DETAILS:"
+        puts "=" * 60
+        puts ex.message
+        if ex.backtrace?
+          puts ""
+          puts "Backtrace:"
+          puts ex.backtrace.join("\n")
+        end
+        puts "=" * 60
+        puts ""
         false
       end
 
@@ -195,7 +212,21 @@ module AzuCLI
               puts ""
             end
           rescue ex
-            Logger.error("File watcher error: #{ex.message}")
+            Logger.error("❌ File watcher error: #{ex.message}")
+            if @verbose
+              puts ""
+              puts "=" * 60
+              puts "FILE WATCHER ERROR DETAILS:"
+              puts "=" * 60
+              puts ex.message
+              if ex.backtrace?
+                puts ""
+                puts "Backtrace:"
+                puts ex.backtrace.join("\n")
+              end
+              puts "=" * 60
+              puts ""
+            end
             sleep 1.second
           end
         end

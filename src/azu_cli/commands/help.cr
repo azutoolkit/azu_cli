@@ -182,7 +182,7 @@ module AzuCLI
         puts
         puts "Options:"
         puts "  --host <host>            Server host [default: localhost]"
-        puts "  --port <port>            Server port [default: 3000]"
+        puts "  --port <port>            Server port [default: 4000]"
         puts "  --environment <env>      Environment [default: development]"
         puts "  --no-reload              Disable hot reloading"
         puts "  --workers <count>        Number of worker processes"

@@ -102,7 +102,7 @@ module AzuCLI
         # Server configuration
         server:
           host: "localhost"
-          port: 3000
+          port: 4000
           environment: "development"
           reload: true
 

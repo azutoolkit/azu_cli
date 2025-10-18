@@ -13,7 +13,7 @@ describe AzuCLI::Generate::Endpoint do
   it "creates an endpoint generator with web type" do
     generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
     generator.endpoint_type.should eq("web")
-    generator.request_type.should eq("UserContract")
+    generator.request_type.should eq("UserRequest")
     generator.response_type.should eq("UserPage")
   end
 
@@ -61,7 +61,7 @@ describe AzuCLI::Generate::Endpoint do
   it "generates scaffold components for Web type" do
     generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web", true)
     components = generator.scaffold_components
-    components.should eq(["contract", "page"])
+    components.should eq(["request", "page"])
   end
 
   it "returns provided actions as effective actions" do
@@ -89,17 +89,17 @@ describe AzuCLI::Generate::Endpoint do
 
     # Check index file content
     index_content = File.read(index_file)
-    index_content.should contain("struct UserIndexEndpoint")
-    index_content.should contain("include Azu::Endpoint(UserIndexRequest, UserIndexResponse)")
+    index_content.should contain("struct IndexEndpoint")
+    index_content.should contain("include Azu::Endpoint(User::IndexRequest, User::IndexResponse)")
     index_content.should contain("get \"/users\"")
-    index_content.should contain("def call : UserIndexResponse")
+    index_content.should contain("def call : User::IndexResponse")
 
     # Check create file content
     create_content = File.read(create_file)
-    create_content.should contain("struct UserCreateEndpoint")
-    create_content.should contain("include Azu::Endpoint(UserCreateRequest, UserCreateResponse)")
+    create_content.should contain("struct CreateEndpoint")
+    create_content.should contain("include Azu::Endpoint(User::CreateRequest, User::CreateResponse)")
     create_content.should contain("post \"/users\"")
-    create_content.should contain("def call : UserCreateResponse")
+    create_content.should contain("def call : User::CreateResponse")
 
     FileUtils.rm_rf(test_dir)
   end
@@ -120,18 +120,113 @@ describe AzuCLI::Generate::Endpoint do
 
     # Check index file content
     index_content = File.read(index_file)
-    index_content.should contain("struct UserIndexEndpoint")
-    index_content.should contain("include Azu::Endpoint(UserIndexContract, UserIndexPage)")
+    index_content.should contain("struct IndexEndpoint")
+    index_content.should contain("include Azu::Endpoint(User::IndexRequest, User::IndexPage)")
     index_content.should contain("get \"/users\"")
-    index_content.should contain("def call : UserIndexPage")
+    index_content.should contain("def call : User::IndexPage")
 
     # Check show file content
     show_content = File.read(show_file)
-    show_content.should contain("struct UserShowEndpoint")
-    show_content.should contain("include Azu::Endpoint(UserShowContract, UserShowPage)")
+    show_content.should contain("struct ShowEndpoint")
+    show_content.should contain("include Azu::Endpoint(User::ShowRequest, User::ShowPage)")
     show_content.should contain("get \"/users/:id\"")
-    show_content.should contain("def call : UserShowPage")
+    show_content.should contain("def call : User::ShowPage")
 
     FileUtils.rm_rf(test_dir)
+  end
+
+  describe "scaffold generation with proper module structure" do
+    it "generates web endpoints with nested module structure and Request types" do
+      actions = ["create"]
+      generator = AzuCLI::Generate::Endpoint.new("Post", actions, "web")
+      test_dir = "./tmp_test"
+      FileUtils.mkdir_p(test_dir)
+      generator.render(test_dir, interactive: false)
+
+      # Check that the endpoint file was created with proper structure
+      create_file = File.join(test_dir, "posts", "post_create_endpoint.cr")
+      File.exists?(create_file).should be_true
+
+      create_content = File.read(create_file)
+
+      # Should use nested module structure
+      create_content.should contain("module AzuCli::Post")
+      create_content.should contain("struct CreateEndpoint")
+
+      # Should always use Request, not Contract
+      create_content.should contain("include Azu::Endpoint(Post::CreateRequest, Post::CreatePage)")
+      create_content.should contain("def call : Post::CreatePage")
+
+      # Should not contain Contract references
+      create_content.should_not contain("Contract")
+
+      FileUtils.rm_rf(test_dir)
+    end
+
+    it "generates API endpoints with nested module structure" do
+      actions = ["create"]
+      generator = AzuCLI::Generate::Endpoint.new("Post", actions, "api")
+      test_dir = "./tmp_test"
+      FileUtils.mkdir_p(test_dir)
+      generator.render(test_dir, interactive: false)
+
+      # Check that the endpoint file was created with proper structure
+      create_file = File.join(test_dir, "posts", "post_create_endpoint.cr")
+      File.exists?(create_file).should be_true
+
+      create_content = File.read(create_file)
+
+      # Should use nested module structure
+      create_content.should contain("module AzuCli::Post")
+      create_content.should contain("struct CreateEndpoint")
+
+      # Should use Request and Response for API
+      create_content.should contain("include Azu::Endpoint(Post::CreateRequest, Post::CreateResponse)")
+      create_content.should contain("def call : Post::CreateResponse")
+
+      FileUtils.rm_rf(test_dir)
+    end
+
+    it "generates endpoints with proper module nesting for complex resource names" do
+      actions = ["create"]
+      generator = AzuCLI::Generate::Endpoint.new("BlogPost", actions, "web")
+      test_dir = "./tmp_test"
+      FileUtils.mkdir_p(test_dir)
+      generator.render(test_dir, interactive: false)
+
+      # Check that the endpoint file was created with proper structure
+      create_file = File.join(test_dir, "blogposts", "blogpost_create_endpoint.cr")
+      File.exists?(create_file).should be_true
+
+      create_content = File.read(create_file)
+
+      # Should use nested module structure with proper CamelCase
+      create_content.should contain("module AzuCli::BlogPost")
+      create_content.should contain("struct CreateEndpoint")
+      create_content.should contain("include Azu::Endpoint(BlogPost::CreateRequest, BlogPost::CreatePage)")
+
+      FileUtils.rm_rf(test_dir)
+    end
+  end
+
+  describe "request type validation" do
+    it "always generates Request types for web applications" do
+      generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
+      generator.request_type.should eq("UserRequest")
+      generator.request_type.should_not contain("Contract")
+    end
+
+    it "always generates Request types for API applications" do
+      generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
+      generator.request_type.should eq("UserRequest")
+    end
+
+    it "generates correct response types based on application type" do
+      web_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
+      api_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
+
+      web_generator.response_type.should eq("UserPage")
+      api_generator.response_type.should eq("UserResponse")
+    end
   end
 end

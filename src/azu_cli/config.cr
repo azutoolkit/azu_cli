@@ -36,9 +36,9 @@ module AzuCLI
 
     # Development server configuration
     property dev_server_host : String = "localhost"
-    property dev_server_port : Int32 = 3000
-    property dev_server_watch : Bool = true
-    property dev_server_rebuild : Bool = true
+    property dev_server_port : Int32 = 4000
+    property? dev_server_watch : Bool = true
+    property? dev_server_rebuild : Bool = true
 
     # Database configuration
     property database_url : String?
@@ -57,8 +57,8 @@ module AzuCLI
     property log_format : String = "default"
 
     # CLI configuration
-    property show_help_on_empty : Bool = true
-    property colored_output : Bool = true
+    property? show_help_on_empty : Bool = true
+    property? colored_output : Bool = true
 
     def self.instance
       INSTANCE
@@ -318,7 +318,7 @@ module AzuCLI
       # Development server configuration
       server:
         host: "localhost"
-        port: 3000
+        port: 4000
         watch: true      # Watch for file changes
         rebuild: true    # Rebuild on changes
 

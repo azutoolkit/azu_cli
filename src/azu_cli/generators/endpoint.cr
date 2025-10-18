@@ -47,7 +47,7 @@ module AzuCLI
 
       # Get the request/response types based on endpoint type
       def request_type : String
-        @endpoint_type == "web" ? "#{@name.camelcase}Contract" : "#{@name.camelcase}Request"
+        "#{@name.camelcase}Request"
       end
 
       def response_type : String
@@ -108,7 +108,7 @@ module AzuCLI
           components << "request"
           components << "response"
         else
-          components << "contract"
+          components << "request"
           components << "page"
         end
 

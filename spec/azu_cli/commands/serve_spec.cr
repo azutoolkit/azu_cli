@@ -2,9 +2,9 @@ require "../../spec_helper"
 
 describe AzuCLI::Commands::Serve do
   describe "property defaults" do
-    it "has default port of 3000" do
+    it "has default port of 4000" do
       command = AzuCLI::Commands::Serve.new
-      command.port.should eq(3000)
+      command.port.should eq(4000)
     end
 
     it "has default host of localhost" do

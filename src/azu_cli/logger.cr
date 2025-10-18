@@ -55,7 +55,7 @@ module AzuCLI
 
     # Create appropriate log backend based on configuration
     private def create_backend(config : Config) : Log::Backend
-      if config.colored_output && STDOUT.tty?
+      if config.colored_output? && STDOUT.tty?
         ColoredBackend.new(
           io: STDOUT, # Changed to STDOUT for regular output
           format: config.log_format,
@@ -112,7 +112,7 @@ module AzuCLI
 
     def warn(message : String)
       # Warnings should go to STDERR
-      if Config.instance.colored_output && STDERR.tty?
+      if Config.instance.colored_output? && STDERR.tty?
         print_colored(:warn, message, io: STDERR)
       else
         STDERR.puts("WARNING: #{message}")
@@ -121,7 +121,7 @@ module AzuCLI
 
     def error(message : String)
       # Errors should go to STDERR
-      if Config.instance.colored_output && STDERR.tty?
+      if Config.instance.colored_output? && STDERR.tty?
         print_colored(:error, message, io: STDERR)
       else
         STDERR.puts("ERROR: #{message}")
@@ -130,7 +130,7 @@ module AzuCLI
 
     def fatal(message : String)
       # Fatal errors should go to STDERR
-      if Config.instance.colored_output && STDERR.tty?
+      if Config.instance.colored_output? && STDERR.tty?
         print_colored(:fatal, message, io: STDERR)
       else
         STDERR.puts("FATAL: #{message}")
@@ -139,7 +139,7 @@ module AzuCLI
 
     # CLI-specific log methods with enhanced formatting
     def success(message : String)
-      if Config.instance.colored_output && STDOUT.tty?
+      if Config.instance.colored_output? && STDOUT.tty?
         print_colored(:success, message, io: STDOUT)
       else
         puts("SUCCESS: #{message}")
@@ -147,7 +147,7 @@ module AzuCLI
     end
 
     def title(message : String)
-      if Config.instance.colored_output && STDOUT.tty?
+      if Config.instance.colored_output? && STDOUT.tty?
         print_colored(:title, message, io: STDOUT)
       else
         puts("TITLE: #{message}")
@@ -155,7 +155,7 @@ module AzuCLI
     end
 
     def prompt(message : String)
-      if Config.instance.colored_output && STDOUT.tty?
+      if Config.instance.colored_output? && STDOUT.tty?
         print_colored(:prompt, message, io: STDOUT)
       else
         print("#{message} ")
@@ -164,7 +164,7 @@ module AzuCLI
 
     def announce(message : String)
       output_io = STDOUT
-      if Config.instance.colored_output && output_io.tty?
+      if Config.instance.colored_output? && output_io.tty?
         output_io.puts
         output_io.puts "=" * 60
         output_io.print "  #{ICONS[:title]} "
@@ -184,7 +184,7 @@ module AzuCLI
       prefix = "[#{step_number}/#{total_steps}]"
       output_io = STDOUT
 
-      if Config.instance.colored_output && output_io.tty?
+      if Config.instance.colored_output? && output_io.tty?
         output_io.print prefix.colorize(:dark_gray)
         output_io.print " "
         output_io.puts message.colorize(COLORS[:info])
@@ -195,7 +195,7 @@ module AzuCLI
 
     def progress_start(message : String)
       output_io = STDOUT
-      if Config.instance.colored_output && output_io.tty?
+      if Config.instance.colored_output? && output_io.tty?
         output_io.print "#{ICONS[:info]} #{message}... ".colorize(COLORS[:info])
         output_io.flush
       else
@@ -206,7 +206,7 @@ module AzuCLI
 
     def progress_done(success : Bool = true)
       output_io = STDOUT
-      if Config.instance.colored_output && output_io.tty?
+      if Config.instance.colored_output? && output_io.tty?
         if success
           output_io.puts "✅ Done".colorize(COLORS[:success])
         else
@@ -219,7 +219,7 @@ module AzuCLI
 
     def command_start(command : String)
       output_io = STDOUT
-      if Config.instance.colored_output && output_io.tty?
+      if Config.instance.colored_output? && output_io.tty?
         output_io.print "    → ".colorize(:dark_gray)
         output_io.puts command.colorize(:white)
       else
@@ -229,7 +229,7 @@ module AzuCLI
 
     def file_created(path : String)
       output_io = STDOUT
-      if Config.instance.colored_output && output_io.tty?
+      if Config.instance.colored_output? && output_io.tty?
         output_io.print "      ✨ Created: ".colorize(COLORS[:success])
         output_io.puts path.colorize(:white)
       else
@@ -239,7 +239,7 @@ module AzuCLI
 
     def file_modified(path : String)
       output_io = STDOUT
-      if Config.instance.colored_output && output_io.tty?
+      if Config.instance.colored_output? && output_io.tty?
         output_io.print "      📝 Modified: ".colorize(COLORS[:warn])
         output_io.puts path.colorize(:white)
       else
@@ -249,7 +249,7 @@ module AzuCLI
 
     def file_skipped(path : String, reason : String = "already exists")
       output_io = STDOUT
-      if Config.instance.colored_output && output_io.tty?
+      if Config.instance.colored_output? && output_io.tty?
         output_io.print "      ⏭️  Skipped: ".colorize(:dark_gray)
         output_io.print path.colorize(:white)
         output_io.puts " (#{reason})".colorize(:dark_gray)
@@ -315,7 +315,7 @@ module AzuCLI
     def exception(ex : Exception, context : String? = nil)
       error_io = STDERR
 
-      if Config.instance.colored_output && error_io.tty?
+      if Config.instance.colored_output? && error_io.tty?
         error_io.puts
         error_io.puts "💥 Exception Occurred".colorize(COLORS[:error]).bold
         error_io.puts "=" * 50
