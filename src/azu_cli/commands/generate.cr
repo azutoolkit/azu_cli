@@ -112,7 +112,7 @@ module AzuCLI
           parser.on("--api-only", "Generate API-only components") { @api_only = true }
           parser.on("--web-only", "Generate web-only components") { @web_only = true }
           parser.on("--skip-tests", "Skip test file generation") { @skip_tests = true }
-          parser.on("--skip COMPONENTS", "Skip specific components (comma-separated): model,endpoint,request,response,template,migration,page") do |components|
+          parser.on("--skip COMPONENTS", "Skip specific components (comma-separated): model,endpoint,request,response,template,migration,page,service") do |components|
             @skip_components = components.split(",").map(&.strip.downcase)
           end
           parser.on("--strategy STRATEGY", "Authentication strategy (jwt, session, oauth)") do |strategy|
@@ -192,12 +192,18 @@ module AzuCLI
       private def generate_service : Result
         Logger.info("Generating service")
 
-        generator = AzuCLI::Generate::Service.new(
-          name: @generator_name,
-          methods: @attributes
-        )
+        # If no actions specified, generate all CRUD actions
+        actions_to_generate = @actions.empty? ? ["create", "index", "show", "update", "destroy"] : @actions
 
-        render_generator(generator, AzuCLI::Generate::Service::OUTPUT_DIR)
+        actions_to_generate.each do |action|
+          generator = AzuCLI::Generate::Service.new(
+            name: @generator_name,
+            action: action,
+            attributes: @attributes
+          )
+          render_generator(generator, AzuCLI::Generate::Service::OUTPUT_DIR)
+        end
+
         success("Generated service #{@generator_name} successfully")
       end
 
@@ -503,6 +509,25 @@ module AzuCLI
           components_generated << "endpoint"
         end
 
+        # Generate Services (if CQL enabled)
+        unless should_skip_component?("service")
+          Logger.info("🔨 Generating services...")
+
+          # Service actions (skip view-only actions)
+          service_actions = ["create", "index", "show", "update", "destroy"]
+
+          service_actions.each do |action|
+            service_generator = AzuCLI::Generate::Service.new(
+              name: @generator_name,
+              action: action,
+              attributes: @attributes
+            )
+            render_generator(service_generator, AzuCLI::Generate::Service::OUTPUT_DIR)
+          end
+
+          components_generated << "service"
+        end
+
         # Generate Requests (both API and Web) - aligns with Azu::Request
         unless should_skip_component?("request") || should_skip_component?("contract")
           Logger.info("🔨 Generating requests...")
@@ -742,7 +767,7 @@ module AzuCLI
         puts "  --api-only                 Generate API-only components (JSON responses)"
         puts "  --web-only                 Generate web-only components (HTML pages)"
         puts "  --skip COMPONENTS          Skip specific components (comma-separated)"
-        puts "                             Available components: model,endpoint,request,response,template,migration,page"
+        puts "                             Available components: model,endpoint,request,response,template,migration,page,service"
         puts "  --help                     Show this help message"
         puts
         puts "Attribute Format:"
@@ -755,6 +780,7 @@ module AzuCLI
         puts "  - Model with attributes"
         puts "  - Database migration file"
         puts "  - RESTful endpoints (index, show, new, create, edit, update, destroy)"
+        puts "  - Service classes for business logic with CRUD operations"
         puts "  - Request classes for input validation (Azu::Request)"
         puts "  - Response/Page classes for output formatting"
         puts "  - Template files for web views (Web mode)"
@@ -765,6 +791,7 @@ module AzuCLI
         puts "Generator Output Directories:"
         puts "  models/         - CQL model files"
         puts "  endpoints/      - HTTP endpoint files"
+        puts "  services/       - Business logic service files"
         puts "  requests/       - Request validation files (Azu::Request)"
         puts "  pages/          - Page response files (Web/API)"
         puts "  jobs/           - Background job files"
