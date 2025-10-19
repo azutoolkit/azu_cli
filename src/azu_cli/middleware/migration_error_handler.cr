@@ -15,16 +15,16 @@ module AzuCLI
       def handle_error(error : Exception, migration_name : String, migration_version : Int64) : String
         error_type = classify_error(error)
         error_details = extract_error_details(error)
-        
+
         # Log the error
         log_error(error, migration_name, migration_version, error_type, error_details)
-        
+
         # Generate recovery suggestions
         recovery_suggestions = generate_recovery_suggestions(error_type, error_details)
-        
+
         # Create recovery script if possible
         recovery_script = create_recovery_script(error_type, error_details, migration_name, migration_version)
-        
+
         # Return formatted error report
         format_error_report(error_type, error_details, recovery_suggestions, recovery_script)
       end
@@ -32,7 +32,7 @@ module AzuCLI
       # Classify the type of error
       private def classify_error(error : Exception) : String
         message = error.message || ""
-        
+
         case
         when message.includes?("connection") || message.includes?("connect")
           "connection"
@@ -60,39 +60,39 @@ module AzuCLI
       # Extract detailed error information
       private def extract_error_details(error : Exception) : Hash(String, String)
         details = {
-          "message" => error.message || "Unknown error",
-          "class" => error.class.name,
-          "backtrace" => error.backtrace?.try(&.join("\n")) || "No backtrace available"
+          "message"   => error.message || "Unknown error",
+          "class"     => error.class.name,
+          "backtrace" => error.backtrace?.try(&.join("\n")) || "No backtrace available",
         }
-        
+
         # Extract additional details based on error type
         message = error.message || ""
-        
+
         if message.includes?("table")
           if match = message.match(/table "?([^"\s]+)"?/)
             details["table_name"] = match[1]
           end
         end
-        
+
         if message.includes?("column")
           if match = message.match(/column "?([^"\s]+)"?/)
             details["column_name"] = match[1]
           end
         end
-        
+
         if message.includes?("constraint")
           if match = message.match(/constraint "?([^"\s]+)"?/)
             details["constraint_name"] = match[1]
           end
         end
-        
+
         details
       end
 
       # Generate recovery suggestions based on error type
       private def generate_recovery_suggestions(error_type : String, error_details : Hash(String, String)) : Array(String)
         suggestions = [] of String
-        
+
         case error_type
         when "connection"
           suggestions << "Check database connection settings"
@@ -142,7 +142,7 @@ module AzuCLI
           suggestions << "Check migration file syntax and logic"
           suggestions << "Consider running migration manually to debug"
         end
-        
+
         suggestions
       end
 
@@ -153,7 +153,7 @@ module AzuCLI
           io << "# Migration: #{migration_name} (#{migration_version})\n"
           io << "# Error Type: #{error_type}\n"
           io << "# Generated: #{Time.utc}\n\n"
-          
+
           case error_type
           when "permission"
             io << "# Grant necessary permissions\n"
@@ -184,7 +184,7 @@ module AzuCLI
             io << "# Review the error and apply appropriate fixes\n"
           end
         end
-        
+
         script_path = File.join(@recovery_scripts_dir, "recovery_#{migration_version}_#{Time.utc.to_unix}.sql")
         File.write(script_path, script_content)
         script_path
@@ -202,7 +202,7 @@ module AzuCLI
           io << "Details: #{error_details}\n"
           io << "#{"=" * 80}\n\n"
         end
-        
+
         File.open(@error_log_path, "a") do |file|
           file << log_entry
         end
@@ -215,17 +215,17 @@ module AzuCLI
           io << "=" * 50 << "\n"
           io << "Error Type: #{error_type}\n"
           io << "Message: #{error_details["message"]}\n\n"
-          
+
           io << "Recovery Suggestions:\n"
           recovery_suggestions.each_with_index do |suggestion, index|
             io << "  #{index + 1}. #{suggestion}\n"
           end
-          
+
           if recovery_script
             io << "\nRecovery script created: #{recovery_script}\n"
             io << "Review and execute the script to fix the issue.\n"
           end
-          
+
           io << "\nFor more details, check the error log: #{@error_log_path}\n"
         end
       end

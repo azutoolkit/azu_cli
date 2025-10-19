@@ -119,7 +119,7 @@ module AzuCLI
             io << "  schema_file_path: \"src/db/schema.cr\",\n"
             io << "  schema_name: :#{schema_name},\n"
             io << "  schema_symbol: :#{schema_symbol},\n"
-            io << "  auto_sync: false\n"  # Data migrations don't affect schema
+            io << "  auto_sync: false\n" # Data migrations don't affect schema
             io << ")\n\n"
             io << "migrator = #{schema_name}.migrator(config)\n\n"
 
@@ -159,24 +159,24 @@ module AzuCLI
         private def execute_dry_run : Result
           Logger.info("DRY RUN MODE - No data changes will be made")
           Logger.info("=" * 50)
-          
+
           # Get data migration files
           data_migrations = Dir.glob("#{data_migrations_dir}/*.cr")
-          
+
           if data_migrations.empty?
             Logger.info("No data migration files found")
             return success("No data migrations")
           end
-          
+
           Logger.info("Data migration files found:")
           data_migrations.each do |file|
             filename = File.basename(file, ".cr")
             Logger.info("  #{filename}")
           end
-          
+
           Logger.info("=" * 50)
           Logger.info("To apply these data migrations, run without --dry-run")
-          
+
           success("Dry run completed")
         end
 

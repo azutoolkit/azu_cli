@@ -43,7 +43,6 @@ module AzuCLI
       def jobs_directory : String
         "src/jobs"
       end
-
     end
   end
 end

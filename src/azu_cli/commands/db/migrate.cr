@@ -49,7 +49,7 @@ module AzuCLI
               Logger.error(validator.summary)
               return error("Migration validation failed. Use --skip-validation to bypass.")
             end
-            
+
             unless validator.warnings.empty?
               Logger.warn("Migration validation warnings:")
               validator.warnings.each { |warning| Logger.warn("  - #{warning}") }
@@ -177,28 +177,28 @@ module AzuCLI
         private def execute_dry_run : Result
           Logger.info("DRY RUN MODE - No changes will be made")
           Logger.info("=" * 50)
-          
+
           validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
           validator.validate_all
-          
+
           # Get applied migrations
           applied_versions = get_applied_migration_versions
           pending_versions = validator.pending_migrations(applied_versions)
-          
+
           if pending_versions.empty?
             Logger.info("No pending migrations to run")
             return success("No pending migrations")
           end
-          
+
           Logger.info("Pending migrations to be applied:")
           pending_versions.each do |version|
             class_name = validator.migration_class_for_version(version) || "Unknown"
             Logger.info("  #{version} - #{class_name}")
           end
-          
+
           Logger.info("=" * 50)
           Logger.info("To apply these migrations, run without --dry-run")
-          
+
           success("Dry run completed")
         end
 
@@ -206,33 +206,33 @@ module AzuCLI
         private def execute_test_rollback : Result
           Logger.info("TEST ROLLBACK MODE - Testing rollback capability")
           Logger.info("=" * 50)
-          
+
           validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
           validator.validate_all
-          
+
           # Get applied migrations
           applied_versions = get_applied_migration_versions
-          
+
           if applied_versions.empty?
             Logger.info("No applied migrations to test rollback")
             return success("No applied migrations")
           end
-          
+
           # Test rollback for the most recent migration
           latest_version = applied_versions.max
           class_name = validator.migration_class_for_version(latest_version) || "Unknown"
-          
+
           Logger.info("Testing rollback for migration: #{latest_version} - #{class_name}")
-          
+
           # Create test script that applies and immediately rolls back
           test_script = create_test_rollback_script(latest_version)
-          
+
           Logger.info("Applying migration in transaction...")
           result = execute_runner_script(test_script)
-          
+
           # Clean up
           File.delete(test_script) if File.exists?(test_script)
-          
+
           if result
             Logger.info("✓ Rollback test passed - migration can be safely applied and rolled back")
             success("Rollback test completed")
@@ -270,7 +270,7 @@ module AzuCLI
             io << "  migrator.rollback(1)\n"
             io << "  puts \"Migration #{version} rolled back successfully\"\n"
             io << "rescue ex\n"
-            io << "  puts \"Test rollback failed: #\{ex.message\}\"\n"
+            io << "  puts \"Test rollback failed: #{ex.message}\"\n"
             io << "  exit(1)\n"
             io << "end\n"
           end

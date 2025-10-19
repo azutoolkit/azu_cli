@@ -142,7 +142,6 @@ module AzuCLI
         end
       end
 
-
       # Enhanced error handling with specific remediation steps
       private def handle_database_error(ex : Exception)
         message = ex.message || ""
@@ -179,7 +178,7 @@ module AzuCLI
       # Check database connection health
       protected def check_connection_health : Bool
         return @connection_healthy if @last_connection_check &&
-          (Time.utc - @last_connection_check.not_nil!).total_seconds < 30
+                                      (Time.utc - @last_connection_check.not_nil!).total_seconds < 30
 
         begin
           query_database("SELECT 1") { }

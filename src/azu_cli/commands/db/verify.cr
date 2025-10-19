@@ -151,7 +151,7 @@ module AzuCLI
             io << "  migrator.rollback(1)\n"
             io << "  puts \"Migration #{version} rolled back successfully\"\n"
             io << "rescue ex\n"
-            io << "  puts \"Rollback test failed: #\{ex.message\}\"\n"
+            io << "  puts \"Rollback test failed: #{ex.message}\"\n"
             io << "  exit(1)\n"
             io << "end\n"
           end

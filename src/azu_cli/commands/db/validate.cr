@@ -104,11 +104,11 @@ module AzuCLI
           begin
             # Test basic read permission
             query_database("SELECT 1") { }
-            
+
             # Test write permission (create a temporary table)
             execute_on_database("CREATE TEMP TABLE _azu_validation_test (id INT)")
             execute_on_database("DROP TABLE _azu_validation_test")
-            
+
             true
           rescue ex
             Logger.error("Permission check failed: #{ex.message}")
@@ -119,14 +119,14 @@ module AzuCLI
         # Check migration files
         private def check_migration_files : Bool
           migrations_dir = "./src/db/migrations"
-          
+
           unless Dir.exists?(migrations_dir)
             Logger.warn("Migrations directory does not exist: #{migrations_dir}")
             return false
           end
 
           migration_files = Dir.glob("#{migrations_dir}/*.cr")
-          
+
           if migration_files.empty?
             Logger.info("No migration files found")
             return true
@@ -135,7 +135,7 @@ module AzuCLI
           valid_count = 0
           migration_files.each do |file|
             filename = File.basename(file, ".cr")
-            
+
             # Check if filename matches expected pattern
             unless filename.match(/^\d+_/)
               Logger.warn("Invalid migration filename: #{filename}")
@@ -149,7 +149,7 @@ module AzuCLI
                 Logger.warn("Migration file does not extend CQL::Migration: #{filename}")
                 next
               end
-              
+
               valid_count += 1
             rescue ex
               Logger.warn("Error reading migration file #{filename}: #{ex.message}")

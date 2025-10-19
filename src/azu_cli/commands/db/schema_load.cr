@@ -79,11 +79,11 @@ module AzuCLI
         # Load Crystal schema file
         private def load_crystal_schema(schema_path : String)
           Logger.info("Loading Crystal schema file...")
-          
+
           # For Crystal schema files, we need to execute the schema definition
           # This is more complex and would require loading the schema file
           # and executing the table creation commands
-          
+
           Logger.warn("Crystal schema loading not fully implemented")
           Logger.info("Consider using 'azu db:migrate' instead")
         end
@@ -91,9 +91,9 @@ module AzuCLI
         # Load SQL schema file
         private def load_sql_schema(schema_path : String)
           Logger.info("Loading SQL schema file...")
-          
+
           sql_content = File.read(schema_path)
-          
+
           # Split SQL into individual statements
           statements = sql_content.split(";")
             .map(&.strip)
@@ -104,14 +104,14 @@ module AzuCLI
 
           statements.each_with_index do |statement, index|
             next if statement.strip.empty?
-            
+
             begin
               Logger.debug("Executing statement #{index + 1}/#{statements.size}")
               execute_on_database(statement)
             rescue ex
               Logger.error("Failed to execute statement #{index + 1}: #{ex.message}")
               Logger.error("Statement: #{statement[0, 100]}...")
-              
+
               unless @force
                 raise ex
               end

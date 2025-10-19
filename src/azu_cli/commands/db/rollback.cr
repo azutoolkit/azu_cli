@@ -173,27 +173,27 @@ module AzuCLI
         private def execute_dry_run(applied_versions : Array(Int64)) : Result
           Logger.info("DRY RUN MODE - No changes will be made")
           Logger.info("=" * 50)
-          
+
           # Determine which migrations will be rolled back
           migrations_to_rollback = if @version
-            applied_versions.select { |v| v >= @version.not_nil! }
-          else
-            applied_versions.last(@steps)
-          end
-          
+                                     applied_versions.select { |v| v >= @version.not_nil! }
+                                   else
+                                     applied_versions.last(@steps)
+                                   end
+
           if migrations_to_rollback.empty?
             Logger.info("No migrations would be rolled back")
             return success("No migrations to rollback")
           end
-          
+
           Logger.info("Migrations that would be rolled back:")
           migrations_to_rollback.each do |version|
             Logger.info("  #{version}")
           end
-          
+
           Logger.info("=" * 50)
           Logger.info("To perform this rollback, run without --dry-run")
-          
+
           success("Dry run completed")
         end
 
@@ -201,18 +201,18 @@ module AzuCLI
         private def show_rollback_warnings(applied_versions : Array(Int64))
           Logger.warn("⚠️  WARNING: This operation will rollback database migrations")
           Logger.warn("This may result in data loss or schema changes")
-          
+
           migrations_to_rollback = if @version
-            applied_versions.select { |v| v >= @version.not_nil! }
-          else
-            applied_versions.last(@steps)
-          end
-          
+                                     applied_versions.select { |v| v >= @version.not_nil! }
+                                   else
+                                     applied_versions.last(@steps)
+                                   end
+
           Logger.info("Migrations to be rolled back:")
           migrations_to_rollback.each do |version|
             Logger.info("  - #{version}")
           end
-          
+
           print "Are you sure you want to continue? [y/N]: "
           response = gets
           unless response && response.downcase.starts_with?("y")

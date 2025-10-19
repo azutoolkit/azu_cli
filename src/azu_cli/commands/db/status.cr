@@ -47,13 +47,13 @@ module AzuCLI
           all_migrations.each do |migration|
             version = migration.split("_").first.to_i64
             is_applied = applied_versions.includes?(version)
-            
+
             status = if is_applied
-              "✓ Applied"
-            else
-              "⏱ Pending"
-            end
-            
+                       "✓ Applied"
+                     else
+                       "⏱ Pending"
+                     end
+
             timestamp = migration.split("_").first
             applied_at = is_applied ? get_migration_applied_at(version) : "N/A"
             name = migration.split("_", 2).last.gsub("_", " ").capitalize
