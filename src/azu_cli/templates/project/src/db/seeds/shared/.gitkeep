@@ -1,0 +1,3 @@
+# Shared seed files go here
+# These run in all environments
+# Example: 001_countries.cr, 002_roles.cr, etc.

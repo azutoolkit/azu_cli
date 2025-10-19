@@ -1,0 +1,45 @@
+# Data migration: <%= @migration_class_name %>
+# This file contains data transformation logic
+# Run with: azu db:data:migrate
+#
+# Examples:
+#
+#   # Update existing records
+#   User.where(role: nil).update_all(role: "user")
+#
+#   # Migrate data with batch processing
+#   User.where(active: true).find_in_batches(batch_size: 1000) do |users|
+#     users.each do |user|
+#       user.full_name = "#{user.first_name} #{user.last_name}"
+#       user.save!
+#     end
+#   end
+
+require "../models/**"
+
+class <%= @migration_class_name %> < CQL::DataMigration(<%= @timestamp %>)
+  def up
+    # Transform data here
+    # Example: Update existing records
+    puts "Running data migration: <%= @migration_class_name %>"
+    
+    # TODO: Add your data transformation logic here
+    # Example:
+    # User.where(role: nil).update_all(role: "user")
+    # puts "Updated #{User.where(role: "user").count} users with default role"
+    
+    puts "✓ Data migration completed: <%= @migration_class_name %>"
+  end
+
+  def down
+    # Rollback data changes here
+    puts "Rolling back data migration: <%= @migration_class_name %>"
+    
+    # TODO: Add your rollback logic here
+    # Example:
+    # User.where(role: "user").update_all(role: nil)
+    # puts "Rolled back user roles"
+    
+    puts "✓ Data migration rollback completed: <%= @migration_class_name %>"
+  end
+end

@@ -17,6 +17,17 @@ module AzuCLI
       property password : String = ""
       property environment : String = "development"
 
+      # Connection pool configuration
+      property pool_size : Int32 = 10
+      property pool_timeout : Int32 = 5
+      property checkout_timeout : Int32 = 5
+      property retry_attempts : Int32 = 3
+      property retry_delay : Float64 = 1.0
+
+      # Connection health tracking
+      property last_connection_check : Time?
+      property connection_healthy : Bool = false
+
       def initialize(name : String = "", description : String = "")
         super(name, description)
         load_database_config
@@ -42,6 +53,13 @@ module AzuCLI
         end
 
         @environment = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || @environment
+
+        # Load connection pool configuration
+        @pool_size = ENV["AZU_DB_POOL_SIZE"]?.try(&.to_i) || @pool_size
+        @pool_timeout = ENV["AZU_DB_POOL_TIMEOUT"]?.try(&.to_i) || @pool_timeout
+        @checkout_timeout = ENV["AZU_DB_CHECKOUT_TIMEOUT"]?.try(&.to_i) || @checkout_timeout
+        @retry_attempts = ENV["AZU_DB_RETRY_ATTEMPTS"]?.try(&.to_i) || @retry_attempts
+        @retry_delay = ENV["AZU_DB_RETRY_DELAY"]?.try(&.to_f) || @retry_delay
       end
 
       # Parse DATABASE_URL into components
@@ -105,27 +123,121 @@ module AzuCLI
         end
       end
 
-      # Execute SQL on server connection
+      # Execute SQL on server connection with retry logic
       protected def execute_on_server(sql : String)
-        ::DB.open(server_connection_url) do |db|
-          db.exec(sql)
-        end
-      end
-
-      # Execute SQL on database connection
-      protected def execute_on_database(sql : String, db_name : String? = nil)
-        ::DB.open(database_connection_url(db_name)) do |db|
-          db.exec(sql)
-        end
-      end
-
-      # Query database and return results
-      protected def query_database(sql : String, db_name : String? = nil, &)
-        ::DB.open(database_connection_url(db_name)) do |db|
-          db.query(sql) do |rs|
-            yield rs
+        with_retry do
+          ::DB.open(server_connection_url) do |db|
+            db.exec(sql)
           end
         end
+      end
+
+      # Execute SQL on database connection with retry logic
+      protected def execute_on_database(sql : String, db_name : String? = nil)
+        with_retry do
+          ::DB.open(database_connection_url(db_name)) do |db|
+            db.exec(sql)
+          end
+        end
+      end
+
+      # Query database and return results with retry logic
+      protected def query_database(sql : String, db_name : String? = nil, &)
+        with_retry do
+          ::DB.open(database_connection_url(db_name)) do |db|
+            db.query(sql) do |rs|
+              yield rs
+            end
+          end
+        end
+      end
+
+      # Retry logic with exponential backoff
+      private def with_retry(&)
+        attempt = 0
+        begin
+          attempt += 1
+          yield
+        rescue ex : Exception
+          if attempt < @retry_attempts && should_retry?(ex)
+            Logger.warn("Database operation failed (attempt #{attempt}/#{@retry_attempts}): #{ex.message}")
+            sleep(@retry_delay * (2 ** (attempt - 1)))
+            retry
+          else
+            handle_database_error(ex)
+            raise ex
+          end
+        end
+      end
+
+      # Determine if an error should trigger a retry
+      private def should_retry?(ex : Exception) : Bool
+        message = ex.message || ""
+        message.includes?("connection") ||
+        message.includes?("timeout") ||
+        message.includes?("network") ||
+        message.includes?("temporary") ||
+        message.includes?("busy")
+      end
+
+      # Enhanced error handling with specific remediation steps
+      private def handle_database_error(ex : Exception)
+        message = ex.message || ""
+
+        case
+        when message.includes?("connection") || message.includes?("connect")
+          Logger.error("Database connection failed")
+          Logger.info("Check your database connection settings:")
+          Logger.info("  - Verify database server is running")
+          Logger.info("  - Check host and port: #{@host}:#{@port}")
+          Logger.info("  - Verify credentials: #{@username}")
+          Logger.info("  - Check firewall settings")
+        when message.includes?("authentication") || message.includes?("password")
+          Logger.error("Database authentication failed")
+          Logger.info("Check your database credentials:")
+          Logger.info("  - Username: #{@username}")
+          Logger.info("  - Verify password is correct")
+          Logger.info("  - Check if user has required permissions")
+        when message.includes?("permission") || message.includes?("access")
+          Logger.error("Database permission denied")
+          Logger.info("Check your database permissions:")
+          Logger.info("  - User needs CREATE, DROP, ALTER privileges")
+          Logger.info("  - Run: GRANT ALL PRIVILEGES ON DATABASE #{@database_name} TO #{@username}")
+        when message.includes?("timeout")
+          Logger.error("Database operation timed out")
+          Logger.info("Try increasing timeout settings:")
+          Logger.info("  - Set AZU_DB_POOL_TIMEOUT=#{@pool_timeout * 2}")
+          Logger.info("  - Set AZU_DB_CHECKOUT_TIMEOUT=#{@checkout_timeout * 2}")
+        else
+          Logger.error("Database operation failed: #{message}")
+        end
+      end
+
+      # Check database connection health
+      protected def check_connection_health : Bool
+        return @connection_healthy if @last_connection_check &&
+          (Time.utc - @last_connection_check).total_seconds < 30
+
+        begin
+          query_database("SELECT 1") { }
+          @connection_healthy = true
+          @last_connection_check = Time.utc
+          true
+        rescue ex
+          @connection_healthy = false
+          @last_connection_check = Time.utc
+          Logger.warn("Database health check failed: #{ex.message}")
+          false
+        end
+      end
+
+      # Validate database connection before operations
+      protected def validate_connection : Bool
+        unless check_connection_health
+          Logger.error("Database connection is not healthy")
+          return false
+        end
+        true
       end
 
       # Check if database exists

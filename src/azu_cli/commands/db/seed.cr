@@ -1,4 +1,5 @@
 require "../database"
+require "./seed_runner"
 
 module AzuCLI
   module Commands
@@ -7,6 +8,10 @@ module AzuCLI
       class Seed < Database
         property file : String?
         property verbose : Bool = false
+        property force : Bool = false
+        property list : Bool = false
+        property status : Bool = false
+        property only : String?
 
         def initialize
           super("db:seed", "seed the database with initial data")
@@ -27,21 +32,76 @@ module AzuCLI
             return error("Database '#{db_name}' does not exist. Run 'azu db:create' first.")
           end
 
-          seed_path = @file || seed_file
+          # Initialize seed runner
+          seed_runner = SeedRunner.new(@environment, "./src/db/seeds")
 
-          unless File.exists?(seed_path)
-            Logger.warn("Seed file not found: #{seed_path}")
-            Logger.info("Create a seed file at #{seed_file} to populate your database")
-            return success("No seed file found")
+          # Handle list command
+          if @list
+            seed_runner.list_seeds
+            return success("Seed list displayed")
           end
 
-          Logger.info("Seeding database '#{db_name}'...")
+          # Handle status command
+          if @status
+            status = seed_runner.get_seed_status
+            Logger.info("Seed Status for environment: #{@environment}")
+            Logger.info("=" * 50)
+            status.each do |seed, state|
+              status_icon = state == "executed" ? "✓" : "⏱"
+              Logger.info("#{status_icon} #{seed}")
+            end
+            return success("Seed status displayed")
+          end
+
+          # Handle specific file
+          if @file
+            unless File.exists?(@file)
+              return error("Seed file not found: #{@file}")
+            end
+
+            Logger.info("Running seed file: #{@file}")
+            show_database_info if @verbose
+
+            if @force
+              success = seed_runner.force_run_seed(@file)
+            else
+              success = seed_runner.run_seed_file(@file)
+            end
+
+            if success
+              Logger.info("✓ Seed file executed successfully")
+              return success("Seed file executed")
+            else
+              return error("Seed file execution failed")
+            end
+          end
+
+          # Handle only specific seeds
+          if @only
+            seed_files = @only.split(",").map(&.strip)
+            Logger.info("Running specific seeds: #{seed_files.join(", ")}")
+            show_database_info if @verbose
+
+            success = seed_runner.run_seeds(seed_files)
+            if success
+              Logger.info("✓ Selected seeds executed successfully")
+              return success("Selected seeds executed")
+            else
+              return error("Seed execution failed")
+            end
+          end
+
+          # Run all seeds for environment
+          Logger.info("Seeding database '#{db_name}' for environment '#{@environment}'...")
           show_database_info if @verbose
 
-          run_seed_file(seed_path)
-
-          Logger.info("✓ Database seeded successfully")
-          success("Database seeded")
+          success = seed_runner.run_seeds
+          if success
+            Logger.info("✓ Database seeded successfully")
+            success("Database seeded")
+          else
+            error("Seed execution failed")
+          end
         end
 
         private def parse_options
@@ -54,6 +114,16 @@ module AzuCLI
               end
             when "--verbose"
               @verbose = true
+            when "--force"
+              @force = true
+            when "--list"
+              @list = true
+            when "--status"
+              @status = true
+            when "--only"
+              if o = args[index + 1]?
+                @only = o
+              end
             when "--env", "-e"
               if env = args[index + 1]?
                 @environment = env

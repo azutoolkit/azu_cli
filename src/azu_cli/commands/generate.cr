@@ -77,6 +77,10 @@ module AzuCLI
           generate_middleware
         when "migration"
           generate_migration
+        when "data:migration", "data_migration"
+          generate_data_migration
+        when "seed"
+          generate_seed
         when "component"
           generate_component
         when "validator"
@@ -338,6 +342,51 @@ module AzuCLI
 
         render_generator(generator, AzuCLI::Generate::Migration::OUTPUT_DIR)
         success("Generated migration #{@generator_name} successfully")
+      end
+
+      private def generate_data_migration : Result
+        Logger.info("Generating data migration")
+
+        generator = AzuCLI::Generate::DataMigration.new(
+          name: @generator_name
+        )
+
+        render_generator(generator, AzuCLI::Generate::DataMigration::OUTPUT_DIR)
+        success("Generated data migration #{@generator_name} successfully")
+      end
+
+      private def generate_seed : Result
+        Logger.info("Generating seed file")
+
+        environment = @options["env"]? || "development"
+        seed_name = @generator_name
+
+        # Create seed file in appropriate environment directory
+        seeds_dir = "./src/db/seeds"
+        env_dir = File.join(seeds_dir, environment)
+        Dir.mkdir_p(env_dir) unless Dir.exists?(env_dir)
+
+        seed_filename = "#{Time.utc.to_s("%Y%m%d%H%M%S")}_#{seed_name.underscore}.cr"
+        seed_path = File.join(env_dir, seed_filename)
+
+        seed_content = String.build do |io|
+          io << "# Seed file: #{seed_name}\n"
+          io << "# Environment: #{environment}\n"
+          io << "# Generated: #{Time.utc}\n\n"
+          io << "require \"../models/**\"\n\n"
+          io << "puts \"Seeding #{seed_name} for #{environment} environment...\"\n\n"
+          io << "# TODO: Add your seed data here\n"
+          io << "# Example:\n"
+          io << "# #{seed_name}.create!(\n"
+          io << "#   name: \"Example #{seed_name}\",\n"
+          io << "#   description: \"This is a sample #{seed_name.downcase}\"\n"
+          io << "# )\n\n"
+          io << "puts \"✓ #{seed_name} seeded successfully\"\n"
+        end
+
+        File.write(seed_path, seed_content)
+        Logger.info("✓ Seed file created: #{seed_path}")
+        success("Generated seed file #{seed_name} for #{environment} environment")
       end
 
       private def generate_component : Result
@@ -901,6 +950,14 @@ SUMMARY
         puts "  migration <name> [attr:type]"
         puts "    Generate a database migration file"
         puts "    Example: azu generate migration AddAgeToUsers age:int32"
+        puts
+        puts "  data:migration <name>"
+        puts "    Generate a data migration file for data transformations"
+        puts "    Example: azu generate data:migration AddDefaultRolesToUsers"
+        puts
+        puts "  seed <name> [--env environment]"
+        puts "    Generate a seed file for database seeding"
+        puts "    Example: azu generate seed Users --env development"
         puts
         puts "  component <name> [attr:type]"
         puts "    Generate a reusable component class"

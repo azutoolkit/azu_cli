@@ -1,4 +1,5 @@
 require "../database"
+require "../../validators/migration_validator"
 
 module AzuCLI
   module Commands
@@ -26,8 +27,12 @@ module AzuCLI
           show_database_info
           puts ""
 
-          all_migrations = load_migrations
-          applied = get_applied_migrations
+          # Use MigrationValidator for better migration handling
+          validator = MigrationValidator.new(migrations_dir)
+          validator.validate_all
+
+          all_migrations = validator.migration_files.map { |file| File.basename(file, ".cr") }
+          applied_versions = get_applied_migration_versions
 
           if all_migrations.empty?
             Logger.info("No migrations found in #{migrations_dir}")
@@ -35,20 +40,42 @@ module AzuCLI
           end
 
           puts "Migration Status:"
-          puts "#{"-" * 80}"
-          puts "#{"Status".ljust(10)} | #{"Version".ljust(20)} | Migration Name"
-          puts "#{"-" * 80}"
+          puts "#{"-" * 100}"
+          puts "#{"Status".ljust(12)} | #{"Version".ljust(20)} | #{"Applied At".ljust(20)} | Migration Name"
+          puts "#{"-" * 100}"
 
           all_migrations.each do |migration|
-            status = applied.includes?(migration) ? "✓ Applied" : "  Pending"
+            version = migration.split("_").first.to_i64
+            is_applied = applied_versions.includes?(version)
+            
+            status = if is_applied
+              "✓ Applied"
+            else
+              "⏱ Pending"
+            end
+            
             timestamp = migration.split("_").first
+            applied_at = is_applied ? get_migration_applied_at(version) : "N/A"
             name = migration.split("_", 2).last.gsub("_", " ").capitalize
 
-            puts "#{status.ljust(10)} | #{timestamp.ljust(20)} | #{name}"
+            puts "#{status.ljust(12)} | #{timestamp.ljust(20)} | #{applied_at.ljust(20)} | #{name}"
           end
 
-          puts "#{"-" * 80}"
-          puts "Total: #{all_migrations.size} migrations (#{applied.size} applied, #{all_migrations.size - applied.size} pending)"
+          puts "#{"-" * 100}"
+          puts "Total: #{all_migrations.size} migrations (#{applied_versions.size} applied, #{all_migrations.size - applied_versions.size} pending)"
+
+          # Show validation status
+          unless validator.valid?
+            puts ""
+            Logger.warn("Migration validation issues detected:")
+            validator.errors.each { |error| Logger.warn("  - #{error}") }
+          end
+
+          unless validator.warnings.empty?
+            puts ""
+            Logger.info("Migration warnings:")
+            validator.warnings.each { |warning| Logger.info("  - #{warning}") }
+          end
 
           success("Status displayed")
         end
@@ -84,6 +111,31 @@ module AzuCLI
           migrations
         rescue
           [] of String
+        end
+
+        # Get applied migration versions as Int64 array
+        private def get_applied_migration_versions : Array(Int64)
+          versions = [] of Int64
+          query_database("SELECT version FROM schema_migrations ORDER BY version") do |rs|
+            rs.each do
+              versions << rs.read(Int64)
+            end
+          end
+          versions
+        rescue
+          [] of Int64
+        end
+
+        # Get when a migration was applied
+        private def get_migration_applied_at(version : Int64) : String
+          query_database("SELECT executed_at FROM schema_migrations WHERE version = ?", version) do |rs|
+            rs.each do
+              return rs.read(Time).to_s("%Y-%m-%d %H:%M:%S")
+            end
+          end
+          "Unknown"
+        rescue
+          "Unknown"
         end
       end
     end
