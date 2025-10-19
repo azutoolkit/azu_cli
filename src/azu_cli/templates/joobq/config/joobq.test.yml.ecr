@@ -15,8 +15,8 @@ joobq:
       job_class: "TestJob"
       workers: 1
 
-    <%= default_queue %>:
-      job_class: "<%= example_job_name %>"
+    <%= @default_queue || "default" %>:
+      job_class: "<%= @example_job_name || "ExampleJob" %>"
       workers: 1
 
   # Minimal middleware for tests

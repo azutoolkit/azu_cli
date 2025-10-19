@@ -198,6 +198,7 @@ module AzuCLI
             Log.info { "Processing request: " + context.request.method + " " + context.request.path }
 
             begin
+              # TODO: Implement custom middleware logic
               # Add your custom middleware logic here
               # Examples:
               # - Request/response modification

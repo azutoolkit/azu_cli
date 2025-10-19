@@ -28,6 +28,10 @@ module AzuCLI
         "#{@action.camelcase}Service"
       end
 
+      def camel_case_name : String
+        @module_name
+      end
+
       # Generate parameter list from attributes
       def param_list : String
         params = [] of String

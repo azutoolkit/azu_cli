@@ -28,7 +28,7 @@ module AzuCLI
           puts ""
 
           # Use MigrationValidator for better migration handling
-          validator = MigrationValidator.new(migrations_dir)
+          validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
           validator.validate_all
 
           all_migrations = validator.migration_files.map { |file| File.basename(file, ".cr") }
@@ -128,7 +128,7 @@ module AzuCLI
 
         # Get when a migration was applied
         private def get_migration_applied_at(version : Int64) : String
-          query_database("SELECT executed_at FROM schema_migrations WHERE version = ?", version) do |rs|
+          query_database("SELECT executed_at FROM schema_migrations WHERE version = #{version}") do |rs|
             rs.each do
               return rs.read(Time).to_s("%Y-%m-%d %H:%M:%S")
             end

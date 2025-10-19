@@ -1,2 +1,25 @@
 require "spec"
+require "log"
+require "cadmium_inflector"
+require "teeplate"
+require "topia"
+
+# Load only the specific modules we need for testing
 require "../src/azu_cli"
+require "../src/azu_cli/commands/base"
+require "../src/azu_cli/commands/database"
+require "../src/azu_cli/commands/db/**"
+require "../src/azu_cli/commands/jobs"
+require "../src/azu_cli/commands/jobs/**"
+require "../src/azu_cli/commands/openapi/**"
+require "../src/azu_cli/validators/**"
+require "../src/azu_cli/middleware/**"
+require "../src/azu_cli/plugins/**"
+
+# Load specific commands that don't depend on generators
+require "../src/azu_cli/commands/help"
+require "../src/azu_cli/commands/init"
+require "../src/azu_cli/commands/new"
+require "../src/azu_cli/commands/serve"
+require "../src/azu_cli/commands/version"
+require "../src/azu_cli/commands/test"

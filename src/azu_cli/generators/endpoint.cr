@@ -140,7 +140,7 @@ module AzuCLI
       # Generate individual endpoint file using specific template
       private def generate_endpoint_file(output_dir : String, action : String, force : Bool = false)
         template_file = "#{__DIR__}/../templates/scaffold/src/endpoints/{{snake_case_name}}_#{action}_endpoint.cr.ecr"
-        output_file = File.join(output_dir, "#{@snake_case_name}_#{action}_endpoint.cr")
+        output_file = File.join(output_dir, "#{@resource_singular}_#{action}_endpoint.cr")
 
         return if File.exists?(output_file) && !force
 

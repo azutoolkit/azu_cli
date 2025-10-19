@@ -27,7 +27,7 @@ module AzuCLI
           load_executed_seeds
 
           seed_files = files || find_seed_files
-          
+
           if seed_files.empty?
             Logger.info("No seed files found for environment: #{@environment}")
             return true
@@ -49,14 +49,14 @@ module AzuCLI
         # Run a specific seed file
         def run_seed_file(file : String) : Bool
           filename = File.basename(file, ".cr")
-          
+
           if @executed_seeds.includes?(filename)
             Logger.info("Skipping already executed seed: #{filename}")
             return true
           end
 
           Logger.info("Running seed: #{filename}")
-          
+
           begin
             # Set environment variable for seed file to use
             ENV["DATABASE_URL"] = database_connection_url
@@ -92,26 +92,26 @@ module AzuCLI
         # Find seed files for the current environment
         def find_seed_files : Array(String)
           files = [] of String
-          
+
           # Look for environment-specific seeds
           env_dir = File.join(@seeds_dir, @environment)
           if Dir.exists?(env_dir)
             files.concat(Dir.glob("#{env_dir}/*.cr").sort)
           end
-          
+
           # Look for shared seeds
           shared_dir = File.join(@seeds_dir, "shared")
           if Dir.exists?(shared_dir)
             files.concat(Dir.glob("#{shared_dir}/*.cr").sort)
           end
-          
+
           files
         end
 
         # Load executed seeds from database
         private def load_executed_seeds
           @executed_seeds.clear
-          
+
           begin
             query_database("SELECT seed_name FROM seed_versions ORDER BY executed_at") do |rs|
               rs.each do
@@ -128,9 +128,7 @@ module AzuCLI
         private def mark_seed_as_executed(seed_name : String)
           begin
             execute_on_database(
-              "INSERT INTO seed_versions (seed_name, executed_at) VALUES (?, ?)",
-              seed_name,
-              Time.utc
+              "INSERT INTO seed_versions (seed_name, executed_at) VALUES ('#{seed_name}', '#{Time.utc}')"
             )
             @executed_seeds << seed_name
           rescue ex
@@ -156,7 +154,7 @@ module AzuCLI
         # Get seed status
         def get_seed_status : Hash(String, String)
           status = {} of String => String
-          
+
           find_seed_files.each do |file|
             filename = File.basename(file, ".cr")
             if @executed_seeds.includes?(filename)
@@ -165,24 +163,24 @@ module AzuCLI
               status[filename] = "pending"
             end
           end
-          
+
           status
         end
 
         # Force re-run a specific seed
         def force_run_seed(file : String) : Bool
           filename = File.basename(file, ".cr")
-          
+
           # Remove from executed seeds if it exists
           @executed_seeds.delete(filename)
-          
+
           # Remove from database
           begin
-            execute_on_database("DELETE FROM seed_versions WHERE seed_name = ?", filename)
+            execute_on_database("DELETE FROM seed_versions WHERE seed_name = '#{filename}'")
           rescue
             # Ignore errors
           end
-          
+
           # Run the seed
           run_seed_file(file)
         end
@@ -190,15 +188,15 @@ module AzuCLI
         # List available seeds
         def list_seeds
           seed_files = find_seed_files
-          
+
           if seed_files.empty?
             Logger.info("No seed files found for environment: #{@environment}")
             return
           end
-          
+
           Logger.info("Available seed files for environment: #{@environment}")
           Logger.info("=" * 50)
-          
+
           seed_files.each do |file|
             filename = File.basename(file, ".cr")
             status = @executed_seeds.includes?(filename) ? "✓ executed" : "⏱ pending"

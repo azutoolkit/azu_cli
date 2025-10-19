@@ -3,7 +3,7 @@
 
 joobq:
   settings:
-    default_queue: "<%= default_queue %>"
+    default_queue: "<%= @default_queue || "default" %>"
     retries: 5
     timeout: "60 seconds"  # Longer timeout for production
     timezone: "UTC"
@@ -12,9 +12,9 @@ joobq:
   # Queue configurations
   # Define job queues with their specific job classes and worker counts
   queues:
-    <%= default_queue %>:
-      job_class: "<%= example_job_name %>"
-      workers: <%= workers * 2 %>  # More workers in production
+    <%= @default_queue || "default" %>:
+      job_class: "<%= @example_job_name || "ExampleJob" %>"
+      workers: <%= (@workers || 3) * 2 %>  # More workers in production
 
     # Email queue
     email:

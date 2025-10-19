@@ -85,9 +85,10 @@ module AzuCLI
       def perform_method_body : String
         if @parameters.empty?
           <<-PERFORM
-              Log.info { "Starting #{@name} job" }
+              Log.info { "Processing #{@name} job" }
 
               begin
+                # TODO: Implement job logic here
                 # Add your job logic here
                 # Example:
                 # - Send emails

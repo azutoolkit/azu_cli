@@ -4,9 +4,9 @@ module AzuCLI
   module Generate
     # Data migration generator that creates CQL::DataMigration classes
     class DataMigration < Teeplate::FileTree
-      directory "#{__DIR__}/../templates"
+      directory "#{__DIR__}/../templates/data_migration"
       OUTPUT_DIR = "./src/db/data_migrations"
-      
+
       # Migration configuration properties
       property name : String
       property snake_case_name : String

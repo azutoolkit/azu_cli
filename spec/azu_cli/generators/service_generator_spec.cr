@@ -10,17 +10,18 @@ describe AzuCLI::Generate::Service do
     generator.camel_case_name.should eq("UserService")
   end
 
-  it "creates a service generator with custom methods" do
-    methods = {"create" => "User", "update" => "User", "delete" => "Bool"}
-    generator = AzuCLI::Generate::Service.new("UserService", methods)
+  it "creates a service generator with custom action" do
+    generator = AzuCLI::Generate::Service.new("UserService", "update")
 
-    generator.methods.should eq(methods)
+    generator.action.should eq("update")
+    generator.service_class_name.should eq("UpdateService")
   end
 
-  it "initializes with empty methods by default" do
+  it "initializes with create action by default" do
     generator = AzuCLI::Generate::Service.new("OrderService")
 
-    generator.methods.should be_empty
+    generator.action.should eq("create")
+    generator.service_class_name.should eq("CreateService")
   end
 
   it "converts name to snake_case" do
@@ -35,62 +36,38 @@ describe AzuCLI::Generate::Service do
     generator.camel_case_name.should eq("UserService")
   end
 
-  describe "#method_definitions" do
-    it "generates TODO comment when no methods provided" do
-      generator = AzuCLI::Generate::Service.new("UserService")
+  describe "#param_list" do
+    it "generates parameter list from attributes" do
+      attributes = {"name" => "string", "email" => "string", "age" => "int32"}
+      generator = AzuCLI::Generate::Service.new("UserService", "create", attributes)
 
-      definitions = generator.method_definitions
-      definitions.should contain("TODO: Add service methods here")
-      definitions.should contain("Example:")
-    end
-
-    it "generates method definitions with correct signatures" do
-      methods = {"create" => "User"}
-      generator = AzuCLI::Generate::Service.new("UserService", methods)
-
-      definitions = generator.method_definitions
-      definitions.should contain("def create(params : Hash) : User")
-      definitions.should contain("TODO: Implement create logic")
-      definitions.should contain("NotImplementedError")
-    end
-
-    it "generates multiple method definitions" do
-      methods = {"create" => "User", "update" => "User", "delete" => "Bool"}
-      generator = AzuCLI::Generate::Service.new("UserService", methods)
-
-      definitions = generator.method_definitions
-      definitions.should contain("def create(params : Hash) : User")
-      definitions.should contain("def update(params : Hash) : User")
-      definitions.should contain("def delete(params : Hash) : Bool")
+      param_list = generator.param_list
+      param_list.should contain("name : String")
+      param_list.should contain("email : String")
+      param_list.should contain("age : Int32")
     end
   end
 
-  describe "#has_dependencies?" do
-    it "returns true by default" do
+  describe "#model_class" do
+    it "generates model class name" do
       generator = AzuCLI::Generate::Service.new("UserService")
 
-      generator.has_dependencies?.should be_true
+      model_class = generator.model_class
+      model_class.should eq("UserService::UserServiceModel")
     end
   end
 
-  describe "#dependency_params" do
-    it "generates repository dependency parameter" do
+  describe "#crystal_type" do
+    it "converts string type to String" do
       generator = AzuCLI::Generate::Service.new("UserService")
 
-      params = generator.dependency_params
-      params.should contain("@repository")
-      params.should contain("UserServiceRepository")
+      generator.crystal_type("string").should eq("String")
     end
-  end
 
-  describe "#usage_example" do
-    it "generates usage example" do
+    it "converts int32 type to Int32" do
       generator = AzuCLI::Generate::Service.new("UserService")
 
-      example = generator.usage_example
-      example.should contain("Usage example:")
-      example.should contain("UserServiceRepository.new")
-      example.should contain("UserServiceService.new")
+      generator.crystal_type("int32").should eq("Int32")
     end
   end
 end

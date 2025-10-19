@@ -43,7 +43,7 @@ module AzuCLI
           # Validate migrations unless skipped
           unless @skip_validation
             Logger.info("Validating migrations...")
-            validator = MigrationValidator.new(migrations_dir)
+            validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
             unless validator.validate_all
               Logger.error("Migration validation failed:")
               Logger.error(validator.summary)
@@ -178,7 +178,7 @@ module AzuCLI
           Logger.info("DRY RUN MODE - No changes will be made")
           Logger.info("=" * 50)
           
-          validator = MigrationValidator.new(migrations_dir)
+          validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
           validator.validate_all
           
           # Get applied migrations
@@ -207,7 +207,7 @@ module AzuCLI
           Logger.info("TEST ROLLBACK MODE - Testing rollback capability")
           Logger.info("=" * 50)
           
-          validator = MigrationValidator.new(migrations_dir)
+          validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
           validator.validate_all
           
           # Get applied migrations
@@ -270,7 +270,7 @@ module AzuCLI
             io << "  migrator.rollback(1)\n"
             io << "  puts \"Migration #{version} rolled back successfully\"\n"
             io << "rescue ex\n"
-            io << "  puts \"Test rollback failed: #{ex.message}\"\n"
+            io << "  puts \"Test rollback failed: #\{ex.message\}\"\n"
             io << "  exit(1)\n"
             io << "end\n"
           end

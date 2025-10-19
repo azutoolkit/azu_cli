@@ -40,7 +40,7 @@ module AzuCLI
 
           # Validate migration files
           Logger.info("Validating migration files...")
-          validator = MigrationValidator.new(migrations_dir)
+          validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
           unless validator.validate_all
             Logger.error("Migration validation failed:")
             Logger.error(validator.summary)
@@ -102,7 +102,7 @@ module AzuCLI
         private def test_migration_rollback : Bool
           # Get applied migrations
           applied_versions = get_applied_migration_versions
-          
+
           if applied_versions.empty?
             Logger.info("No applied migrations to test")
             return true
@@ -114,7 +114,7 @@ module AzuCLI
 
           # Create test script that applies and immediately rolls back
           test_script = create_rollback_test_script(latest_version)
-          
+
           begin
             result = execute_runner_script(test_script)
             result
@@ -151,7 +151,7 @@ module AzuCLI
             io << "  migrator.rollback(1)\n"
             io << "  puts \"Migration #{version} rolled back successfully\"\n"
             io << "rescue ex\n"
-            io << "  puts \"Rollback test failed: #{ex.message}\"\n"
+            io << "  puts \"Rollback test failed: #\{ex.message\}\"\n"
             io << "  exit(1)\n"
             io << "end\n"
           end

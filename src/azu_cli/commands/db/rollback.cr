@@ -40,7 +40,7 @@ module AzuCLI
           end
 
           # Validate migrations
-          validator = MigrationValidator.new(migrations_dir)
+          validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
           unless validator.validate_all
             Logger.error("Migration validation failed:")
             Logger.error(validator.summary)
@@ -176,7 +176,7 @@ module AzuCLI
           
           # Determine which migrations will be rolled back
           migrations_to_rollback = if @version
-            applied_versions.select { |v| v >= @version }
+            applied_versions.select { |v| v >= @version.not_nil! }
           else
             applied_versions.last(@steps)
           end
@@ -203,7 +203,7 @@ module AzuCLI
           Logger.warn("This may result in data loss or schema changes")
           
           migrations_to_rollback = if @version
-            applied_versions.select { |v| v >= @version }
+            applied_versions.select { |v| v >= @version.not_nil! }
           else
             applied_versions.last(@steps)
           end

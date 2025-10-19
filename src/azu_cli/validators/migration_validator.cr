@@ -1,8 +1,9 @@
 require "../logger"
 
 module AzuCLI
-  # Validates migration files for conflicts, dependencies, and consistency
-  class MigrationValidator
+  module Validators
+    # Validates migration files for conflicts, dependencies, and consistency
+    class MigrationValidator
     property migrations_dir : String
     property errors : Array(String)
     property warnings : Array(String)
@@ -178,4 +179,5 @@ module AzuCLI
       filename.split("_", 2).last.split("_").map(&.capitalize).join
     end
   end
+end
 end

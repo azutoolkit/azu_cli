@@ -12,6 +12,7 @@ module AzuCLI
       property default_queue : String
       property workers : Int32
       property create_example_job : Bool
+      property example_job_name : String
 
       def initialize(
         @project_name : String,
@@ -19,6 +20,7 @@ module AzuCLI
         @default_queue : String = "default",
         @workers : Int32 = 3,
         @create_example_job : Bool = true,
+        @example_job_name : String = "ExampleJob",
       )
       end
 
@@ -42,10 +44,6 @@ module AzuCLI
         "src/jobs"
       end
 
-      # Generate example job name
-      def example_job_name : String
-        "ExampleJob"
-      end
     end
   end
 end

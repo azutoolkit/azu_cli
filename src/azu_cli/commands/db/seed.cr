@@ -55,7 +55,7 @@ module AzuCLI
 
           # Handle specific file
           if @file
-            unless File.exists?(@file)
+            unless File.exists?(@file.not_nil!)
               return error("Seed file not found: #{@file}")
             end
 
@@ -63,9 +63,9 @@ module AzuCLI
             show_database_info if @verbose
 
             if @force
-              success = seed_runner.force_run_seed(@file)
+              success = seed_runner.force_run_seed(@file.not_nil!)
             else
-              success = seed_runner.run_seed_file(@file)
+              success = seed_runner.run_seed_file(@file.not_nil!)
             end
 
             if success
@@ -78,7 +78,7 @@ module AzuCLI
 
           # Handle only specific seeds
           if @only
-            seed_files = @only.split(",").map(&.strip)
+            seed_files = @only.not_nil!.split(",").map(&.strip)
             Logger.info("Running specific seeds: #{seed_files.join(", ")}")
             show_database_info if @verbose
 

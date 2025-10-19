@@ -21,8 +21,6 @@ module AzuCLI
       property pool_size : Int32 = 10
       property pool_timeout : Int32 = 5
       property checkout_timeout : Int32 = 5
-      property retry_attempts : Int32 = 3
-      property retry_delay : Float64 = 1.0
 
       # Connection health tracking
       property last_connection_check : Time?
@@ -58,8 +56,6 @@ module AzuCLI
         @pool_size = ENV["AZU_DB_POOL_SIZE"]?.try(&.to_i) || @pool_size
         @pool_timeout = ENV["AZU_DB_POOL_TIMEOUT"]?.try(&.to_i) || @pool_timeout
         @checkout_timeout = ENV["AZU_DB_CHECKOUT_TIMEOUT"]?.try(&.to_i) || @checkout_timeout
-        @retry_attempts = ENV["AZU_DB_RETRY_ATTEMPTS"]?.try(&.to_i) || @retry_attempts
-        @retry_delay = ENV["AZU_DB_RETRY_DELAY"]?.try(&.to_f) || @retry_delay
       end
 
       # Parse DATABASE_URL into components
@@ -123,62 +119,29 @@ module AzuCLI
         end
       end
 
-      # Execute SQL on server connection with retry logic
+      # Execute SQL on server connection
       protected def execute_on_server(sql : String)
-        with_retry do
-          ::DB.open(server_connection_url) do |db|
-            db.exec(sql)
-          end
+        ::DB.open(server_connection_url) do |db|
+          db.exec(sql)
         end
       end
 
-      # Execute SQL on database connection with retry logic
+      # Execute SQL on database connection
       protected def execute_on_database(sql : String, db_name : String? = nil)
-        with_retry do
-          ::DB.open(database_connection_url(db_name)) do |db|
-            db.exec(sql)
-          end
+        ::DB.open(database_connection_url(db_name)) do |db|
+          db.exec(sql)
         end
       end
 
-      # Query database and return results with retry logic
+      # Query database and return results
       protected def query_database(sql : String, db_name : String? = nil, &)
-        with_retry do
-          ::DB.open(database_connection_url(db_name)) do |db|
-            db.query(sql) do |rs|
-              yield rs
-            end
+        ::DB.open(database_connection_url(db_name)) do |db|
+          db.query(sql) do |rs|
+            yield rs
           end
         end
       end
 
-      # Retry logic with exponential backoff
-      private def with_retry(&)
-        attempt = 0
-        begin
-          attempt += 1
-          yield
-        rescue ex : Exception
-          if attempt < @retry_attempts && should_retry?(ex)
-            Logger.warn("Database operation failed (attempt #{attempt}/#{@retry_attempts}): #{ex.message}")
-            sleep(@retry_delay * (2 ** (attempt - 1)))
-            retry
-          else
-            handle_database_error(ex)
-            raise ex
-          end
-        end
-      end
-
-      # Determine if an error should trigger a retry
-      private def should_retry?(ex : Exception) : Bool
-        message = ex.message || ""
-        message.includes?("connection") ||
-        message.includes?("timeout") ||
-        message.includes?("network") ||
-        message.includes?("temporary") ||
-        message.includes?("busy")
-      end
 
       # Enhanced error handling with specific remediation steps
       private def handle_database_error(ex : Exception)
@@ -216,7 +179,7 @@ module AzuCLI
       # Check database connection health
       protected def check_connection_health : Bool
         return @connection_healthy if @last_connection_check &&
-          (Time.utc - @last_connection_check).total_seconds < 30
+          (Time.utc - @last_connection_check.not_nil!).total_seconds < 30
 
         begin
           query_database("SELECT 1") { }

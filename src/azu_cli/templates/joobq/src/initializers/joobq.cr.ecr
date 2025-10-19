@@ -6,9 +6,7 @@ require "joobq"
 require "../jobs/**"
 
 # Register job types with QueueFactory before loading configuration
-<% if create_example_job %>
-JoobQ::QueueFactory.register_job_type(<%= example_job_name %>)
-<% end %>
+JoobQ::QueueFactory.register_job_type(ExampleJob)
 # Add your job classes here as you create them
 # Example:
 # JoobQ::QueueFactory.register_job_type(EmailJob)
@@ -27,8 +25,8 @@ else
 
   # Fallback to manual configuration if no config file exists
   JoobQ.configure do |config|
-    config.redis_url = ENV["REDIS_URL"]? || "<%= redis_url %>"
-    config.default_queue = "<%= default_queue %>"
+    config.redis_url = ENV["REDIS_URL"]? || "<%= @redis_url rescue "redis://localhost:6379" %>"
+    config.default_queue = "<%= @default_queue rescue "default" %>"
     config.retries = 5
     config.timeout = 30.seconds
     config.timezone = Time::Location.load("UTC")
