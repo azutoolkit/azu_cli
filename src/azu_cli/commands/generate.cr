@@ -771,7 +771,7 @@ SUMMARY
           "GET    #{base_path}/:id       - Show #{@generator_name.underscore}",
           "GET    #{base_path}/:id/edit  - Edit #{@generator_name.underscore} form",
           "PATCH  #{base_path}/:id       - Update #{@generator_name.underscore}",
-          "DELETE #{base_path}/:id       - Delete #{@generator_name.underscore}"
+          "DELETE #{base_path}/:id       - Delete #{@generator_name.underscore}",
         ]
         endpoints.join("\n")
       end

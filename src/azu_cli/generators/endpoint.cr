@@ -176,7 +176,6 @@ module AzuCLI
           ""
         end
       end
-
     end
   end
 end
