@@ -195,13 +195,30 @@ module AzuCLI
       # Custom middleware logic
       private def custom_logic : String
         <<-CUSTOM
-            # TODO: Implement custom middleware logic
-            # Example:
-            # Log.info { "Processing request: " + context.request.method + " " + context.request.path }
-            #
-            # # Your custom logic here
-            #
-            # Log.info { "Request processed successfully" }
+            Log.info { "Processing request: " + context.request.method + " " + context.request.path }
+
+            begin
+              # Add your custom middleware logic here
+              # Examples:
+              # - Request/response modification
+              # - Authentication checks
+              # - Rate limiting
+              # - Request logging
+              # - Context manipulation
+
+              # Call the next middleware in the chain
+              call_next(context)
+
+              Log.info { "Request processed successfully" }
+            rescue ex
+              Log.error(exception: ex) { "Error in custom middleware" }
+              context.response.status = HTTP::Status::INTERNAL_SERVER_ERROR
+              context.response.content_type = "application/json"
+              context.response.print({
+                "error" => "Internal server error",
+                "message" => "An unexpected error occurred"
+              }.to_json)
+            end
         CUSTOM
       end
 
@@ -330,8 +347,15 @@ module AzuCLI
           end
 
           private def custom_validation?(context : HTTP::Server::Context) : Bool
-            # TODO: Implement custom validation logic
-            true # Simple demo
+            # Implement your custom validation logic here
+            # Examples:
+            # - Check request headers
+            # - Validate request body
+            # - Check user permissions
+            # - Validate API keys
+
+            # Return true to allow request, false to block
+            true # Default: allow all requests
           end
         CUSTOM_METHODS
       end

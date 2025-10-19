@@ -163,6 +163,59 @@ module Services
     def failure? : Bool
       !@success
     end
+
+    # Transform the data if successful, otherwise return the same result
+    def map(&block : T -> U) : Result(U) forall U
+      if success?
+        begin
+          Result(U).success(block.call(data.not_nil!))
+        rescue ex
+          errors = CQL::ActiveRecord::Validations::Errors.new
+          errors << CQL::ActiveRecord::Validations::Error.new(:base, "Transformation error: \#{ex.message}")
+          Result(U).failure(errors)
+        end
+      else
+        Result(U).failure(errors)
+      end
+    end
+
+    # Chain operations that return Results
+    def flat_map(&block : T -> Result(U)) : Result(U) forall U
+      if success?
+        block.call(data.not_nil!)
+      else
+        Result(U).failure(errors)
+      end
+    end
+
+    # Get error messages as a single string
+    def error_messages : String
+      errors.map { |error| "\#{error.field}: \#{error.message}" }.join(", ")
+    end
+
+    # Get error messages as an array
+    def error_messages_array : Array(String)
+      errors.map { |error| error.message }
+    end
+
+    # Check if result has any errors
+    def has_errors? : Bool
+      !errors.empty?
+    end
+
+    # Get the data or raise an exception if failed
+    def data! : T
+      if success?
+        data.not_nil!
+      else
+        raise "Cannot access data from failed result: \#{error_messages}"
+      end
+    end
+
+    # Get the data or return a default value
+    def data_or(default : T) : T
+      success? ? data.not_nil! : default
+    end
   end
 end
 CRYSTAL
@@ -200,13 +253,22 @@ require "../result"
 module #{@module_name}
   class CreateService
     def call(#{param_list}) : Services::Result(#{model_class})
+      Log.info { "Creating new #{@snake_case_name}" }
+
       #{@snake_case_name} = #{model_class}.new(#{constructor_params})
 
       if #{@snake_case_name}.save
+        Log.info { "Successfully created \#{@snake_case_name} with ID: \#{#{@snake_case_name}.id}" }
         Services::Result.success(#{@snake_case_name})
       else
+        Log.warn { "Failed to create \#{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(\", \")}" }
         Services::Result.failure(#{@snake_case_name}.errors)
       end
+    rescue ex
+      Log.error(exception: ex) { "Error creating \#{@snake_case_name}" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: \#{ex.message}")
+      Services::Result.failure(errors)
     end
   end
 end
@@ -220,8 +282,16 @@ require "../result"
 module #{@module_name}
   class IndexService
     def call : Services::Result(Array(#{model_class}))
+      Log.info { "Fetching all #{@snake_case_name.pluralize}" }
+
       records = #{model_class}.all
+      Log.info { "Successfully fetched \#{records.size} \#{@snake_case_name.pluralize}" }
       Services::Result.success(records.to_a)
+    rescue ex
+      Log.error(exception: ex) { "Error fetching \#{@snake_case_name.pluralize}" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: \#{ex.message}")
+      Services::Result.failure(errors)
     end
   end
 end
@@ -235,12 +305,21 @@ require "../result"
 module #{@module_name}
   class ShowService
     def call(id : #{id_type}) : Services::Result(#{model_class})
+      Log.info { "Fetching #{@snake_case_name} with ID: \#{id}" }
+
       #{@snake_case_name} = #{model_class}.find(id)
+      Log.info { "Successfully found \#{@snake_case_name}" }
       Services::Result.success(#{@snake_case_name})
     rescue CQL::RecordNotFound
+      Log.warn { "\#{@snake_case_name.camelcase} with ID \#{id} not found" }
       errors = CQL::ActiveRecord::Validations::Errors.new
       errors << CQL::ActiveRecord::Validations::Error.new(:base, "Record not found")
-      Services::Result(#{model_class}).failure(errors)
+      Services::Result.failure(errors)
+    rescue ex
+      Log.error(exception: ex) { "Error fetching \#{@snake_case_name} with ID \#{id}" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: \#{ex.message}")
+      Services::Result.failure(errors)
     end
   end
 end
@@ -254,17 +333,27 @@ require "../result"
 module #{@module_name}
   class UpdateService
     def call(id : #{id_type}, #{param_list}) : Services::Result(#{model_class})
+      Log.info { "Updating #{@snake_case_name} with ID: \#{id}" }
+
       #{@snake_case_name} = #{model_class}.find(id)
-      
+
       if #{@snake_case_name}.update(#{update_params})
+        Log.info { "Successfully updated \#{@snake_case_name} with ID: \#{id}" }
         Services::Result.success(#{@snake_case_name})
       else
+        Log.warn { "Failed to update \#{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(\", \")}" }
         Services::Result.failure(#{@snake_case_name}.errors)
       end
     rescue CQL::RecordNotFound
+      Log.warn { "\#{@snake_case_name.camelcase} with ID \#{id} not found" }
       errors = CQL::ActiveRecord::Validations::Errors.new
       errors << CQL::ActiveRecord::Validations::Error.new(:base, "Record not found")
-      Services::Result(#{model_class}).failure(errors)
+      Services::Result.failure(errors)
+    rescue ex
+      Log.error(exception: ex) { "Error updating \#{@snake_case_name} with ID \#{id}" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: \#{ex.message}")
+      Services::Result.failure(errors)
     end
   end
 end
@@ -278,17 +367,27 @@ require "../result"
 module #{@module_name}
   class DestroyService
     def call(id : #{id_type}) : Services::Result(#{model_class})
+      Log.info { "Destroying #{@snake_case_name} with ID: \#{id}" }
+
       #{@snake_case_name} = #{model_class}.find(id)
-      
+
       if #{@snake_case_name}.delete
+        Log.info { "Successfully destroyed \#{@snake_case_name} with ID: \#{id}" }
         Services::Result.success(#{@snake_case_name})
       else
+        Log.warn { "Failed to destroy \#{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(\", \")}" }
         Services::Result.failure(#{@snake_case_name}.errors)
       end
     rescue CQL::RecordNotFound
+      Log.warn { "\#{@snake_case_name.camelcase} with ID \#{id} not found" }
       errors = CQL::ActiveRecord::Validations::Errors.new
       errors << CQL::ActiveRecord::Validations::Error.new(:base, "Record not found")
-      Services::Result(#{model_class}).failure(errors)
+      Services::Result.failure(errors)
+    rescue ex
+      Log.error(exception: ex) { "Error destroying \#{@snake_case_name} with ID \#{id}" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: \#{ex.message}")
+      Services::Result.failure(errors)
     end
   end
 end

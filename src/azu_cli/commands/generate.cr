@@ -62,7 +62,10 @@ module AzuCLI
           generate_endpoint
         when "service"
           generate_service
-        when "contract", "request"
+        when "request"
+          generate_request
+        when "contract"
+          Logger.warn("'contract' generator is deprecated. Use 'request' instead.")
           generate_request
         when "page"
           generate_page
@@ -465,49 +468,71 @@ module AzuCLI
       private def generate_scaffold : Result
         Logger.info("Generating scaffold (complete CRUD)")
 
+        # Validate scaffold generation parameters
+        validation_result = validate_scaffold_parameters
+        return validation_result unless validation_result.success?
+
         components_generated = [] of String
         crud_actions = ["index", "show", "new", "create", "edit", "update", "destroy"]
 
         # Generate Model
         unless should_skip_component?("model")
           Logger.info("🔨 Generating model...")
-          model_generator = AzuCLI::Generate::Model.new(
-            name: @generator_name,
-            attributes: @attributes,
-            generate_migration: !should_skip_component?("migration") # Only generate migration with model if migration is not being skipped
-          )
-          render_generator(model_generator, AzuCLI::Generate::Model::OUTPUT_DIR)
-          components_generated << "model"
+          begin
+            model_generator = AzuCLI::Generate::Model.new(
+              name: @generator_name,
+              attributes: @attributes,
+              generate_migration: !should_skip_component?("migration") # Only generate migration with model if migration is not being skipped
+            )
+            render_generator(model_generator, AzuCLI::Generate::Model::OUTPUT_DIR)
+            components_generated << "model"
+            Logger.success("✓ Model generated successfully")
+          rescue ex
+            Logger.error("Failed to generate model: #{ex.message}")
+            return error("Model generation failed: #{ex.message}")
+          end
         end
 
         # Generate separate Migration if not skipped and not generated with model
         unless should_skip_component?("migration")
           unless should_skip_component?("model") # If model was generated, migration might already be created
             Logger.info("🔨 Generating migration...")
-            migration_generator = AzuCLI::Generate::Migration.new(
-              name: "create_#{@generator_name.downcase}s",
-              attributes: @attributes
-            )
-            render_generator(migration_generator, AzuCLI::Generate::Migration::OUTPUT_DIR)
-            components_generated << "migration"
+            begin
+              migration_generator = AzuCLI::Generate::Migration.new(
+                name: "create_#{@generator_name.downcase}s",
+                attributes: @attributes
+              )
+              render_generator(migration_generator, AzuCLI::Generate::Migration::OUTPUT_DIR)
+              components_generated << "migration"
+              Logger.success("✓ Migration generated successfully")
+            rescue ex
+              Logger.error("Failed to generate migration: #{ex.message}")
+              return error("Migration generation failed: #{ex.message}")
+            end
           end
         end
 
         # Generate Endpoints
         unless should_skip_component?("endpoint")
           Logger.info("🔨 Generating endpoints...")
-          endpoint_type = @api_only ? "api" : (@web_only ? "web" : "web")
-          endpoint_generator = AzuCLI::Generate::Endpoint.new(
-            name: @generator_name,
-            actions: crud_actions,
-            endpoint_type: endpoint_type,
-            scaffold: true
-          )
-          endpoint_generator.fields = @attributes
-          output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
-          Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
-          endpoint_generator.render(output_dir)
-          components_generated << "endpoint"
+          begin
+            endpoint_type = @api_only ? "api" : (@web_only ? "web" : "web")
+            endpoint_generator = AzuCLI::Generate::Endpoint.new(
+              name: @generator_name,
+              actions: crud_actions,
+              endpoint_type: endpoint_type,
+              scaffold: true
+            )
+            endpoint_generator.fields = @attributes
+            output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
+            Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
+            endpoint_generator.render(output_dir)
+            components_generated << "endpoint"
+            Logger.success("✓ Endpoints generated successfully")
+          rescue ex
+            Logger.error("Failed to generate endpoints: #{ex.message}")
+            return error("Endpoint generation failed: #{ex.message}")
+          end
         end
 
         # Generate Services (if CQL enabled)
@@ -530,7 +555,7 @@ module AzuCLI
         end
 
         # Generate Requests (both API and Web) - aligns with Azu::Request
-        unless should_skip_component?("request") || should_skip_component?("contract")
+        unless should_skip_component?("request")
           Logger.info("🔨 Generating requests...")
           # Get project name from config or use default
           proj_name = project_name
@@ -590,7 +615,165 @@ module AzuCLI
           Logger.info("⏭️  Skipped components: #{@skip_components.join(", ")}")
         end
 
+        # Generate summary file
+        generate_scaffold_summary(components_generated)
+
         success("Generated scaffold #{@generator_name} successfully")
+      end
+
+      # Validate scaffold generation parameters
+      private def validate_scaffold_parameters : Result
+        # Validate resource name format
+        unless valid_crystal_identifier?(@generator_name)
+          return error("Invalid resource name '#{@generator_name}'. Must be a valid Crystal identifier.")
+        end
+
+        # Check for reserved words
+        reserved_words = ["id", "created_at", "updated_at", "class", "module", "def", "end", "if", "else", "elsif", "unless", "while", "until", "for", "in", "case", "when", "then", "do", "begin", "rescue", "ensure", "return", "break", "next", "yield", "super", "self", "true", "false", "nil"]
+        if reserved_words.includes?(@generator_name.downcase)
+          return error("Resource name '#{@generator_name}' is a reserved word. Please choose a different name.")
+        end
+
+        # Validate attribute types
+        supported_types = ["string", "text", "int32", "int64", "float32", "float64", "bool", "boolean", "time", "datetime", "date", "json", "uuid", "email", "url", "references", "belongs_to"]
+        @attributes.each do |field, type|
+          unless supported_types.includes?(type.downcase)
+            return error("Unsupported attribute type '#{type}' for field '#{field}'. Supported types: #{supported_types.join(", ")}")
+          end
+
+          # Check for duplicate field names
+          if @attributes.keys.count(field) > 1
+            return error("Duplicate field name '#{field}' found in attributes.")
+          end
+
+          # Warn about reserved field names
+          if reserved_words.includes?(field.downcase)
+            Logger.warn("Field name '#{field}' is a reserved word. Consider using a different name.")
+          end
+        end
+
+        # Validate that at least one component will be generated
+        if @skip_components.size >= 7 # All components skipped
+          return error("Cannot generate scaffold with all components skipped. At least one component must be generated.")
+        end
+
+        success("Scaffold validation passed")
+      end
+
+      # Check if string is a valid Crystal identifier
+      private def valid_crystal_identifier?(name : String) : Bool
+        return false if name.empty?
+        return false unless name.match(/^[A-Za-z_][A-Za-z0-9_]*$/)
+        true
+      end
+
+      # Generate scaffold summary file
+      private def generate_scaffold_summary(components_generated : Array(String))
+        summary_content = <<-SUMMARY
+# Scaffold Generation Summary
+
+**Resource:** #{@generator_name}
+**Generated at:** #{Time.utc}
+**Project type:** #{@api_only ? "API" : (@web_only ? "Web" : "Web + API")}
+
+## Generated Components
+
+#{components_generated.map { |comp| "- ✅ #{comp.capitalize}" }.join("\n")}
+
+## Generated Files
+
+#{generate_file_list(components_generated)}
+
+## Next Steps
+
+1. **Database Setup:**
+   - Run `azu db:migrate` to create the database tables
+   - Run `azu db:seed` to populate with sample data (if applicable)
+
+2. **Development:**
+   - Start the development server with `azu serve`
+   - Visit the generated endpoints in your browser or API client
+
+3. **Customization:**
+   - Modify the generated models, services, and endpoints as needed
+   - Add business logic to the service classes
+   - Customize the templates for web pages
+
+## Generated Endpoints
+
+#{generate_endpoint_list}
+
+## Configuration
+
+- **API Mode:** #{@api_only}
+- **Web Mode:** #{@web_only}
+- **Skipped Components:** #{@skip_components.any? ? @skip_components.join(", ") : "None"}
+
+---
+Generated by Azu CLI v#{AzuCLI::VERSION}
+SUMMARY
+
+        File.write("SCAFFOLD_SUMMARY.md", summary_content)
+        Logger.info("📄 Summary saved to SCAFFOLD_SUMMARY.md")
+      end
+
+      # Generate file list for summary
+      private def generate_file_list(components_generated : Array(String)) : String
+        files = [] of String
+        crud_actions = ["index", "show", "new", "create", "edit", "update", "destroy"]
+
+        components_generated.each do |component|
+          case component
+          when "model"
+            files << "- `src/models/#{@generator_name.underscore}.cr`"
+          when "migration"
+            files << "- `src/db/migrations/*_create_#{@generator_name.underscore.pluralize}.cr`"
+          when "endpoint"
+            crud_actions.each do |action|
+              files << "- `src/endpoints/#{@generator_name.underscore.pluralize}/#{@generator_name.underscore}_#{action}_endpoint.cr`"
+            end
+          when "service"
+            ["create", "index", "show", "update", "destroy"].each do |action|
+              files << "- `src/services/#{@generator_name.underscore}/#{action}_service.cr`"
+            end
+            files << "- `src/services/result.cr`"
+          when "request"
+            crud_actions.each do |action|
+              files << "- `src/requests/#{@generator_name.underscore}/#{action}_request.cr`"
+            end
+          when "response", "page"
+            if @api_only
+              crud_actions.each do |action|
+                files << "- `src/pages/#{@generator_name.underscore}/#{@generator_name.underscore}_#{action}_json.cr`"
+              end
+            else
+              crud_actions.each do |action|
+                files << "- `src/pages/#{@generator_name.underscore}/#{action}_page.cr`"
+              end
+            end
+          when "template"
+            ["index", "show", "new", "edit"].each do |action|
+              files << "- `public/templates/#{@generator_name.underscore}/#{action}_page.jinja`"
+            end
+          end
+        end
+
+        files.join("\n")
+      end
+
+      # Generate endpoint list for summary
+      private def generate_endpoint_list : String
+        base_path = "/#{@generator_name.underscore.pluralize}"
+        endpoints = [
+          "GET    #{base_path}           - List all #{@generator_name.underscore.pluralize}",
+          "GET    #{base_path}/new       - New #{@generator_name.underscore} form",
+          "POST   #{base_path}           - Create #{@generator_name.underscore}",
+          "GET    #{base_path}/:id       - Show #{@generator_name.underscore}",
+          "GET    #{base_path}/:id/edit  - Edit #{@generator_name.underscore} form",
+          "PATCH  #{base_path}/:id       - Update #{@generator_name.underscore}",
+          "DELETE #{base_path}/:id       - Delete #{@generator_name.underscore}"
+        ]
+        endpoints.join("\n")
       end
 
       # Helper method to check if a component should be skipped
@@ -702,8 +885,6 @@ module AzuCLI
         puts "    Generate a request class for request validation (aligns with Azu::Request)"
         puts "    Example: azu generate request UserRequest name:string email:string"
         puts
-        puts "  contract <name> [attr:type]"
-        puts "    Alias for 'request' (deprecated, use 'request' instead)"
         puts
         puts "  page <name> [attr:type]"
         puts "    Generate a page response class (Web) or JSON response class (API)"

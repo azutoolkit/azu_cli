@@ -85,13 +85,21 @@ module AzuCLI
       def perform_method_body : String
         if @parameters.empty?
           <<-PERFORM
-              # TODO: Implement job logic here
-              # Example:
-              # Log.info { "Processing #{@name} job" }
-              #
-              # # Your job logic here
-              #
-              # Log.info { "#{@name} job completed successfully" }
+              Log.info { "Starting #{@name} job" }
+
+              begin
+                # Add your job logic here
+                # Example:
+                # - Send emails
+                # - Process data
+                # - Call external APIs
+                # - Generate reports
+
+                Log.info { "#{@name} job completed successfully" }
+              rescue ex
+                Log.error(exception: ex) { "Failed to process #{@name} job" }
+                raise ex # Let JoobQ handle retries
+              end
           PERFORM
         else
           # Generate example usage of parameters
@@ -113,13 +121,24 @@ module AzuCLI
           end
 
           <<-PERFORM
-              # TODO: Implement job logic here
-              # Example:
-              #{param_examples.join("\n    ")}
-              #
-              # # Your job logic here
-              #
-              # Log.info { "#{@name} job completed successfully" }
+              Log.info { "Starting #{@name} job with parameters" }
+
+              begin
+                # Log parameter values for debugging
+                #{param_examples.join("\n    ")}
+
+                # Add your job logic here
+                # Example:
+                # - Process the parameters
+                # - Send emails to users
+                # - Process data based on parameters
+                # - Call external APIs with parameters
+
+                Log.info { "#{@name} job completed successfully" }
+              rescue ex
+                Log.error(exception: ex) { "Failed to process #{@name} job" }
+                raise ex # Let JoobQ handle retries
+              end
           PERFORM
         end
       end

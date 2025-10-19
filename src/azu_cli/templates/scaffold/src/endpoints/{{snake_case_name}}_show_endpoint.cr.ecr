@@ -1,0 +1,68 @@
+module <%= @module_name %>::<%= @name.camelcase %>
+  struct ShowEndpoint
+    include Azu::Endpoint(<%= @name.camelcase %>::ShowRequest, <%= @name.camelcase %>::Show<%= @endpoint_type == "api" ? "Response" : "Page" %>)
+
+    get "<%= action_path %>"
+
+    def call : <%= @name.camelcase %>::Show<%= @endpoint_type == "api" ? "Response" : "Page" %>
+<% if @scaffold -%>
+      service = <%= @module_name %>::ShowService.new
+      result = service.call(@request.id)
+
+      if result.success?
+        <%= @name.camelcase %>::Show<%= @endpoint_type == "api" ? "Response" : "Page" %>.new(
+          <%= @resource_singular %>: result.data.not_nil!
+        )
+      else
+<% if @endpoint_type == "api" -%>
+        error("<%= @name.camelcase %> not found", 404, format_errors(result.errors).values.flatten)
+<% else -%>
+        flash["error"] = "<%= @name.camelcase %> not found"
+        redirect "/<%= @resource_plural %>"
+<% end -%>
+      end
+<% else -%>
+      # Non-scaffold implementation
+      # This is a basic implementation - customize as needed
+      #
+      # Example service integration:
+      # service = <%= @module_name %>::ShowService.new
+      # result = service.call(@request.id)
+      #
+      # Example direct model usage:
+      # model = <%= @name.camelcase %>::<%= @name.camelcase %>Model.find(@request.id)
+
+      begin
+        # Add your business logic here
+        <%= @name.camelcase %>::Show<%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+      rescue ex
+        Log.error(exception: ex) { "Error in show action" }
+<% if @endpoint_type == "api" -%>
+        error("Internal server error", 500, ["An unexpected error occurred"])
+<% else -%>
+        flash["error"] = "An unexpected error occurred"
+        redirect "/<%= @resource_plural %>"
+<% end -%>
+      end
+<% end -%>
+    end
+<% if @scaffold -%>
+
+    # Convert CQL errors to hash format for JSON responses
+    private def format_errors(errors : CQL::ActiveRecord::Validations::Errors) : Hash(String, Array(String))
+      result = {} of String => Array(String)
+      errors.each do |error|
+        field = error.field.to_s
+        result[field] ||= [] of String
+        result[field] << error.message
+      end
+      result
+    end
+
+    # Convert CQL errors to readable string for flash messages
+    private def format_error_messages(errors : CQL::ActiveRecord::Validations::Errors) : String
+      errors.map { |error| "#{error.field}: #{error.message}" }.join(", ")
+    end
+<% end -%>
+  end
+end

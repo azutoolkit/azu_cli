@@ -1,0 +1,12 @@
+module <%= @module_name %>::<%= @name.camelcase %>
+  struct NewEndpoint
+    include Azu::Endpoint(<%= @name.camelcase %>::NewRequest, <%= @name.camelcase %>::New<%= @endpoint_type == "api" ? "Response" : "Page" %>)
+
+    get "<%= action_path %>"
+
+    def call : <%= @name.camelcase %>::New<%= @endpoint_type == "api" ? "Response" : "Page" %>
+      # Render form page
+      <%= @name.camelcase %>::New<%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+    end
+  end
+end

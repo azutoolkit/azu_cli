@@ -20,6 +20,67 @@ module AzuCLI
         @table_name = @snake_case_name.singularize.pluralize
       end
 
+      # Detect migration type based on name pattern
+      def migration_type : String
+        case @name.downcase
+        when /^add_.*_to_/
+          "add_columns"
+        when /^remove_.*_from_/
+          "remove_columns"
+        when /^change_.*_in_/
+          "change_columns"
+        when /^add_index_to_/
+          "add_index"
+        when /^remove_index_from_/
+          "remove_index"
+        when /^create_/
+          "create_table"
+        else
+          "create_table" # Default fallback
+        end
+      end
+
+      # Extract table name from migration name for add/remove operations
+      def target_table_name : String
+        case migration_type
+        when "add_columns", "remove_columns", "change_columns"
+          # Extract table name from "AddXToY" or "add_x_to_y"
+          parts = @name.downcase.split(/_/)
+          if parts.size >= 3 && parts[-2] == "to"
+            parts.last
+          else
+            @table_name
+          end
+        when "add_index", "remove_index"
+          # Extract table name from "AddIndexToX" or "add_index_to_x"
+          parts = @name.downcase.split(/_/)
+          if parts.size >= 4 && parts[-2] == "to"
+            parts.last
+          else
+            @table_name
+          end
+        else
+          @table_name
+        end
+      end
+
+      # Extract column names from migration name
+      def column_names : Array(String)
+        case migration_type
+        when "add_columns", "remove_columns", "change_columns"
+          # Extract column names from "AddXToY" or "add_x_to_y"
+          parts = @name.downcase.split(/_/)
+          if parts.size >= 3 && parts[-2] == "to"
+            # For "add_name_and_email_to_users", extract ["name", "email"]
+            parts[1..-3].reject { |p| p == "and" }
+          else
+            @attributes.keys
+          end
+        else
+          @attributes.keys
+        end
+      end
+
       # Convert name to snake_case for file naming
       def snake_case_name : String
         # Convert to snake_case first, then singularize to avoid singularize lowercasing issues

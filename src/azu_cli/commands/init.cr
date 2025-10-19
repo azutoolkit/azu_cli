@@ -50,7 +50,6 @@ module AzuCLI
           "src/models",
           "src/endpoints",
           "src/services",
-          "src/contracts",
           "src/pages",
           "src/middleware",
           "src/validators",

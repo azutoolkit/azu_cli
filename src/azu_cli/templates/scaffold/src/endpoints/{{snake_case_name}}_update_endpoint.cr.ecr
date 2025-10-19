@@ -1,0 +1,76 @@
+module <%= @module_name %>::<%= @name.camelcase %>
+  struct UpdateEndpoint
+    include Azu::Endpoint(<%= @name.camelcase %>::UpdateRequest, <%= @name.camelcase %>::Update<%= @endpoint_type == "api" ? "Response" : "Page" %>)
+
+    patch "<%= action_path %>"
+
+    def call : <%= @name.camelcase %>::Update<%= @endpoint_type == "api" ? "Response" : "Page" %>
+<% if @scaffold -%>
+      service = <%= @module_name %>::UpdateService.new
+      result = service.call(@request.id, <%= request_params %>)
+
+      if result.success?
+<% if @endpoint_type == "api" -%>
+        <%= @name.camelcase %>::UpdateResponse.new(
+          <%= @resource_singular %>: result.data,
+          message: "<%= @name.camelcase %> updated successfully",
+          success: true
+        )
+<% else -%>
+        flash["success"] = "<%= @name.camelcase %> updated successfully"
+        redirect "/<%= @resource_plural %>/#{result.data.not_nil!.id}"
+<% end -%>
+      else
+<% if @endpoint_type == "api" -%>
+        error("Failed to update <%= @resource_singular %>", 422, format_errors(result.errors).values.flatten)
+<% else -%>
+        flash["error"] = "Failed to update <%= @resource_singular %>: #{format_error_messages(result.errors)}"
+        redirect "/<%= @resource_plural %>/#{@request.id}/edit"
+<% end -%>
+      end
+<% else -%>
+      # Non-scaffold implementation
+      # This is a basic implementation - customize as needed
+      #
+      # Example service integration:
+      # service = <%= @module_name %>::UpdateService.new
+      # result = service.call(@request.id, @request.to_h)
+      #
+      # Example direct model usage:
+      # model = <%= @name.camelcase %>::<%= @name.camelcase %>Model.find(@request.id)
+      # model.update(@request.to_h)
+
+      begin
+        # Add your business logic here
+        <%= @name.camelcase %>::Update<%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+      rescue ex
+        Log.error(exception: ex) { "Error in update action" }
+<% if @endpoint_type == "api" -%>
+        error("Internal server error", 500, ["An unexpected error occurred"])
+<% else -%>
+        flash["error"] = "An unexpected error occurred"
+        redirect "/<%= @resource_plural %>/#{@request.id}/edit"
+<% end -%>
+      end
+<% end -%>
+    end
+<% if @scaffold -%>
+
+    # Convert CQL errors to hash format for JSON responses
+    private def format_errors(errors : CQL::ActiveRecord::Validations::Errors) : Hash(String, Array(String))
+      result = {} of String => Array(String)
+      errors.each do |error|
+        field = error.field.to_s
+        result[field] ||= [] of String
+        result[field] << error.message
+      end
+      result
+    end
+
+    # Convert CQL errors to readable string for flash messages
+    private def format_error_messages(errors : CQL::ActiveRecord::Validations::Errors) : String
+      errors.map { |error| "#{error.field}: #{error.message}" }.join(", ")
+    end
+<% end -%>
+  end
+end
