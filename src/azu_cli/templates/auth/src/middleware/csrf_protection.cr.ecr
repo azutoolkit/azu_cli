@@ -1,0 +1,115 @@
+# CSRF Protection Middleware
+# Implements Cross-Site Request Forgery protection
+
+require "openssl"
+require "secure_random"
+
+module <%=project.camelcase%>::Middleware
+  class CSRFProtection < Azu::Middleware
+    CSRF_TOKEN_HEADER = "X-CSRF-Token"
+    CSRF_TOKEN_PARAM = "_csrf_token"
+    CSRF_TOKEN_COOKIE = "_csrf_token"
+
+    # Skip CSRF for safe methods
+    SAFE_METHODS = ["GET", "HEAD", "OPTIONS"]
+
+    def call(context : HTTP::Server::Context)
+      request = context.request
+
+      # Skip CSRF for safe methods
+      if SAFE_METHODS.includes?(request.method)
+        call_next(context)
+        return
+      end
+
+      # Skip CSRF for API endpoints if configured
+      if skip_for_api?(request.path)
+        call_next(context)
+        return
+      end
+
+      # Validate CSRF token
+      unless valid_csrf_token?(context)
+        context.response.status = 403
+        context.response.content_type = "application/json"
+        context.response.puts({error: "Invalid CSRF token"}.to_json)
+        return
+      end
+
+      call_next(context)
+    end
+
+    private def valid_csrf_token?(context : HTTP::Server::Context) : Bool
+      request = context.request
+
+      # Get token from header, param, or cookie
+      token = get_csrf_token(context)
+      return false unless token
+
+      # Get stored token from session
+      stored_token = context.session[CSRF_TOKEN_COOKIE]?
+      return false unless stored_token
+
+      # Compare tokens using secure comparison
+      secure_compare(token, stored_token)
+    end
+
+    private def get_csrf_token(context : HTTP::Server::Context) : String?
+      request = context.request
+
+      # Check header first
+      token = request.headers[CSRF_TOKEN_HEADER]?
+      return token if token && !token.empty?
+
+      # Check form parameter
+      token = request.body.try(&.gets_to_end)
+      if token && !token.empty?
+        # Parse form data to get CSRF token
+        form_data = HTTP::Params.parse(token)
+        return form_data[CSRF_TOKEN_PARAM]? if form_data.has_key?(CSRF_TOKEN_PARAM)
+      end
+
+      # Check query parameter
+      token = request.query_params[CSRF_TOKEN_PARAM]?
+      return token if token && !token.empty?
+
+      nil
+    end
+
+    private def secure_compare(a : String, b : String) : Bool
+      return false if a.size != b.size
+
+      result = 0
+      a.bytes.zip(b.bytes) do |byte_a, byte_b|
+        result |= byte_a ^ byte_b
+      end
+
+      result == 0
+    end
+
+    private def skip_for_api?(path : String) : Bool
+      # Skip CSRF for API endpoints (can be configured)
+      path.starts_with?("/api/")
+    end
+
+    # Generate a new CSRF token
+    def self.generate_token : String
+      SecureRandom.urlsafe_base64(32)
+    end
+
+    # Store CSRF token in session
+    def self.store_token(context : HTTP::Server::Context, token : String)
+      context.session[CSRF_TOKEN_COOKIE] = token
+    end
+
+    # Get CSRF token from session or generate new one
+    def self.get_or_create_token(context : HTTP::Server::Context) : String
+      token = context.session[CSRF_TOKEN_COOKIE]?
+      unless token
+        token = generate_token
+        store_token(context, token)
+      end
+      token
+    end
+  end
+end

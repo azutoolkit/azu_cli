@@ -1,0 +1,147 @@
+# Authly Configuration
+# OAuth2 and OpenID Connect configuration using Authly
+
+<%- if using_authly? %>
+require "authly"
+
+module <%=project.camelcase%>::Config
+  class AuthlyConfig
+    def self.configure
+      Authly.configure do |config|
+        # Basic configuration
+        config.secret_key = ENV["AUTHLY_SECRET_KEY"]? || ENV["JWT_SECRET"]? || raise "AUTHLY_SECRET_KEY or JWT_SECRET must be set"
+        config.algorithm = JWT::Algorithm::HS256
+
+        # Token configuration
+        config.token_strategy = :jwt
+        config.access_token_ttl = 15.minutes
+        config.refresh_token_ttl = 7.days
+        config.authorization_code_ttl = 10.minutes
+
+        # PKCE configuration
+        config.require_pkce = true
+        config.pkce_method = :S256
+
+        # Security configuration
+        config.require_client_authentication = true
+        config.allow_implicit_grant = false
+        config.allow_password_grant = true
+
+        # CORS configuration
+        config.allowed_origins = ENV["CORS_ORIGINS"]?.try(&.split(",")) || ["http://localhost:3000"]
+
+        # Database configuration
+        config.token_store = CustomTokenStore.new
+      end
+    end
+  end
+
+  # Custom token store implementation
+  class CustomTokenStore
+    include Authly::TokenStore
+
+    def store(token : String, data : Hash(String, String))
+      # Store token in database
+      OAuthAccessToken.create!(
+        token: token,
+        resource_owner_id: data["user_id"].to_i64,
+        application_id: data["client_id"]?.try(&.to_i64) || 1,
+        expires_in: data["ttl"]?.try(&.to_i) || 900,
+        scopes: data["scopes"]? || "read"
+      )
+    end
+
+    def fetch(token : String) : Hash(String, String)?
+      token_record = OAuthAccessToken.find_by(token: token)
+      return nil unless token_record && token_record.valid?
+
+      {
+        "user_id" => token_record.resource_owner_id.to_s,
+        "client_id" => token_record.application_id.to_s,
+        "scopes" => token_record.scopes || "read",
+        "expires_at" => (token_record.created_at + (token_record.expires_in || 900).seconds).to_unix.to_s
+      }
+    rescue
+      nil
+    end
+
+    def revoke(token : String)
+      token_record = OAuthAccessToken.find_by(token: token)
+      token_record.try(&.revoke!)
+    end
+
+    def revoked?(token : String) : Bool
+      token_record = OAuthAccessToken.find_by(token: token)
+      token_record.nil? ? true : token_record.revoked?
+    end
+
+    def valid?(token : String) : Bool
+      token_record = OAuthAccessToken.find_by(token: token)
+      token_record.nil? ? false : token_record.valid?
+    end
+  end
+
+  # Custom authorizable client implementation
+  class CustomAuthorizableClient
+    include Authly::AuthorizableClient
+
+    def valid_redirect?(redirect_uri : String) : Bool
+      # Validate redirect URI against allowed URLs
+      allowed_uris = [
+        "http://localhost:3000/auth/callback",
+        "https://your-app.com/auth/callback"
+      ]
+
+      # Add dynamic validation from database
+      OAuthApplication.all.each do |app|
+        allowed_uris << app.redirect_uri if app.redirect_uri
+      end
+
+      allowed_uris.any? { |uri| redirect_uri.starts_with?(uri) }
+    end
+
+    def authorized?(client_id : String, client_secret : String) : Bool
+      # Verify client credentials
+      app = OAuthApplication.find_by(client_id: client_id)
+      return false unless app
+
+      app.client_secret == client_secret && app.confidential?
+    end
+  end
+
+  # Custom authorizable owner implementation
+  class CustomAuthorizableOwner
+    include Authly::AuthorizableOwner
+
+    def authorized?(username : String, password : String) : Bool
+      # Verify user credentials using email as username
+      user = User.authenticate(username, password)
+      user && user.confirmed? && !user.locked?
+    end
+
+    def id_token(user_data : Hash(String, String)) : String
+      # Generate an OpenID Connect ID Token
+      user_id = user_data["user_id"]
+      user = User.find(user_id.to_i64)
+      return "" unless user
+
+      now = Time.utc
+      payload = {
+        "sub" => user.id.to_s,
+        "name" => user.name || user.email,
+        "email" => user.email,
+        "email_verified" => user.confirmed?,
+        "iat" => now.to_unix,
+        "exp" => (now + 1.hour).to_unix,
+        "iss" => ENV["JWT_ISSUER"]? || "#{@project.downcase}-api",
+        "aud" => user_data["client_id"]? || "default"
+      }
+
+      JWT.encode(payload, ENV["JWT_SECRET"]? || "", JWT::Algorithm::HS256)
+    end
+  end
+end
+<%- else %>
+# Authly configuration is disabled
+# This file is included for completeness but Authly is not configured
+<%- end %>

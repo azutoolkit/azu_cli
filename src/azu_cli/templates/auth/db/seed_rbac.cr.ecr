@@ -1,0 +1,160 @@
+# RBAC Seed Data
+# Creates default roles and permissions
+
+<%- if rbac_enabled? %>
+require "../src/models/*"
+
+# Create default permissions
+permissions = [
+  # User management
+  {name: "users:create", description: "Create users", resource: "users", action: "create"},
+  {name: "users:read", description: "Read users", resource: "users", action: "read"},
+  {name: "users:update", description: "Update users", resource: "users", action: "update"},
+  {name: "users:delete", description: "Delete users", resource: "users", action: "delete"},
+
+  # Role management
+  {name: "roles:create", description: "Create roles", resource: "roles", action: "create"},
+  {name: "roles:read", description: "Read roles", resource: "roles", action: "read"},
+  {name: "roles:update", description: "Update roles", resource: "roles", action: "update"},
+  {name: "roles:delete", description: "Delete roles", resource: "roles", action: "delete"},
+
+  # Permission management
+  {name: "permissions:create", description: "Create permissions", resource: "permissions", action: "create"},
+  {name: "permissions:read", description: "Read permissions", resource: "permissions", action: "read"},
+  {name: "permissions:update", description: "Update permissions", resource: "permissions", action: "update"},
+  {name: "permissions:delete", description: "Delete permissions", resource: "permissions", action: "delete"},
+
+  # Admin operations
+  {name: "admin:access", description: "Access admin panel", resource: "admin", action: "access"},
+  {name: "admin:settings", description: "Manage system settings", resource: "admin", action: "settings"},
+
+  # Content management
+  {name: "content:create", description: "Create content", resource: "content", action: "create"},
+  {name: "content:read", description: "Read content", resource: "content", action: "read"},
+  {name: "content:update", description: "Update content", resource: "content", action: "update"},
+  {name: "content:delete", description: "Delete content", resource: "content", action: "delete"},
+
+  # Profile management
+  {name: "profile:read", description: "Read own profile", resource: "profile", action: "read"},
+  {name: "profile:update", description: "Update own profile", resource: "profile", action: "update"},
+]
+
+puts "Creating permissions..."
+permissions.each do |perm_data|
+  permission = Permission.find_by(name: perm_data[:name])
+  unless permission
+    Permission.create!(
+      name: perm_data[:name],
+      description: perm_data[:description],
+      resource: perm_data[:resource],
+      action: perm_data[:action]
+    )
+    puts "Created permission: #{perm_data[:name]}"
+  end
+end
+
+# Create default roles
+roles_data = [
+  {
+    name: "super_admin",
+    description: "Super Administrator with full system access",
+    permissions: [
+      "users:create", "users:read", "users:update", "users:delete",
+      "roles:create", "roles:read", "roles:update", "roles:delete",
+      "permissions:create", "permissions:read", "permissions:update", "permissions:delete",
+      "admin:access", "admin:settings",
+      "content:create", "content:read", "content:update", "content:delete",
+      "profile:read", "profile:update"
+    ]
+  },
+  {
+    name: "admin",
+    description: "Administrator with most system access",
+    permissions: [
+      "users:read", "users:update",
+      "roles:read",
+      "permissions:read",
+      "admin:access",
+      "content:create", "content:read", "content:update", "content:delete",
+      "profile:read", "profile:update"
+    ]
+  },
+  {
+    name: "moderator",
+    description: "Moderator with content management access",
+    permissions: [
+      "users:read",
+      "content:create", "content:read", "content:update", "content:delete",
+      "profile:read", "profile:update"
+    ]
+  },
+  {
+    name: "user",
+    description: "Regular user with basic access",
+    permissions: [
+      "content:read",
+      "profile:read", "profile:update"
+    ]
+  }
+]
+
+puts "Creating roles..."
+roles_data.each do |role_data|
+  role = Role.find_by(name: role_data[:name])
+  unless role
+    role = Role.create!(
+      name: role_data[:name],
+      description: role_data[:description],
+      permissions: role_data[:permissions].to_json
+    )
+
+    # Assign permissions to role
+    role_data[:permissions].each do |perm_name|
+      permission = Permission.find_by(name: perm_name)
+      if permission
+        RolePermission.create!(
+          role_id: role.id,
+          permission_id: permission.id
+        )
+      end
+    end
+
+    puts "Created role: #{role_data[:name]}"
+  end
+end
+
+# Create default admin user if it doesn't exist
+admin_email = ENV["ADMIN_EMAIL"]? || "admin@example.com"
+admin_password = ENV["ADMIN_PASSWORD"]? || "Admin123!"
+
+admin_user = User.find_by(email: admin_email)
+unless admin_user
+  admin_user = User.create!(
+    email: admin_email,
+    password: admin_password,
+    name: "Administrator",
+    role: "super_admin",
+    confirmed_at: Time.utc
+  )
+
+  # Assign super_admin role
+  super_admin_role = Role.find_by(name: "super_admin")
+  if super_admin_role
+    UserRole.create!(
+      user_id: admin_user.id,
+      role_id: super_admin_role.id
+    )
+  end
+
+  puts "Created admin user: #{admin_email}"
+  puts "Default password: #{admin_password}"
+  puts "Please change the password after first login!"
+else
+  puts "Admin user already exists: #{admin_email}"
+end
+
+puts "RBAC seed data created successfully!"
+<%- else %>
+# RBAC is disabled - no seed data needed
+puts "RBAC is disabled - skipping RBAC seed data"
+<%- end %>

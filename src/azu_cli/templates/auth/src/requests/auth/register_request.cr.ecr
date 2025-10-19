@@ -41,7 +41,19 @@ struct RegisterRequest
       add_error("password", "is required")
     elsif @password.size < 8
       add_error("password", "must be at least 8 characters")
+    elsif !strong_password?(@password)
+      add_error("password", "must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
     end
+  end
+
+  private def strong_password?(password : String) : Bool
+    # Check for uppercase, lowercase, number, and special character
+    has_upper = password.match(/[A-Z]/)
+    has_lower = password.match(/[a-z]/)
+    has_number = password.match(/[0-9]/)
+    has_special = password.match(/[^A-Za-z0-9]/)
+
+    has_upper && has_lower && has_number && has_special
   end
 
   private def validate_password_confirmation

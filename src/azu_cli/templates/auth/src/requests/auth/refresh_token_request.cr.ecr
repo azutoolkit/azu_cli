@@ -1,0 +1,33 @@
+# Refresh Token Request
+# Validates refresh token data
+
+struct RefreshTokenRequest
+  include JSON::Serializable
+
+  property refresh_token : String
+
+  property errors : Hash(String, Array(String)) = {} of String => Array(String)
+
+  def initialize(params : Hash)
+    @refresh_token = params["refresh_token"]?.to_s
+  end
+
+  def valid? : Bool
+    @errors.clear
+
+    validate_refresh_token
+
+    @errors.empty?
+  end
+
+  private def validate_refresh_token
+    if @refresh_token.empty?
+      add_error("refresh_token", "is required")
+    end
+  end
+
+  private def add_error(field : String, message : String)
+    @errors[field] ||= [] of String
+    @errors[field] << message
+  end
+end

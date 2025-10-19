@@ -26,6 +26,8 @@ struct LoginRequest
   private def validate_email
     if @email.empty?
       add_error("email", "is required")
+    elsif !@email.match(/\A[^@\s]+@[^@\s]+\z/)
+      add_error("email", "is invalid")
     end
   end
 

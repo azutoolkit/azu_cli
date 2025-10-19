@@ -1,0 +1,60 @@
+# Security Headers Middleware
+# Implements security headers for enhanced protection
+
+module <%=project.camelcase%>::Middleware
+  class SecurityHeaders < Azu::Middleware
+    def call(context : HTTP::Server::Context)
+      response = context.response
+
+      # Content Security Policy
+      csp = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'", # Adjust as needed
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: https:",
+        "font-src 'self'",
+        "connect-src 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'"
+      ].join("; ")
+
+      response.headers["Content-Security-Policy"] = csp
+
+      # HTTP Strict Transport Security
+      response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+
+      # X-Frame-Options
+      response.headers["X-Frame-Options"] = "DENY"
+
+      # X-Content-Type-Options
+      response.headers["X-Content-Type-Options"] = "nosniff"
+
+      # X-XSS-Protection
+      response.headers["X-XSS-Protection"] = "1; mode=block"
+
+      # Referrer Policy
+      response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+      # Permissions Policy (Feature Policy)
+      permissions_policy = [
+        "camera=()",
+        "microphone=()",
+        "geolocation=()",
+        "payment=()",
+        "usb=()",
+        "magnetometer=()",
+        "gyroscope=()",
+        "speaker=()"
+      ].join(", ")
+
+      response.headers["Permissions-Policy"] = permissions_policy
+
+      # Remove server information
+      response.headers.delete("Server")
+      response.headers.delete("X-Powered-By")
+
+      call_next(context)
+    end
+  end
+end

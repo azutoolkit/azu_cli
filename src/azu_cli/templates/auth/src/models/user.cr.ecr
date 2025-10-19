@@ -1,8 +1,11 @@
-# User Model
+# User Model with Enhanced Security and RBAC
 # Authentication and authorization model
 
 require "cql"
 require "crypto/bcrypt"
+<%- if rbac_enabled? %>
+require "json"
+<%- end %>
 
 class User < CQL::Model(Int64)
   db_context Schema, :users
@@ -14,6 +17,12 @@ class User < CQL::Model(Int64)
   property role : String = "user"
   property confirmed_at : Time?
   property locked_at : Time?
+  property failed_login_attempts : Int32 = 0
+  property last_login_at : Time?
+  property password_changed_at : Time?
+  property two_factor_enabled : Bool = false
+  property two_factor_secret : String?
+  property recovery_codes : String?
   property created_at : Time
   property updated_at : Time
 
@@ -24,10 +33,12 @@ class User < CQL::Model(Int64)
   validates :email, presence: true, format: /\A[^@\s]+@[^@\s]+\z/
   validates :password, presence: true, length: {minimum: 8}, on: :create
   validates :role, inclusion: {in: ["user", "admin", "moderator"]}
+  validates :failed_login_attempts, numericality: {greater_than_or_equal_to: 0}
 
   # Callbacks
   before_save :hash_password, if: :password_changed?
   before_save :update_timestamps
+  before_save :update_password_changed_at, if: :password_changed?
 
   # Virtual password getter/setter
   def password
@@ -44,6 +55,11 @@ class User < CQL::Model(Int64)
     return nil unless user
     return nil unless user.verify_password(password)
     return nil if user.locked?
+    return nil if user.account_locked_due_to_failed_attempts?
+
+    # Reset failed attempts on successful login
+    user.reset_failed_login_attempts!
+    user.update_last_login!
     user
   end
 
@@ -55,6 +71,13 @@ class User < CQL::Model(Int64)
   # Check if account is locked
   def locked? : Bool
     !@locked_at.nil?
+  end
+
+  # Check if account is locked due to failed login attempts
+  def account_locked_due_to_failed_attempts? : Bool
+    @failed_login_attempts >= 5 &&
+    @locked_at &&
+    @locked_at.not_nil! > (Time.utc - 30.minutes)
   end
 
   # Check if account is confirmed
@@ -72,9 +95,106 @@ class User < CQL::Model(Int64)
     has_role?("admin")
   end
 
+  # Check if user is moderator
+  def moderator? : Bool
+    has_role?("moderator")
+  end
+
+  # Record failed login attempt
+  def record_failed_login!
+    @failed_login_attempts += 1
+    if @failed_login_attempts >= 5
+      @locked_at = Time.utc
+    end
+    save!
+  end
+
+  # Reset failed login attempts
+  def reset_failed_login_attempts!
+    @failed_login_attempts = 0
+    @locked_at = nil
+    save!
+  end
+
+  # Update last login time
+  def update_last_login!
+    @last_login_at = Time.utc
+    save!
+  end
+
+  # Enable two-factor authentication
+  def enable_two_factor!(secret : String, recovery_codes : Array(String))
+    @two_factor_enabled = true
+    @two_factor_secret = secret
+    @recovery_codes = recovery_codes.to_json
+    save!
+  end
+
+  # Disable two-factor authentication
+  def disable_two_factor!
+    @two_factor_enabled = false
+    @two_factor_secret = nil
+    @recovery_codes = nil
+    save!
+  end
+
+  # Get recovery codes
+  def get_recovery_codes : Array(String)?
+    return nil unless @recovery_codes
+    JSON.parse(@recovery_codes).as(Array).map(&.as_s)
+  rescue
+    nil
+  end
+
+  # Check if password needs to be changed
+  def password_needs_change? : Bool
+    return false unless @password_changed_at
+    @password_changed_at.not_nil! < (Time.utc - 90.days)
+  end
+
+  <%- if rbac_enabled? %>
+  # RBAC Methods
+  def has_permission?(permission : String) : Bool
+    # Check if user has permission through role or direct assignment
+    RolePermission.where(
+      "role_id IN (SELECT role_id FROM user_roles WHERE user_id = ?) OR " +
+      "permission_id IN (SELECT id FROM permissions WHERE name = ?)",
+      @id, permission
+    ).exists?
+  end
+
+  def has_permission_for_resource?(resource : String, action : String) : Bool
+    permission_name = "#{resource}:#{action}"
+    has_permission?(permission_name)
+  end
+
+  def roles : Array(Role)
+    Role.joins(:user_roles).where("user_roles.user_id = ?", @id).to_a
+  end
+
+  def permissions : Array(Permission)
+    Permission.joins(:role_permissions)
+      .joins("JOIN user_roles ON role_permissions.role_id = user_roles.role_id")
+      .where("user_roles.user_id = ?", @id)
+      .distinct
+      .to_a
+  end
+
+  def assign_role!(role : Role)
+    UserRole.create!(
+      user_id: @id,
+      role_id: role.id
+    )
+  end
+
+  def remove_role!(role : Role)
+    UserRole.where(user_id: @id, role_id: role.id).delete_all
+  end
+  <%- end %>
+
   private def hash_password
     if pwd = @password
-      @password_hash = Crypto::Bcrypt::Password.create(pwd, cost: 12).to_s
+      @password_hash = Crypto::Bcrypt::Password.create(pwd, cost: 14).to_s
       @password = nil # Clear plaintext password
     end
   end
@@ -88,5 +208,177 @@ class User < CQL::Model(Int64)
     @updated_at = now
     @created_at ||= now
   end
+
+  private def update_password_changed_at
+    @password_changed_at = Time.utc
+  end
 end
 
+<%- if rbac_enabled? %>
+# Role Model for RBAC
+class Role < CQL::Model(Int64)
+  db_context Schema, :roles
+
+  property name : String
+  property description : String?
+  property permissions : String?  # JSON array of permissions
+  property created_at : Time
+  property updated_at : Time
+
+  validates :name, presence: true, uniqueness: true
+
+  # Get permissions as array
+  def get_permissions : Array(String)
+    return [] of String unless @permissions
+    JSON.parse(@permissions).as(Array).map(&.as_s)
+  rescue
+    [] of String
+  end
+
+  # Set permissions from array
+  def set_permissions(permissions : Array(String))
+    @permissions = permissions.to_json
+  end
+
+  # Check if role has permission
+  def has_permission?(permission : String) : Bool
+    get_permissions.includes?(permission)
+  end
+
+  # Add permission
+  def add_permission!(permission : String)
+    permissions = get_permissions
+    unless permissions.includes?(permission)
+      permissions << permission
+      set_permissions(permissions)
+      save!
+    end
+  end
+
+  # Remove permission
+  def remove_permission!(permission : String)
+    permissions = get_permissions
+    permissions.delete(permission)
+    set_permissions(permissions)
+    save!
+  end
+end
+
+# Permission Model for RBAC
+class Permission < CQL::Model(Int64)
+  db_context Schema, :permissions
+
+  property name : String
+  property description : String?
+  property resource : String?
+  property action : String?
+  property created_at : Time
+
+  validates :name, presence: true, uniqueness: true
+  validates :resource, presence: true
+  validates :action, presence: true
+
+  # Get full permission name
+  def full_name : String
+    "#{@resource}:#{@action}"
+  end
+end
+
+# UserRole Junction Model
+class UserRole < CQL::Model(Int64)
+  db_context Schema, :user_roles
+
+  property user_id : Int64
+  property role_id : Int64
+  property assigned_at : Time
+  property assigned_by : Int64?
+
+  validates :user_id, presence: true
+  validates :role_id, presence: true
+  validates :user_id, uniqueness: {scope: :role_id}
+end
+
+# RolePermission Junction Model
+class RolePermission < CQL::Model(Int64)
+  db_context Schema, :role_permissions
+
+  property role_id : Int64
+  property permission_id : Int64
+  property created_at : Time
+
+  validates :role_id, presence: true
+  validates :permission_id, presence: true
+  validates :role_id, uniqueness: {scope: :permission_id}
+end
+<%- end %>
+
+<%- if using_authly? %>
+# OAuth Application Model for Authly integration
+class OAuthApplication < CQL::Model(Int64)
+  db_context Schema, :oauth_applications
+
+  property name : String
+  property client_id : String
+  property client_secret : String
+  property redirect_uri : String?
+  property scopes : String?
+  property confidential : Bool = true
+  property created_at : Time
+  property updated_at : Time
+
+  validates :name, presence: true
+  validates :client_id, presence: true, uniqueness: true
+  validates :client_secret, presence: true
+
+  # Get scopes as array
+  def get_scopes : Array(String)
+    return [] of String unless @scopes
+    @scopes.not_nil!.split(",").map(&.strip)
+  end
+
+  # Set scopes from array
+  def set_scopes(scopes : Array(String))
+    @scopes = scopes.join(",")
+  end
+end
+
+# OAuth Access Token Model
+class OAuthAccessToken < CQL::Model(Int64)
+  db_context Schema, :oauth_access_tokens
+
+  property application_id : Int64
+  property resource_owner_id : Int64
+  property token : String
+  property refresh_token : String?
+  property expires_in : Int32?
+  property scopes : String?
+  property created_at : Time
+  property revoked_at : Time?
+
+  validates :application_id, presence: true
+  validates :resource_owner_id, presence: true
+  validates :token, presence: true, uniqueness: true
+
+  # Check if token is expired
+  def expired? : Bool
+    return false unless @expires_in
+    @created_at + @expires_in.not_nil!.seconds < Time.utc
+  end
+
+  # Check if token is revoked
+  def revoked? : Bool
+    !@revoked_at.nil?
+  end
+
+  # Check if token is valid
+  def valid? : Bool
+    !expired? && !revoked?
+  end
+
+  # Revoke token
+  def revoke!
+    @revoked_at = Time.utc
+    save!
+  end
+end
+<%- end %>

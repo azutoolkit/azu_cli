@@ -481,23 +481,51 @@ module AzuCLI
       private def generate_auth : Result
         Logger.info("Generating authentication system")
 
-        strategy = @options["strategy"]? || "jwt"
+        strategy = @options["strategy"]? || "authly"
         proj_name = project_name
+
+        # Parse boolean options
+        enable_rbac = @options["rbac"]?.try { |v| v.downcase == "true" } || true
+        enable_csrf = @options["csrf"]?.try { |v| v.downcase == "true" } || true
+
+        # Parse OAuth providers
+        oauth_providers = @options["oauth-providers"]?.try(&.split(",").map(&.strip)) || ["google", "github"]
 
         generator = AzuCLI::Generate::Auth.new(
           project: proj_name,
-          strategy: strategy
+          strategy: strategy,
+          enable_rbac: enable_rbac,
+          enable_csrf: enable_csrf,
+          enable_oauth_providers: oauth_providers
         )
 
         Logger.info("Strategy: #{strategy}")
+        Logger.info("RBAC enabled: #{enable_rbac}")
+        Logger.info("CSRF protection: #{enable_csrf}")
+        Logger.info("OAuth providers: #{oauth_providers.join(", ")}")
+
         render_generator(generator, AzuCLI::Generate::Auth::OUTPUT_DIR)
 
         Logger.info("✓ Authentication system generated")
         Logger.info("")
         Logger.info("Next steps:")
-        Logger.info("1. Run 'azu db:migrate' to create users table")
-        Logger.info("2. Set JWT_SECRET environment variable (if using JWT)")
-        Logger.info("3. Configure your application to use the auth endpoints")
+        Logger.info("1. Run 'azu db:migrate' to create authentication tables")
+
+        if strategy == "jwt" || strategy == "authly"
+          Logger.info("2. Set JWT_SECRET and JWT_REFRESH_SECRET environment variables")
+          Logger.info("3. Set JWT_ISSUER and JWT_AUDIENCE environment variables")
+        end
+
+        if strategy == "authly"
+          Logger.info("4. Configure OAuth providers in your application")
+          Logger.info("5. Set up Authly configuration")
+        end
+
+        if enable_csrf
+          Logger.info("6. Configure CSRF protection middleware")
+        end
+
+        Logger.info("7. Configure your application to use the auth endpoints")
 
         success("Generated authentication system successfully")
       end
