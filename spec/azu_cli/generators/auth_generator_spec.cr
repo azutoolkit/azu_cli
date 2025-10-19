@@ -27,11 +27,11 @@ describe AzuCLI::Generate::Auth do
 
   it "creates an auth generator with custom options" do
     generator = AzuCLI::Generate::Auth.new(
-      "myapp", 
-      "authly", 
-      "User", 
-      false, 
-      false, 
+      "myapp",
+      "authly",
+      "User",
+      false,
+      false,
       ["google"]
     )
 
