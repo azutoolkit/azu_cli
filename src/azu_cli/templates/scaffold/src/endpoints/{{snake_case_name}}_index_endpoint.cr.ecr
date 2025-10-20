@@ -6,7 +6,7 @@ module <%= @module_name %>::<%= @name.camelcase %>
 
     def call : <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>
 <% if @scaffold -%>
-      service = <%= @module_name %>::IndexService.new
+      service = <%= @module_name %>::<%= @name.camelcase %>::IndexService.new
       result = service.call
 
       if result.success?
@@ -18,7 +18,7 @@ module <%= @module_name %>::<%= @name.camelcase %>
         error("Failed to fetch <%= @resource_plural %>", 422, format_errors(result.errors).values.flatten)
 <% else -%>
         flash["error"] = "Failed to fetch <%= @resource_plural %>"
-        <%= @name.camelcase %>::IndexPage.new(<%= @resource_plural %>: [] of <%= @module_name %>::<%= @module_name %>Model)
+        <%= @name.camelcase %>::IndexPage.new(<%= @resource_plural %>: [] of <%= @module_name %>::<%= @name.camelcase %>::<%= @name.camelcase %>Model)
 <% end -%>
       end
 <% else -%>
@@ -26,7 +26,7 @@ module <%= @module_name %>::<%= @name.camelcase %>
       # This is a basic implementation - customize as needed
       #
       # Example service integration:
-      # service = <%= @module_name %>::IndexService.new
+      # service = <%= @module_name %>::<%= @name.camelcase %>::IndexService.new
       # result = service.call
       #
       # Example direct model usage:
@@ -41,7 +41,7 @@ module <%= @module_name %>::<%= @name.camelcase %>
         error("Internal server error", 500, ["An unexpected error occurred"])
 <% else -%>
         flash["error"] = "An unexpected error occurred"
-        <%= @name.camelcase %>::IndexPage.new(<%= @resource_plural %>: [] of <%= @module_name %>::<%= @module_name %>Model)
+        <%= @name.camelcase %>::IndexPage.new(<%= @resource_plural %>: [] of <%= @module_name %>::<%= @name.camelcase %>::<%= @name.camelcase %>Model)
 <% end -%>
       end
 <% end -%>

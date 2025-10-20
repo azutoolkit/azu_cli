@@ -25,6 +25,16 @@ module AzuCLI
         @fields = FieldCollection.new(attributes)
       end
 
+      # Get the full nested module name for the request
+      def full_module_name : String
+        "#{@module_name}::#{@camelcase_name}"
+      end
+
+      # Get the request struct name
+      def request_struct_name : String
+        "#{@action.camelcase}Request"
+      end
+
       def self.generate_for_scaffold(project : String, resource : String, actions : Array(String), attributes : Hash(String, String))
         actions.each do |action|
           generator = new(project, resource, action, attributes)

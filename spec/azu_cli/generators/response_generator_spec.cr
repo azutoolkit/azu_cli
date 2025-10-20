@@ -9,7 +9,7 @@ describe AzuCLI::Generate::Page do
       generator.name.should eq("User")
       generator.fields.should eq(fields)
       generator.snake_case_name.should eq("user")
-      generator.struct_name.should eq("UserIndexJSON")
+      generator.struct_name.should eq("User::UserIndexJSON")
       generator.api_type.should be_true
       generator.web_type.should be_false
     end
@@ -51,13 +51,13 @@ describe AzuCLI::Generate::Page do
       fields = {"id" => "int64", "name" => "string"}
 
       generator = AzuCLI::Generate::Page.new("User", fields, "create", "api")
-      generator.struct_name.should eq("UserCreateJSON")
+      generator.struct_name.should eq("User::UserCreateJSON")
 
       generator = AzuCLI::Generate::Page.new("User", fields, "update", "api")
-      generator.struct_name.should eq("UserUpdateJSON")
+      generator.struct_name.should eq("User::UserUpdateJSON")
 
       generator = AzuCLI::Generate::Page.new("User", fields, "show", "api")
-      generator.struct_name.should eq("UserShowJSON")
+      generator.struct_name.should eq("User::UserShowJSON")
     end
   end
 
@@ -68,7 +68,7 @@ describe AzuCLI::Generate::Page do
       generator.name.should eq("User")
       generator.fields.should eq(fields)
       generator.snake_case_name.should eq("user")
-      generator.struct_name.should eq("UserIndexPage")
+      generator.struct_name.should eq("User::UserIndexPage")
       generator.web_type.should be_true
       generator.api_type.should be_false
     end
@@ -85,13 +85,13 @@ describe AzuCLI::Generate::Page do
       fields = {"id" => "int64", "name" => "string"}
 
       generator = AzuCLI::Generate::Page.new("User", fields, "create", "web")
-      generator.struct_name.should eq("UserCreatePage")
+      generator.struct_name.should eq("User::UserCreatePage")
 
       generator = AzuCLI::Generate::Page.new("User", fields, "update", "web")
-      generator.struct_name.should eq("UserUpdatePage")
+      generator.struct_name.should eq("User::UserUpdatePage")
 
       generator = AzuCLI::Generate::Page.new("User", fields, "show", "web")
-      generator.struct_name.should eq("UserShowPage")
+      generator.struct_name.should eq("User::UserShowPage")
     end
   end
 end

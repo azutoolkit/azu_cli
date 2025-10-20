@@ -7,14 +7,14 @@ describe AzuCLI::Generate::Endpoint do
     generator.name.should eq("User")
     generator.endpoint_type.should eq("api")
     generator.snake_case_name.should eq("user")
-    generator.endpoint_struct_name.should eq("UserEndpoint")
+    generator.endpoint_struct_name.should eq("User::UserEndpoint")
   end
 
   it "creates an endpoint generator with web type" do
     generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
     generator.endpoint_type.should eq("web")
-    generator.request_type.should eq("UserRequest")
-    generator.response_type.should eq("UserPage")
+    generator.request_type.should eq("User::UserRequest")
+    generator.response_type.should eq("User::UserPage")
   end
 
   it "creates an endpoint generator with actions" do
@@ -212,21 +212,21 @@ describe AzuCLI::Generate::Endpoint do
   describe "request type validation" do
     it "always generates Request types for web applications" do
       generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
-      generator.request_type.should eq("UserRequest")
+      generator.request_type.should eq("User::UserRequest")
       generator.request_type.should_not contain("Contract")
     end
 
     it "always generates Request types for API applications" do
       generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
-      generator.request_type.should eq("UserRequest")
+      generator.request_type.should eq("User::UserRequest")
     end
 
     it "generates correct response types based on application type" do
       web_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
       api_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
 
-      web_generator.response_type.should eq("UserPage")
-      api_generator.response_type.should eq("UserResponse")
+      web_generator.response_type.should eq("User::UserPage")
+      api_generator.response_type.should eq("User::UserResponse")
     end
   end
 end

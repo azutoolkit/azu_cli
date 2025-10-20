@@ -90,10 +90,23 @@ Full-stack endpoints that render HTML pages and handle form submissions.
 
 ```crystal
 # src/endpoints/users/index_endpoint.cr
-class Users::IndexEndpoint < Azu::Endpoint
-  def call
-    users = User.all
-    render "users/index_page", users: users
+module App::Users
+  struct IndexEndpoint
+    include Azu::Endpoint(Users::IndexRequest, Users::IndexPage)
+
+    get "/users"
+
+    def call : Users::IndexPage
+      service = App::Users::IndexService.new
+      result = service.call
+
+      if result.success?
+        Users::IndexPage.new(users: result.data.not_nil!)
+      else
+        flash["error"] = "Failed to fetch users"
+        Users::IndexPage.new(users: [] of App::Users::UserModel)
+      end
+    end
   end
 end
 ```

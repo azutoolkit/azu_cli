@@ -24,6 +24,11 @@ module AzuCLI
         "#{@module_name}::#{@module_name}Model"
       end
 
+      # Get the full nested module name for the service
+      def full_module_name : String
+        "#{@module_name}::#{@module_name}"
+      end
+
       def service_class_name : String
         "#{@action.camelcase}Service"
       end

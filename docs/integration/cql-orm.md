@@ -94,10 +94,11 @@ database:
 # src/initializers/database.cr
 require "cql"
 
-CQL.configure do |config|
-  config.adapter = :postgresql
-  config.url = ENV["AZU_DATABASE_URL"]? || "postgresql://localhost/myapp"
-  config.pool_size = ENV["AZU_DATABASE_POOL_SIZE"]?.try(&.to_i) || 5
+# Define database context
+AppDB = CQL::Schema.define do
+  adapter :postgresql
+  url ENV["AZU_DATABASE_URL"]? || "postgresql://localhost/myapp"
+  pool_size ENV["AZU_DATABASE_POOL_SIZE"]?.try(&.to_i) || 5
   config.timeout = ENV["AZU_DATABASE_TIMEOUT"]?.try(&.to_i) || 5
   config.log_queries = ENV["AZU_LOG_QUERIES"]? == "true"
 end
@@ -271,17 +272,17 @@ azu db seed --file=users
 
 ```crystal
 # Find all users
-users = User.all
+users = User::UserModel.all
 
 # Find by ID
-user = User.find(user_id)
+user = User::UserModel.find(user_id)
 
 # Find by conditions
-user = User.find_by(email: "user@example.com")
-users = User.where("age > ?", 18)
+user = User::UserModel.find_by(email: "user@example.com")
+users = User::UserModel.where("age > ?", 18)
 
 # Complex queries
-users = User
+users = User::UserModel
   .joins(:posts)
   .where("posts.created_at > ?", 1.week.ago)
   .group("users.id")

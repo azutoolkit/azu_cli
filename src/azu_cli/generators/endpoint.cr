@@ -40,18 +40,18 @@ module AzuCLI
         "App"
       end
 
-      # Convert name to endpoint struct name
+      # Convert name to endpoint struct name (nested under resource module)
       def endpoint_struct_name : String
-        @name.camelcase + "Endpoint"
+        "#{@name.camelcase}::#{@name.camelcase}Endpoint"
       end
 
-      # Get the request/response types based on endpoint type
+      # Get the request/response types based on endpoint type (nested under resource module)
       def request_type : String
-        "#{@name.camelcase}Request"
+        "#{@name.camelcase}::#{@name.camelcase}Request"
       end
 
       def response_type : String
-        @endpoint_type == "api" ? "#{@name.camelcase}Response" : "#{@name.camelcase}Page"
+        @endpoint_type == "api" ? "#{@name.camelcase}::#{@name.camelcase}Response" : "#{@name.camelcase}::#{@name.camelcase}Page"
       end
 
       # Get HTTP verb for action

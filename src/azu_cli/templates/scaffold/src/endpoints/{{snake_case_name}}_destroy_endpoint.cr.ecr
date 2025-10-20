@@ -6,7 +6,7 @@ module <%= @module_name %>::<%= @name.camelcase %>
 
     def call : <%= @name.camelcase %>::Destroy<%= @endpoint_type == "api" ? "Response" : "Page" %>
 <% if @scaffold -%>
-      service = <%= @module_name %>::DestroyService.new
+      service = <%= @module_name %>::<%= @name.camelcase %>::DestroyService.new
       result = service.call(@request.id)
 
       if result.success?
@@ -32,7 +32,7 @@ module <%= @module_name %>::<%= @name.camelcase %>
       # This is a basic implementation - customize as needed
       #
       # Example service integration:
-      # service = <%= @module_name %>::DestroyService.new
+      # service = <%= @module_name %>::<%= @name.camelcase %>::DestroyService.new
       # result = service.call(@request.id)
       #
       # Example direct model usage:

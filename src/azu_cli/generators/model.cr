@@ -2,7 +2,7 @@ require "teeplate"
 
 module AzuCLI
   module Generate
-    # Model generator that creates CQL::Model classes
+    # Model generator that creates CQL::ActiveRecord::Model classes
     class Model < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/models"
       OUTPUT_DIR = "./src/models"
@@ -12,7 +12,7 @@ module AzuCLI
       property attributes : Hash(String, String)
       property fields : Hash(String, String)
       property timestamps : Bool
-      property database : String
+      property database : String = "AppSchema"
       property id_type : String
       property validations : Hash(String, Array(String))
       property snake_case_name : String
@@ -22,13 +22,14 @@ module AzuCLI
       property generate_migration : Bool = true
 
       def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true,
-                     @database : String = "BlogDB", @id_type : String = "UUID", @generate_migration : Bool = true)
+                     @database : String = "AppSchema", @id_type : String = "UUID", @generate_migration : Bool = true)
         @snake_case_name = @name.underscore
         @resource_plural = @snake_case_name.pluralize
         @fields = @attributes
         @validations = extract_validations(@attributes)
         @associations = extract_associations(@attributes)
         @scopes = generate_scopes(@attributes)
+        @database = detect_schema_name if @database == "AppSchema"
       end
 
       # Convert name to snake_case for file naming
@@ -44,6 +45,21 @@ module AzuCLI
       # Get the module name from the database context
       def module_name : String
         @database
+      end
+
+      # Detect schema name from the project's schema file
+      private def detect_schema_name : String
+        schema_file = "./src/db/schema.cr"
+        return "AppSchema" unless File.exists?(schema_file)
+
+        content = File.read(schema_file)
+        if match = content.match(/^(\w+DB)\s*=\s*CQL::Schema\.define/)
+          match[1]
+        else
+          "AppSchema"
+        end
+      rescue
+        "AppSchema"
       end
 
       # Get the resource module name (for nesting the model)
@@ -280,12 +296,12 @@ module AzuCLI
         params.join(", ")
       end
 
-      # Get getter declarations (CQL style)
+      # Get getter declarations (CQL ActiveRecord style)
       def getter_declarations : String
         getters = [] of String
 
         # Add ID getter
-        getters << "getter id : #{crystal_type(@id_type)}"
+        getters << "getter id : #{crystal_type(@id_type)}?"
 
         # Add attribute getters
         @attributes.each do |field, type|
@@ -300,8 +316,8 @@ module AzuCLI
 
         # Add timestamp getters if enabled
         if @timestamps
-          getters << "getter created_at : Time"
-          getters << "getter updated_at : Time"
+          getters << "getter created_at : Time?"
+          getters << "getter updated_at : Time?"
         end
 
         getters.join("\n  ")
@@ -319,7 +335,7 @@ module AzuCLI
         end
       end
 
-      # Get validation declarations (CQL style)
+      # Get validation declarations (CQL ActiveRecord style)
       def validation_declarations : String
         validations = [] of String
 
@@ -362,18 +378,20 @@ module AzuCLI
         "db_context #{@database}, :#{table_name}"
       end
 
-      # Get include statement (CQL style)
+      # Get include statement (CQL ActiveRecord style)
       def include_statement : String
-        "include CQL::Model(#{crystal_type(@id_type)})"
+        "include CQL::ActiveRecord::Model(#{crystal_type(@id_type)})"
       end
 
       # In the render method or after model file generation, if generate_migration is true, generate migration
       # (Assume migration generator is available as AzuCLI::Generate::Migration)
-      def render(output_path : String)
-        super(output_path)
+      def render(output_path : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
+        super(output_path, force: force, interactive: interactive, list: list, color: color)
         if @generate_migration
           migration = AzuCLI::Generate::Migration.new(@name, @attributes, @timestamps)
-          migration.render(output_path)
+          migration_dir = File.join(output_path, "db", "migrations")
+          Dir.mkdir_p(migration_dir) unless Dir.exists?(migration_dir)
+          migration.render(migration_dir, force: force, interactive: interactive, list: list, color: color)
         end
       end
     end

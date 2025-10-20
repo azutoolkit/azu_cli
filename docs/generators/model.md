@@ -72,26 +72,32 @@ azu generate model user name:string email:string --uuid
 # src/models/user.cr
 require "cql"
 
-class User < CQL::Model
-  table :users
+module User
+  struct UserModel
+    include CQL::ActiveRecord::Model(Int64)
+    db_context AppDB, :users
 
-  column id : Int64, primary: true, auto: true
-  column name : String
-  column email : String
-  column age : Int32?
-  column created_at : Time
-  column updated_at : Time
+    getter id : Int64?
+    getter name : String
+    getter email : String
+    getter age : Int32?
+    getter created_at : Time?
+    getter updated_at : Time?
 
-  validates :name, presence: true
-  validates :email, presence: true, format: /\A[^@\s]+@[^@\s]+\z/
-  validates :age, numericality: { greater_than: 0 }, allow_nil: true
+    validate :name, presence: true
+    validate :email, presence: true, format: /\A[^@\s]+@[^@\s]+\z/
+    validate :age, numericality: { greater_than: 0 }
 
-  def self.find_by_email(email : String)
-    where(email: email).first
-  end
+    def initialize(@name : String, @email : String, @age : Int32? = nil)
+    end
 
-  def full_name
-    "#{name} (#{email})"
+    def self.find_by_email(email : String)
+      where(email: email).first
+    end
+
+    def full_name
+      "#{name} (#{email})"
+    end
   end
 end
 ```
@@ -169,27 +175,32 @@ azu generate model user name:string email:string age:integer --validations --tim
 # src/models/user.cr
 require "cql"
 
-class User
-  include CQL::Model(Int64)
-  db_context AppDB, :users
+module User
+  struct UserModel
+    include CQL::ActiveRecord::Model(Int64)
+    db_context AppDB, :users
 
-  column id : Int64, primary: true, auto: true
-  column name : String
-  column email : String
-  column age : Int32?
-  column created_at : Time
-  column updated_at : Time
+    getter id : Int64?
+    getter name : String
+    getter email : String
+    getter age : Int32?
+    getter created_at : Time?
+    getter updated_at : Time?
 
-  validates :name, presence: true
-  validates :email, presence: true, format: /\A[^@\s]+@[^@\s]+\z/
-  validates :age, numericality: { greater_than: 0 }, allow_nil: true
+    validate :name, presence: true
+    validate :email, presence: true, format: /\A[^@\s]+@[^@\s]+\z/
+    validate :age, numericality: { greater_than: 0 }
 
-  def self.find_by_email(email : String)
-    where(email: email).first
-  end
+    def initialize(@name : String, @email : String, @age : Int32? = nil)
+    end
 
-  def full_name
-    "#{name} (#{email})"
+    def self.find_by_email(email : String)
+      where(email: email).first
+    end
+
+    def full_name
+      "#{name} (#{email})"
+    end
   end
 end
 ```

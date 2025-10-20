@@ -22,20 +22,20 @@ describe AzuCLI::Generate::Page do
   describe "#struct_name" do
     it "returns the correct struct name for web project" do
       generator = AzuCLI::Generate::Page.new("Post")
-      generator.struct_name.should eq("PostIndexPage")
+      generator.struct_name.should eq("Post::PostIndexPage")
     end
 
     it "returns the correct struct name for API project" do
       generator = AzuCLI::Generate::Page.new("Post", project_type: "api")
-      generator.struct_name.should eq("PostIndexJSON")
+      generator.struct_name.should eq("Post::PostIndexJSON")
     end
 
     it "returns the correct struct name for different actions" do
       generator = AzuCLI::Generate::Page.new("Post", action: "create")
-      generator.struct_name.should eq("PostCreatePage")
+      generator.struct_name.should eq("Post::PostCreatePage")
 
       generator = AzuCLI::Generate::Page.new("Post", action: "update", project_type: "api")
-      generator.struct_name.should eq("PostUpdateJSON")
+      generator.struct_name.should eq("Post::PostUpdateJSON")
     end
   end
 

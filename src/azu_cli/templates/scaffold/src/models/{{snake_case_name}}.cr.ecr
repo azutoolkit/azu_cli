@@ -1,7 +1,7 @@
 require "cql"
 
 module <%= @name.camelcase %>
-  class <%= model_class_name %>
+  struct <%= model_class_name %>
     <%= include_statement %>
     <%= db_context_declaration %>
 

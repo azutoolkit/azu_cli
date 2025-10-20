@@ -190,9 +190,7 @@ module AzuCLI
         )
 
         # Endpoint generator has custom render method, but use proper output directory
-        output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
-        Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
-        generator.render(output_dir)
+        render_generator(generator, AzuCLI::Generate::Endpoint::OUTPUT_DIR)
         success("Generated endpoint #{@generator_name} successfully")
       end
 
@@ -289,7 +287,7 @@ module AzuCLI
         Dir.mkdir_p("src/jobs") unless Dir.exists?("src/jobs")
 
         # Render the generator files
-        generator.render(".")
+        generator.render(".", force: @force, interactive: false, list: false, color: true)
 
         Logger.success("✓ JoobQ configuration created: config/joobq.development.yml")
         Logger.success("✓ JoobQ initializer created: src/initializers/joobq.cr")
@@ -601,9 +599,7 @@ module AzuCLI
               scaffold: true
             )
             endpoint_generator.fields = @attributes
-            output_dir = AzuCLI::Generate::Endpoint::OUTPUT_DIR
-            Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
-            endpoint_generator.render(output_dir)
+            render_generator(endpoint_generator, AzuCLI::Generate::Endpoint::OUTPUT_DIR)
             components_generated << "endpoint"
             Logger.success("✓ Endpoints generated successfully")
           rescue ex

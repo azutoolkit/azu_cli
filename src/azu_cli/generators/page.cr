@@ -70,14 +70,19 @@ module AzuCLI
         "./src/pages"
       end
 
-      # Convert name to page response struct name based on project type
+      # Convert name to page response struct name based on project type (nested under resource module)
       def struct_name : String
         case @project_type
         when "api"
-          @name.camelcase + @action.camelcase + "JSON"
+          "#{@name.camelcase}::#{@name.camelcase}#{@action.camelcase}JSON"
         else # web (default)
-          @name.camelcase + @action.camelcase + "Page"
+          "#{@name.camelcase}::#{@name.camelcase}#{@action.camelcase}Page"
         end
+      end
+
+      # Get the full nested module name for the page
+      def full_module_name : String
+        "#{@module_name}::#{@name.camelcase}"
       end
 
       # Check if this is a web project
