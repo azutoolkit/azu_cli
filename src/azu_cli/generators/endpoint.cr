@@ -5,8 +5,7 @@ require "./action"
 module AzuCLI
   module Generate
     # Endpoint generator that creates Azu::Endpoint structs
-    class Endpoint < Teeplate::FileTree
-      directory "#{__DIR__}/../templates/scaffold/src/endpoints"
+    class Endpoint
       OUTPUT_DIR = "./src/endpoints"
 
       property name : String
@@ -139,31 +138,185 @@ module AzuCLI
 
       # Generate individual endpoint file using specific template
       private def generate_endpoint_file(output_dir : String, action : String, force : Bool = false)
-        template_file = "#{__DIR__}/../templates/scaffold/src/endpoints/{{snake_case_name}}_#{action}_endpoint.cr.ecr"
         output_file = File.join(output_dir, "#{@resource_singular}_#{action}_endpoint.cr")
 
         return if File.exists?(output_file) && !force
 
-        # Read and process the template
-        template_content = File.read(template_file)
-
-        # Simple template variable replacement
-        content = template_content
-          .gsub("{{snake_case_name}}", @snake_case_name)
-          .gsub("{{action}}", action)
-          .gsub("<%= @module_name %>", @module_name)
-          .gsub("<%= @name.camelcase %>", @name.camelcase)
-          .gsub("<%= @action.camelcase %>", action.camelcase)
-          .gsub("<%= @endpoint_type == \"api\" ? \"Response\" : \"Page\" %>", @endpoint_type == "api" ? "Response" : "Page")
-          .gsub("<%= @endpoint_type == \"api\" ? \"Response\" : \"Page\" %>", @endpoint_type == "api" ? "Response" : "Page")
-          .gsub("<%= @resource_singular %>", @resource_singular)
-          .gsub("<%= @resource_plural %>", @resource_plural)
-          .gsub("<%= @scaffold %>", @scaffold.to_s)
-          .gsub("<%= action_path %>", action_path(action))
-          .gsub("<%= request_params %>", request_params_for_action(action))
-          .gsub("<%= http_verb_action %>", http_verb(action))
+        # Generate simple endpoint content directly
+        content = generate_endpoint_content(action)
 
         File.write(output_file, content)
+      end
+
+      # Generate endpoint content directly
+      private def generate_endpoint_content(action : String) : String
+        case action.downcase
+        when "index"
+          generate_index_endpoint_content
+        when "show"
+          generate_show_endpoint_content
+        when "create"
+          generate_create_endpoint_content
+        when "update"
+          generate_update_endpoint_content
+        when "destroy"
+          generate_destroy_endpoint_content
+        when "new"
+          generate_new_endpoint_content
+        when "edit"
+          generate_edit_endpoint_content
+        else
+          generate_index_endpoint_content
+        end
+      end
+
+      private def generate_index_endpoint_content : String
+        <<-CRYSTAL
+module #{@module_name}::#{@name.camelcase}
+  struct IndexEndpoint
+    include Azu::Endpoint(#{@name.camelcase}::IndexRequest, #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"})
+
+    get "#{action_path("index")}"
+
+    def call : #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"}
+      # Basic implementation - customize as needed
+      begin
+        # Add your business logic here
+        #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"}.new
+      rescue ex
+        Log.error(exception: ex) { "Error in index action" }
+        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"}.new"}
+      end
+    end
+  end
+end
+CRYSTAL
+      end
+
+      private def generate_show_endpoint_content : String
+        <<-CRYSTAL
+module #{@module_name}::#{@name.camelcase}
+  struct ShowEndpoint
+    include Azu::Endpoint(#{@name.camelcase}::ShowRequest, #{@name.camelcase}::Show#{@endpoint_type == "api" ? "Response" : "Page"})
+
+    get "#{action_path("show")}"
+
+    def call : #{@name.camelcase}::Show#{@endpoint_type == "api" ? "Response" : "Page"}
+      # Basic implementation - customize as needed
+      begin
+        # Add your business logic here
+        #{@name.camelcase}::Show#{@endpoint_type == "api" ? "Response" : "Page"}.new
+      rescue ex
+        Log.error(exception: ex) { "Error in show action" }
+        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; #{@name.camelcase}::Show#{@endpoint_type == "api" ? "Response" : "Page"}.new"}
+      end
+    end
+  end
+end
+CRYSTAL
+      end
+
+      private def generate_create_endpoint_content : String
+        <<-CRYSTAL
+module #{@module_name}::#{@name.camelcase}
+  struct CreateEndpoint
+    include Azu::Endpoint(#{@name.camelcase}::CreateRequest, #{@name.camelcase}::Create#{@endpoint_type == "api" ? "Response" : "Page"})
+
+    post "#{action_path("create")}"
+
+    def call : #{@name.camelcase}::Create#{@endpoint_type == "api" ? "Response" : "Page"}
+      # Basic implementation - customize as needed
+      begin
+        # Add your business logic here
+        #{@name.camelcase}::Create#{@endpoint_type == "api" ? "Response" : "Page"}.new
+      rescue ex
+        Log.error(exception: ex) { "Error in create action" }
+        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; redirect \"/#{@resource_plural}/new\""}
+      end
+    end
+  end
+end
+CRYSTAL
+      end
+
+      private def generate_update_endpoint_content : String
+        <<-CRYSTAL
+module #{@module_name}::#{@name.camelcase}
+  struct UpdateEndpoint
+    include Azu::Endpoint(#{@name.camelcase}::UpdateRequest, #{@name.camelcase}::Update#{@endpoint_type == "api" ? "Response" : "Page"})
+
+    patch "#{action_path("update")}"
+
+    def call : #{@name.camelcase}::Update#{@endpoint_type == "api" ? "Response" : "Page"}
+      # Basic implementation - customize as needed
+      begin
+        # Add your business logic here
+        #{@name.camelcase}::Update#{@endpoint_type == "api" ? "Response" : "Page"}.new
+      rescue ex
+        Log.error(exception: ex) { "Error in update action" }
+        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; redirect \"/#{@resource_plural}\""}
+      end
+    end
+  end
+end
+CRYSTAL
+      end
+
+      private def generate_destroy_endpoint_content : String
+        <<-CRYSTAL
+module #{@module_name}::#{@name.camelcase}
+  struct DestroyEndpoint
+    include Azu::Endpoint(#{@name.camelcase}::DestroyRequest, #{@name.camelcase}::Destroy#{@endpoint_type == "api" ? "Response" : "Page"})
+
+    delete "#{action_path("destroy")}"
+
+    def call : #{@name.camelcase}::Destroy#{@endpoint_type == "api" ? "Response" : "Page"}
+      # Basic implementation - customize as needed
+      begin
+        # Add your business logic here
+        #{@name.camelcase}::Destroy#{@endpoint_type == "api" ? "Response" : "Page"}.new
+      rescue ex
+        Log.error(exception: ex) { "Error in destroy action" }
+        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; redirect \"/#{@resource_plural}\""}
+      end
+    end
+  end
+end
+CRYSTAL
+      end
+
+      private def generate_new_endpoint_content : String
+        <<-CRYSTAL
+module #{@module_name}::#{@name.camelcase}
+  struct NewEndpoint
+    include Azu::Endpoint(#{@name.camelcase}::NewRequest, #{@name.camelcase}::New#{@endpoint_type == "api" ? "Response" : "Page"})
+
+    get "#{action_path("new")}"
+
+    def call : #{@name.camelcase}::New#{@endpoint_type == "api" ? "Response" : "Page"}
+      # Render form page
+      #{@name.camelcase}::New#{@endpoint_type == "api" ? "Response" : "Page"}.new
+    end
+  end
+end
+CRYSTAL
+      end
+
+      private def generate_edit_endpoint_content : String
+        <<-CRYSTAL
+module #{@module_name}::#{@name.camelcase}
+  struct EditEndpoint
+    include Azu::Endpoint(#{@name.camelcase}::EditRequest, #{@name.camelcase}::Edit#{@endpoint_type == "api" ? "Response" : "Page"})
+
+    get "#{action_path("edit")}"
+
+    def call : #{@name.camelcase}::Edit#{@endpoint_type == "api" ? "Response" : "Page"}
+      # Render form page
+      #{@name.camelcase}::Edit#{@endpoint_type == "api" ? "Response" : "Page"}.new
+    end
+  end
+end
+CRYSTAL
       end
 
       # Get request parameters for specific action

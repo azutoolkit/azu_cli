@@ -1,0 +1,23 @@
+module <%= @module_name %>::<%= @name.camelcase %>
+  struct IndexEndpoint
+    include Azu::Endpoint(<%= @name.camelcase %>::IndexRequest, <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>)
+
+    get "<%= action_path %>"
+
+    def call : <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>
+      # Basic implementation - customize as needed
+      begin
+        # Add your business logic here
+        <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+      rescue ex
+        Log.error(exception: ex) { "Error in index action" }
+        if @endpoint_type == "api"
+          error("Internal server error", 500, ["An unexpected error occurred"])
+        else
+          flash["error"] = "An unexpected error occurred"
+          <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+        end
+      end
+    end
+  end
+end

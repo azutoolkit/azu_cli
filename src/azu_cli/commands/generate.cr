@@ -189,8 +189,8 @@ module AzuCLI
           endpoint_type: endpoint_type
         )
 
-        # Endpoint generator has custom render method, but use proper output directory
-        render_generator(generator, AzuCLI::Generate::Endpoint::OUTPUT_DIR)
+        # Endpoint generator has custom render method
+        generator.render(AzuCLI::Generate::Endpoint::OUTPUT_DIR)
         success("Generated endpoint #{@generator_name} successfully")
       end
 
@@ -599,7 +599,7 @@ module AzuCLI
               scaffold: true
             )
             endpoint_generator.fields = @attributes
-            render_generator(endpoint_generator, AzuCLI::Generate::Endpoint::OUTPUT_DIR)
+            endpoint_generator.render(AzuCLI::Generate::Endpoint::OUTPUT_DIR)
             components_generated << "endpoint"
             Logger.success("✓ Endpoints generated successfully")
           rescue ex
