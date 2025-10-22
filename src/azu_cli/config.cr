@@ -99,7 +99,9 @@ module AzuCLI
         env_config = config_data[environment]? || config_data
 
         # Parse configuration sections
+        load_global_config(env_config)
         load_general_config(env_config)
+        load_filesystem_config(env_config)
         load_database_config(env_config)
         load_server_config(env_config)
         load_logging_config(env_config)
@@ -159,6 +161,16 @@ module AzuCLI
       end
     end
 
+    # Load global configuration section
+    private def load_global_config(config : YAML::Any)
+      if global = config["global"]?
+        @debug_mode = global["debug_mode"]?.try(&.as_bool) || @debug_mode
+        @verbose = global["verbose"]?.try(&.as_bool) || @verbose
+        @quiet = global["quiet"]?.try(&.as_bool) || @quiet
+        @show_help_on_empty = global["show_help_on_empty"]?.try(&.as_bool) || @show_help_on_empty
+      end
+    end
+
     # Load general configuration section
     private def load_general_config(config : YAML::Any)
       if general = config["general"]?
@@ -167,6 +179,14 @@ module AzuCLI
         @database_adapter = general["database_adapter"]?.try(&.as_s) || @database_adapter
         @template_engine = general["template_engine"]?.try(&.as_s) || @template_engine
         @colored_output = general["colored_output"]?.try(&.as_bool) || @colored_output
+      end
+    end
+
+    # Load file system configuration section
+    private def load_filesystem_config(config : YAML::Any)
+      if filesystem = config["filesystem"]?
+        @templates_path = filesystem["templates_path"]?.try(&.as_s) || @templates_path
+        @output_path = filesystem["output_path"]?.try(&.as_s) || @output_path
       end
     end
 
@@ -293,53 +313,106 @@ module AzuCLI
       config_content = <<-YAML
       # Azu CLI Configuration File
       # This file configures the Azu CLI tool for your project
+      #
+      # Configuration is loaded in this order:
+      # 1. Default values (defined in code)
+      # 2. Configuration file (this file)
+      # 3. Environment variables (override file values)
+      #
+      # Environment variables take precedence over file configuration.
+      # See the Environment Variables section below for available options.
 
       # Environment: development, test, production
+      # Can be overridden with AZU_ENV environment variable
       environment: development
 
-      # General configuration
+      # Global configuration
+      # These settings affect CLI behavior globally
+      global:
+        debug_mode: false     # Enable debug output (AZU_DEBUG)
+        verbose: false        # Enable verbose output (AZU_VERBOSE)
+        quiet: false          # Suppress non-error output (AZU_QUIET)
+        show_help_on_empty: true  # Show help when no command provided
+
+      # General project configuration
       general:
         project_name: "my_azu_project"
-        project_path: "."
-        database_adapter: "postgresql"  # postgresql, mysql, sqlite
-        template_engine: "jinja"        # jinja, ecr
-        colored_output: true
+        project_path: "."                    # Project root directory
+        database_adapter: "postgresql"       # postgresql, mysql, sqlite
+        template_engine: "jinja"             # jinja, ecr
+        colored_output: true                 # Enable colored terminal output
+
+      # File system configuration
+      filesystem:
+        templates_path: "./src/azu_cli/templates"  # Path to template files (AZU_TEMPLATES_PATH)
+        output_path: "."                            # Default output directory (AZU_OUTPUT_PATH)
 
       # Database configuration
       database:
-        host: "localhost"
-        port: 5432
-        user: "postgres"
-        password: ""
-        name: "my_azu_project_development"
-        # Alternatively, use a full URL:
-        # url: "postgresql://user:password@localhost:5432/database"
+        host: "localhost"                    # Database host (AZU_DB_HOST)
+        port: 5432                          # Database port (AZU_DB_PORT)
+        user: "postgres"                    # Database user (AZU_DB_USER)
+        password: ""                        # Database password (AZU_DB_PASSWORD)
+        name: "my_azu_project_development"  # Database name (AZU_DB_NAME)
+        # Alternatively, use a full URL (overrides individual settings):
+        # url: "postgresql://user:password@localhost:5432/database"  # (DATABASE_URL)
 
       # Development server configuration
       server:
-        host: "localhost"
-        port: 4000
-        watch: true      # Watch for file changes
-        rebuild: true    # Rebuild on changes
+        host: "localhost"    # Server host (AZU_HOST)
+        port: 4000          # Server port (AZU_PORT)
+        watch: true         # Watch for file changes
+        rebuild: true       # Rebuild on changes
 
       # Logging configuration
       logging:
-        level: "info"    # debug, info, warn, error, fatal
-        format: "default"
+        level: "info"       # Log level: debug, info, warn, error, fatal
+        format: "default"   # Log format
 
       # Environment-specific overrides
+      # These sections override the base configuration for specific environments
+
       test:
+        global:
+          quiet: true
         database:
           name: "my_azu_project_test"
         logging:
           level: "warn"
 
       production:
+        global:
+          debug_mode: false
         server:
           watch: false
           rebuild: false
         logging:
           level: "info"
+
+      # Environment Variables Reference
+      # The following environment variables can be used to override configuration:
+      #
+      # Global Settings:
+      #   AZU_ENV          - Set environment (development, test, production)
+      #   AZU_DEBUG        - Enable debug mode (any value)
+      #   AZU_VERBOSE      - Enable verbose output (any value)
+      #   AZU_QUIET        - Suppress output (any value)
+      #
+      # Database Settings:
+      #   DATABASE_URL     - Full database connection URL
+      #   AZU_DB_HOST      - Database host
+      #   AZU_DB_PORT      - Database port
+      #   AZU_DB_USER      - Database user
+      #   AZU_DB_PASSWORD  - Database password
+      #   AZU_DB_NAME      - Database name
+      #
+      # Server Settings:
+      #   AZU_HOST         - Server host
+      #   AZU_PORT         - Server port
+      #
+      # File System Settings:
+      #   AZU_TEMPLATES_PATH - Path to template files
+      #   AZU_OUTPUT_PATH    - Default output directory
       YAML
 
       File.write(path, config_content)
