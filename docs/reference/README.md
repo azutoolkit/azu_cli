@@ -200,7 +200,7 @@ APP_ENV=development|test|production
 ```bash
 # Server
 AZU_HOST=0.0.0.0
-AZU_PORT=3000
+AZU_PORT=4000
 
 # Database
 AZU_DB_HOST=localhost
@@ -242,7 +242,7 @@ development:
 
   server:
     host: <%= ENV["AZU_HOST"] || "localhost" %>
-    port: <%= ENV["AZU_PORT"] || 3000 %>
+    port: <%= ENV["AZU_PORT"] || 4000 %>
     watch: true
     rebuild: true
 
@@ -535,7 +535,7 @@ export AZU_ENV=production
 export DATABASE_URL=postgresql://user:pass@host/db
 export APP_SECRET=your-secret-key
 export AZU_HOST=0.0.0.0
-export AZU_PORT=3000
+export AZU_PORT=4000
 ```
 
 ## Performance Reference

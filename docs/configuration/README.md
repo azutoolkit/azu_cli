@@ -63,7 +63,7 @@ database:
 
 server:
   host: 0.0.0.0
-  port: 3000
+  port: 4000
 
 app:
   environment: development
@@ -92,7 +92,7 @@ database:
 # Server configuration
 server:
   host: <%= ENV["HOST"] || "0.0.0.0" %>
-  port: <%= ENV["PORT"] || 3000 %>
+  port: <%= ENV["PORT"] || 4000 %>
   workers: <%= ENV["WORKERS"] || 1 %>
 
 # Development server configuration
@@ -132,7 +132,7 @@ database:
 
 dev_server:
   reload: true
-  port: 3000
+  port: 4000
 
 logging:
   level: debug
@@ -285,7 +285,7 @@ DB_LOGGING=true
 
 # Server configuration
 HOST=0.0.0.0
-PORT=3000
+PORT=4000
 WORKERS=1
 
 # Logging configuration
@@ -443,7 +443,7 @@ database:
 
 server:
   host: <%= ENV["HOST"] || "0.0.0.0" %>
-  port: <%= ENV["PORT"] || 3000 %>
+  port: <%= ENV["PORT"] || 4000 %>
   workers: <%= ENV["WORKERS"] || 1 %>
 ```
 

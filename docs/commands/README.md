@@ -293,7 +293,7 @@ azu version
 
 | Option                | Description          | Default     |
 | --------------------- | -------------------- | ----------- |
-| `--port <port>`       | Server port          | 3000        |
+| `--port <port>`       | Server port          | 4000        |
 | `--host <host>`       | Server host          | localhost   |
 | `--env <environment>` | Environment name     | development |
 | `--ssl`               | Enable SSL           | false       |
@@ -315,7 +315,7 @@ Azu CLI respects these environment variables:
 | ------------------ | ----------------------- | ----------- |
 | `AZU_ENV`          | Current environment     | development |
 | `AZU_DATABASE_URL` | Database connection URL |             |
-| `AZU_PORT`         | Default server port     | 3000        |
+| `AZU_PORT`         | Default server port     | 4000        |
 | `AZU_HOST`         | Default server host     | localhost   |
 | `AZU_CONFIG`       | Configuration file path | azu.yml     |
 | `AZU_DEBUG`        | Enable debug mode       | false       |
@@ -331,7 +331,7 @@ project:
   default_type: web
 
 development:
-  port: 3000
+  port: 4000
   host: localhost
   debug: true
 

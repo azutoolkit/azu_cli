@@ -116,14 +116,14 @@ azu serve
 🚀 Starting Azu development server...
 📦 Compiling application...
 ✅ Compilation successful!
-🌐 Server running at: http://localhost:3000
+🌐 Server running at: http://localhost:4000
 🔥 Hot reloading enabled
 👀 Watching for file changes...
 
 Press Ctrl+C to stop the server
 ```
 
-Open your browser and navigate to `http://localhost:3000`. You should see the Azu welcome page!
+Open your browser and navigate to `http://localhost:4000`. You should see the Azu welcome page!
 
 ## Step 5: Generate Your First Resource
 
@@ -196,9 +196,9 @@ azu db migrate
 
 The development server should automatically reload your application. Visit these URLs:
 
-- **Homepage**: `http://localhost:3000`
-- **Posts Index**: `http://localhost:3000/posts`
-- **New Post**: `http://localhost:3000/posts/new`
+- **Homepage**: `http://localhost:4000`
+- **Posts Index**: `http://localhost:4000/posts`
+- **New Post**: `http://localhost:4000/posts/new`
 
 ### Generated Files Explained
 

@@ -139,8 +139,8 @@ end
 #### Optional Arguments
 
 ```crystal
-parser.on("-p [PORT]", "--port [PORT]", "Port number (default: 3000)") do |port|
-  parsed_options["port"] = port || "3000"
+parser.on("-p [PORT]", "--port [PORT]", "Port number (default: 4000)") do |port|
+  parsed_options["port"] = port || "4000"
 end
 ```
 
@@ -234,7 +234,7 @@ Usage: azu serve [options]
       --force                      Force operation without prompts
 
 Server Options:
-  -p PORT, --port PORT             Port to listen on (default: 3000)
+  -p PORT, --port PORT             Port to listen on (default: 4000)
   -H HOST, --host HOST             Host to bind to (default: 0.0.0.0)
   -e ENV, --environment ENV        Environment to run in (default: development)
       --no-reload                  Disable automatic reloading

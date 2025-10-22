@@ -33,7 +33,7 @@ azu serve
 # 🚀 Starting Azu development server...
 # 📦 Compiling application...
 # ✅ Compilation successful!
-# 🌐 Server running at: http://localhost:3000
+# 🌐 Server running at: http://localhost:4000
 # 🔥 Hot reloading enabled
 # 👀 Watching for file changes...
 #
@@ -114,7 +114,7 @@ azu serve --env custom
 ```bash
 # Default configuration
 azu serve
-# Server: http://localhost:3000
+# Server: http://localhost:4000
 
 # Custom port
 azu serve --port 8080
@@ -122,7 +122,7 @@ azu serve --port 8080
 
 # Bind to all interfaces
 azu serve --host 0.0.0.0
-# Server: http://0.0.0.0:3000
+# Server: http://0.0.0.0:4000
 
 # Custom host and port
 azu serve --host 192.168.1.100 --port 4000
@@ -238,7 +238,7 @@ end
 # Start development server
 azu serve
 
-# Visit http://localhost:3000
+# Visit http://localhost:4000
 # Make changes to files
 # Server automatically recompiles and restarts
 ```
@@ -263,7 +263,7 @@ azu serve --ssl --port 443
 azu serve --host 0.0.0.0 --port 4000
 
 # Multiple developers can access:
-# http://your-ip:3000
+# http://your-ip:4000
 ```
 
 ### Mobile Development
@@ -275,7 +275,7 @@ azu serve --host 0.0.0.0 --port 4000
 # Find your IP address
 ifconfig | grep "inet " | grep -v 127.0.0.1
 
-# Access from mobile: http://your-ip:3000
+# Access from mobile: http://your-ip:4000
 ```
 
 ## Troubleshooting
@@ -284,7 +284,7 @@ ifconfig | grep "inet " | grep -v 127.0.0.1
 
 ```bash
 # Check what's using the port
-lsof -i :3000
+lsof -i :4000
 
 # Kill the process
 kill -9 <PID>
@@ -395,7 +395,7 @@ azu serve --debug
 tail -f log/development.log
 
 # Check server status
-curl http://localhost:3000/health
+curl http://localhost:4000/health
 ```
 
 ## Integration with Other Tools
@@ -412,7 +412,7 @@ curl http://localhost:3000/health
       "type": "crystal",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.cr",
-      "args": ["serve", "--port", "3000"]
+      "args": ["serve", "--port", "4000"]
     }
   ]
 }
@@ -429,7 +429,7 @@ COPY . .
 
 RUN shards install
 
-EXPOSE 3000
+EXPOSE 4000
 
 CMD ["crystal", "run", "src/main.cr", "--", "serve", "--host", "0.0.0.0"]
 ```
@@ -437,7 +437,7 @@ CMD ["crystal", "run", "src/main.cr", "--", "serve", "--host", "0.0.0.0"]
 ```bash
 # Run with Docker
 docker build -f Dockerfile.dev -t my-app-dev .
-docker run -p 3000:3000 -v $(pwd):/app my-app-dev
+docker run -p 4000:4000 -v $(pwd):/app my-app-dev
 ```
 
 ---

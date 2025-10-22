@@ -193,7 +193,7 @@ class Azu::Config::ServerConfig
 
   def initialize(config : Hash(String, Any))
     @host = config["host"]?.try(&.as_s) || "0.0.0.0"
-    @port = config["port"]?.try(&.as_i) || 3000
+    @port = config["port"]?.try(&.as_i) || 4000
     @watch = config["watch"]?.try(&.as_bool) || true
     @rebuild = config["rebuild"]?.try(&.as_bool) || true
   end
@@ -240,7 +240,7 @@ defaults: &defaults
 
   server:
     host: 0.0.0.0
-    port: 3000
+    port: 4000
     watch: true
     rebuild: true
 
@@ -261,7 +261,7 @@ development:
 
   server:
     host: <%= ENV["AZU_HOST"] || "localhost" %>
-    port: <%= ENV["AZU_PORT"] || 3000 %>
+    port: <%= ENV["AZU_PORT"] || 4000 %>
 
   logging:
     level: debug
@@ -286,7 +286,7 @@ production:
 
   server:
     host: <%= ENV["AZU_HOST"] || "0.0.0.0" %>
-    port: <%= ENV["AZU_PORT"] || 3000 %>
+    port: <%= ENV["AZU_PORT"] || 4000 %>
     watch: false
     rebuild: false
 
@@ -314,7 +314,7 @@ export AZU_DB_NAME="myapp_development"
 
 # Server configuration
 export AZU_HOST="0.0.0.0"
-export AZU_PORT="3000"
+export AZU_PORT="4000"
 
 # Application configuration
 export APP_SECRET="your-secret-key-here"
@@ -438,7 +438,7 @@ development:
 
   server:
     host: localhost
-    port: 3000
+    port: 4000
     watch: true
     rebuild: true
 
@@ -485,7 +485,7 @@ production:
 
   server:
     host: 0.0.0.0
-    port: <%= ENV["PORT"] || 3000 %>
+    port: <%= ENV["PORT"] || 4000 %>
     watch: false
     rebuild: false
 
@@ -587,7 +587,7 @@ defaults: &defaults
 
   server:
     host: 0.0.0.0
-    port: 3000
+    port: 4000
     watch: true
     rebuild: true
 
@@ -608,7 +608,7 @@ development:
 
   server:
     host: <%= ENV["AZU_HOST"] || "localhost" %>
-    port: <%= ENV["AZU_PORT"] || 3000 %>
+    port: <%= ENV["AZU_PORT"] || 4000 %>
 
   logging:
     level: debug
@@ -633,7 +633,7 @@ production:
 
   server:
     host: <%= ENV["AZU_HOST"] || "0.0.0.0" %>
-    port: <%= ENV["AZU_PORT"] || 3000 %>
+    port: <%= ENV["AZU_PORT"] || 4000 %>
     watch: false
     rebuild: false
 

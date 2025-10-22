@@ -33,10 +33,10 @@ azu dev
 # 🚀 Starting Azu development environment...
 # 📦 Compiling application...
 # ✅ Compilation successful!
-# 🌐 Server running at: http://localhost:3000
+# 🌐 Server running at: http://localhost:4000
 # 🔥 Hot reloading enabled
 # 👀 Watching for file changes...
-# 📊 Development dashboard at: http://localhost:3000/dev
+# 📊 Development dashboard at: http://localhost:4000/dev
 # 🧪 Test runner available
 # 📝 Code formatter active
 #
@@ -47,7 +47,7 @@ azu dev
 
 | Option                | Description                  | Default     |
 | --------------------- | ---------------------------- | ----------- |
-| `--port <port>`       | Server port                  | 3000        |
+| `--port <port>`       | Server port                  | 4000        |
 | `--host <host>`       | Server host                  | localhost   |
 | `--env <environment>` | Environment name             | development |
 | `--debug`             | Enable debug mode            | true        |
@@ -62,7 +62,7 @@ azu dev
 
 ### Development Dashboard
 
-Access the development dashboard at `http://localhost:3000/dev`:
+Access the development dashboard at `http://localhost:4000/dev`:
 
 ```bash
 # Dashboard features:
@@ -198,7 +198,7 @@ crystal spec --coverage
 azu dev
 
 # Access dashboard
-# http://localhost:3000/dev
+# http://localhost:4000/dev
 
 # Dashboard sections:
 # /dev/status      - Application status
@@ -219,10 +219,10 @@ azu dev
 azu dev
 
 # Visit application
-# http://localhost:3000
+# http://localhost:4000
 
 # Visit dashboard
-# http://localhost:3000/dev
+# http://localhost:4000/dev
 ```
 
 ### Custom Configuration
@@ -242,11 +242,11 @@ azu dev --coverage
 
 ```bash
 # Share development server
-azu dev --host 0.0.0.0 --port 3000
+azu dev --host 0.0.0.0 --port 4000
 
 # Multiple developers can access:
-# http://your-ip:3000
-# http://your-ip:3000/dev
+# http://your-ip:4000
+# http://your-ip:4000/dev
 ```
 
 ## Development Workflow
@@ -283,20 +283,20 @@ ameba --watch src/
 # - Performance metrics
 # - Error logs
 
-# Visit: http://localhost:3000/dev
+# Visit: http://localhost:4000/dev
 ```
 
 ### 4. Debug Issues
 
 ```bash
 # Check error logs in dashboard
-# http://localhost:3000/dev/errors
+# http://localhost:4000/dev/errors
 
 # Check test failures
-# http://localhost:3000/dev/tests
+# http://localhost:4000/dev/tests
 
 # Check performance issues
-# http://localhost:3000/dev/performance
+# http://localhost:4000/dev/performance
 ```
 
 ## Advanced Features
@@ -308,7 +308,7 @@ ameba --watch src/
 azu dev --coverage
 
 # View coverage in dashboard
-# http://localhost:3000/dev/coverage
+# http://localhost:4000/dev/coverage
 
 # Coverage includes:
 # - Line coverage
@@ -324,7 +324,7 @@ azu dev --coverage
 azu dev --profile
 
 # Profile information available in dashboard
-# http://localhost:3000/dev/performance
+# http://localhost:4000/dev/performance
 
 # Profile data includes:
 # - Request timing
@@ -337,7 +337,7 @@ azu dev --profile
 
 ```bash
 # Database monitoring in dashboard
-# http://localhost:3000/dev/database
+# http://localhost:4000/dev/database
 
 # Database information includes:
 # - Connection status
@@ -351,7 +351,7 @@ azu dev --profile
 
 ```bash
 # Error tracking in dashboard
-# http://localhost:3000/dev/errors
+# http://localhost:4000/dev/errors
 
 # Error information includes:
 # - Error count
@@ -371,7 +371,7 @@ Azu.configure do |config|
   config.debug = true
   config.log_level = :debug
   config.host = "localhost"
-  config.port = 3000
+  config.port = 4000
 
   # Development-specific settings
   config.development.dashboard = true
@@ -389,7 +389,7 @@ end
 development:
   dashboard:
     enabled: true
-    port: 3000
+    port: 4000
     host: localhost
     auth: false
     metrics:
@@ -412,7 +412,7 @@ development:
 azu dev --dashboard=true
 
 # Check dashboard port
-# Default: http://localhost:3000/dev
+# Default: http://localhost:4000/dev
 
 # Check firewall settings
 # Ensure port is accessible
@@ -477,7 +477,7 @@ crystal build src/main.cr --release
 
 ```bash
 # Monitor dashboard regularly
-# http://localhost:3000/dev
+# http://localhost:4000/dev
 
 # Check for:
 # - Compilation errors
@@ -503,7 +503,7 @@ crystal build src/main.cr --release
 
 ```bash
 # Monitor performance in dashboard
-# http://localhost:3000/dev/performance
+# http://localhost:4000/dev/performance
 
 # Watch for:
 # - Slow requests
@@ -526,7 +526,7 @@ crystal build src/main.cr --release
       "type": "crystal",
       "request": "launch",
       "program": "${workspaceFolder}/src/main.cr",
-      "args": ["dev", "--port", "3000"]
+      "args": ["dev", "--port", "4000"]
     }
   ]
 }
@@ -537,7 +537,7 @@ crystal build src/main.cr --release
 ```bash
 # Run configuration
 # Program: src/main.cr
-# Arguments: dev --port 3000
+# Arguments: dev --port 4000
 # Working directory: project root
 ```
 
