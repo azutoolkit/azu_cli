@@ -3,7 +3,7 @@ require "cql"
 # Migration to create <%= table_name %> table
 # Generated at <%= Time.utc %>
 # Model location: <%= name.camelcase %>::<%= name.camelcase %>Model
-class Create<%= name.pluralize %> < CQL::Migration(<%= timestamp.to_i64 %>)
+class <%= migration_class_name %> < CQL::Migration(<%= timestamp.to_i64 %>)
   def up
     # Create <%= table_name %> table
     schema.table :<%= table_name %> do

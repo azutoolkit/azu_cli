@@ -13,28 +13,54 @@ module AzuCLI
       property snake_case_name : String
       property timestamp : String
       property table_name : String
+      property action_prefix : String
+      property table_name_for_template : String
 
       def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true)
         @snake_case_name = to_snake_case(@name)
         @timestamp = generate_timestamp
-        @table_name = @snake_case_name.singularize.pluralize
+        @table_name = extract_table_name(@snake_case_name)
+        @action_prefix = get_action_prefix
+        @table_name_for_template = get_table_name_for_filename
+      end
+
+      # Extract clean table name from migration name
+      private def extract_table_name(name : String) : String
+        # Remove common prefixes to get the actual table name
+        clean_name = name
+          .gsub(/^create_/, "")
+          .gsub(/^update_/, "")
+          .gsub(/^delete_/, "")
+          .gsub(/^drop_/, "")
+          .gsub(/^add_.*_to_/, "")
+          .gsub(/^remove_.*_from_/, "")
+          .gsub(/^change_.*_in_/, "")
+
+        # Ensure it's properly pluralized
+        clean_name.singularize.pluralize
       end
 
       # Detect migration type based on name pattern
       def migration_type : String
         case @name.downcase
+        when /^add_index_to_/
+          "add_index"
+        when /^remove_index_from_/
+          "remove_index"
         when /^add_.*_to_/
           "add_columns"
         when /^remove_.*_from_/
           "remove_columns"
         when /^change_.*_in_/
           "change_columns"
-        when /^add_index_to_/
-          "add_index"
-        when /^remove_index_from_/
-          "remove_index"
         when /^create_/
           "create_table"
+        when /^update_/
+          "update_table"
+        when /^delete_/
+          "delete_table"
+        when /^drop_/
+          "drop_table"
         else
           "create_table" # Default fallback
         end
@@ -221,12 +247,50 @@ module AzuCLI
 
       # Get migration filename
       def migration_filename : String
-        "#{@timestamp}_create_#{table_name}.cr"
+        action_prefix = get_action_prefix
+        table_name = get_table_name_for_filename
+        "#{@timestamp}_#{action_prefix}_#{table_name}.cr"
+      end
+
+      # Get action prefix for filename based on migration type
+      private def get_action_prefix : String
+        case migration_type
+        when "create_table"
+          "create"
+        when "update_table"
+          "update"
+        when "delete_table", "drop_table"
+          "delete"
+        when "add_columns"
+          "add"
+        when "remove_columns"
+          "remove"
+        when "change_columns"
+          "change"
+        when "add_index"
+          "add_index"
+        when "remove_index"
+          "remove_index"
+        else
+          "create"
+        end
+      end
+
+      # Get table name for filename
+      private def get_table_name_for_filename : String
+        case migration_type
+        when "add_columns", "remove_columns", "change_columns", "add_index", "remove_index"
+          target_table_name
+        else
+          @table_name
+        end
       end
 
       # Get migration class name
       def migration_class_name : String
-        "Create#{@name.pluralize}"
+        action_prefix = get_action_prefix.camelcase
+        table_name = get_table_name_for_filename.camelcase
+        "#{action_prefix}#{table_name}"
       end
     end
   end
