@@ -1,218 +1,656 @@
 # OpenAPI Commands
 
-The Azu CLI provides comprehensive OpenAPI 3.1 support with bidirectional code generation capabilities.
+Azu CLI provides comprehensive OpenAPI 3.1 support for both generating code from OpenAPI specifications and exporting OpenAPI specifications from your Crystal code.
 
-## Commands
+## Overview
 
-### `azu openapi:generate`
+The OpenAPI commands enable bidirectional integration between OpenAPI specifications and Azu applications:
 
-Generate Crystal code from an OpenAPI specification file.
+- **Generate code** from OpenAPI specifications
+- **Export specifications** from existing Azu code
+- **Support OpenAPI 3.1** standard
+- **Type-safe integration** with Crystal
 
-**Usage:**
-```bash
-azu openapi:generate <spec_path> [options]
-```
+## Available Commands
 
-**Arguments:**
-- `<spec_path>` - Path to OpenAPI specification file (YAML or JSON)
+| Command | Description |
+|---------|-------------|
+| `azu openapi:generate` | Generate Crystal code from OpenAPI specification |
+| `azu openapi:export` | Export OpenAPI specification from Crystal code |
 
-**Options:**
-- `--spec PATH` - Path to OpenAPI specification file
-- `--force` - Overwrite existing files without prompting
-- `--models-only` - Generate only models from schemas
-- `--endpoints-only` - Generate only endpoints from paths
-- `--help` - Show help message
+## azu openapi:generate
 
-**Examples:**
+Generates Crystal code from an OpenAPI 3.1 specification file, creating models, endpoints, requests, and responses.
+
+### Basic Usage
+
 ```bash
 # Generate all code from OpenAPI spec
 azu openapi:generate openapi.yaml
-
-# Generate from JSON spec with force overwrite
-azu openapi:generate api-spec.json --force
 
 # Generate only models
 azu openapi:generate openapi.yaml --models-only
 
 # Generate only endpoints
 azu openapi:generate openapi.yaml --endpoints-only
+
+# Force overwrite existing files
+azu openapi:generate openapi.yaml --force
 ```
 
-**What Gets Generated:**
-- **Models** in `src/models/` from component schemas
-- **Endpoints** in `src/endpoints/` from paths
-- **Request classes** in `src/requests/` from request bodies
-- **Response classes** in `src/pages/` from responses
+### Options
 
-### `azu openapi:export`
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--spec PATH` | Path to OpenAPI specification file | Required |
+| `--force` | Overwrite existing files without prompting | false |
+| `--models-only` | Generate only models from schemas | false |
+| `--endpoints-only` | Generate only endpoints from paths | false |
 
-Export an OpenAPI specification from your existing Crystal code.
+### Examples
 
-**Usage:**
+#### Generate Complete API
+
 ```bash
-azu openapi:export [options]
+# Generate all components from OpenAPI spec
+azu openapi:generate api-spec.yaml
+
+# Output:
+# Parsing OpenAPI specification: api-spec.yaml
+# Generated models: 5
+# Generated endpoints: 12
+# Generated requests: 8
+# Generated responses: 12
+# ✓ Code generation completed successfully
 ```
 
-**Options:**
-- `--output PATH` - Output file path (default: `openapi.yaml`)
-- `--format FORMAT` - Output format: `yaml` or `json` (default: `yaml`)
-- `--project NAME` - Project name (auto-detected from `shard.yml`)
-- `--version VERSION` - API version (default: `1.0.0`)
-- `--help` - Show help message
+#### Generate Specific Components
 
-**Examples:**
 ```bash
-# Export to default openapi.yaml
+# Generate only models
+azu openapi:generate api-spec.yaml --models-only
+# Generated models: 5
+# ✓ Code generation completed successfully
+
+# Generate only endpoints
+azu openapi:generate api-spec.yaml --endpoints-only
+# Generated endpoints: 12
+# ✓ Code generation completed successfully
+```
+
+#### Force Overwrite
+
+```bash
+# Overwrite existing files
+azu openapi:generate api-spec.yaml --force
+# Overwriting existing files...
+# ✓ Code generation completed successfully
+```
+
+### Generated Code Structure
+
+The generator creates the following files based on your OpenAPI specification:
+
+```
+src/
+├── models/                    # Generated from schemas
+│   ├── user.cr
+│   ├── post.cr
+│   └── comment.cr
+├── endpoints/                 # Generated from paths
+│   ├── users/
+│   │   ├── index_endpoint.cr
+│   │   ├── show_endpoint.cr
+│   │   ├── create_endpoint.cr
+│   │   ├── update_endpoint.cr
+│   │   └── destroy_endpoint.cr
+│   └── posts/
+│       ├── index_endpoint.cr
+│       └── show_endpoint.cr
+├── requests/                  # Generated from request bodies
+│   ├── users/
+│   │   ├── create_request.cr
+│   │   └── update_request.cr
+│   └── posts/
+│       ├── create_request.cr
+│       └── update_request.cr
+└── pages/                     # Generated from responses
+    ├── users/
+    │   ├── index_page.cr
+    │   ├── show_page.cr
+    │   └── create_page.cr
+    └── posts/
+        ├── index_page.cr
+        └── show_page.cr
+```
+
+### Generated Model Example
+
+```crystal
+# src/models/user.cr
+require "cql"
+
+class User < CQL::Model
+  table :users
+
+  column :id, Int64
+  column :name, String
+  column :email, String
+  column :created_at, Time
+  column :updated_at, Time
+
+  validates :name, presence: true
+  validates :email, presence: true, format: /^[^@]+@[^@]+\.[^@]+$/
+end
+```
+
+### Generated Endpoint Example
+
+```crystal
+# src/endpoints/users/index_endpoint.cr
+class Users::IndexEndpoint < Azu::Endpoint
+  def call
+    users = User.all
+    render_page(Users::IndexPage, users: users)
+  end
+end
+```
+
+### Generated Request Example
+
+```crystal
+# src/requests/users/create_request.cr
+class Users::CreateRequest < Azu::Request
+  field :name, String, required: true
+  field :email, String, required: true, format: /^[^@]+@[^@]+\.[^@]+$/
+end
+```
+
+### Generated Response Example
+
+```crystal
+# src/pages/users/show_page.cr
+class Users::ShowPage < Azu::Page
+  def initialize(@user : User)
+  end
+
+  def render
+    template("users/show_page.jinja", {
+      "user" => @user.to_h
+    })
+  end
+end
+```
+
+### Supported OpenAPI Features
+
+#### Schemas (Component Models)
+
+- **Basic types**: string, integer, number, boolean
+- **Complex types**: object, array
+- **Validation**: required fields, format patterns, length constraints
+- **Nested objects**: automatically handled
+- **Enums**: converted to Crystal enums
+
+#### Paths (Endpoints)
+
+- **HTTP methods**: GET, POST, PUT, PATCH, DELETE
+- **Path parameters**: automatically extracted
+- **Query parameters**: converted to request validation
+- **Request bodies**: generated as request classes
+- **Responses**: generated as page classes
+
+#### Request/Response Bodies
+
+- **JSON schemas**: converted to Crystal structs
+- **Validation rules**: mapped to Azu validation
+- **Nested objects**: properly handled
+- **Arrays**: converted to Crystal arrays
+
+### OpenAPI Specification Example
+
+```yaml
+# openapi.yaml
+openapi: 3.1.0
+info:
+  title: Blog API
+  version: 1.0.0
+  description: A simple blog API
+
+paths:
+  /users:
+    get:
+      summary: List users
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - created_at
+
+    CreateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+        - name
+        - email
+```
+
+## azu openapi:export
+
+Exports an OpenAPI 3.1 specification from your existing Azu application code.
+
+### Basic Usage
+
+```bash
+# Export to default file (openapi.yaml)
 azu openapi:export
 
-# Export to JSON format
+# Export to specific file
+azu openapi:export --output api-spec.yaml
+
+# Export as JSON
 azu openapi:export --output api-spec.json --format json
 
-# Export with custom version
-azu openapi:export --output docs/openapi.yaml --version 2.0.0
+# Export with custom project name and version
+azu openapi:export --project "My API" --version "2.0.0"
 ```
 
-**What Gets Analyzed:**
-- Endpoints in `src/endpoints/`
-- Models in `src/models/`
-- Request classes in `src/requests/`
-- Response classes in `src/pages/`
+### Options
 
-## OpenAPI Specification Support
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--output PATH` | Output file path | openapi.yaml |
+| `--format FORMAT` | Output format (yaml, json) | yaml |
+| `--project NAME` | Project name | Auto-detected from shard.yml |
+| `--version VERSION` | API version | 1.0.0 |
 
-### Supported Versions
-- OpenAPI 3.1.x (full support)
-- OpenAPI 3.0.x (with limitations)
+### Examples
 
-### Type Mapping
+#### Export to YAML
 
-#### OpenAPI → Crystal
+```bash
+# Export to default YAML file
+azu openapi:export
+# Building OpenAPI specification from code...
+# ✓ OpenAPI specification exported to: openapi.yaml
+```
 
-| OpenAPI Type | OpenAPI Format | Crystal Type |
-|--------------|----------------|--------------|
-| `string` | - | `String` |
-| `string` | `date-time` | `Time` |
-| `string` | `date` | `Time` |
-| `string` | `uuid` | `UUID` |
-| `string` | `email` | `String` |
-| `string` | `uri` | `String` |
-| `string` | `binary` | `Bytes` |
-| `integer` | - | `Int32` |
-| `integer` | `int32` | `Int32` |
-| `integer` | `int64` | `Int64` |
-| `number` | - | `Float64` |
-| `number` | `float` | `Float32` |
-| `number` | `double` | `Float64` |
-| `boolean` | - | `Bool` |
-| `array` | - | `Array(T)` |
-| `object` | - | `Hash(String, JSON::Any)` or custom class |
+#### Export to JSON
 
-#### Crystal → OpenAPI
+```bash
+# Export to JSON file
+azu openapi:export --output api-spec.json --format json
+# Building OpenAPI specification from code...
+# ✓ OpenAPI specification exported to: api-spec.json
+```
 
-| Crystal Type | OpenAPI Type | OpenAPI Format |
-|--------------|--------------|----------------|
-| `String` | `string` | - |
-| `Time` | `string` | `date-time` |
-| `UUID` | `string` | `uuid` |
-| `Int32` | `integer` | `int32` |
-| `Int64` | `integer` | `int64` |
-| `Float32` | `number` | `float` |
-| `Float64` | `number` | `double` |
-| `Bool` | `boolean` | - |
-| `Bytes` | `string` | `binary` |
-| `Array(T)` | `array` | - |
-| `Hash(K, V)` | `object` | - |
+#### Custom Project Information
 
-### Nullable Types
+```bash
+# Export with custom project details
+azu openapi:export --project "Blog API" --version "2.0.0" --output docs/api.yaml
+# Building OpenAPI specification from code...
+# ✓ OpenAPI specification exported to: docs/api.yaml
+```
 
-Nullable Crystal types (ending with `?`) are mapped to OpenAPI schemas with `nullable: true`.
+### Code Analysis
 
-## Integration with API Projects
+The export command analyzes your Azu application and extracts:
 
-When you create an API project with `azu new myapp --api`, the following OpenAPI features are enabled:
+#### Endpoints Analysis
 
-1. **OpenAPI Configuration** - `config/openapi.yml` with API metadata
-2. **Swagger UI** - Interactive documentation at `/api/docs/ui`
-3. **Spec Endpoint** - OpenAPI spec served at `/api/openapi.json`
-4. **Health Endpoint** - Health check at `/health`
+- **HTTP methods** from endpoint classes
+- **Path patterns** from route definitions
+- **Request parameters** from method signatures
+- **Response types** from return values
 
-## Workflow Examples
+#### Models Analysis
 
-### From Spec to Code
+- **Schema definitions** from CQL models
+- **Field types** and constraints
+- **Validation rules** and formats
+- **Relationships** between models
 
-1. Design your API using an OpenAPI spec
-2. Generate code: `azu openapi:generate openapi.yaml`
-3. Implement business logic in generated files
-4. Run your API: `azu serve`
+#### Request/Response Analysis
 
-### From Code to Spec
+- **Request classes** and their fields
+- **Response classes** and their structure
+- **Validation rules** and constraints
+- **Content types** and formats
 
-1. Build your API with Azu generators
-2. Export spec: `azu openapi:export --output docs/openapi.yaml`
-3. Share spec with frontend teams
-4. Generate client SDKs using OpenAPI tools
+### Generated OpenAPI Specification
 
-### Round-Trip Development
+The exported specification includes:
 
-1. Start with initial spec: `azu openapi:generate api-v1.yaml`
-2. Develop and extend functionality
-3. Export updated spec: `azu openapi:export --output api-v2.yaml`
-4. Compare versions and document changes
+```yaml
+# Generated openapi.yaml
+openapi: 3.1.0
+info:
+  title: My Application
+  version: 1.0.0
+  description: Generated from Azu application
+
+servers:
+  - url: http://localhost:4000
+    description: Development server
+
+paths:
+  /users:
+    get:
+      summary: List users
+      operationId: listUsers
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      summary: Create user
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - created_at
+        - updated_at
+
+    CreateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+        - name
+        - email
+```
+
+## Workflow Integration
+
+### API-First Development
+
+1. **Design API** using OpenAPI specification
+2. **Generate code** from specification
+3. **Implement business logic** in generated files
+4. **Export updated spec** as you develop
+
+```bash
+# Start with OpenAPI spec
+azu openapi:generate api-design.yaml
+
+# Develop your application
+# ... implement business logic ...
+
+# Export updated specification
+azu openapi:export --output updated-api.yaml
+```
+
+### Code-First Development
+
+1. **Develop application** with Azu endpoints and models
+2. **Export specification** from existing code
+3. **Share specification** with frontend/API consumers
+4. **Generate client code** from specification
+
+```bash
+# Develop your application
+# ... create endpoints and models ...
+
+# Export OpenAPI specification
+azu openapi:export
+
+# Share with frontend team
+# They can generate client code from openapi.yaml
+```
+
+### Continuous Integration
+
+```bash
+# In CI pipeline
+# Generate code from spec
+azu openapi:generate api-spec.yaml
+
+# Run tests
+crystal spec
+
+# Export updated spec
+azu openapi:export --output generated-api.yaml
+
+# Compare with original spec
+diff api-spec.yaml generated-api.yaml
+```
 
 ## Best Practices
 
-### OpenAPI Spec Design
+### 1. Specification Management
 
-- Use meaningful `operationId` for better code generation
-- Include descriptions for all schemas and operations
-- Define reusable components for common patterns
-- Use `$ref` for schema references
-- Tag operations for logical grouping
+```bash
+# Keep specifications in version control
+git add openapi.yaml
+git commit -m "Update API specification"
 
-### Code Organization
+# Use meaningful file names
+azu openapi:export --output "api-v1.2.0.yaml"
+```
 
-- Keep generated files separate from custom logic
-- Use service classes for business logic
-- Don't modify generated request/response classes directly
-- Version your API with path prefixes (`/api/v1/`)
+### 2. Code Generation
 
-### Documentation
+```bash
+# Always review generated code
+azu openapi:generate api-spec.yaml
 
-- Keep OpenAPI spec in version control
-- Document breaking changes in spec
-- Use examples in OpenAPI spec for better docs
-- Include authentication requirements
+# Customize generated files as needed
+# ... edit generated files ...
+
+# Regenerate when spec changes
+azu openapi:generate api-spec.yaml --force
+```
+
+### 3. Validation
+
+```bash
+# Validate OpenAPI specification
+# Use online validators or tools like swagger-codegen
+
+# Test generated code
+crystal spec
+```
+
+### 4. Documentation
+
+```bash
+# Export specification for documentation
+azu openapi:export --output docs/api.yaml
+
+# Generate API documentation
+# Use tools like Swagger UI or Redoc
+```
 
 ## Troubleshooting
 
-### Generation Issues
+### Common Issues
 
-**Problem:** Generated code doesn't compile
-- Check OpenAPI spec validity with online validators
-- Ensure all `$ref` references are resolved
-- Verify type formats are supported
+#### Invalid OpenAPI Specification
 
-**Problem:** Missing models or endpoints
-- Check file paths in OpenAPI spec
-- Ensure schemas are in `components/schemas`
-- Verify paths are defined at top level
+```bash
+# Check specification syntax
+cat openapi.yaml | head -20
 
-### Export Issues
+# Validate with online tools
+# https://editor.swagger.io/
+```
 
-**Problem:** Export fails to find endpoints
-- Ensure endpoints follow Azu naming conventions
-- Check endpoint files are in `src/endpoints/`
-- Verify struct definitions include `Azu::Endpoint`
+#### Generation Failures
 
-**Problem:** Type mapping errors
-- Use standard Crystal types (String, Int32, etc.)
-- Avoid complex union types in public APIs
-- Use custom classes for complex objects
+```bash
+# Check for missing dependencies
+crystal deps
 
-## See Also
+# Verify file permissions
+ls -la openapi.yaml
 
-- [API Resource Generator](../generators/api-resource.md)
-- [REST API Example](../examples/rest-api.md)
-- [New Command](./new.md) - Creating API projects
-- [Generate Command](./generate.md) - Code generation
+# Use verbose output for debugging
+azu openapi:generate openapi.yaml --verbose
+```
 
+#### Export Issues
+
+```bash
+# Check if endpoints exist
+ls -la src/endpoints/
+
+# Verify model definitions
+ls -la src/models/
+
+# Check for compilation errors
+crystal build src/main.cr
+```
+
+### File Permission Issues
+
+```bash
+# Fix file permissions
+chmod 644 openapi.yaml
+chmod 755 src/
+
+# Check directory permissions
+ls -la
+```
+
+### Memory Issues
+
+```bash
+# For large specifications
+# Process in smaller chunks
+azu openapi:generate openapi.yaml --models-only
+azu openapi:generate openapi.yaml --endpoints-only
+```
+
+## Integration Examples
+
+### Frontend Integration
+
+```bash
+# Export API specification
+azu openapi:export --output frontend/api-spec.json --format json
+
+# Frontend team can generate TypeScript client
+# npx @openapitools/openapi-generator-cli generate -i api-spec.json -g typescript-axios -o src/api
+```
+
+### API Documentation
+
+```bash
+# Export for documentation
+azu openapi:export --output docs/api.yaml
+
+# Generate Swagger UI
+# Use tools like swagger-ui-dist or redoc-cli
+```
+
+### Testing Integration
+
+```bash
+# Generate test data from spec
+azu openapi:generate test-spec.yaml --models-only
+
+# Use in test files
+# require "./models/**"
+# user = User.new(name: "Test", email: "test@example.com")
+```
+
+---
+
+The OpenAPI commands provide powerful integration between OpenAPI specifications and Azu applications, enabling both API-first and code-first development workflows.
+
+**Next Steps:**
+
+- [Generate Command](generate.md) - Learn about code generation
+- [Model Generator](../generators/model.md) - Create database models
+- [Endpoint Generator](../generators/endpoint.md) - Create HTTP endpoints
+- [API Development Workflows](../workflows/building-apis.md) - Learn API development patterns

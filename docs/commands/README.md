@@ -20,13 +20,19 @@ Azu CLI provides a comprehensive set of commands to help you develop, manage, an
 
 ### Database Management
 
-- [`azu db create`](database.md#azu-db-create) - Create the database
-- [`azu db migrate`](database.md#azu-db-migrate) - Run database migrations
-- [`azu db rollback`](database.md#azu-db-rollback) - Rollback migrations
-- [`azu db seed`](database.md#azu-db-seed) - Seed database with sample data
-- [`azu db reset`](database.md#azu-db-reset) - Reset database (drop, create, migrate)
-- [`azu db status`](database.md#azu-db-status) - Show migration status
-- [`azu db new_migration`](database.md#azu-db-new_migration) - Create new migration file
+- [`azu db:create`](database.md#azu-dbcreate) - Create the database
+- [`azu db:migrate`](database.md#azu-dbmigrate) - Run database migrations
+- [`azu db:rollback`](database.md#azu-dbrollback) - Rollback migrations
+- [`azu db:seed`](database.md#azu-dbseed) - Seed database with sample data
+- [`azu db:reset`](database.md#azu-dbreset) - Reset database (drop, create, migrate)
+- [`azu db:status`](database.md#azu-dbstatus) - Show migration status
+- [`azu db:setup`](database.md#azu-dbsetup) - Setup database (create and migrate)
+- [`azu db:drop`](database.md#azu-dbdrop) - Drop the database
+
+### OpenAPI Integration
+
+- [`azu openapi:generate`](openapi.md#azu-openapigenerate) - Generate code from OpenAPI specification
+- [`azu openapi:export`](openapi.md#azu-openapiexport) - Export OpenAPI specification from code
 
 ### Information & Help
 
@@ -41,19 +47,19 @@ All Azu CLI commands follow a consistent structure:
 azu <command> [subcommand] [arguments] [options]
 ```
 
-### Examples:
+### Examples
 
 ```bash
-# Project creation
+# Project Creation
 azu new my_app --database postgres
 
-# Code generation
+# Code Generation
 azu generate scaffold Post title:string content:text
 
-# Database operations
-azu db migrate
+# Database Operations
+azu db:migrate
 
-# Development server
+# Development Server
 azu serve --port 4000
 ```
 
@@ -70,7 +76,7 @@ These options are available for most commands:
 | `--quiet`       | `-q`  | Suppress non-error output             |
 | `--config FILE` |       | Use custom configuration file         |
 
-### Examples:
+### Examples
 
 ```bash
 # Get help for any command
@@ -86,7 +92,7 @@ azu db:migrate --quiet
 
 ## Command Categories
 
-### 🏗️ Project Management Commands
+### Project Management Commands
 
 Commands for creating and initializing Azu projects.
 
@@ -121,7 +127,7 @@ azu init
 azu init --database postgres
 ```
 
-### 🛠️ Code Generation Commands
+### Code Generation Commands
 
 Commands for generating application components.
 
@@ -158,7 +164,7 @@ azu generate scaffold Post title:string content:text published:boolean
 azu generate component Counter count:integer --websocket
 ```
 
-### 🚀 Development Commands
+### Development Commands
 
 Commands for development and testing.
 
@@ -193,11 +199,11 @@ azu dev
 azu dev --port 8080
 ```
 
-### 🗄️ Database Commands
+### Database Commands
 
 Commands for database management.
 
-#### `azu db create`
+#### `azu db:create`
 
 Creates the database for the current environment.
 
@@ -216,6 +222,14 @@ Seeds the database with sample data.
 #### `azu db:reset`
 
 Drops, creates, and migrates the database.
+
+#### `azu db:setup`
+
+Sets up the database by creating it and running migrations.
+
+#### `azu db:drop`
+
+Drops the database for the current environment.
 
 **Quick Examples:**
 
@@ -239,7 +253,45 @@ azu db:seed
 azu db:reset
 ```
 
-### ℹ️ Information Commands
+### OpenAPI Commands
+
+Commands for OpenAPI specification integration.
+
+#### `azu openapi:generate`
+
+Generates Crystal code from an OpenAPI specification.
+
+**Quick Examples:**
+
+```bash
+# Generate all code from spec
+azu openapi:generate api-spec.yaml
+
+# Generate only models
+azu openapi:generate api-spec.yaml --models-only
+
+# Generate only endpoints
+azu openapi:generate api-spec.yaml --endpoints-only
+```
+
+#### `azu openapi:export`
+
+Exports an OpenAPI specification from existing code.
+
+**Quick Examples:**
+
+```bash
+# Export to default file
+azu openapi:export
+
+# Export to specific file
+azu openapi:export --output api.yaml
+
+# Export as JSON
+azu openapi:export --output api.json --format json
+```
+
+### Information Commands
 
 Commands for getting help and information.
 

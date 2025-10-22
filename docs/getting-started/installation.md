@@ -115,6 +115,7 @@ This is the most reliable method and ensures you get the latest version.
    - Make it available system-wide
 
 4. **Verify installation:**
+
    ```bash
    azu version
    ```
@@ -128,15 +129,38 @@ If you prefer to build manually:
    ```bash
    git clone https://github.com/azutoolkit/azu_cli.git
    cd azu_cli
-   make
+   make build
    ```
 
 2. **Install manually:**
+
    ```bash
    sudo make install
    ```
 
-### Method 3: Development Installation
+### Method 3: Symlink Installation (Development)
+
+For development work where you want changes to be reflected immediately:
+
+1. **Clone and build:**
+
+   ```bash
+   git clone https://github.com/azutoolkit/azu_cli.git
+   cd azu_cli
+   make build
+   ```
+
+2. **Create symlink:**
+
+   ```bash
+   sudo make link
+   # Or force overwrite existing symlink
+   sudo make force_link
+   ```
+
+This creates a symlink from the built binary to `/usr/local/bin/azu`, so any changes you make to the source will be reflected immediately after rebuilding.
+
+### Method 4: Development Installation
 
 For development or if you want to modify Azu CLI:
 
@@ -156,10 +180,11 @@ For development or if you want to modify Azu CLI:
 3. **Build in development mode:**
 
    ```bash
-   crystal build src/main.cr -o bin/azu
+   crystal build src/azu_cli.cr -o bin/azu
    ```
 
 4. **Add to PATH (optional):**
+
    ```bash
    export PATH="$PWD/bin:$PATH"
    # Add to your shell profile for persistence
@@ -254,7 +279,7 @@ export PATH="/usr/local/bin:$PATH"
 sudo make install
 
 # Or install to user directory
-make install PREFIX=~/.local
+make install PREFIX=$HOME/.local
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
@@ -308,12 +333,47 @@ If you encounter issues during installation:
 1. **Check the logs** during compilation for specific errors
 2. **Verify prerequisites** are properly installed
 3. **Update Crystal** to the latest version
-4. **Clear build cache**: `make clean && make`
+4. **Clear build cache**: `make clean && make build`
 5. **Create an issue** on [GitHub](https://github.com/azutoolkit/azu_cli/issues) with:
    - Your operating system and version
    - Crystal version (`crystal version`)
    - Full error output
    - Installation method used
+
+## Available Makefile Targets
+
+The Azu CLI Makefile provides several useful targets:
+
+| Target               | Description                                |
+| -------------------- | ------------------------------------------ |
+| `make` or `make all` | Build and create symlink (default)         |
+| `make build`         | Build the binary only                      |
+| `make shard`         | Install dependencies and build             |
+| `make install`       | Build and install binary to system         |
+| `make link`          | Create symlink to built binary             |
+| `make force_link`    | Force create symlink (overwrites existing) |
+| `make run`           | Run the built binary                       |
+| `make clean`         | Remove built binary                        |
+| `make distclean`     | Remove binary and all build artifacts      |
+
+### Examples
+
+```bash
+# Build only
+make build
+
+# Install system-wide
+sudo make install
+
+# Create development symlink
+sudo make link
+
+# Run without installing
+make run
+
+# Clean up
+make clean
+```
 
 ## Updating Azu CLI
 
@@ -331,9 +391,28 @@ make install
 
 To remove Azu CLI:
 
+### If installed with `make install`
+
 ```bash
 sudo rm /usr/local/bin/azu
 rm -rf ~/.config/azu  # Remove configuration (optional)
+```
+
+### If installed with `make link`
+
+```bash
+sudo rm /usr/local/bin/azu  # Remove symlink
+# The source binary in bin/azu will remain
+```
+
+### Complete cleanup
+
+```bash
+# Remove binary and all build artifacts
+make distclean
+
+# Remove configuration
+rm -rf ~/.config/azu
 ```
 
 ---

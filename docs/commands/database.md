@@ -7,20 +7,21 @@ Azu CLI provides a comprehensive set of database commands for managing your appl
 All database commands follow the pattern:
 
 ```bash
-azu db <command> [options]
+azu db:<command> [options]
 ```
 
 ## Available Commands
 
-| Command                | Description                        |
-| ---------------------- | ---------------------------------- |
-| `azu db create`        | Create the database                |
-| `azu db migrate`       | Run pending migrations             |
-| `azu db rollback`      | Rollback migrations                |
-| `azu db reset`         | Drop, create, and migrate database |
-| `azu db seed`          | Run seed data                      |
-| `azu db status`        | Show migration status              |
-| `azu db new_migration` | Create a new migration file        |
+| Command           | Description                         |
+| ----------------- | ----------------------------------- |
+| `azu db:create`   | Create the database                 |
+| `azu db:migrate`  | Run pending migrations              |
+| `azu db:rollback` | Rollback migrations                 |
+| `azu db:reset`    | Drop, create, and migrate database  |
+| `azu db:seed`     | Run seed data                       |
+| `azu db:status`   | Show migration status               |
+| `azu db:setup`    | Setup database (create and migrate) |
+| `azu db:drop`     | Drop the database                   |
 
 ## Database Configuration
 
@@ -63,7 +64,7 @@ production:
   url: <%= ENV["DATABASE_URL"] %>
 ```
 
-## azu db create
+## azu db:create
 
 Creates the database for the current environment.
 
@@ -71,13 +72,13 @@ Creates the database for the current environment.
 
 ```bash
 # Create database for current environment
-azu db create
+azu db:create
 
 # Create with custom database name
-azu db create --database my_custom_db
+azu db:create --database my_custom_db
 ```
 
-### Options
+#### Options
 
 | Option                | Description                     | Default       |
 | --------------------- | ------------------------------- | ------------- |
@@ -85,15 +86,15 @@ azu db create --database my_custom_db
 | `--database <name>`   | Database name                   | auto-detected |
 | `--force`             | Force creation (drop if exists) | false         |
 
-### Examples
+#### Examples
 
 ```bash
 # Create development database
-azu db create
+azu db:create
 # Created database 'my_app_development'
 
 # Create with custom name
-azu db create --database my_custom_db
+azu db:create --database my_custom_db
 # Created database 'my_custom_db'
 ```
 
@@ -111,7 +112,7 @@ azu db create --force
 sudo systemctl status postgresql
 ```
 
-## azu db reset
+## azu db:reset
 
 Resets the database by dropping, creating, migrating, and optionally seeding.
 
@@ -119,10 +120,10 @@ Resets the database by dropping, creating, migrating, and optionally seeding.
 
 ```bash
 # Reset database for current environment
-azu db reset
+azu db:reset
 
 # Reset with confirmation
-azu db reset --force
+azu db:reset --force
 ```
 
 ### Options
@@ -135,16 +136,16 @@ azu db reset --force
 
 ```bash
 # Reset development database
-azu db reset
+azu db:reset
 # Are you sure? [y/N]: y
 # Reset database 'my_app_development'
 
 # Reset without confirmation
-azu db reset --force
+azu db:reset --force
 # Reset database 'my_app_development'
 ```
 
-## azu db migrate
+## azu db:migrate
 
 Runs pending database migrations using CQL's built-in Migrator to update the database schema.
 
@@ -159,13 +160,13 @@ Runs pending database migrations using CQL's built-in Migrator to update the dat
 
 ```bash
 # Run all pending migrations
-azu db migrate
+azu db:migrate
 
 # Run specific number of migrations
-azu db migrate --steps 2
+azu db:migrate --steps 2
 
 # Run with verbose output
-azu db migrate --verbose
+azu db:migrate --verbose
 ```
 
 ### Options
@@ -181,28 +182,29 @@ azu db migrate --verbose
 
 ```bash
 # Run all pending migrations
-azu db migrate
+azu db:migrate
 # Running migrations...
 # ✓ All migrations completed successfully
 # ✓ Schema file updated: src/db/schema.cr
 
 # Run specific number of migrations
-azu db migrate --steps 2
+azu db:migrate --steps 2
 
 # Migrate to specific version
-azu db migrate --version 20240115103045
+azu db:migrate --version 20240115103045
 
 # View migration status with verbose output
-azu db migrate --verbose
+azu db:migrate --verbose
 ```
 
 ### How It Works
 
-1. CLI generates a temporary Crystal script
-2. Script loads `src/db/schema.cr` and all migrations
-3. CQL Migrator runs pending migrations in order
-4. Schema file is automatically updated
-5. Pretty-printed status table shows results
+1. CLI generates a temporary Crystal script in the project root
+2. Script loads `src/db/schema.cr` and all migration files from `src/db/migrations/`
+3. CQL Migrator runs pending migrations in order using the generated script
+4. Schema file is automatically synchronized with the database
+5. Migration status is tracked in the `schema_migrations` table
+6. Temporary script is cleaned up after execution
 
 ### Migration File Example
 
@@ -226,7 +228,7 @@ class CreateUsers < CQL::Migration(20240115103045_i64)
 end
 ```
 
-## azu db rollback
+## azu db:rollback
 
 Rolls back database migrations using CQL's Migrator. Automatically updates the schema file after rollback.
 
@@ -234,13 +236,13 @@ Rolls back database migrations using CQL's Migrator. Automatically updates the s
 
 ```bash
 # Rollback last migration
-azu db rollback
+azu db:rollback
 
 # Rollback multiple migrations
-azu db rollback --steps 3
+azu db:rollback --steps 3
 
 # Rollback to specific version
-azu db rollback --version 20240115103045
+azu db:rollback --version 20240115103045
 ```
 
 ### Options
@@ -255,28 +257,28 @@ azu db rollback --version 20240115103045
 
 ```bash
 # Rollback last migration
-azu db rollback
+azu db:rollback
 # Rolling back 1 migration(s)...
 # ✓ Rollback completed successfully
 # ✓ Schema file updated: src/db/schema.cr
 
 # Rollback last 3 migrations
-azu db rollback --steps 3
+azu db:rollback --steps 3
 
 # Rollback to specific version (all migrations after this version)
-azu db rollback --version 20240115103045
+azu db:rollback --version 20240115103045
 ```
 
 ### How It Works
 
-1. CLI generates a temporary Crystal script
-2. Script loads schema and all migration files
-3. CQL Migrator executes the `down` method for each migration
-4. Removes migration records from `cql_schema_migrations` table
-5. Schema file is automatically synchronized
-6. Temporary script is cleaned up
+1. CLI generates a temporary Crystal script in the project root
+2. Script loads `src/db/schema.cr` and all migration files from `src/db/migrations/`
+3. CQL Migrator executes the `down` method for each migration in reverse order
+4. Removes migration records from `schema_migrations` table
+5. Schema file is automatically synchronized with the database
+6. Temporary script is cleaned up after execution
 
-## azu db reset
+## azu db:reset
 
 Drops, creates, and migrates the database in one command.
 
@@ -284,10 +286,10 @@ Drops, creates, and migrates the database in one command.
 
 ```bash
 # Reset database for current environment
-azu db reset
+azu db:reset
 
 # Reset with seed data
-azu db reset --seed
+azu db:reset --seed
 ```
 
 ### Options
@@ -301,21 +303,91 @@ azu db reset --seed
 
 ```bash
 # Reset development database
-azu db reset
+azu db:reset
 # Dropped database 'my_app_development'
 # Created database 'my_app_development'
 # == 20231201000001 CreateUsers: migrating ========================
 # == 20231201000001 CreateUsers: migrated (0.1234s) ===============
 
 # Reset with seed data
-azu db reset --seed
+azu db:reset --seed
 # ... database operations ...
 # Seeding database...
 # Created 10 users
 # Created 25 posts
 ```
 
-## azu db seed
+## azu db:setup
+
+Sets up the database by creating it (if it doesn't exist) and running all migrations.
+
+### Basic Usage
+
+```bash
+# Setup database for current environment
+azu db:setup
+
+# Setup with seed data
+azu db:setup --seed
+```
+
+### Options
+
+| Option   | Description               | Default |
+| -------- | ------------------------- | ------- |
+| `--seed` | Run seed data after setup | false   |
+
+### Examples
+
+```bash
+# Setup development database
+azu db:setup
+# Database already exists
+# Running migrations...
+# ✓ Database setup completed successfully
+
+# Setup with seed data
+azu db:setup --seed
+# Database already exists
+# Running migrations...
+# Seeding database...
+# ✓ Database setup completed successfully
+```
+
+## azu db:drop
+
+Drops the database for the current environment.
+
+### Basic Usage
+
+```bash
+# Drop database for current environment
+azu db:drop
+
+# Drop with force (no confirmation)
+azu db:drop --force
+```
+
+### Options
+
+| Option    | Description              | Default |
+| --------- | ------------------------ | ------- |
+| `--force` | Skip confirmation prompt | false   |
+
+### Examples
+
+```bash
+# Drop development database
+azu db:drop
+# Are you sure you want to drop database 'my_app_development'? [y/N]: y
+# Dropped database 'my_app_development'
+
+# Drop without confirmation
+azu db:drop --force
+# Dropped database 'my_app_development'
+```
+
+## azu db:seed
 
 Runs seed data to populate the database with initial data.
 
@@ -323,14 +395,14 @@ Runs seed data to populate the database with initial data.
 
 ```bash
 # Run seed data for current environment
-azu db seed
+azu db:seed
 ```
 
 ### Examples
 
 ```bash
 # Run all seed files
-azu db seed
+azu db:seed
 # Seeding database...
 # Created 10 users
 # Created 25 posts
@@ -423,7 +495,7 @@ end
 - `uuid` → `UUID`
 - `references`, `belongs_to` → Foreign key (Int64)
 
-## azu db status
+## azu db:status
 
 Shows the current migration status.
 
@@ -431,14 +503,14 @@ Shows the current migration status.
 
 ```bash
 # Show migration status
-azu db status
+azu db:status
 ```
 
 ### Examples
 
 ```bash
 # Check migration status
-azu db status
+azu db:status
 # Migration Status:
 #   [✓] 20231201000001_create_users
 #   [✓] 20231201000002_add_email_to_users
@@ -495,47 +567,46 @@ export DATABASE_URL="sqlite://./db/development.db"
 
 ```bash
 # Start new feature
-azu db migrate
+azu db:migrate
 
 # Make changes to models
 # Generate new migration
 azu generate migration add_field_to_table
 
 # Run migration
-azu db migrate
+azu db:migrate
 
 # If something goes wrong
-azu db rollback
+azu db:rollback
 
 # Reset for clean slate
-azu db reset --seed
+azu db:reset --seed
 ```
 
 ### Testing Workflow
 
 ```bash
 # Setup test database
-azu db create
-azu db migrate
+azu db:setup
 
 # Run tests
 crystal spec
 
 # Clean up
-azu db reset
+azu db:reset
 ```
 
 ### Production Workflow
 
 ```bash
 # Deploy to production
-azu db migrate
+azu db:migrate
 
 # If migration fails
-azu db rollback
+azu db:rollback
 
 # Check current status
-azu db status
+azu db:status
 ```
 
 ## Troubleshooting
@@ -567,10 +638,10 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE my_app_development TO
 
 ```bash
 # Check migration status
-azu db status
+azu db:status
 
 # Reset migrations
-azu db reset
+azu db:reset
 
 # Check migration files
 ls -la src/db/migrations/
@@ -580,7 +651,7 @@ ls -la src/db/migrations/
 
 ```bash
 # Run seed data
-azu db seed
+azu db:seed
 
 # Check seed files
 ls -la src/db/
@@ -595,7 +666,7 @@ cat src/db/seed.cr
 
 ```bash
 # Use different databases for each environment
-azu db create
+azu db:setup
 # Database name will be based on project name and environment
 ```
 
@@ -606,10 +677,10 @@ azu db create
 pg_dump my_app_production > backup.sql
 
 # Test migrations in development first
-azu db migrate
+azu db:migrate
 
 # Check migration status
-azu db status
+azu db:status
 ```
 
 ### 3. Seed Data

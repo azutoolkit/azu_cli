@@ -26,7 +26,7 @@ This command will:
 
 **Output:**
 
-```
+```text
 🚀 Creating new Azu project: my_blog
 📦 Using database: postgres
 📁 Generating project structure...
@@ -41,7 +41,7 @@ This command will:
 
 📋 Next Steps:
   cd my_blog
-  azu db create
+  azu db:create
   azu serve
 ```
 
@@ -53,7 +53,7 @@ cd my_blog
 
 Let's examine the generated project structure:
 
-```
+```text
 my_blog/
 ├── src/
 │   ├── my_blog.cr              # Main application file
@@ -79,12 +79,12 @@ my_blog/
 Create your database:
 
 ```bash
-azu db create
+azu db:create
 ```
 
 **Output:**
 
-```
+```text
 🗄️  Creating database: my_blog_development
 ✅ Database created successfully!
 ```
@@ -92,12 +92,12 @@ azu db create
 Run initial migrations:
 
 ```bash
-azu db migrate
+azu db:migrate
 ```
 
 **Output:**
 
-```
+```text
 🔄 Running migrations...
 ✅ All migrations completed successfully!
 ```
@@ -112,7 +112,7 @@ azu serve
 
 **Output:**
 
-```
+```text
 🚀 Starting Azu development server...
 📦 Compiling application...
 ✅ Compilation successful!
@@ -135,7 +135,7 @@ azu generate scaffold Post title:string content:text published:boolean
 
 **Output:**
 
-```
+```text
 🛠️  Generating scaffold: Post
    create  src/models/post.cr
    create  src/endpoints/posts/index_endpoint.cr
@@ -172,7 +172,7 @@ azu generate migration create_posts_table title:string content:text published:bo
 
 **Output:**
 
-```
+```text
 🛠️  Generating migration: create_posts_table
    create  db/migrations/20231214_120000_create_posts_table.cr
 ✅ Migration create_posts_table generated successfully!
@@ -181,12 +181,12 @@ azu generate migration create_posts_table title:string content:text published:bo
 Run the migration:
 
 ```bash
-azu db migrate
+azu db:migrate
 ```
 
 **Output:**
 
-```
+```text
 🔄 Running migrations...
    migrate  20231214_120000_create_posts_table.cr
 ✅ All migrations completed successfully!
@@ -272,7 +272,7 @@ crystal spec
 
 **Output:**
 
-```
+```text
 🧪 Running tests...
 
 Post
@@ -325,7 +325,7 @@ azu db:seed
 
 **Output:**
 
-```
+```text
 🌱 Seeding database...
 ✅ Sample data created successfully!
 ```
@@ -385,28 +385,28 @@ end
 
 Congratulations! You've successfully created your first Azu application. Here's what you can explore next:
 
-### 🎯 **Immediate Next Steps**
+### Immediate Next Steps
 
 1. **[Add Authentication](../workflows/building-web-apps.md#authentication)** - Secure your blog
 2. **[Add Real-time Features](../workflows/real-time-components.md)** - Live comments or reactions
 3. **[Create an API](../workflows/building-apis.md)** - Build a REST API for your blog
 4. **[Add Testing](../workflows/testing.md)** - Write comprehensive tests
 
-### 📚 **Learn More**
+### Learn More
 
 - **[Command Reference](../commands/README.md)** - All available CLI commands
 - **[Generators Guide](../generators/README.md)** - Detailed generator documentation
 - **[Development Workflows](../workflows/README.md)** - Common development patterns
 - **[Configuration](../configuration/README.md)** - Advanced configuration options
 
-### 🛠️ **Advanced Features**
+### Advanced Features
 
 - **[Database Relationships](../workflows/database-workflow.md#relationships)** - Model associations
 - **[Background Jobs](../workflows/building-apis.md#background-jobs)** - Async processing
 - **[Deployment](../workflows/deployment.md)** - Deploy to production
 - **[Performance Optimization](../architecture/README.md#performance)** - Scale your application
 
-### 🌟 **Community Examples**
+### Community Examples
 
 - **[Blog Tutorial](../examples/blog-tutorial.md)** - Extended blog with user authentication
 - **[API Tutorial](../examples/api-tutorial.md)** - Build a complete REST API

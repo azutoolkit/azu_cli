@@ -6,7 +6,7 @@ Welcome to the comprehensive documentation for **Azu CLI** - the command-line in
 
 Azu CLI is a powerful, developer-friendly command-line tool designed to accelerate development with the Azu Toolkit framework. It provides scaffolding, code generation, development server capabilities, and database management tools to help you build high-performance, type-safe Crystal applications quickly and efficiently.
 
-## 🚀 Key Features
+## Key Features
 
 ### **Project Scaffolding**
 
@@ -43,7 +43,7 @@ Azu CLI is a powerful, developer-friendly command-line tool designed to accelera
 - **CQL ORM**: Crystal Query Language Object-Relational Mapping
 - **Topia CLI**: Powerful command-line parsing framework
 
-## 🎯 Who Is This For?
+## Who Is This For?
 
 - **Crystal Developers** building web applications with Azu
 - **Backend Developers** creating APIs and microservices
@@ -51,7 +51,7 @@ Azu CLI is a powerful, developer-friendly command-line tool designed to accelera
 - **DevOps Engineers** deploying Crystal applications
 - **Teams** looking for consistent development workflows
 
-## 🛠️ What You Can Build
+## What You Can Build
 
 - **Web Applications**: Full-featured web apps with real-time capabilities
 - **REST APIs**: Type-safe, high-performance API services
@@ -60,7 +60,7 @@ Azu CLI is a powerful, developer-friendly command-line tool designed to accelera
 - **CLI Tools**: Command-line applications using Crystal
 - **Background Jobs**: Asynchronous job processing systems
 
-## 📋 Prerequisites
+## Prerequisites
 
 Before using Azu CLI, ensure you have:
 
@@ -69,7 +69,7 @@ Before using Azu CLI, ensure you have:
 - **Git**: For version control and project management
 - **Node.js**: (Optional) For frontend asset management
 
-## 🚦 Getting Started
+## Getting Started
 
 1. **[Install Azu CLI](getting-started/installation.md)** - Installation instructions for all platforms
 2. **[Quick Start Guide](getting-started/quick-start.md)** - Create your first Azu application in minutes
@@ -77,39 +77,39 @@ Before using Azu CLI, ensure you have:
 
 ## 📚 Documentation Sections
 
-### 🔧 **Command Reference**
+### Command Reference
 
 Comprehensive guide to all CLI commands, their options, and usage examples.
 
-### 🏗️ **Generators**
+### Generators
 
 Detailed documentation for all code generators including templates, customization, and best practices.
 
-### 🔄 **Development Workflows**
+### Development Workflows
 
 Step-by-step guides for common development scenarios and patterns.
 
-### 🏛️ **Architecture & Internals**
+### Architecture & Internals
 
 Deep dive into how Azu CLI works internally, useful for contributors and advanced users.
 
-### ⚙️ **Configuration**
+### Configuration
 
 Complete configuration reference for projects, databases, and development environments.
 
-### 📖 **Examples & Tutorials**
+### Examples & Tutorials
 
 Hands-on tutorials building real applications with Azu CLI.
 
-### 🔗 **Integration**
+### Integration
 
 How to integrate Azu CLI with other tools and frameworks in the Crystal ecosystem.
 
-### 🛠️ **Troubleshooting**
+### Troubleshooting
 
 Solutions to common issues and problems you might encounter.
 
-## 🌟 Quick Examples
+## Quick Examples
 
 ### Create a New Project
 
@@ -148,25 +148,35 @@ azu dev
 
 ```bash
 # Create and migrate database
-azu db create
-azu db migrate
+azu db:create
+azu db:migrate
 
 # Seed with sample data
-azu db seed
+azu db:seed
 ```
 
-## 🤝 Community & Support
+### OpenAPI Integration
+
+```bash
+# Generate code from OpenAPI specification
+azu openapi:generate api-spec.yaml
+
+# Export OpenAPI specification from code
+azu openapi:export --output api.yaml
+```
+
+## Community & Support
 
 - **GitHub Repository**: [azutoolkit/azu_cli](https://github.com/azutoolkit/azu_cli)
 - **Azu Toolkit Documentation**: [azutopia.gitbook.io/azu](https://azutopia.gitbook.io/azu/)
 - **Crystal Language**: [crystal-lang.org](https://crystal-lang.org/)
 - **Issues & Bug Reports**: [GitHub Issues](https://github.com/azutoolkit/azu_cli/issues)
 
-## 📄 License
+## License
 
 Azu CLI is open source software licensed under the [MIT License](https://github.com/azutoolkit/azu_cli/blob/master/LICENSE).
 
-## 🔗 Related Projects
+## Related Projects
 
 - **[Azu Web Framework](https://github.com/azutoolkit/azu)**: The core web framework
 - **[CQL ORM](https://github.com/azutoolkit/cql)**: Crystal Query Language ORM
