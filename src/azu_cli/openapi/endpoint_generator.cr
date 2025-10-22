@@ -1,5 +1,7 @@
 require "./parser"
 require "./schema_mapper"
+require "./request_generator"
+require "./response_generator"
 require "../logger"
 
 module AzuCLI
@@ -26,6 +28,10 @@ module AzuCLI
       # Generate a single endpoint file
       private def generate_endpoint_file(op_info : Parser::OperationInfo, output_dir : String, force : Bool)
         action = extract_action_from_operation(op_info)
+
+        # Generate request and response classes first
+        generate_request_and_response(op_info, action, force)
+
         file_name = "#{@resource}_#{action}_endpoint.cr"
         output_path = File.join(output_dir, file_name)
 
@@ -66,7 +72,8 @@ module AzuCLI
 
       # Generate endpoint content
       private def generate_endpoint_content(op_info : Parser::OperationInfo, action : String) : String
-        resource_class = @resource.camelcase.singularize
+        resource_class = @resource.camelcase
+        resource_singular = @resource.camelcase.singularize
         endpoint_name = "#{resource_class}::#{resource_class}#{action.camelcase}Endpoint"
         request_class = "#{resource_class}::#{resource_class}#{action.camelcase}Request"
         response_class = "#{resource_class}::#{resource_class}#{action.camelcase}Page"
@@ -89,6 +96,73 @@ module AzuCLI
           end
         end
         ENDPOINT
+      end
+
+      # Generate request and response classes for an operation
+      private def generate_request_and_response(op_info : Parser::OperationInfo, action : String, force : Bool)
+        # Extract request schema from requestBody
+        request_schema = extract_request_schema(op_info)
+
+        # Extract response schema from responses
+        response_schema = extract_response_schema(op_info)
+
+        # Generate request class
+        request_generator = RequestGenerator.new(@resource, action, request_schema, @parser)
+        request_generator.generate(force)
+
+        # Generate response class
+        response_generator = ResponseGenerator.new(@resource, action, response_schema, @parser)
+        response_generator.generate(force)
+      end
+
+      # Extract request schema from operation requestBody
+      private def extract_request_schema(op_info : Parser::OperationInfo) : Schema?
+        request_body = op_info.operation.requestBody
+        return nil unless request_body
+
+        content = request_body.content
+        return nil unless content
+
+        # Look for application/json content type
+        media_type = content["application/json"]?
+        return nil unless media_type
+
+        schema = media_type.schema
+        return nil unless schema
+
+        # If it's a reference, resolve it
+        if ref = schema.ref
+          @parser.resolve_ref(ref)
+        else
+          schema
+        end
+      end
+
+      # Extract response schema from operation responses
+      private def extract_response_schema(op_info : Parser::OperationInfo) : Schema?
+        responses = op_info.operation.responses
+        return nil unless responses
+
+        # Look for 200 response
+        response = responses["200"]?
+        return nil unless response
+
+        content = response.content
+        return nil unless content
+
+        # Look for application/json content type
+        media_type = content["application/json"]?
+        return nil unless media_type
+
+        schema = media_type.schema
+        return nil unless schema
+
+        # If it's a reference, resolve it
+        if ref = schema.ref
+          @parser.resolve_ref(ref)
+        else
+          schema
+        end
       end
     end
   end

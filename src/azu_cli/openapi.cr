@@ -10,6 +10,8 @@ require "./openapi/response_generator"
 require "./openapi/analyzer"
 require "./openapi/endpoint_extractor"
 require "./openapi/model_extractor"
+require "./openapi/request_extractor"
+require "./openapi/response_extractor"
 require "./openapi/spec_builder"
 
 module AzuCLI

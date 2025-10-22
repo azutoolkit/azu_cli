@@ -39,7 +39,7 @@ module AzuCLI
 
       # Generate request content
       private def generate_request_content : String
-        resource_class = @resource.camelcase.singularize
+        resource_class = @resource.camelcase
         request_class = "#{resource_class}::#{resource_class}#{@action.camelcase}Request"
 
         if schema = @schema

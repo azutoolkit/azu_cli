@@ -39,7 +39,7 @@ module AzuCLI
 
       # Generate response content
       private def generate_response_content : String
-        resource_class = @resource.camelcase.singularize
+        resource_class = @resource.camelcase
         response_class = "#{resource_class}::#{resource_class}#{@action.camelcase}Page"
 
         if schema = @schema

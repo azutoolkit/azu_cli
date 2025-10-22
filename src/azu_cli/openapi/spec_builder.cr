@@ -24,7 +24,11 @@ module AzuCLI
         spec.info = build_info
         spec.servers = build_servers
         spec.paths = build_paths(analysis[:endpoints].as(Array(EndpointExtractor::EndpointInfo)))
-        spec.components = build_components(analysis[:models].as(Array(ModelExtractor::ModelInfo)))
+        spec.components = build_components(
+          analysis[:models].as(Array(ModelExtractor::ModelInfo)),
+          analysis[:requests].as(Array(RequestExtractor::RequestInfo)),
+          analysis[:responses].as(Array(ResponseExtractor::ResponseInfo))
+        )
         spec.tags = build_tags(analysis[:endpoints].as(Array(EndpointExtractor::EndpointInfo)))
 
         spec
@@ -85,11 +89,16 @@ module AzuCLI
         paths
       end
 
-      # Build components from models
-      private def build_components(models : Array(ModelExtractor::ModelInfo)) : Components
+      # Build components from models, requests, and responses
+      private def build_components(
+        models : Array(ModelExtractor::ModelInfo),
+        requests : Array(RequestExtractor::RequestInfo),
+        responses : Array(ResponseExtractor::ResponseInfo)
+      ) : Components
         components = Components.new
         schemas = {} of String => Schema
 
+        # Add models
         models.each do |model|
           schema = Schema.new
           schema.type = "object"
@@ -97,6 +106,26 @@ module AzuCLI
           schema.required = TypeMapper.extract_required_fields(model.properties)
 
           schemas[model.name] = schema
+        end
+
+        # Add requests
+        requests.each do |request|
+          schema = Schema.new
+          schema.type = "object"
+          schema.properties = TypeMapper.properties_to_schemas(request.properties)
+          schema.required = TypeMapper.extract_required_fields(request.properties)
+
+          schemas[request.name] = schema
+        end
+
+        # Add responses
+        responses.each do |response|
+          schema = Schema.new
+          schema.type = "object"
+          schema.properties = TypeMapper.properties_to_schemas(response.properties)
+          schema.required = TypeMapper.extract_required_fields(response.properties)
+
+          schemas[response.name] = schema
         end
 
         components.schemas = schemas
