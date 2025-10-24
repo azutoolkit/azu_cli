@@ -1,9 +1,9 @@
 require "cql"
 
-module <%= @module_name %>::<%= @name.camelcase %>
+module <%= module_name %>::<%= @name.camelcase %>
   struct <%= @name.camelcase %>
     include CQL::ActiveRecord::Model(Int64)
-    db_context <%= @module_name %>DB, :<%= @resource_plural %>
+    db_context <%= module_name %>DB, :<%= @resource_plural %>
 
     # Attribute accessors
 <% @fields.each do |field_name, field_type| -%>

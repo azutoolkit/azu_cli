@@ -21,7 +21,7 @@ module AzuCLI
       end
 
       def model_class : String
-        "#{@module_name}::#{@module_name}Model"
+        "#{@module_name}::#{@module_name}"
       end
 
       # Get the full nested module name for the service

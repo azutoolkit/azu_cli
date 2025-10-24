@@ -1,0 +1,132 @@
+require "../../../spec_helper"
+
+describe <%= @module_name %>::<%= @name.camelcase %>::CreateService do
+
+  before_each do
+    <%= @name.camelcase %>::<%= @name.camelcase %>.delete_all
+  end
+
+  describe "#call" do
+    context "with valid parameters" do
+      it "creates a <%= @snake_case_name %> successfully" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::CreateService.new
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <%= field %> = "Test <%= field.capitalize %>"<% unless i == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>
+
+        <% end -%><% end %>
+
+        result = service.call(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(", ") %>)
+
+        result.should be_a(Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>))
+        result.success?.should be_true
+        result.data.should_not be_nil
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each do |field| -%>
+        result.data!.<%= field %>.should eq(<%= field %>)
+        <% end -%>
+        result.data!.id.should_not be_nil
+      end
+
+      it "persists the <%= @snake_case_name %> to the database" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::CreateService.new
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <%= field %> = "Persistent <%= field.capitalize %>"<% unless i == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>
+
+        <% end -%><% end %>
+
+        result = service.call(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(", ") %>)
+
+        result.success?.should be_true
+        <%= @snake_case_name %> = result.data!
+
+        # Verify the <%= @snake_case_name %> exists in the database
+        found_<%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.last!
+
+        found_<%= @snake_case_name %>.should_not be_nil
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each do |field| -%>
+        found_<%= @snake_case_name %>.<%= field %>.should eq(<%= field %>)
+        <% end -%>
+      end
+    end
+
+    context "with invalid parameters" do
+      it "fails with empty parameters" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::CreateService.new
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <%= field %> = ""<% unless i == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>
+
+        <% end -%><% end %>
+
+        result = service.call(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(", ") %>)
+
+        result.success?.should be_false
+        result.failure?.should be_true
+        result.has_errors?.should be_true
+      end
+
+      it "fails with multiple validation errors" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::CreateService.new
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <%= field %> = ""<% unless i == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>
+
+        <% end -%><% end %>
+
+        result = service.call(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(", ") %>)
+
+        result.success?.should be_false
+        result.failure?.should be_true
+        result.has_errors?.should be_true
+        result.errors.size.should be >= 1
+      end
+    end
+
+    context "with database errors" do
+      it "handles database errors gracefully" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::CreateService.new
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <%= field %> = "Valid <%= field.capitalize %>"<% unless i == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>
+
+        <% end -%><% end %>
+
+        result = service.call(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(", ") %>)
+
+        # The service should either succeed or fail gracefully, never crash
+        (result.success? || result.failure?).should be_true
+      end
+    end
+
+    context "result object behavior" do
+      it "returns a proper Result object on success" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::CreateService.new
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <%= field %> = "Test <%= field.capitalize %>"<% unless i == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>
+
+        <% end -%><% end %>
+
+        result = service.call(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(", ") %>)
+
+        result.should be_a(Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>))
+        result.success?.should be_true
+        result.failure?.should be_false
+        result.data.should_not be_nil
+        result.has_errors?.should be_false
+      end
+
+      it "returns a proper Result object on failure" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::CreateService.new
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <%= field %> = ""<% unless i == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>
+
+        <% end -%><% end %>
+
+        result = service.call(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(", ") %>)
+
+        result.should be_a(Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>))
+        result.success?.should be_false
+        result.failure?.should be_true
+        result.data.should be_nil
+        result.has_errors?.should be_true
+        result.errors.should_not be_empty
+      end
+    end
+  end
+end

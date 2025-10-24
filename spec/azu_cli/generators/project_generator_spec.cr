@@ -178,4 +178,32 @@ describe AzuCLI::Generate::Project do
       generator.github_name.should eq("johndoe")
     end
   end
+
+  it "generates spec_helper with CQL configuration" do
+    generator = AzuCLI::Generate::Project.new(
+      "myapp",
+      "MyApp",
+      "John Doe",
+      "john@example.com"
+    )
+
+    test_dir = "./tmp_test"
+    FileUtils.mkdir_p(test_dir)
+    generator.render(test_dir)
+
+    # Check spec_helper file
+    spec_helper_file = File.join(test_dir, "spec", "spec_helper.cr")
+    File.exists?(spec_helper_file).should be_true
+
+    content = File.read(spec_helper_file)
+    content.should contain("require \"spec\"")
+    content.should contain("require \"../src/myapp\"")
+    content.should contain("ENV[\"CRYSTAL_ENV\"] = \"test\"")
+    content.should contain("CQL.configure do |config|")
+    content.should contain("config.env = ENV[\"CRYSTAL_ENV\"]? || \"test\"")
+    content.should contain("end")
+
+    # Clean up
+    FileUtils.rm_rf(test_dir)
+  end
 end

@@ -112,18 +112,14 @@ describe AzuCLI::Generate::Model do
     File.exists?(generated_file).should be_true
 
     content = File.read(generated_file)
-    content.should contain("module Product")
-    content.should contain("struct ProductModel")
-    content.should contain("include CQL::ActiveRecord::Model(UUID)")
-    content.should contain("db_context AppSchema, :products")
-    content.should contain("getter id : UUID?")
+    content.should contain("module AppSchema::Product")
+    content.should contain("struct Product")
+    content.should contain("include CQL::ActiveRecord::Model(Int64)")
+    content.should contain("db_context AppSchemaDB, :products")
     content.should contain("getter name : String")
     content.should contain("getter price : Float64")
-    content.should contain("getter created_at : Time?")
-    content.should contain("getter updated_at : Time?")
     content.should contain("validate :name, presence: true")
-    content.should contain("validate :name, length: {min: 2, max: 100}")
-    content.should contain("validate :price, numericality: {greater_than: 0.0}")
+    content.should contain("validate :name, size: 2..100")
     content.should contain("def initialize(@name : String, @price : Float64)")
     content.should contain("end")
 

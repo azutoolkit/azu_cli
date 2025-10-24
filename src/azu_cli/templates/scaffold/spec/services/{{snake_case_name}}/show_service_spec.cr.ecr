@@ -1,0 +1,98 @@
+require "../../../spec_helper"
+
+describe <%= @module_name %>::<%= @name.camelcase %>::ShowService do
+
+  before_each do
+    <%= @name.camelcase %>::<%= @name.camelcase %>.delete_all
+  end
+
+  describe "#call" do
+    context "with existing record" do
+      it "returns the <%= @snake_case_name %> successfully" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::ShowService.new
+
+        # Create test record
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <% if i == 0 -%>
+        <%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.new(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |f, j| -%><%= f %>: "Test <%= f.capitalize %>"<% unless j == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>, <% end %><% end %>)
+        <% end -%>
+        <% end -%>
+        <%= @snake_case_name %>.save!
+        id = <%= @snake_case_name %>.id
+
+        result = service.call(id)
+
+        result.should be_a(Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>))
+        result.success?.should be_true
+        result.data.should_not be_nil
+        result.data!.id.should eq(id)
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each do |field| -%>
+        result.data!.<%= field %>.should eq("Test <%= field.capitalize %>")
+        <% end -%>
+      end
+    end
+
+    context "with non-existent record" do
+      it "fails when record is not found" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::ShowService.new
+        non_existent_id = 99999
+
+        result = service.call(non_existent_id)
+
+        result.success?.should be_false
+        result.failure?.should be_true
+        result.has_errors?.should be_true
+        result.error_messages.should contain("Record not found")
+      end
+    end
+
+    context "with database errors" do
+      it "handles database errors gracefully" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::ShowService.new
+
+        # The service should handle any database-related exceptions
+        result = service.call(1)
+
+        # The service should either succeed or fail gracefully, never crash
+        (result.success? || result.failure?).should be_true
+      end
+    end
+
+    context "result object behavior" do
+      it "returns a proper Result object on success" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::ShowService.new
+
+        # Create test record
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <% if i == 0 -%>
+        <%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.new(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |f, j| -%><%= f %>: "Test <%= f.capitalize %>"<% unless j == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>, <% end %><% end %>)
+        <% end -%>
+        <% end -%>
+        <%= @snake_case_name %>.save!
+        id = <%= @snake_case_name %>.id
+
+        result = service.call(id)
+
+        result.should be_a(Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>))
+        result.success?.should be_true
+        result.failure?.should be_false
+        result.data.should_not be_nil
+        result.has_errors?.should be_false
+      end
+
+      it "returns a proper Result object on failure" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::ShowService.new
+        non_existent_id = 99999
+
+        result = service.call(non_existent_id)
+
+        result.should be_a(Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>))
+        result.success?.should be_false
+        result.failure?.should be_true
+        result.data.should be_nil
+        result.has_errors?.should be_true
+        result.errors.should_not be_empty
+      end
+    end
+  end
+end

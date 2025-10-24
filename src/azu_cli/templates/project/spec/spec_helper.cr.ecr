@@ -1,2 +1,8 @@
 require "spec"
 require "../src/<%= @project %>"
+
+ENV["CRYSTAL_ENV"] = "test"
+
+CQL.configure do |config|
+  config.env = ENV["CRYSTAL_ENV"]? || "test"
+end

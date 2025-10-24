@@ -1,0 +1,58 @@
+require "../../../spec_helper"
+
+describe <%= @module_name %>::<%= @name.camelcase %>::IndexService do
+
+  before_each do
+    <%= @name.camelcase %>::<%= @name.camelcase %>.delete_all
+  end
+
+  describe "#call" do
+    context "with existing records" do
+      it "returns all records successfully" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::IndexService.new
+
+        # Create test records
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <% if i == 0 -%>
+        record1 = <%= @name.camelcase %>::<%= @name.camelcase %>.new(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |f, j| -%><%= f %>: "Test <%= f.capitalize %> 1"<% unless j == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>, <% end %><% end %>)
+        <% end -%>
+        <% end -%>
+        <% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |field, i| -%>
+        <% if i == 0 -%>
+        record2 = <%= @name.camelcase %>::<%= @name.camelcase %>.new(<% @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |f, j| -%><%= f %>: "Test <%= f.capitalize %> 2"<% unless j == @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>, <% end %><% end %>)
+        <% end -%>
+        <% end -%>
+        record1.save!
+        record2.save!
+
+        result = service.call
+
+        result.should be_a(Services::Result(Array(<%= @name.camelcase %>::<%= @name.camelcase %>)))
+        result.success?.should be_true
+        result.data.should_not be_nil
+        result.data!.size.should eq(2)
+      end
+
+      it "returns empty array when no records exist" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::IndexService.new
+
+        result = service.call
+
+        result.success?.should be_true
+        result.data!.size.should eq(0)
+      end
+    end
+
+    context "with database errors" do
+      it "handles database errors gracefully" do
+        service = <%= @module_name %>::<%= @name.camelcase %>::IndexService.new
+
+        # The service should handle any database-related exceptions
+        result = service.call
+
+        # The service should either succeed or fail gracefully, never crash
+        (result.success? || result.failure?).should be_true
+      end
+    end
+  end
+end

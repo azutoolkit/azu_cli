@@ -49,11 +49,11 @@ describe AzuCLI::Generate::Service do
   end
 
   describe "#model_class" do
-    it "generates model class name" do
+    it "generates model class name without Model suffix" do
       generator = AzuCLI::Generate::Service.new("UserService")
 
       model_class = generator.model_class
-      model_class.should eq("UserService::UserServiceModel")
+      model_class.should eq("UserService::UserService")
     end
   end
 
