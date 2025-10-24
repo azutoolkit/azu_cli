@@ -265,120 +265,197 @@ describe AzuCLI::Generate::Migration do
 
   describe "file generation" do
     it "generates a create migration file with correct content" do
-      attributes = {"name" => "string", "price" => "float64", "user_id" => "references"}
-      generator = AzuCLI::Generate::Migration.new("create_products", attributes)
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        Dir.mkdir_p("db/migrations")
 
-      # Generate the file
-      test_dir = "./tmp_test"
-      FileUtils.mkdir_p(test_dir)
-      generator.render(test_dir)
+        attributes = {"name" => "string", "price" => "float64", "user_id" => "references"}
+        generator = AzuCLI::Generate::Migration.new("create_products", attributes)
 
-      # Read the generated file
-      generated_file = File.join(test_dir, generator.migration_filename)
-      File.exists?(generated_file).should be_true
+        # Generate the file
+        generator.render(".")
 
-      content = File.read(generated_file)
-      content.should contain("require \"cql\"")
-      content.should contain("class CreateProducts < CQL::Migration")
-      content.should contain("def up")
-      content.should contain("schema.table :products do")
-      content.should contain("column :name, String")
-      content.should contain("column :price, Float64")
-      content.should contain("timestamps")
-      content.should contain("foreign_key [:user_id], references: :users")
-      content.should contain("def down")
-      content.should contain("schema.products.drop!")
+        # Read the generated file
+        generated_file = File.join("db/migrations", generator.migration_filename)
+        File.exists?(generated_file).should be_true
 
-      # Clean up
-      FileUtils.rm_rf(test_dir)
+        content = File.read(generated_file)
+        content.should contain("require \"cql\"")
+        content.should contain("class CreateProducts < CQL::Migration")
+        content.should contain("def up")
+        content.should contain("schema.table :products do")
+        content.should contain("column :name, String")
+        content.should contain("column :price, Float64")
+        content.should contain("timestamps")
+        content.should contain("foreign_key [:user_id], references: :users")
+        content.should contain("def down")
+        content.should contain("schema.products.drop!")
+      end
     end
 
     it "generates an update migration file with correct content" do
-      attributes = {"name" => "string", "price" => "float64"}
-      generator = AzuCLI::Generate::Migration.new("update_products", attributes)
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        Dir.mkdir_p("db/migrations")
 
-      # Generate the file
-      test_dir = "./tmp_test"
-      FileUtils.mkdir_p(test_dir)
-      generator.render(test_dir)
+        attributes = {"name" => "string", "price" => "float64"}
+        generator = AzuCLI::Generate::Migration.new("update_products", attributes)
 
-      # Read the generated file
-      generated_file = File.join(test_dir, generator.migration_filename)
-      File.exists?(generated_file).should be_true
+        # Generate the file
+        generator.render(".")
 
-      content = File.read(generated_file)
-      content.should contain("require \"cql\"")
-      content.should contain("class UpdateProducts < CQL::Migration")
-      content.should contain("schema.table :products do")
-      content.should contain("column :name, String")
-      content.should contain("column :price, Float64")
+        # Read the generated file
+        generated_file = File.join("db/migrations", generator.migration_filename)
+        File.exists?(generated_file).should be_true
 
-      # Clean up
-      FileUtils.rm_rf(test_dir)
+        content = File.read(generated_file)
+        content.should contain("require \"cql\"")
+        content.should contain("class UpdateProducts < CQL::Migration")
+        content.should contain("schema.table :products do")
+        content.should contain("column :name, String")
+        content.should contain("column :price, Float64")
+      end
     end
 
     it "generates a delete migration file with correct content" do
-      generator = AzuCLI::Generate::Migration.new("delete_products", {} of String => String)
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        Dir.mkdir_p("db/migrations")
 
-      # Generate the file
-      test_dir = "./tmp_test"
-      FileUtils.mkdir_p(test_dir)
-      generator.render(test_dir)
+        generator = AzuCLI::Generate::Migration.new("delete_products", {} of String => String)
 
-      # Read the generated file
-      generated_file = File.join(test_dir, generator.migration_filename)
-      File.exists?(generated_file).should be_true
+        # Generate the file
+        generator.render(".")
 
-      content = File.read(generated_file)
-      content.should contain("require \"cql\"")
-      content.should contain("class DeleteProducts < CQL::Migration")
-      content.should contain("schema.table :products do")
-      content.should contain("schema.products.drop!")
+        # Read the generated file
+        generated_file = File.join("db/migrations", generator.migration_filename)
+        File.exists?(generated_file).should be_true
 
-      # Clean up
-      FileUtils.rm_rf(test_dir)
+        content = File.read(generated_file)
+        content.should contain("require \"cql\"")
+        content.should contain("class DeleteProducts < CQL::Migration")
+        content.should contain("schema.table :products do")
+        content.should contain("schema.products.drop!")
+      end
     end
 
     it "generates an add columns migration file with correct content" do
-      attributes = {"name" => "string", "description" => "text"}
-      generator = AzuCLI::Generate::Migration.new("add_name_to_products", attributes)
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        Dir.mkdir_p("db/migrations")
 
-      # Generate the file
-      test_dir = "./tmp_test"
-      FileUtils.mkdir_p(test_dir)
-      generator.render(test_dir)
+        attributes = {"name" => "string", "description" => "text"}
+        generator = AzuCLI::Generate::Migration.new("add_name_to_products", attributes)
 
-      # Read the generated file
-      generated_file = File.join(test_dir, generator.migration_filename)
-      File.exists?(generated_file).should be_true
+        # Generate the file
+        generator.render(".")
 
-      content = File.read(generated_file)
-      content.should contain("require \"cql\"")
-      content.should contain("class AddProducts < CQL::Migration")
-      content.should contain("schema.table :products do")
-      content.should contain("column :name, String")
-      content.should contain("column :description, String")
+        # Read the generated file
+        generated_file = File.join("db/migrations", generator.migration_filename)
+        File.exists?(generated_file).should be_true
 
-      # Clean up
-      FileUtils.rm_rf(test_dir)
+        content = File.read(generated_file)
+        content.should contain("require \"cql\"")
+        content.should contain("class AddProducts < CQL::Migration")
+        content.should contain("schema.table :products do")
+        content.should contain("column :name, String")
+        content.should contain("column :description, String")
+      end
     end
   end
 
   it "handles timestamps correctly" do
-    attributes = {"name" => "string"}
-    generator = AzuCLI::Generate::Migration.new("User", attributes, timestamps: false)
+    TestHelpers::TestSetup.with_temp_project do |temp_project|
+      temp_project.create_shard_yml
+      Dir.mkdir_p("db/migrations")
 
-    # Generate the file
-    test_dir = "./tmp_test"
-    FileUtils.mkdir_p(test_dir)
-    generator.render(test_dir)
+      attributes = {"name" => "string"}
+      generator = AzuCLI::Generate::Migration.new("User", attributes, timestamps: false)
 
-    # Read the generated file
-    generated_file = File.join(test_dir, generator.migration_filename)
-    content = File.read(generated_file)
-    content.should_not contain("t.timestamps")
+      # Generate the file
+      generator.render(".")
 
-    # Clean up
-    FileUtils.rm_rf(test_dir)
+      # Read the generated file
+      generated_file = File.join("db/migrations", generator.migration_filename)
+      content = File.read(generated_file)
+      content.should_not contain("t.timestamps")
+    end
+  end
+
+  describe "migration file placement" do
+    it "places migration files in correct directory" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        Dir.mkdir_p("db/migrations")
+
+        generator = AzuCLI::Generate::Migration.new("create_users", {} of String => String)
+        generator.render(".")
+
+        # Check that file was created in correct location
+        generated_file = File.join("db/migrations", generator.migration_filename)
+        File.exists?(generated_file).should be_true
+      end
+    end
+
+    it "creates migrations directory if it doesn't exist" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+
+        generator = AzuCLI::Generate::Migration.new("create_users", {} of String => String)
+        generator.render(".")
+
+        # Check that directory was created
+        Dir.exists?("db/migrations").should be_true
+
+        # Check that file was created
+        generated_file = File.join("db/migrations", generator.migration_filename)
+        File.exists?(generated_file).should be_true
+      end
+    end
+  end
+
+  describe "timestamp generation" do
+    it "generates unique timestamps for different migrations" do
+      generator1 = AzuCLI::Generate::Migration.new("create_users", {} of String => String)
+      sleep(1) # Ensure different timestamp
+      generator2 = AzuCLI::Generate::Migration.new("create_products", {} of String => String)
+
+      generator1.timestamp.should_not eq(generator2.timestamp)
+    end
+
+    it "generates timestamp in correct format" do
+      generator = AzuCLI::Generate::Migration.new("create_users", {} of String => String)
+      timestamp = generator.timestamp
+
+      timestamp.size.should eq(14) # YYYYMMDDHHMMSS
+      timestamp.should match(/^\d{14}$/)
+    end
+  end
+
+  describe "foreign key handling" do
+    it "handles references type correctly" do
+      attributes = {"user_id" => "references", "category_id" => "references"}
+      generator = AzuCLI::Generate::Migration.new("create_posts", attributes)
+
+      # Test that references are handled properly
+      generator.attributes["user_id"].should eq("references")
+      generator.attributes["category_id"].should eq("references")
+    end
+
+    it "generates foreign key constraints" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        Dir.mkdir_p("db/migrations")
+
+        attributes = {"user_id" => "references", "category_id" => "references"}
+        generator = AzuCLI::Generate::Migration.new("create_posts", attributes)
+        generator.render(".")
+
+        generated_file = File.join("db/migrations", generator.migration_filename)
+        content = File.read(generated_file)
+        content.should contain("foreign_key [:user_id], references: :users")
+        content.should contain("foreign_key [:category_id], references: :categories")
+      end
+    end
   end
 end

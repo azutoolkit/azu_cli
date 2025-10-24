@@ -1,4 +1,5 @@
 require "../../spec_helper"
+require "../../support/test_helpers"
 
 describe AzuCLI::Generate::Job do
   describe "#initialize" do
@@ -259,6 +260,324 @@ describe AzuCLI::Generate::Job do
         content.should contain("@sizes.each { |item| Log.info { \"Processing item: \"+item.to_s } }")
       ensure
         FileUtils.rm_rf(temp_dir)
+      end
+    end
+  end
+
+  describe "enhanced job generator testing" do
+    describe "file generation with proper structure" do
+      it "generates job files in correct directory" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob")
+          generator.render(".")
+
+          # Check that job file was created in correct location
+          job_file = "src/jobs/email_job.cr"
+          File.exists?(job_file).should be_true
+        end
+      end
+
+      it "creates jobs directory if it doesn't exist" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+
+          generator = AzuCLI::Generate::Job.new("EmailJob")
+          generator.render(".")
+
+          # Check that directory was created
+          Dir.exists?("src/jobs").should be_true
+
+          # Check that file was created
+          File.exists?("src/jobs/email_job.cr").should be_true
+        end
+      end
+
+      it "handles nested job names correctly" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("UserNotificationJob")
+          generator.render(".")
+
+          # Check that snake_case is used for filenames
+          File.exists?("src/jobs/user_notification_job.cr").should be_true
+
+          content = File.read("src/jobs/user_notification_job.cr")
+          content.should contain("struct UserNotificationJob")
+        end
+      end
+    end
+
+    describe "job configuration options" do
+      it "generates job with custom queue" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob", {} of String => String, "high_priority")
+          generator.render(".")
+
+          job_file = "src/jobs/email_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("@queue = \"high_priority\"")
+        end
+      end
+
+      it "generates job with custom retries" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob", {} of String => String, "default", 5)
+          generator.render(".")
+
+          job_file = "src/jobs/email_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("@retries = 5")
+        end
+      end
+
+      it "generates job with custom expiration" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob", {} of String => String, "default", 3, "2.hours")
+          generator.render(".")
+
+          job_file = "src/jobs/email_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("@expires = 2.hours.total_seconds.to_i")
+        end
+      end
+    end
+
+    describe "job parameter handling" do
+      it "handles complex parameter types" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          parameters = {
+            "user_id"    => "Int64",
+            "email"      => "String",
+            "data"       => "Hash(String, String)",
+            "tags"       => "Array(String)",
+            "created_at" => "Time",
+          }
+
+          generator = AzuCLI::Generate::Job.new("DataProcessingJob", parameters)
+          generator.render(".")
+
+          job_file = "src/jobs/data_processing_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("@user_id : Int64")
+          content.should contain("@email : String")
+          content.should contain("@data : Hash(String, String)")
+          content.should contain("@tags : Array(String)")
+          content.should contain("@created_at : Time")
+        end
+      end
+
+      it "handles optional parameters correctly" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          parameters = {"user_id" => "Int64", "description" => "String?"}
+          generator = AzuCLI::Generate::Job.new("OptionalJob", parameters)
+          generator.render(".")
+
+          job_file = "src/jobs/optional_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("@user_id : Int64")
+          content.should contain("@description : String?")
+        end
+      end
+
+      it "generates proper parameter list for job struct" do
+        parameters = {"user_id" => "Int64", "email" => "String", "priority" => "Int32"}
+        generator = AzuCLI::Generate::Job.new("TestJob", parameters)
+
+        param_list = generator.constructor_params
+        param_list.should contain("@user_id : Int64")
+        param_list.should contain("@email : String")
+        param_list.should contain("@priority : Int32")
+      end
+    end
+
+    describe "job execution logic" do
+      it "generates job with proper execution method" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob")
+          generator.render(".")
+
+          job_file = "src/jobs/email_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("def perform")
+          content.should contain("# Add your job logic here")
+        end
+      end
+
+      it "generates job with error handling" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob")
+          generator.render(".")
+
+          job_file = "src/jobs/email_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("rescue ex : Exception")
+          content.should contain("Log.error")
+        end
+      end
+
+      it "generates job with logging" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob")
+          generator.render(".")
+
+          job_file = "src/jobs/email_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("Log.info")
+          content.should contain("Log.error")
+        end
+      end
+    end
+
+    describe "job inheritance and includes" do
+      it "includes proper JoobQ job inheritance" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob")
+          generator.render(".")
+
+          job_file = "src/jobs/email_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("include JoobQ::Job")
+          content.should contain("struct EmailJob")
+        end
+      end
+
+      it "includes proper logging module" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("EmailJob")
+          generator.render(".")
+
+          job_file = "src/jobs/email_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("require \"log\"")
+          content.should contain("Log")
+        end
+      end
+    end
+
+    describe "job scheduling and timing" do
+      it "handles different expiration formats" do
+        generator = AzuCLI::Generate::Job.new("TestJob")
+
+        generator.expiration_seconds.should eq("1.hour.total_seconds.to_i")
+        # Test different expiration times by creating new generators
+        generator_30min = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "30.minutes")
+        generator_30min.expiration_seconds.should eq("30.minutes.total_seconds.to_i")
+
+        generator_1day = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "1.day")
+        generator_1day.expiration_seconds.should eq("1.days.total_seconds.to_i")
+      end
+
+      it "generates job with scheduling information" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("ScheduledJob", {} of String => String, "default", 3, "1.hour")
+          generator.render(".")
+
+          job_file = "src/jobs/scheduled_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("@queue = \"default\"")
+          content.should contain("@retries = 3")
+          content.should contain("@expires = 1.hour.total_seconds.to_i")
+        end
+      end
+    end
+
+    describe "job testing support" do
+      it "generates job with test-friendly structure" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          generator = AzuCLI::Generate::Job.new("TestableJob")
+          generator.render(".")
+
+          job_file = "src/jobs/testable_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("struct TestableJob")
+          content.should contain("def perform")
+          content.should contain("include JoobQ::Job")
+        end
+      end
+
+      it "generates job with proper initialization" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+          Dir.mkdir_p("src/jobs")
+
+          parameters = {"user_id" => "Int64", "email" => "String"}
+          generator = AzuCLI::Generate::Job.new("TestableJob", parameters)
+          generator.render(".")
+
+          job_file = "src/jobs/testable_job.cr"
+          content = File.read(job_file)
+
+          content.should contain("def initialize(@user_id : Int64, @email : String)")
+        end
       end
     end
   end

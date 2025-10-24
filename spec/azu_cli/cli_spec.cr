@@ -1,5 +1,5 @@
-require "../../spec_helper"
-require "../../support/test_helpers"
+require "../spec_helper"
+require "../support/test_helpers"
 
 describe AzuCLI::CLI do
   describe "#initialize" do
@@ -120,7 +120,7 @@ describe AzuCLI::CLI do
 
       cli.@commands.has_key?("serve").should be_true
       cli.@commands.has_key?("server").should be_true # Alias
-      cli.@commands.has_key?("s").should be_true # Short alias
+      cli.@commands.has_key?("s").should be_true      # Short alias
     end
 
     it "registers job queue commands" do

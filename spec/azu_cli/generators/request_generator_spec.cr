@@ -1,4 +1,5 @@
 require "../../spec_helper"
+require "../../support/test_helpers"
 require "teeplate"
 
 describe AzuCLI::Generate::Request do
@@ -129,5 +130,243 @@ describe AzuCLI::Generate::Request::Field do
     field = AzuCLI::Generate::Request::Field.new("price", "Float64", "float64")
 
     field.original_type.should eq("float64")
+  end
+end
+
+describe "enhanced Request generator API/Web mode testing" do
+  describe "API mode request generation" do
+    it "generates API request files with correct content" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"name" => "string", "email" => "string"}
+        generator = AzuCLI::Generate::Request.new("myapp", "User", "create", attributes)
+        generator.render(".")
+
+        # Check that request file was created
+        request_file = "src/requests/user_create_request.cr"
+        File.exists?(request_file).should be_true
+
+        content = File.read(request_file)
+        content.should contain("class User::UserCreateRequest")
+        content.should contain("property name : String")
+        content.should contain("property email : String")
+        content.should contain("include JSON::Serializable")
+      end
+    end
+
+    it "generates API request with validation" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"name" => "string", "email" => "string", "age" => "int32"}
+        generator = AzuCLI::Generate::Request.new("myapp", "User", "create", attributes)
+        generator.render(".")
+
+        request_file = "src/requests/user_create_request.cr"
+        content = File.read(request_file)
+
+        content.should contain("property name : String")
+        content.should contain("property email : String")
+        content.should contain("property age : Int32")
+        content.should contain("include JSON::Serializable")
+      end
+    end
+  end
+
+  describe "Web mode request generation" do
+    it "generates Web request files with correct content" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"title" => "string", "content" => "text"}
+        generator = AzuCLI::Generate::Request.new("myapp", "Post", "create", attributes)
+        generator.render(".")
+
+        # Check that request file was created
+        request_file = "src/requests/post_create_request.cr"
+        File.exists?(request_file).should be_true
+
+        content = File.read(request_file)
+        content.should contain("class Post::PostCreateRequest")
+        content.should contain("property title : String")
+        content.should contain("property content : String")
+        content.should contain("include JSON::Serializable")
+      end
+    end
+
+    it "generates Web request with form validation" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"title" => "string", "content" => "text", "published" => "bool"}
+        generator = AzuCLI::Generate::Request.new("myapp", "Post", "update", attributes)
+        generator.render(".")
+
+        request_file = "src/requests/post_update_request.cr"
+        content = File.read(request_file)
+
+        content.should contain("property title : String")
+        content.should contain("property content : String")
+        content.should contain("property published : Bool")
+        content.should contain("include JSON::Serializable")
+      end
+    end
+  end
+
+  describe "request file structure" do
+    it "creates proper directory structure for requests" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+
+        attributes = {"name" => "string"}
+        generator = AzuCLI::Generate::Request.new("myapp", "User", "create", attributes)
+        generator.render(".")
+
+        # Check directory structure
+        Dir.exists?("src/requests").should be_true
+        File.exists?("src/requests/user_create_request.cr").should be_true
+      end
+    end
+
+    it "handles nested resource names correctly" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"name" => "string"}
+        generator = AzuCLI::Generate::Request.new("myapp", "UserProfile", "create", attributes)
+        generator.render(".")
+
+        # Check that snake_case is used for filenames
+        File.exists?("src/requests/user_profile_create_request.cr").should be_true
+
+        content = File.read("src/requests/user_profile_create_request.cr")
+        content.should contain("class UserProfile::UserProfileCreateRequest")
+      end
+    end
+  end
+
+  describe "field type mapping" do
+    it "maps common field types correctly" do
+      attributes = {
+        "name"       => "string",
+        "age"        => "int32",
+        "price"      => "float64",
+        "active"     => "bool",
+        "created_at" => "time",
+      }
+
+      generator = AzuCLI::Generate::Request.new("myapp", "Product", "create", attributes)
+      generator.render(".")
+
+      request_file = "src/requests/product_create_request.cr"
+      content = File.read(request_file)
+
+      content.should contain("property name : String")
+      content.should contain("property age : Int32")
+      content.should contain("property price : Float64")
+      content.should contain("property active : Bool")
+      content.should contain("property created_at : Time")
+    end
+
+    it "handles references type correctly" do
+      attributes = {"user_id" => "references", "category_id" => "references"}
+      generator = AzuCLI::Generate::Request.new("myapp", "Post", "create", attributes)
+      generator.render(".")
+
+      request_file = "src/requests/post_create_request.cr"
+      content = File.read(request_file)
+
+      content.should contain("property user_id : Int64")
+      content.should contain("property category_id : Int64")
+    end
+  end
+
+  describe "request validation" do
+    it "generates request with validation methods" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"name" => "string", "email" => "string"}
+        generator = AzuCLI::Generate::Request.new("myapp", "User", "create", attributes)
+        generator.render(".")
+
+        request_file = "src/requests/user_create_request.cr"
+        content = File.read(request_file)
+
+        content.should contain("def valid?")
+        content.should contain("def errors")
+      end
+    end
+
+    it "generates validation for required fields" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"name" => "string", "email" => "string", "age" => "int32"}
+        generator = AzuCLI::Generate::Request.new("myapp", "User", "create", attributes)
+        generator.render(".")
+
+        request_file = "src/requests/user_create_request.cr"
+        content = File.read(request_file)
+
+        content.should contain("name.present?")
+        content.should contain("email.present?")
+      end
+    end
+  end
+
+  describe "JSON serialization" do
+    it "includes JSON serialization for API requests" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"name" => "string", "email" => "string"}
+        generator = AzuCLI::Generate::Request.new("myapp", "User", "create", attributes)
+        generator.render(".")
+
+        request_file = "src/requests/user_create_request.cr"
+        content = File.read(request_file)
+
+        content.should contain("include JSON::Serializable")
+        content.should contain("property name : String")
+        content.should contain("property email : String")
+      end
+    end
+
+    it "handles optional fields correctly" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/requests")
+
+        attributes = {"name" => "string", "description" => "string?"}
+        generator = AzuCLI::Generate::Request.new("myapp", "Product", "create", attributes)
+        generator.render(".")
+
+        request_file = "src/requests/product_create_request.cr"
+        content = File.read(request_file)
+
+        content.should contain("property name : String")
+        content.should contain("property description : String?")
+      end
+    end
   end
 end

@@ -477,7 +477,7 @@ describe AzuCLI::Commands::Generate do
         "model", "endpoint", "service", "request", "contract", "page",
         "job", "joobq", "middleware", "migration", "data:migration", "data_migration",
         "seed", "component", "validator", "response", "template", "scaffold",
-        "mailer", "channel", "auth", "authentication", "api_resource", "api-resource"
+        "mailer", "channel", "auth", "authentication", "api_resource", "api-resource",
       ]
 
       supported_generators.each do |generator_type|

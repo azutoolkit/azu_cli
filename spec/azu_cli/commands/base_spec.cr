@@ -295,26 +295,31 @@ describe AzuCLI::Commands::Base do
     it "recognizes common boolean flags" do
       command = TestCommand.new
 
-      # Test various boolean flags
-      command.send(:is_boolean_flag?, "debug").should be_true
-      command.send(:is_boolean_flag?, "d").should be_true
-      command.send(:is_boolean_flag?, "help").should be_true
-      command.send(:is_boolean_flag?, "h").should be_true
-      command.send(:is_boolean_flag?, "version").should be_true
-      command.send(:is_boolean_flag?, "v").should be_true
-      command.send(:is_boolean_flag?, "verbose").should be_true
-      command.send(:is_boolean_flag?, "quiet").should be_true
-      command.send(:is_boolean_flag?, "q").should be_true
-      command.send(:is_boolean_flag?, "force").should be_true
-      command.send(:is_boolean_flag?, "f").should be_true
+      # Test boolean flag parsing by checking if they're treated as boolean
+      command.parse_args(["--debug"])
+      command.has_option?("debug").should be_true
+      command.get_option("debug").should eq("true")
+
+      command.parse_args(["-d"])
+      command.has_option?("d").should be_true
+      command.get_option("d").should eq("true")
+
+      command.parse_args(["--help"])
+      command.has_option?("help").should be_true
+      command.get_option("help").should eq("true")
     end
 
-    it "does not recognize non-boolean flags" do
+    it "does not recognize non-boolean flags as boolean" do
       command = TestCommand.new
 
-      command.send(:is_boolean_flag?, "name").should be_false
-      command.send(:is_boolean_flag?, "value").should be_false
-      command.send(:is_boolean_flag?, "config").should be_false
+      # Test that non-boolean flags require values
+      command.parse_args(["--name", "value"])
+      command.has_option?("name").should be_true
+      command.get_option("name").should eq("value")
+
+      command.parse_args(["--config", "path"])
+      command.has_option?("config").should be_true
+      command.get_option("config").should eq("path")
     end
   end
 

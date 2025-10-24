@@ -4,6 +4,9 @@ require "cadmium_inflector"
 require "teeplate"
 require "topia"
 
+# Load test helpers
+require "./support/test_helpers"
+
 # Load only the specific modules we need for testing
 require "../src/azu_cli"
 require "../src/azu_cli/commands/base"

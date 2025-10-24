@@ -1,4 +1,5 @@
 require "../../spec_helper"
+require "../../support/test_helpers"
 require "teeplate"
 
 describe AzuCLI::Generate::Endpoint do
@@ -227,6 +228,105 @@ describe AzuCLI::Generate::Endpoint do
 
       web_generator.response_type.should eq("User::UserPage")
       api_generator.response_type.should eq("User::UserResponse")
+    end
+  end
+
+  describe "enhanced API/Web mode testing" do
+    it "handles API project type correctly" do
+      generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
+      generator.endpoint_type.should eq("api")
+    end
+
+    it "handles Web project type correctly" do
+      generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
+      generator.endpoint_type.should eq("web")
+    end
+
+    it "generates different full paths for API and Web" do
+      api_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
+      web_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
+
+      api_generator.full_path("index").should eq("/api/users")
+      web_generator.full_path("index").should eq("/users")
+    end
+
+    it "generates scaffold components correctly for API" do
+      generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api", true)
+      components = generator.scaffold_components
+      components.should eq(["request", "response"])
+    end
+
+    it "generates scaffold components correctly for Web" do
+      generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web", true)
+      components = generator.scaffold_components
+      components.should eq(["request", "page"])
+    end
+
+    it "handles nested resource names correctly" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/endpoints")
+
+        generator = AzuCLI::Generate::Endpoint.new("UserProfile", ["index"], "api")
+        generator.render(".")
+
+        # Check that snake_case is used for filenames
+        File.exists?("src/endpoints/user_profile_index_endpoint.cr").should be_true
+
+        content = File.read("src/endpoints/user_profile_index_endpoint.cr")
+        content.should contain("class UserProfile::UserProfileIndexEndpoint")
+      end
+    end
+
+    it "creates proper directory structure for endpoints" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+
+        generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
+        generator.render(".")
+
+        # Check directory structure
+        Dir.exists?("src/endpoints").should be_true
+        File.exists?("src/endpoints/user_index_endpoint.cr").should be_true
+      end
+    end
+
+    it "generates all standard RESTful actions for API" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/endpoints")
+
+        actions = ["index", "show", "create", "update", "destroy"]
+        generator = AzuCLI::Generate::Endpoint.new("User", actions, "api")
+        generator.render(".")
+
+        # Check all action files were created
+        actions.each do |action|
+          file_path = "src/endpoints/user_#{action}_endpoint.cr"
+          File.exists?(file_path).should be_true
+        end
+      end
+    end
+
+    it "generates all standard RESTful actions for Web" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        temp_project.create_src_dir
+        Dir.mkdir_p("src/endpoints")
+
+        actions = ["index", "show", "new", "create", "edit", "update", "destroy"]
+        generator = AzuCLI::Generate::Endpoint.new("User", actions, "web")
+        generator.render(".")
+
+        # Check all action files were created
+        actions.each do |action|
+          file_path = "src/endpoints/user_#{action}_endpoint.cr"
+          File.exists?(file_path).should be_true
+        end
+      end
     end
   end
 end
