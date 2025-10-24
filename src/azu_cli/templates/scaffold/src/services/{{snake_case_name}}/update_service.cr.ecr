@@ -1,0 +1,29 @@
+require "../result"
+
+module <%= @name.camelcase %>
+  class UpdateService
+    def call(id : Int64, <%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.map { |field| "#{field} : #{crystal_type(@fields[field])}" }.join(", ") %>) : Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>)
+      Log.info { "Updating <%= @snake_case_name %> with ID: #{id}" }
+
+      <%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.find(id)
+
+      if <%= @snake_case_name %>.update({<%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.map { |field| "#{field}: #{field}" }.join(", ") %>})
+        Log.info { "Successfully updated <%= @snake_case_name %> with ID: #{id}" }
+        Services::Result.success(<%= @snake_case_name %>)
+      else
+        Log.warn { "Failed to update <%= @snake_case_name %>: #{<%= @snake_case_name %>.errors.to_a.map(&.message).join(", ")}" }
+        Services::Result.failure(<%= @snake_case_name %>.errors)
+      end
+    rescue CQL::RecordNotFound
+      Log.warn { "<%= @name.camelcase %> with ID #{id} not found" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "Record not found")
+      Services::Result.failure(errors)
+    rescue ex
+      Log.error(exception: ex) { "Error updating <%= @snake_case_name %> with ID #{id}" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: #{ex.message}")
+      Services::Result.failure(errors)
+    end
+  end
+end

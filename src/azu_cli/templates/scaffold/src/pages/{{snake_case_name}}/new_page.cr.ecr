@@ -1,0 +1,21 @@
+module <%= @module_name %>
+  struct <%= @name.camelcase %>::NewPage
+    include Azu::Response
+    include Azu::Templates::Renderable
+
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>::<%= @name.camelcase %>? = nil,
+                   @csrf_token : String = "",
+                   @csrf_tag : String = "",
+                   @csrf_metatag : String = "")
+    end
+
+    def render
+      view data: {
+        "<%= @resource_singular %>"         => @<%= @resource_singular %>,
+        "csrf_token"   => @csrf_token,
+        "csrf_tag"     => @csrf_tag,
+        "csrf_metatag" => @csrf_metatag,
+      }
+    end
+  end
+end

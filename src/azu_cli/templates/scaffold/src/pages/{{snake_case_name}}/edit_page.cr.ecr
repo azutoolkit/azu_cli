@@ -1,0 +1,53 @@
+module <%= @module_name %>
+  struct <%= @name.camelcase %>::EditPage
+    include Azu::Response
+    include Azu::Templates::Renderable
+
+    def initialize(@<%= @resource_singular %> : <%= @name.camelcase %>::<%= @name.camelcase %>? = nil,
+                   @csrf_token : String = "",
+                   @csrf_tag : String = "",
+                   @csrf_metatag : String = "")
+    end
+
+    def render
+      view data: {
+        "<%= @resource_singular %>" => <%= @resource_singular %>_to_hash,
+        "csrf_token"   => @csrf_token,
+        "csrf_tag"     => @csrf_tag,
+        "csrf_metatag" => @csrf_metatag,
+      }
+    end
+
+    def <%= @resource_singular %>_to_hash : Hash(String, String)
+      return {} of String => String if @<%= @resource_singular %>.nil?
+
+      resource = @<%= @resource_singular %>.not_nil!
+      {
+<% @fields.each do |field_name, field_type| -%>
+        "<%= field_name %>" => safe_to_s(resource.<%= field_name %>),
+<% end -%>
+      }
+    end
+
+    # Safely convert any value to string, handling nil and complex types
+    private def safe_to_s(value : String) : String
+      value
+    end
+
+    private def safe_to_s(value : Bool) : String
+      value ? "true" : "false"
+    end
+
+    private def safe_to_s(value : Time) : String
+      value.to_s("%Y-%m-%d %H:%M:%S")
+    end
+
+    private def safe_to_s(value : Nil) : String
+      ""
+    end
+
+    private def safe_to_s(value) : String
+      value.to_s
+    end
+  end
+end

@@ -7,7 +7,7 @@ describe AzuCLI::OpenAPI::RequestGenerator do
       schema.type = "object"
       schema.properties = {
         "name" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
-        "age" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" }
+        "age"  => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" },
       }
       schema.required = ["name"]
 
@@ -69,7 +69,7 @@ describe AzuCLI::OpenAPI::RequestGenerator do
         schema.type = "object"
         schema.properties = {
           "name" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
-          "age" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" }
+          "age"  => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" },
         }
         schema.required = ["name"]
 

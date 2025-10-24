@@ -1,23 +1,30 @@
 require "cql"
 
-module <%= @name.camelcase %>
-  struct <%= model_class_name %>
-    <%= include_statement %>
-    <%= db_context_declaration %>
+module <%= @module_name %>::<%= @name.camelcase %>
+  struct <%= @name.camelcase %>
+    include CQL::ActiveRecord::Model(Int64)
+    db_context <%= @module_name %>DB, :<%= @resource_plural %>
 
     # Attribute accessors
-    <%= getter_declarations %>
+<% @fields.each do |field_name, field_type| -%>
+    getter <%= field_name %> : <%= crystal_type(field_type) %>
+<% end %>
 
-<% if has_validations? -%>
     # Validations
-    <%= validation_declarations %>
+<% @fields.each do |field_name, field_type| -%>
+<% if field_name == "title" || field_name == "name" -%>
+    validate :<%= field_name %>, presence: true
+    validate :<%= field_name %>, size: 2..100
+<% elsif field_name == "body" || field_name == "content" || field_name == "description" -%>
+    validate :<%= field_name %>, presence: true
+    validate :<%= field_name %>, size: 2..100
+<% end -%>
 <% end %>
 
     # Constructor
     def initialize(<% @fields.reject { |k, v| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |(field_name, field_type), i| %>@<%= field_name %> : <%= crystal_type(field_type) %><% unless i == @fields.reject { |k, v| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>, <% end %><% end %>)
     end
 
-<% if has_scopes? -%>
     # Scopes
 <% @fields.each do |field_name, field_type| -%>
 <% if field_type == "string" -%>
@@ -27,11 +34,5 @@ module <%= @name.camelcase %>
 <% if @fields.has_key?("published") -%>
     scope :published, -> { where(published: true) }
 <% end -%>
-<% end %>
-
-<% if has_associations? -%>
-    # Associations
-    <%= association_declarations %>
-<% end %>
   end
 end

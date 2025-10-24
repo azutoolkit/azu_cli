@@ -1,0 +1,18 @@
+require "../result"
+
+module <%= @name.camelcase %>
+  class IndexService
+    def call : Services::Result(Array(<%= @name.camelcase %>::<%= @name.camelcase %>))
+      Log.info { "Fetching all <%= @snake_case_name.pluralize %>" }
+
+      records = <%= @name.camelcase %>::<%= @name.camelcase %>.all
+      Log.info { "Successfully fetched #{records.size} <%= @snake_case_name.pluralize %>" }
+      Services::Result.success(records.to_a)
+    rescue ex
+      Log.error(exception: ex) { "Error fetching <%= @snake_case_name.pluralize %>" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: #{ex.message}")
+      Services::Result.failure(errors)
+    end
+  end
+end

@@ -111,7 +111,7 @@ module AzuCLI
           suggestion = "Use block conditionals instead: {% if #{condition} %}{{ #{variable} }}{% endif %}"
           result.add_error(ValidationError.new(
             line_number,
-            line.index(match[0]).not_nil! + 1,
+            line.index!(match[0]) + 1,
             "Invalid ternary operator syntax: '#{match[0]}'",
             suggestion
           ))
@@ -126,7 +126,7 @@ module AzuCLI
           suggestion = "Use block conditionals instead: {% if #{condition} %}{{ #{variable} }}{% else %}{{ #{default} }}{% endif %}"
           result.add_error(ValidationError.new(
             line_number,
-            line.index(match[0]).not_nil! + 1,
+            line.index!(match[0]) + 1,
             "Invalid ternary operator with else: '#{match[0]}'",
             suggestion
           ))
@@ -141,7 +141,7 @@ module AzuCLI
           suggestion = "Use variable instead: {{ #{function_name} }}"
           result.add_error(ValidationError.new(
             line_number,
-            line.index(match[0]).not_nil! + 1,
+            line.index!(match[0]) + 1,
             "Function call in template expression: '#{match[0]}'",
             suggestion
           ))
@@ -154,7 +154,7 @@ module AzuCLI
           suggestion = "Function calls are not supported in Jinja expressions. Use variables instead."
           result.add_error(ValidationError.new(
             line_number,
-            line.index(match[0]).not_nil! + 1,
+            line.index!(match[0]) + 1,
             "Function call with parameters: '#{match[0]}'",
             suggestion
           ))
@@ -167,7 +167,7 @@ module AzuCLI
           suggestion = "Use variable instead: {{ csrf_token }}"
           result.add_warning(ValidationError.new(
             line_number,
-            line.index("csrf_token()").not_nil! + 1,
+            line.index!("csrf_token()") + 1,
             "CSRF token function call detected",
             suggestion
           ))
@@ -178,7 +178,7 @@ module AzuCLI
           # This is a warning, not an error, as the block might be closed on another line
           result.add_warning(ValidationError.new(
             line_number,
-            line.index("{% if").not_nil! + 1,
+            line.index!("{% if") + 1,
             "If block opened but not closed on same line",
             "Ensure {% endif %} is present to close the block"
           ))

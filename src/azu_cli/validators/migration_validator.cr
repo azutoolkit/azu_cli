@@ -167,7 +167,7 @@ module AzuCLI
 
       # Get migration file for version
       def migration_file_for_version(version : Int64) : String?
-        @migration_files.find { |file| file.includes?("#{version}_") }
+        @migration_files.find(&.includes?("#{version}_"))
       end
 
       # Get migration class name for version

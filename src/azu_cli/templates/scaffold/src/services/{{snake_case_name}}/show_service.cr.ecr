@@ -1,0 +1,23 @@
+require "../result"
+
+module <%= @name.camelcase %>
+  class ShowService
+    def call(id : Int64) : Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>)
+      Log.info { "Fetching <%= @snake_case_name %> with ID: #{id}" }
+
+      <%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.find(id)
+      Log.info { "Successfully found <%= @snake_case_name %>" }
+      Services::Result.success(<%= @snake_case_name %>)
+    rescue CQL::RecordNotFound
+      Log.warn { "<%= @name.camelcase %> with ID #{id} not found" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "Record not found")
+      Services::Result.failure(errors)
+    rescue ex
+      Log.error(exception: ex) { "Error fetching <%= @snake_case_name %> with ID #{id}" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: #{ex.message}")
+      Services::Result.failure(errors)
+    end
+  end
+end

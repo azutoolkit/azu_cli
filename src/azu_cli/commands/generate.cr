@@ -925,13 +925,13 @@ SUMMARY
 
         if error_count > 0
           Logger.error("Template validation failed with #{error_count} errors")
-          return error("Template validation failed")
+          error("Template validation failed")
         elsif warning_count > 0
           Logger.warn("Template validation completed with #{warning_count} warnings")
-          return success("Template validation completed with warnings")
+          success("Template validation completed with warnings")
         else
           Logger.info("All templates are valid")
-          return success("Template validation passed")
+          success("Template validation passed")
         end
       end
 

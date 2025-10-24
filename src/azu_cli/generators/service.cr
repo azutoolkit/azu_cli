@@ -50,7 +50,7 @@ module AzuCLI
       # Generate constructor parameters for model
       def constructor_params : String
         params = [] of String
-        @attributes.each do |field, type|
+        @attributes.each do |field, _|
           params << "#{field}: #{field}"
         end
         params.join(", ")
@@ -59,7 +59,7 @@ module AzuCLI
       # Generate update parameters hash
       def update_params : String
         params = [] of String
-        @attributes.each do |field, type|
+        @attributes.each do |field, _|
           params << "#{field}: #{field}"
         end
         "{#{params.join(", ")}}"

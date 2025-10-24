@@ -7,7 +7,7 @@ describe AzuCLI::OpenAPI::ModelGenerator do
       schema.type = "object"
       schema.properties = {
         "name" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
-        "age" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" }
+        "age"  => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" },
       }
       schema.required = ["name"]
 
@@ -45,11 +45,11 @@ describe AzuCLI::OpenAPI::ModelGenerator do
         schema.type = "object"
         schema.description = "A user in the system"
         schema.properties = {
-          "id" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer"; s.format = "int32" },
-          "name" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
-          "email" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string"; s.format = "email" },
-          "age" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" },
-          "active" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "boolean" }
+          "id"     => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer"; s.format = "int32" },
+          "name"   => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
+          "email"  => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string"; s.format = "email" },
+          "age"    => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" },
+          "active" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "boolean" },
         }
         schema.required = ["id", "name", "email"]
 
@@ -101,7 +101,7 @@ describe AzuCLI::OpenAPI::ModelGenerator do
         schema.type = "object"
         schema.properties = {
           "name" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string"; s.nullable = true },
-          "age" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" }
+          "age"  => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" },
         }
         schema.required = ["age"]
 
@@ -149,7 +149,7 @@ describe AzuCLI::OpenAPI::ModelGenerator do
         schema = AzuCLI::OpenAPI::Schema.new
         schema.type = "object"
         schema.properties = {
-          "name" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" }
+          "name" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
         }
 
         parser = AzuCLI::OpenAPI::Parser.new("test_spec.yaml")

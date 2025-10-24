@@ -1,0 +1,25 @@
+require "../result"
+
+module <%= @name.camelcase %>
+  class CreateService
+    def call(<%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.map { |field| "#{field} : #{crystal_type(@fields[field])}" }.join(", ") %>) : Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>)
+      <%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.new(<%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(": ") %>)
+
+      if <%= @snake_case_name %>.valid?
+        if <%= @snake_case_name %>.save
+          Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>).success(<%= @snake_case_name %>)
+        else
+          errors = [] of CQL::ActiveRecord::Validations::Error
+          errors << CQL::ActiveRecord::Validations::Error.new(:base, "Failed to save <%= @snake_case_name %> to database")
+          Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>).failure(errors)
+        end
+      else
+        Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>).failure(<%= @snake_case_name %>.errors)
+      end
+    rescue ex
+      errors = [] of CQL::ActiveRecord::Validations::Error
+      errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: #{ex.message}")
+      Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>).failure(errors)
+    end
+  end
+end

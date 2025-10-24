@@ -65,10 +65,10 @@ module AzuCLI
 
           # Test schema consistency
           Logger.info("Checking schema consistency...")
-          unless check_schema_consistency
-            Logger.warn("⚠ Schema consistency issues detected")
-          else
+          if check_schema_consistency
             Logger.info("✓ Schema is consistent")
+          else
+            Logger.warn("⚠ Schema consistency issues detected")
           end
 
           Logger.info("=" * 50)
@@ -169,12 +169,11 @@ module AzuCLI
         # Check schema consistency
         private def check_schema_consistency : Bool
           # Basic consistency check - verify schema_migrations table exists
-          begin
-            query_database("SELECT COUNT(*) FROM schema_migrations") { }
-            true
-          rescue
-            false
-          end
+
+          query_database("SELECT COUNT(*) FROM schema_migrations") { }
+          true
+        rescue
+          false
         end
 
         # Get applied migration versions from database

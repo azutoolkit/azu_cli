@@ -126,29 +126,26 @@ module AzuCLI
 
         # Mark seed as executed in database
         private def mark_seed_as_executed(seed_name : String)
-          begin
-            execute_on_database(
-              "INSERT INTO seed_versions (seed_name, executed_at) VALUES ('#{seed_name}', '#{Time.utc}')"
-            )
-            @executed_seeds << seed_name
-          rescue ex
-            Logger.warn("Failed to mark seed as executed: #{ex.message}")
-          end
+          execute_on_database(
+            "INSERT INTO seed_versions (seed_name, executed_at) VALUES ('#{seed_name}', '#{Time.utc}')"
+          )
+          @executed_seeds << seed_name
+        rescue ex
+          Logger.warn("Failed to mark seed as executed: #{ex.message}")
         end
 
         # Ensure seed_versions table exists
         private def ensure_seed_versions_table
-          begin
-            execute_on_database(<<-SQL)
+          execute_on_database(<<-SQL)
               CREATE TABLE IF NOT EXISTS seed_versions (
                 id SERIAL PRIMARY KEY,
                 seed_name VARCHAR(255) NOT NULL UNIQUE,
                 executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
               )
             SQL
-          rescue ex
-            Logger.warn("Failed to create seed_versions table: #{ex.message}")
-          end
+
+        rescue ex
+          Logger.warn("Failed to create seed_versions table: #{ex.message}")
         end
 
         # Get seed status

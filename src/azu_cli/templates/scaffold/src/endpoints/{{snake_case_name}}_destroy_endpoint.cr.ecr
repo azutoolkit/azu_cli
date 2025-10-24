@@ -1,75 +1,11 @@
 module <%= @module_name %>::<%= @name.camelcase %>
   struct DestroyEndpoint
-    include Azu::Endpoint(<%= @name.camelcase %>::DestroyRequest, <%= @name.camelcase %>::Destroy<%= @endpoint_type == "api" ? "Response" : "Page" %>)
+    include Azu::Endpoint(<%= @name.camelcase %>::DestroyRequest, <%= @name.camelcase %>::DestroyPage)
 
-    delete "<%= action_path %>"
+    <%= http_verb %> "<%= action_path %>"
 
-    def call : <%= @name.camelcase %>::Destroy<%= @endpoint_type == "api" ? "Response" : "Page" %>
-<% if @scaffold -%>
-      service = <%= @module_name %>::<%= @name.camelcase %>::DestroyService.new
-      result = service.call(@request.id)
-
-      if result.success?
-<% if @endpoint_type == "api" -%>
-        <%= @name.camelcase %>::DestroyResponse.new(
-          message: "<%= @name.camelcase %> deleted successfully",
-          success: true
-        )
-<% else -%>
-        flash["success"] = "<%= @name.camelcase %> deleted successfully"
-        redirect "/<%= @resource_plural %>"
-<% end -%>
-      else
-<% if @endpoint_type == "api" -%>
-        error("Failed to delete <%= @resource_singular %>", 422, format_errors(result.errors).values.flatten)
-<% else -%>
-        flash["error"] = "Failed to delete <%= @resource_singular %>: #{format_error_messages(result.errors)}"
-        redirect "/<%= @resource_plural %>"
-<% end -%>
-      end
-<% else -%>
-      # Non-scaffold implementation
-      # This is a basic implementation - customize as needed
-      #
-      # Example service integration:
-      # service = <%= @module_name %>::<%= @name.camelcase %>::DestroyService.new
-      # result = service.call(@request.id)
-      #
-      # Example direct model usage:
-      # model = <%= @name.camelcase %>::<%= @name.camelcase %>Model.find(@request.id)
-      # model.delete
-
-      begin
-        # Add your business logic here
-        <%= @name.camelcase %>::Destroy<%= @endpoint_type == "api" ? "Response" : "Page" %>.new
-      rescue ex
-        Log.error(exception: ex) { "Error in destroy action" }
-<% if @endpoint_type == "api" -%>
-        error("Internal server error", 500, ["An unexpected error occurred"])
-<% else -%>
-        flash["error"] = "An unexpected error occurred"
-        redirect "/<%= @resource_plural %>"
-<% end -%>
-      end
-<% end -%>
+    def call : <%= @name.camelcase %>::DestroyPage
+      <%= @name.camelcase %>::DestroyPage.new
     end
-<% if @scaffold -%>
-
-    # Convert CQL errors to hash format for JSON responses
-    private def format_errors(errors : CQL::ActiveRecord::Validations::Errors) : Hash(String, Array(String))
-      result = {} of String => Array(String)
-      errors.each do |error|
-        field = error.field.to_s
-        result[field] ||= [] of String
-        result[field] << error.message
-      end
-      result
-    end
-
-    # Convert CQL errors to readable string for flash messages
-    private def format_error_messages(errors : CQL::ActiveRecord::Validations::Errors) : String
-      errors.map { |error| "#{error.field}: #{error.message}" }.join(", ")
-    end
-<% end -%>
   end
 end

@@ -98,7 +98,7 @@ module AzuCLI
           statements = sql_content.split(";")
             .map(&.strip)
             .reject(&.empty?)
-            .reject { |stmt| stmt.starts_with?("--") }
+            .reject(&.starts_with?("--"))
 
           Logger.info("Executing #{statements.size} SQL statements...")
 

@@ -93,7 +93,7 @@ module AzuCLI
       private def build_components(
         models : Array(ModelExtractor::ModelInfo),
         requests : Array(RequestExtractor::RequestInfo),
-        responses : Array(ResponseExtractor::ResponseInfo)
+        responses : Array(ResponseExtractor::ResponseInfo),
       ) : Components
         components = Components.new
         schemas = {} of String => Schema

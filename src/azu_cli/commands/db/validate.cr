@@ -101,19 +101,17 @@ module AzuCLI
 
         # Check database permissions
         private def check_database_permissions : Bool
-          begin
-            # Test basic read permission
-            query_database("SELECT 1") { }
+          # Test basic read permission
+          query_database("SELECT 1") { }
 
-            # Test write permission (create a temporary table)
-            execute_on_database("CREATE TEMP TABLE _azu_validation_test (id INT)")
-            execute_on_database("DROP TABLE _azu_validation_test")
+          # Test write permission (create a temporary table)
+          execute_on_database("CREATE TEMP TABLE _azu_validation_test (id INT)")
+          execute_on_database("DROP TABLE _azu_validation_test")
 
-            true
-          rescue ex
-            Logger.error("Permission check failed: #{ex.message}")
-            false
-          end
+          true
+        rescue ex
+          Logger.error("Permission check failed: #{ex.message}")
+          false
         end
 
         # Check migration files

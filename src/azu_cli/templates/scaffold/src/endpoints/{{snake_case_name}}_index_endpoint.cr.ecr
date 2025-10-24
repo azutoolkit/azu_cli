@@ -1,68 +1,11 @@
 module <%= @module_name %>::<%= @name.camelcase %>
   struct IndexEndpoint
-    include Azu::Endpoint(<%= @name.camelcase %>::IndexRequest, <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>)
+    include Azu::Endpoint(<%= @name.camelcase %>::IndexRequest, <%= @name.camelcase %>::IndexPage)
 
     get "<%= action_path %>"
 
-    def call : <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>
-<% if @scaffold -%>
-      service = <%= @module_name %>::<%= @name.camelcase %>::IndexService.new
-      result = service.call
-
-      if result.success?
-        <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>.new(
-          <%= @resource_plural %>: result.data.not_nil!
-        )
-      else
-<% if @endpoint_type == "api" -%>
-        error("Failed to fetch <%= @resource_plural %>", 422, format_errors(result.errors).values.flatten)
-<% else -%>
-        flash["error"] = "Failed to fetch <%= @resource_plural %>"
-        <%= @name.camelcase %>::IndexPage.new(<%= @resource_plural %>: [] of <%= @module_name %>::<%= @name.camelcase %>::<%= @name.camelcase %>Model)
-<% end -%>
-      end
-<% else -%>
-      # Non-scaffold implementation
-      # This is a basic implementation - customize as needed
-      #
-      # Example service integration:
-      # service = <%= @module_name %>::<%= @name.camelcase %>::IndexService.new
-      # result = service.call
-      #
-      # Example direct model usage:
-      # records = <%= @name.camelcase %>::<%= @name.camelcase %>Model.all
-
-      begin
-        # Add your business logic here
-        <%= @name.camelcase %>::Index<%= @endpoint_type == "api" ? "Response" : "Page" %>.new
-      rescue ex
-        Log.error(exception: ex) { "Error in index action" }
-<% if @endpoint_type == "api" -%>
-        error("Internal server error", 500, ["An unexpected error occurred"])
-<% else -%>
-        flash["error"] = "An unexpected error occurred"
-        <%= @name.camelcase %>::IndexPage.new(<%= @resource_plural %>: [] of <%= @module_name %>::<%= @name.camelcase %>::<%= @name.camelcase %>Model)
-<% end -%>
-      end
-<% end -%>
+    def call : <%= @name.camelcase %>::IndexPage
+      <%= @name.camelcase %>::IndexPage.new
     end
-<% if @scaffold -%>
-
-    # Convert CQL errors to hash format for JSON responses
-    private def format_errors(errors : CQL::ActiveRecord::Validations::Errors) : Hash(String, Array(String))
-      result = {} of String => Array(String)
-      errors.each do |error|
-        field = error.field.to_s
-        result[field] ||= [] of String
-        result[field] << error.message
-      end
-      result
-    end
-
-    # Convert CQL errors to readable string for flash messages
-    private def format_error_messages(errors : CQL::ActiveRecord::Validations::Errors) : String
-      errors.map { |error| "#{error.field}: #{error.message}" }.join(", ")
-    end
-<% end -%>
   end
 end

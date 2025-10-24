@@ -1,12 +1,12 @@
 module <%= @module_name %>::<%= @name.camelcase %>
   struct EditEndpoint
-    include Azu::Endpoint(<%= @name.camelcase %>::EditRequest, <%= @name.camelcase %>::Edit<%= @endpoint_type == "api" ? "Response" : "Page" %>)
+    include Azu::Endpoint(<%= @name.camelcase %>::EditRequest, <%= @name.camelcase %>::EditPage)
 
     get "<%= action_path %>"
 
-    def call : <%= @name.camelcase %>::Edit<%= @endpoint_type == "api" ? "Response" : "Page" %>
+    def call : <%= @name.camelcase %>::EditPage
       # Render form page
-      <%= @name.camelcase %>::Edit<%= @endpoint_type == "api" ? "Response" : "Page" %>.new
+      <%= @name.camelcase %>::EditPage.new
     end
   end
 end
