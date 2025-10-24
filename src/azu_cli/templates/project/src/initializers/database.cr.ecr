@@ -1,4 +1,5 @@
 require "cql"
+require "pg"
 
 CQL.configure do |config|
   # Environment configuration
@@ -7,53 +8,17 @@ CQL.configure do |config|
   # Database connection - environment-aware database names
   config.db = ENV["DATABASE_URL"]? || "<%= database_env_url %>"
 
-  config.timezone = :utc
-
-  # Connection pool settings (CQL ConnectionPoolConfig structure)
-  config.pool.size = (ENV["DB_POOL_SIZE"]? || "10").to_i
-  config.pool.initial_size = (ENV["DB_POOL_INITIAL_SIZE"]? || "1").to_i
-  config.pool.max_idle_size = (ENV["DB_POOL_MAX_IDLE_SIZE"]? || "1").to_i
-  config.pool.checkout_timeout = (ENV["DB_POOL_CHECKOUT_TIMEOUT"]? || "10").to_i.seconds
-  config.pool.query_timeout = (ENV["DB_POOL_QUERY_TIMEOUT"]? || "30").to_i.seconds
-  config.pool.max_retry_attempts = (ENV["DB_POOL_MAX_RETRY_ATTEMPTS"]? || "3").to_i
-  config.pool.retry_delay = (ENV["DB_POOL_RETRY_DELAY"]? || "1").to_i.seconds
-  config.pool.use_prepared_statements = (ENV["DB_USE_PREPARED_STATEMENTS"]? || "true") == "true"
-
-  # Schema and migration settings
-  config.schema_dir = "src/db"
-  config.schema_file = "schema.cr"
   config.schema_class = :<%= schema_name %>
-  config.schema_name = :<%= schema_symbol %>
-  config.migrations_table = :schema_migrations
-
-  # Development-friendly defaults
   config.auto_load = true
-  config.auto_sync = ENV["CRYSTAL_ENV"]? != "production"
-  config.verify_schema = ENV["CRYSTAL_ENV"]? == "development"
-  config.bootstrap = false
+  config.auto_sync = true
+  config.bootstrap = true
+  config.verify_schema = true
+  config.monitor_performance = true
 
-  # Logging configuration
-  config.log_level = case config.env
-                     when "production" then Log::Severity::Info
-                     when "test" then Log::Severity::Error
-                     else Log::Severity::Debug
-                     end
+  # Enable beautiful SQL logging (auto-enabled in development)
+  config.sql_logging = true
 
-  # SQL logging configuration (available in CQL)
-  config.sql_logging = config.env == "development"
+  # SQL logging options
   config.sql_logging_colorize = true
-  config.sql_logging_async = false
-
-  # Cache configuration
-  config.cache.on = ENV["ENABLE_CACHE"]? == "true" || config.env == "production"
-  config.cache.ttl = 30.minutes
-  config.cache.memory_size = (ENV["CACHE_SIZE"]? || "2000").to_i
-  config.cache.request_cache = true
-  config.cache.fragments = true
-
-  # SSL/TLS Configuration (production security)
-  config.ssl.mode = ENV["DB_SSL_MODE"]? || (config.env == "production" ? "require" : "prefer")
-  config.ssl.cert_path = ENV["DB_SSL_CERT"]?
-  config.ssl.key_path = ENV["DB_SSL_KEY"]?
-  config.ssl.ca_path = ENV["DB_SSL_CA"]?
+  config.sql_logging_async = true
 end
