@@ -1,4 +1,5 @@
 require "../spec_helper"
+require "file_utils"
 
 # Test command for testing base functionality
 class TestCommand < AzuCLI::Commands::Base
@@ -30,6 +31,13 @@ class RequireArgsCommand < AzuCLI::Commands::Base
 end
 
 describe AzuCLI::Commands::Base do
+  before_each do
+    # Clean up tmp directory if it exists
+    if Dir.exists?("tmp")
+      FileUtils.rm_rf("tmp")
+    end
+  end
+
   describe "command metadata" do
     it "sets command name correctly" do
       cmd = TestCommand.new

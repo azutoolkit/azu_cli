@@ -417,7 +417,7 @@ describe AzuCLI::Generate::Migration do
   describe "timestamp generation" do
     it "generates unique timestamps for different migrations" do
       generator1 = AzuCLI::Generate::Migration.new("create_users", {} of String => String)
-      sleep(1) # Ensure different timestamp
+      sleep(1.millisecond) # Ensure different timestamp
       generator2 = AzuCLI::Generate::Migration.new("create_products", {} of String => String)
 
       generator1.timestamp.should_not eq(generator2.timestamp)

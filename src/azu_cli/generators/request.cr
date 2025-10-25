@@ -39,7 +39,7 @@ module AzuCLI
         actions.each do |action|
           generator = new(project, resource, action, attributes)
           Dir.mkdir_p(OUTPUT_DIR) unless Dir.exists?(OUTPUT_DIR)
-          generator.render(OUTPUT_DIR)
+          generator.render(OUTPUT_DIR, force: false, interactive: false)
         end
       end
 

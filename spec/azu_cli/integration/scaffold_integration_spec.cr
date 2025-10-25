@@ -35,11 +35,12 @@ describe "Scaffold Integration" do
 
         # Create the generate command
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", generator_name,
+        command.parse_args(["--force", "scaffold", generator_name,
                             "name:string",
                             "description:text",
                             "price:float64",
-                            "published:bool"])
+                            "published:bool",
+                            "--force"])
 
         # Execute scaffold generation
         result = command.execute
@@ -55,7 +56,7 @@ describe "Scaffold Integration" do
         generator_name = "Article"
 
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", generator_name, "title:string", "content:text"])
+        command.parse_args(["--force", "scaffold", generator_name, "title:string", "content:text"])
         command.execute
 
         # Check endpoint files
@@ -72,7 +73,7 @@ describe "Scaffold Integration" do
         generator_name = "Post"
 
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", generator_name, "title:string", "body:text"])
+        command.parse_args(["--force", "scaffold", generator_name, "title:string", "body:text"])
         command.execute
 
         # Verify service files exist
@@ -102,7 +103,7 @@ describe "Scaffold Integration" do
     it "wires IndexEndpoint to IndexService correctly" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Book", "title:string"])
+        command.parse_args(["--force", "scaffold", "Book", "title:string"])
         command.execute
 
         index_endpoint = File.read("src/endpoints/books/book_index_endpoint.cr")
@@ -115,7 +116,7 @@ describe "Scaffold Integration" do
     it "wires ShowEndpoint to ShowService with ID" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Book", "title:string"])
+        command.parse_args(["--force", "scaffold", "Book", "title:string"])
         command.execute
 
         show_endpoint = File.read("src/endpoints/books/book_show_endpoint.cr")
@@ -128,7 +129,7 @@ describe "Scaffold Integration" do
     it "wires CreateEndpoint to CreateService with request object" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Book", "title:string"])
+        command.parse_args(["--force", "scaffold", "Book", "title:string"])
         command.execute
 
         create_endpoint = File.read("src/endpoints/books/book_create_endpoint.cr")
@@ -141,7 +142,7 @@ describe "Scaffold Integration" do
     it "wires UpdateEndpoint to UpdateService with ID and request" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Book", "title:string"])
+        command.parse_args(["--force", "scaffold", "Book", "title:string"])
         command.execute
 
         update_endpoint = File.read("src/endpoints/books/book_update_endpoint.cr")
@@ -154,7 +155,7 @@ describe "Scaffold Integration" do
     it "wires DestroyEndpoint to DestroyService with ID" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Book", "title:string"])
+        command.parse_args(["--force", "scaffold", "Book", "title:string"])
         command.execute
 
         destroy_endpoint = File.read("src/endpoints/books/book_destroy_endpoint.cr")
@@ -166,7 +167,7 @@ describe "Scaffold Integration" do
     it "wires EditEndpoint to ShowService to load data" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Book", "title:string"])
+        command.parse_args(["--force", "scaffold", "Book", "title:string"])
         command.execute
 
         edit_endpoint = File.read("src/endpoints/books/book_edit_endpoint.cr")
@@ -181,7 +182,7 @@ describe "Scaffold Integration" do
     it "uses redirect to: syntax correctly in CreateEndpoint" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Comment", "body:text"])
+        command.parse_args(["--force", "scaffold", "Comment", "body:text"])
         command.execute
 
         create_endpoint = File.read("src/endpoints/comments/comment_create_endpoint.cr")
@@ -193,7 +194,7 @@ describe "Scaffold Integration" do
     it "uses redirect to: syntax in UpdateEndpoint" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Comment", "body:text"])
+        command.parse_args(["--force", "scaffold", "Comment", "body:text"])
         command.execute
 
         update_endpoint = File.read("src/endpoints/comments/comment_update_endpoint.cr")
@@ -205,7 +206,7 @@ describe "Scaffold Integration" do
     it "uses redirect to: syntax in DestroyEndpoint" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Comment", "body:text"])
+        command.parse_args(["--force", "scaffold", "Comment", "body:text"])
         command.execute
 
         destroy_endpoint = File.read("src/endpoints/comments/comment_destroy_endpoint.cr")
@@ -216,7 +217,7 @@ describe "Scaffold Integration" do
     it "redirects to index on ShowEndpoint failure" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Comment", "body:text"])
+        command.parse_args(["--force", "scaffold", "Comment", "body:text"])
         command.execute
 
         show_endpoint = File.read("src/endpoints/comments/comment_show_endpoint.cr")
@@ -228,7 +229,7 @@ describe "Scaffold Integration" do
     it "redirects to index on EditEndpoint failure" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Comment", "body:text"])
+        command.parse_args(["--force", "scaffold", "Comment", "body:text"])
         command.execute
 
         edit_endpoint = File.read("src/endpoints/comments/comment_edit_endpoint.cr")
@@ -242,7 +243,7 @@ describe "Scaffold Integration" do
     it "handles Services::Result success correctly" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Task", "name:string"])
+        command.parse_args(["--force", "scaffold", "Task", "name:string"])
         command.execute
 
         create_endpoint = File.read("src/endpoints/tasks/task_create_endpoint.cr")
@@ -254,7 +255,7 @@ describe "Scaffold Integration" do
     it "handles Services::Result failure correctly" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Task", "name:string"])
+        command.parse_args(["--force", "scaffold", "Task", "name:string"])
         command.execute
 
         create_endpoint = File.read("src/endpoints/tasks/task_create_endpoint.cr")
@@ -266,7 +267,7 @@ describe "Scaffold Integration" do
     it "services return Services::Result type" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Task", "name:string"])
+        command.parse_args(["--force", "scaffold", "Task", "name:string"])
         command.execute
 
         create_service = File.read("src/services/task/create_service.cr")
@@ -280,7 +281,7 @@ describe "Scaffold Integration" do
     it "includes id property in ShowRequest" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "User", "email:string"])
+        command.parse_args(["--force", "scaffold", "User", "email:string"])
         command.execute
 
         show_request = File.read("src/requests/user/show_request.cr")
@@ -291,7 +292,7 @@ describe "Scaffold Integration" do
     it "includes id property in EditRequest" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "User", "email:string"])
+        command.parse_args(["--force", "scaffold", "User", "email:string"])
         command.execute
 
         edit_request = File.read("src/requests/user/edit_request.cr")
@@ -302,7 +303,7 @@ describe "Scaffold Integration" do
     it "includes id property in UpdateRequest" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "User", "email:string"])
+        command.parse_args(["--force", "scaffold", "User", "email:string"])
         command.execute
 
         update_request = File.read("src/requests/user/update_request.cr")
@@ -313,7 +314,7 @@ describe "Scaffold Integration" do
     it "includes id property in DestroyRequest" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "User", "email:string"])
+        command.parse_args(["--force", "scaffold", "User", "email:string"])
         command.execute
 
         destroy_request = File.read("src/requests/user/destroy_request.cr")
@@ -324,7 +325,7 @@ describe "Scaffold Integration" do
     it "includes field properties in CreateRequest" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "User", "email:string", "name:string"])
+        command.parse_args(["--force", "scaffold", "User", "email:string", "name:string"])
         command.execute
 
         create_request = File.read("src/requests/user/create_request.cr")
@@ -338,7 +339,7 @@ describe "Scaffold Integration" do
     it "uses correct HTTP verbs in endpoints" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Note", "content:text"])
+        command.parse_args(["--force", "scaffold", "Note", "content:text"])
         command.execute
 
         # GET for index
@@ -369,7 +370,7 @@ describe "Scaffold Integration" do
     it "includes error handling in services" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Item", "name:string"])
+        command.parse_args(["--force", "scaffold", "Item", "name:string"])
         command.execute
 
         create_service = File.read("src/services/item/create_service.cr")
@@ -384,7 +385,7 @@ describe "Scaffold Integration" do
     it "includes logging in services" do
       Dir.cd(SCAFFOLD_TEST_DIR) do
         command = AzuCLI::Commands::Generate.new
-        command.parse_args(["scaffold", "Item", "name:string"])
+        command.parse_args(["--force", "scaffold", "Item", "name:string"])
         command.execute
 
         create_service = File.read("src/services/item/create_service.cr")

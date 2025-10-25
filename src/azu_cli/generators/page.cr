@@ -60,7 +60,7 @@ module AzuCLI
 
         # Generate the Jinja2 HTML template only for web projects
         if @project_type == "web" && @generate_template
-          @template_generator.render("#{output_dir}/../public")
+          @template_generator.render("#{output_dir}/../public", force: force, interactive: interactive, list: list, color: color)
         end
       end
 

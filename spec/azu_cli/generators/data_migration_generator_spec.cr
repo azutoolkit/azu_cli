@@ -32,7 +32,7 @@ describe AzuCLI::Generate::DataMigration do
 
     it "generates unique filenames for different migrations" do
       generator1 = AzuCLI::Generate::DataMigration.new("UpdateUserData")
-      sleep(1) # Ensure different timestamp
+      sleep(1.millisecond) # Ensure different timestamp
       generator2 = AzuCLI::Generate::DataMigration.new("UpdateProductData")
 
       generator1.migration_filename.should_not eq(generator2.migration_filename)
@@ -62,7 +62,7 @@ describe AzuCLI::Generate::DataMigration do
 
     it "generates unique timestamps for different migrations" do
       generator1 = AzuCLI::Generate::DataMigration.new("UpdateUserData")
-      sleep(1) # Ensure different timestamp
+      sleep(1.millisecond) # Ensure different timestamp
       generator2 = AzuCLI::Generate::DataMigration.new("UpdateProductData")
 
       generator1.timestamp.should_not eq(generator2.timestamp)
