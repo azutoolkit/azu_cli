@@ -17,6 +17,20 @@ Azu CLI provides a comprehensive set of commands to help you develop, manage, an
 
 - [`azu serve`](serve.md) - Start development server with hot reloading
 - [`azu dev`](dev.md) - Alias for serve command
+- [`azu test`](test.md) - Run application tests with watch mode
+
+### Background Jobs
+
+- [`azu jobs:worker`](jobs.md#azu-jobsworker) - Start job workers
+- [`azu jobs:status`](jobs.md#azu-jobsstatus) - Show job queue status
+- [`azu jobs:clear`](jobs.md#azu-jobsclear) - Clear job queues
+- [`azu jobs:retry`](jobs.md#azu-jobsretry) - Retry failed jobs
+- [`azu jobs:ui`](jobs.md#azu-jobsui) - Start JoobQ web interface
+
+### Session Management
+
+- [`azu session:setup`](session.md#azu-sessionsetup) - Setup session management
+- [`azu session:clear`](session.md#azu-sessionclear) - Clear all sessions
 
 ### Database Management
 
@@ -33,6 +47,10 @@ Azu CLI provides a comprehensive set of commands to help you develop, manage, an
 
 - [`azu openapi:generate`](openapi.md#azu-openapigenerate) - Generate code from OpenAPI specification
 - [`azu openapi:export`](openapi.md#azu-openapiexport) - Export OpenAPI specification from code
+
+### Plugin Management
+
+- [`azu plugin`](plugin.md) - Manage CLI plugins
 
 ### Information & Help
 
@@ -199,6 +217,129 @@ azu dev
 azu dev --port 8080
 ```
 
+#### `azu test`
+
+Runs application tests with watch mode support.
+
+**Quick Examples:**
+
+```bash
+# Run all tests
+azu test
+
+# Run with watch mode
+azu test --watch
+
+# Run specific tests
+azu test spec/models/user_spec.cr
+```
+
+### Background Jobs Commands
+
+Commands for managing JoobQ background jobs.
+
+#### `azu jobs:worker`
+
+Starts background job workers.
+
+**Quick Examples:**
+
+```bash
+# Start single worker
+azu jobs:worker
+
+# Start multiple workers
+azu jobs:worker --workers 4
+
+# Process specific queues
+azu jobs:worker --queues critical,default
+```
+
+#### `azu jobs:status`
+
+Shows job queue statistics.
+
+**Quick Examples:**
+
+```bash
+# Show status
+azu jobs:status
+```
+
+#### `azu jobs:clear`
+
+Clears job queues.
+
+**Quick Examples:**
+
+```bash
+# Clear default queue
+azu jobs:clear
+
+# Clear all queues
+azu jobs:clear --all --force
+```
+
+#### `azu jobs:retry`
+
+Retries failed jobs.
+
+**Quick Examples:**
+
+```bash
+# Retry failed jobs
+azu jobs:retry
+
+# Retry all failed
+azu jobs:retry --all
+```
+
+#### `azu jobs:ui`
+
+Launches JoobQ web interface.
+
+**Quick Examples:**
+
+```bash
+# Start UI
+azu jobs:ui
+
+# Custom port
+azu jobs:ui --port 5000
+```
+
+### Session Management Commands
+
+Commands for session configuration and management.
+
+#### `azu session:setup`
+
+Configures session management.
+
+**Quick Examples:**
+
+```bash
+# Setup with Redis
+azu session:setup --backend redis
+
+# Setup with database
+azu session:setup --backend database
+```
+
+#### `azu session:clear`
+
+Clears all application sessions.
+
+**Quick Examples:**
+
+```bash
+# Clear sessions
+azu session:clear
+
+# Clear without confirmation
+azu session:clear --force
+```
+
 ### Database Commands
 
 Commands for database management.
@@ -289,6 +430,27 @@ azu openapi:export --output api.yaml
 
 # Export as JSON
 azu openapi:export --output api.json --format json
+```
+
+### Plugin Management Commands
+
+Commands for managing CLI plugins.
+
+#### `azu plugin`
+
+Manages Azu CLI plugins.
+
+**Quick Examples:**
+
+```bash
+# List plugins
+azu plugin list
+
+# Install plugin
+azu plugin install my-plugin
+
+# Show plugin info
+azu plugin info generator
 ```
 
 ### Information Commands

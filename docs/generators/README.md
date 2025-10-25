@@ -26,18 +26,22 @@ Each generator creates focused, single-responsibility components that work toget
 
 ## Available Generators
 
-| Generator                            | Purpose                     | Files Created                          | Use Case                         |
-| ------------------------------------ | --------------------------- | -------------------------------------- | -------------------------------- |
-| **[endpoint](endpoint.md)**          | HTTP request handlers       | Endpoints, contracts, pages, templates | Web controllers, API endpoints   |
-| **[model](model.md)**                | Database models             | Model classes with validations         | Data persistence layer           |
-| **[service](service.md)**            | Business logic              | Service classes                        | Domain logic, complex operations |
-| **[middleware](middleware.md)**      | HTTP middleware             | Middleware classes                     | Cross-cutting concerns           |
-| **[contract](contract.md)**          | Request/response validation | Contract structs                       | Input validation, API contracts  |
-| **[page](page.md)**                  | HTML page components        | Page classes, templates                | View layer, HTML rendering       |
-| **[component](component.md)**        | Live interactive components | Component classes                      | Real-time UI, dynamic interfaces |
-| **[validator](custom-validator.md)** | Custom validation logic     | Validator classes                      | Reusable validation rules        |
-| **[migration](migration.md)**        | Database migrations         | Migration files                        | Database schema changes          |
-| **[scaffold](scaffold.md)**          | Complete CRUD resource      | All of the above                       | Rapid prototyping                |
+| Generator                               | Purpose                     | Files Created                          | Use Case                         |
+| --------------------------------------- | --------------------------- | -------------------------------------- | -------------------------------- |
+| **[endpoint](endpoint.md)**             | HTTP request handlers       | Endpoints, contracts, pages, templates | Web controllers, API endpoints   |
+| **[model](model.md)**                   | Database models             | Model classes with validations         | Data persistence layer           |
+| **[service](service.md)**               | Business logic              | Service classes                        | Domain logic, complex operations |
+| **[middleware](middleware.md)**         | HTTP middleware             | Middleware classes                     | Cross-cutting concerns           |
+| **[contract](contract.md)**             | Request/response validation | Contract structs                       | Input validation, API contracts  |
+| **[page](page.md)**                     | HTML page components        | Page classes, templates                | View layer, HTML rendering       |
+| **[component](component.md)**           | Live interactive components | Component classes                      | Real-time UI, dynamic interfaces |
+| **[validator](custom-validator.md)**    | Custom validation logic     | Validator classes                      | Reusable validation rules        |
+| **[migration](migration.md)**           | Database migrations         | Migration files                        | Database schema changes          |
+| **[data_migration](data-migration.md)** | Data transformations        | Data migration scripts                 | Data imports, transformations    |
+| **[auth](auth.md)**                     | Authentication system       | Auth models, endpoints, middleware     | User authentication, RBAC        |
+| **[channel](channel.md)**               | WebSocket channels          | Channel classes, client code           | Real-time communication          |
+| **[mailer](mailer.md)**                 | Email functionality         | Mailer classes, templates, jobs        | Transactional emails             |
+| **[scaffold](scaffold.md)**             | Complete CRUD resource      | All of the above                       | Rapid prototyping                |
 
 ## Generator Types
 
