@@ -84,7 +84,7 @@ module TestHelpers
       @stderr = ""
     end
 
-    def capture_stdout(&block)
+    def capture_stdout(&)
       # For now, just execute the block without capturing output
       # This can be enhanced later with proper output capture
       yield
@@ -239,7 +239,7 @@ module TestHelpers
 
   # Test setup and teardown helpers
   module TestSetup
-    def self.with_temp_project(project_name : String = "test_project", &block)
+    def self.with_temp_project(project_name : String = "test_project", &)
       temp_project = TempProject.new(project_name)
       begin
         yield temp_project
@@ -248,7 +248,7 @@ module TestHelpers
       end
     end
 
-    def self.with_captured_output(&block)
+    def self.with_captured_output(&)
       capture = OutputCapture.new
       capture.capture_stdout do
         yield capture

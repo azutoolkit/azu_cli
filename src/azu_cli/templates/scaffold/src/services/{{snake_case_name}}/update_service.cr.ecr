@@ -2,12 +2,14 @@ require "../result"
 
 module <%= @name.camelcase %>
   class UpdateService
-    def call(id : Int64, <%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.map { |field| "#{field} : #{crystal_type(@fields[field])}" }.join(", ") %>) : Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>)
+    def call(id : Int64, request : <%= @name.camelcase %>::UpdateRequest) : Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>)
       Log.info { "Updating <%= @snake_case_name %> with ID: #{id}" }
 
       <%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.find(id)
 
-      if <%= @snake_case_name %>.update({<%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.map { |field| "#{field}: #{field}" }.join(", ") %>})
+      if <%= @snake_case_name %>.update({
+        <%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.map { |field| "#{field}: request.#{field}" }.join(",\n        ") %>
+      })
         Log.info { "Successfully updated <%= @snake_case_name %> with ID: #{id}" }
         Services::Result.success(<%= @snake_case_name %>)
       else

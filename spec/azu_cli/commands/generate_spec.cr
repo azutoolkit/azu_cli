@@ -31,7 +31,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["auth"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -47,7 +47,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["validate"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -58,7 +58,7 @@ describe AzuCLI::Commands::Generate do
       command = AzuCLI::Commands::Generate.new
       command.parse_args(["model"])
 
-      TestHelpers::TestSetup.with_captured_output do |capture|
+      TestHelpers::TestSetup.with_captured_output do |_|
         result = command.execute
         result.success?.should be_false
         result.error.should contain("Usage: azu generate <type> <name>")
@@ -74,7 +74,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["model", "User", "name:string", "email:string"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -90,7 +90,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["endpoint", "User", "index", "show"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -106,7 +106,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["service", "User", "create"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -122,7 +122,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["request", "User", "create"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -155,7 +155,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["page", "User", "index"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -171,7 +171,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["job", "EmailJob"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -187,7 +187,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["joobq"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -203,7 +203,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["middleware", "AuthMiddleware"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -220,7 +220,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["migration", "CreateUsers", "name:string", "email:string"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -237,7 +237,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["data:migration", "UpdateUserData"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -253,7 +253,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["seed", "UserSeed"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -269,7 +269,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["component", "UserCard"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -285,7 +285,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["validator", "UserValidator"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -301,7 +301,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["response", "UserResponse"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -317,7 +317,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["template", "user_form"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -333,7 +333,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["scaffold", "User", "name:string", "email:string"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -349,7 +349,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["mailer", "UserMailer"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -365,7 +365,7 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["channel", "UserChannel"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -376,7 +376,7 @@ describe AzuCLI::Commands::Generate do
       command = AzuCLI::Commands::Generate.new
       command.parse_args(["unknown_generator", "Name"])
 
-      TestHelpers::TestSetup.with_captured_output do |capture|
+      TestHelpers::TestSetup.with_captured_output do |_|
         result = command.execute
         result.success?.should be_false
         result.error.should contain("Unknown generator type")
@@ -452,7 +452,7 @@ describe AzuCLI::Commands::Generate do
       command = AzuCLI::Commands::Generate.new
       command.parse_args(["model"])
 
-      TestHelpers::TestSetup.with_captured_output do |capture|
+      TestHelpers::TestSetup.with_captured_output do |_|
         result = command.execute
         result.success?.should be_false
         result.error.should contain("Usage: azu generate <type> <name>")
@@ -463,7 +463,7 @@ describe AzuCLI::Commands::Generate do
       command = AzuCLI::Commands::Generate.new
       command.parse_args(["invalid_type", "Name"])
 
-      TestHelpers::TestSetup.with_captured_output do |capture|
+      TestHelpers::TestSetup.with_captured_output do |_|
         result = command.execute
         result.success?.should be_false
         result.error.should contain("Unknown generator type")

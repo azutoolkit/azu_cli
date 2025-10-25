@@ -1,11 +1,20 @@
 module <%= @module_name %>::<%= @name.camelcase %>
   struct ShowEndpoint
-    include Azu::Endpoint(<%= @name.camelcase %>::ShowRequest, <%= @name.camelcase %>::ShowPage)
+    include Azu::Endpoint(<%= @name.camelcase %>::ShowRequest, <%= @name.camelcase %>::ShowPage | Azu::Response::Empty)
 
     get "<%= action_path %>"
 
-    def call : <%= @name.camelcase %>::ShowPage
-      <%= @name.camelcase %>::ShowPage.new
+    def call : <%= @name.camelcase %>::ShowPage | Azu::Response::Empty
+      id = show_request.id
+      result = ShowService.new.call(id)
+
+      if result.success?
+        <%= @snake_case_name %> = result.data.not_nil!
+        <%= @name.camelcase %>::ShowPage.new(<%= @snake_case_name %>: <%= @snake_case_name %>)
+      else
+        # Redirect to index if not found
+        redirect to: "/<%= @resource_plural %>"
+      end
     end
   end
 end

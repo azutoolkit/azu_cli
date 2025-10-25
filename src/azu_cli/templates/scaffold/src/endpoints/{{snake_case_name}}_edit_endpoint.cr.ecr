@@ -1,12 +1,20 @@
 module <%= @module_name %>::<%= @name.camelcase %>
   struct EditEndpoint
-    include Azu::Endpoint(<%= @name.camelcase %>::EditRequest, <%= @name.camelcase %>::EditPage)
+    include Azu::Endpoint(<%= @name.camelcase %>::EditRequest, <%= @name.camelcase %>::EditPage | Azu::Response::Empty)
 
     get "<%= action_path %>"
 
-    def call : <%= @name.camelcase %>::EditPage
-      # Render form page
-      <%= @name.camelcase %>::EditPage.new
+    def call : <%= @name.camelcase %>::EditPage | Azu::Response::Empty
+      id = edit_request.id
+      result = ShowService.new.call(id)
+
+      if result.success?
+        <%= @snake_case_name %> = result.data.not_nil!
+        <%= @name.camelcase %>::EditPage.new(<%= @snake_case_name %>: <%= @snake_case_name %>)
+      else
+        # Redirect to index if not found
+        redirect to: "/<%= @resource_plural %>"
+      end
     end
   end
 end

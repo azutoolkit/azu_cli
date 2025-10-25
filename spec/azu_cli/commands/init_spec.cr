@@ -19,7 +19,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
           result.message.should contain("Azu initialized in current project")
@@ -41,13 +41,13 @@ describe AzuCLI::Commands::Init do
     end
 
     it "fails when not in valid project directory" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
+      TestHelpers::TestSetup.with_temp_project do |_|
         # Don't create shard.yml to simulate invalid project
 
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_false
           result.error.should contain("Not in a valid Crystal project directory")
@@ -63,13 +63,13 @@ describe AzuCLI::Commands::Init do
         command.parse_args([] of String)
 
         # First run
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
 
         # Second run should also succeed
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -83,7 +83,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -104,7 +104,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -138,7 +138,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -163,7 +163,7 @@ describe AzuCLI::Commands::Init do
 
         # Test with shard.yml - should work
         command.parse_args([] of String)
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -182,7 +182,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -199,7 +199,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -221,7 +221,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -243,7 +243,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -259,7 +259,7 @@ describe AzuCLI::Commands::Init do
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -271,13 +271,13 @@ describe AzuCLI::Commands::Init do
 
   describe "error handling" do
     it "provides clear error message for invalid directory" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
+      TestHelpers::TestSetup.with_temp_project do |_|
         # Don't create shard.yml
 
         command = AzuCLI::Commands::Init.new
         command.parse_args([] of String)
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_false
           result.error.should contain("Not in a valid Crystal project directory")

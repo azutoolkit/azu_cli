@@ -108,8 +108,8 @@ describe AzuCLI::OpenAPI::ResponseExtractor do
       files = extractor.response_files
 
       files.size.should eq(2)
-      files.any? { |f| f.ends_with?("users_show_page.cr") }.should be_true
-      files.any? { |f| f.ends_with?("orders_index_response.cr") }.should be_true
+      files.any?(&.ends_with?("users_show_page.cr")).should be_true
+      files.any?(&.ends_with?("orders_index_response.cr")).should be_true
 
       # Cleanup
       File.delete("spec/fixtures/response_test/src/pages/users/users_show_page.cr") if File.exists?("spec/fixtures/response_test/src/pages/users/users_show_page.cr")

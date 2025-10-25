@@ -109,8 +109,8 @@ describe AzuCLI::OpenAPI::RequestExtractor do
       files = extractor.request_files
 
       files.size.should eq(2)
-      files.any? { |f| f.ends_with?("users_create_request.cr") }.should be_true
-      files.any? { |f| f.ends_with?("orders_create_contract.cr") }.should be_true
+      files.any?(&.ends_with?("users_create_request.cr")).should be_true
+      files.any?(&.ends_with?("orders_create_contract.cr")).should be_true
 
       # Cleanup
       File.delete("spec/fixtures/request_test/src/requests/users/users_create_request.cr") if File.exists?("spec/fixtures/request_test/src/requests/users/users_create_request.cr")

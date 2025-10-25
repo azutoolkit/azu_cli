@@ -1,11 +1,15 @@
 module <%= @module_name %>::<%= @name.camelcase %>
   struct DestroyEndpoint
-    include Azu::Endpoint(<%= @name.camelcase %>::DestroyRequest, <%= @name.camelcase %>::DestroyPage)
+    include Azu::Endpoint(<%= @name.camelcase %>::DestroyRequest, Azu::Response::Empty)
 
-    <%= http_verb %> "<%= action_path %>"
+    delete "<%= action_path %>"
 
-    def call : <%= @name.camelcase %>::DestroyPage
-      <%= @name.camelcase %>::DestroyPage.new
+    def call : Azu::Response::Empty
+      id = destroy_request.id
+      result = DestroyService.new.call(id)
+
+      # Always redirect to index, regardless of success/failure
+      redirect to: "/<%= @resource_plural %>"
     end
   end
 end

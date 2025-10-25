@@ -5,7 +5,15 @@ module <%= @module_name %>::<%= @name.camelcase %>
     get "<%= action_path %>"
 
     def call : <%= @name.camelcase %>::IndexPage
-      <%= @name.camelcase %>::IndexPage.new
+      result = IndexService.new.call
+
+      if result.success?
+        <%= @resource_plural %> = result.data.not_nil!
+        <%= @name.camelcase %>::IndexPage.new(<%= @resource_plural %>: <%= @resource_plural %>)
+      else
+        # Handle error - return empty list with error message
+        <%= @name.camelcase %>::IndexPage.new(<%= @resource_plural %>: [] of <%= @name.camelcase %>::<%= @name.camelcase %>)
+      end
     end
   end
 end

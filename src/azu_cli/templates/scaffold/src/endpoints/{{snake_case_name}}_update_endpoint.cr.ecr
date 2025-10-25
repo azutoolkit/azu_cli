@@ -1,11 +1,19 @@
 module <%= @module_name %>::<%= @name.camelcase %>
   struct UpdateEndpoint
-    include Azu::Endpoint(<%= @name.camelcase %>::UpdateRequest, <%= @name.camelcase %>::UpdatePage)
+    include Azu::Endpoint(<%= @name.camelcase %>::UpdateRequest, <%= @name.camelcase %>::UpdatePage | Azu::Response::Empty)
 
-    <%= http_verb %> "<%= action_path %>"
+    patch "<%= action_path %>"
 
-    def call : <%= @name.camelcase %>::UpdatePage
-      <%= @name.camelcase %>::UpdatePage.new
+    def call : <%= @name.camelcase %>::UpdatePage | Azu::Response::Empty
+      id = update_request.id
+      result = UpdateService.new.call(id, update_request)
+
+      if result.success?
+        <%= @snake_case_name %> = result.data.not_nil!
+        redirect to: "/<%= @resource_plural %>/#{<%= @snake_case_name %>.id}"
+      else
+        redirect to: "/<%= @resource_plural %>/#{id}/edit"
+      end
     end
   end
 end

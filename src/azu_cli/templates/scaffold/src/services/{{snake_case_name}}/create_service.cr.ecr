@@ -2,22 +2,30 @@ require "../result"
 
 module <%= @name.camelcase %>
   class CreateService
-    def call(<%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.map { |field| "#{field} : #{crystal_type(@fields[field])}" }.join(", ") %>) : Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>)
-      <%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.new(<%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(": ") %>)
+    def call(request : <%= @name.camelcase %>::CreateRequest) : Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>)
+      Log.info { "Creating new <%= @snake_case_name %>" }
+
+      <%= @snake_case_name %> = <%= @name.camelcase %>::<%= @name.camelcase %>.new(
+        <%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.map { |field| "#{field}: request.#{field}" }.join(",\n        ") %>
+      )
 
       if <%= @snake_case_name %>.valid?
         if <%= @snake_case_name %>.save
+          Log.info { "Successfully created <%= @snake_case_name %> with ID: #{<%= @snake_case_name %>.id}" }
           Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>).success(<%= @snake_case_name %>)
         else
-          errors = [] of CQL::ActiveRecord::Validations::Error
+          Log.warn { "Failed to save <%= @snake_case_name %> to database" }
+          errors = CQL::ActiveRecord::Validations::Errors.new
           errors << CQL::ActiveRecord::Validations::Error.new(:base, "Failed to save <%= @snake_case_name %> to database")
           Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>).failure(errors)
         end
       else
+        Log.warn { "Validation failed for <%= @snake_case_name %>: #{<%= @snake_case_name %>.errors.to_a.map(&.message).join(", ")}" }
         Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>).failure(<%= @snake_case_name %>.errors)
       end
     rescue ex
-      errors = [] of CQL::ActiveRecord::Validations::Error
+      Log.error(exception: ex) { "Error creating <%= @snake_case_name %>" }
+      errors = CQL::ActiveRecord::Validations::Errors.new
       errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: #{ex.message}")
       Services::Result(<%= @name.camelcase %>::<%= @name.camelcase %>).failure(errors)
     end

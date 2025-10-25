@@ -2,13 +2,14 @@ module <%= @module_name %>::<%= @name.camelcase %>
   struct CreateEndpoint
     include Azu::Endpoint(<%= @name.camelcase %>::CreateRequest, <%= @name.camelcase %>::CreatePage | Azu::Response::Empty)
 
-    <%= http_verb %> "<%= action_path %>"
+    post "<%= action_path %>"
 
     def call : <%= @name.camelcase %>::CreatePage | Azu::Response::Empty
-      result = CreateService.new.call(create_request.<%= @fields.keys.reject { |k| ["id", "created_at", "updated_at"].includes?(k) }.join(", create_request.") %>)
+      result = CreateService.new.call(create_request)
+
       if result.success?
-        <%= @name.camelcase %> = result.data.not_nil!
-        redirect to: "/<%= @resource_plural %>/#{<%= @name.camelcase %>.id}"
+        <%= @snake_case_name %> = result.data.not_nil!
+        redirect to: "/<%= @resource_plural %>/#{<%= @snake_case_name %>.id}"
       else
         redirect to: "/<%= @resource_plural %>/new"
       end

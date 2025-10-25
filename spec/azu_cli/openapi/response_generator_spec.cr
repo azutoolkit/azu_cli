@@ -6,8 +6,8 @@ describe AzuCLI::OpenAPI::ResponseGenerator do
       schema = AzuCLI::OpenAPI::Schema.new
       schema.type = "object"
       schema.properties = {
-        "id"   => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" },
-        "name" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
+        "id"   => AzuCLI::OpenAPI::Schema.new.tap(&.type=("integer")),
+        "name" => AzuCLI::OpenAPI::Schema.new.tap(&.type=("string")),
       }
       schema.required = ["id", "name"]
 
@@ -68,9 +68,9 @@ describe AzuCLI::OpenAPI::ResponseGenerator do
         schema = AzuCLI::OpenAPI::Schema.new
         schema.type = "object"
         schema.properties = {
-          "id"    => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "integer" },
-          "name"  => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
-          "email" => AzuCLI::OpenAPI::Schema.new.tap { |s| s.type = "string" },
+          "id"    => AzuCLI::OpenAPI::Schema.new.tap(&.type=("integer")),
+          "name"  => AzuCLI::OpenAPI::Schema.new.tap(&.type=("string")),
+          "email" => AzuCLI::OpenAPI::Schema.new.tap(&.type=("string")),
         }
         schema.required = ["id", "name"]
 

@@ -35,7 +35,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
           result.message.should contain("Project created successfully")
@@ -52,7 +52,7 @@ describe AzuCLI::Commands::New do
       command = AzuCLI::Commands::New.new
       command.parse_args(["invalid-project-name!"])
 
-      TestHelpers::TestSetup.with_captured_output do |capture|
+      TestHelpers::TestSetup.with_captured_output do |_|
         result = command.execute
         result.success?.should be_false
         result.error.should contain("Invalid project name")
@@ -64,7 +64,7 @@ describe AzuCLI::Commands::New do
       command = AzuCLI::Commands::New.new
       command.parse_args([] of String)
 
-      TestHelpers::TestSetup.with_captured_output do |capture|
+      TestHelpers::TestSetup.with_captured_output do |_|
         result = command.execute
         result.success?.should be_false
         result.error.should contain("Project name is required")
@@ -81,7 +81,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["existing_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_false
           result.error.should contain("Directory already exists")
@@ -97,7 +97,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -115,7 +115,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--non-interactive", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -133,7 +133,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--type", "api", "test_api"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -150,7 +150,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--database", "mysql", "test_mysql"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -167,7 +167,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--author", "Test Author", "--email", "test@example.com", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -185,7 +185,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--license", "Apache-2.0", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -202,7 +202,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--docker", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -219,7 +219,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--no-git", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -236,7 +236,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--no-example", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -253,7 +253,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--no-joobq", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -272,7 +272,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -301,7 +301,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--type", "web", "test_web"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -323,7 +323,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--type", "api", "test_api"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -347,7 +347,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--author", "Test Author", "--email", "test@example.com", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -369,7 +369,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -392,7 +392,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -410,7 +410,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["--no-git", "test_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
         end
@@ -447,7 +447,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args([name])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_false
           result.error.should contain("Invalid project name")
@@ -467,7 +467,7 @@ describe AzuCLI::Commands::New do
         command = AzuCLI::Commands::New.new
         command.parse_args(["existing_project"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
+        TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_false
           result.error.should contain("Directory already exists")
