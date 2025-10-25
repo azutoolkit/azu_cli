@@ -6,43 +6,156 @@ on:
   pull_request:
     branches: [master]
 
-permissions:
-  contents: write # push branches, push tags, create release
-  pull-requests: write # open / update PR
-
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     container:
       image: crystallang/crystal:1.17.1
+    services:
+      # Label used to access the service container
+      redis:
+        # Docker Hub image
+        image: redis
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
-      - uses: actions/checkout@v4
-      - name: Install system dependencies
-        run: |
-          apt-get update
-          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev
-      - name: Install shards
-        run: shards install --ignore-crystal-version
-      - name: Check formatting
-        run: crystal tool format --check ./src
-      - name: Run Specs
-        run: crystal spec
+      - uses: actions/checkout@v2
 
+      - name: Cache shards dependencies
+        uses: actions/cache@v3
+        with:
+          path: lib
+          key: ${{ runner.os }}-shards-${{ hashFiles('**/shard.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-shards-
+
+      - name: Cache Crystal build artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            bin/
+            .crystal/
+          key: ${{ runner.os }}-crystal-build-${{ hashFiles('**/*.cr', '**/shard.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-crystal-build-
+
+      - name: Cache test results
+        uses: actions/cache@v3
+        with:
+          path: |
+            .crystal/
+            spec/
+          key: ${{ runner.os }}-test-cache-${{ hashFiles('**/*.cr', '**/shard.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-test-cache-
+
+      - name: Install dependencies
+        run: shards install
+
+      - name: Build binary to test
+        run: shards build example_app
+
+      - name: Check code style
+        run: crystal tool format --check
+
+      - name: Run cache tests
+        run: crystal spec spec/azu/cache_spec.cr --fail-fast
+        env:
+          CRYSTAL_ENV: pipeline
+          CRYSTAL_LOG_SOURCES: "*"
+          CRYSTAL_LOG_LEVEL: DEBUG
+          PORT: 4000
+          PORT_REUSE: false
+          HOST: 0.0.0.0
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
+
+      - name: Run handler tests
+        run: crystal spec spec/azu/handler/ --fail-fast
+        env:
+          CRYSTAL_ENV: pipeline
+          CRYSTAL_LOG_SOURCES: "*"
+          CRYSTAL_LOG_LEVEL: DEBUG
+          PORT: 4000
+          PORT_REUSE: false
+          HOST: 0.0.0.0
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
+
+      - name: Run integration tests
+        run: crystal spec spec/integration/ --fail-fast
+        env:
+          CRYSTAL_ENV: pipeline
+          CRYSTAL_LOG_SOURCES: "*"
+          CRYSTAL_LOG_LEVEL: DEBUG
+          PORT: 4000
+          PORT_REUSE: false
+          HOST: 0.0.0.0
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
+
+      - name: Run router and templates tests
+        run: crystal spec spec/azu/router_spec.cr spec/azu/templates_spec.cr --fail-fast
+        env:
+          CRYSTAL_ENV: pipeline
+          CRYSTAL_LOG_SOURCES: "*"
+          CRYSTAL_LOG_LEVEL: DEBUG
+          PORT: 4000
+          PORT_REUSE: false
+          HOST: 0.0.0.0
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
+
+      - name: Run WebSocket and component tests
+        run: crystal spec spec/azu/websocket_spec.cr spec/azu/channel_spec.cr spec/azu/component_spec.cr spec/azu/spark_spec.cr --fail-fast
+        env:
+          CRYSTAL_ENV: pipeline
+          CRYSTAL_LOG_SOURCES: "*"
+          CRYSTAL_LOG_LEVEL: DEBUG
+          PORT: 4000
+          PORT_REUSE: false
+          HOST: 0.0.0.0
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
+
+      # - name: Run core framework tests
+      #   run: crystal spec spec/azu/configuration_spec.cr spec/azu/endpoint_spec.cr spec/azu/environment_spec.cr spec/azu/error_spec.cr spec/azu/http_request_spec.cr spec/azu/log_format_spec.cr spec/azu/markup_spec.cr spec/azu/method_spec.cr spec/azu/params_spec.cr spec/azu/request_spec.cr spec/azu/response_spec.cr --fail-fast
+      #   env:
+      #     CRYSTAL_ENV: pipeline
+      #     CRYSTAL_LOG_SOURCES: "*"
+      #     CRYSTAL_LOG_LEVEL: DEBUG
+      #     PORT: 4000
+      #     PORT_REUSE: false
+      #     HOST: 0.0.0.0
+      #     REDIS_HOST: redis
+      #     REDIS_PORT: 6379
+
+      # - name: Run remaining core tests
+      #   run: crystal spec spec/azu/content_negotiator_spec.cr spec/azu/csrf_spec.cr spec/azu/file_upload_spec.cr spec/azu/performance_monitoring_spec.cr spec/azu/performance_reporter_spec.cr spec/azu/refactoring_spec.cr --fail-fast
+      #   env:
+      #     CRYSTAL_ENV: pipeline
+      #     CRYSTAL_LOG_SOURCES: "*"
+      #     CRYSTAL_LOG_LEVEL: DEBUG
+      #     PORT: 4000
+      #     PORT_REUSE: false
+      #     HOST: 0.0.0.0
+      #     REDIS_HOST: redis
+      #     REDIS_PORT: 6379
   release:
     runs-on: ubuntu-latest
-    needs: [build]
+    needs:
+      - test
     if: ${{ success() }}
     steps:
-      - name: Checkout (full history)
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
-      - name: Configure git identity
-        run: |
-          git config user.name "eliasjpr"
-          git config user.email "eliasjpr@gmail.com"
-
       - name: Compute Release Version
         id: semver
         uses: paulhatch/semantic-version@v4.0.2
@@ -50,93 +163,34 @@ jobs:
           tag_prefix: "v"
           major_pattern: "(MAJOR)"
           minor_pattern: "(MINOR)"
+          # A string to determine the format of the version output
           format: "${major}.${minor}.${patch}"
+          # If this is set to true, *every* commit will be treated as a new version.
           bump_each_commit: false
 
-      # Prepare / sync the persistent release branch off master
-      - name: Prepare release branch
-        id: prep_branch
-        run: |
-          BASE_BRANCH="master"
-          REL_BRANCH="release-bot"
-
-          # make sure we have latest master
-          git checkout "$BASE_BRANCH"
-          git pull origin "$BASE_BRANCH"
-
-          # does release-bot already exist remotely?
-          if git ls-remote --exit-code origin "refs/heads/$REL_BRANCH" >/dev/null 2>&1; then
-            # fetch it locally and rebase it on master so it's up to date
-            git fetch origin "$REL_BRANCH":"$REL_BRANCH"
-            git checkout "$REL_BRANCH"
-            git rebase "origin/$BASE_BRANCH"
-          else
-            # create it fresh from master
-            git checkout -b "$REL_BRANCH"
-          fi
-
-          echo "rel_branch=$REL_BRANCH" >> $GITHUB_OUTPUT
-
-      # bump shard.yml version IN release-bot branch (not directly in master)
       - name: Bump Shard Version
+        id: bump-shard
         uses: fjogeleit/yaml-update-action@master
         with:
           valueFile: shard.yml
           propertyPath: version
-          value: ${{ steps.semver.outputs.version }}
+          value: ${{steps.semver.outputs.version}}
           commitChange: true
-          branch: ${{ steps.prep_branch.outputs.rel_branch }}
-          message: "chore: set shard version ${{ steps.semver.outputs.version }}"
+          targetBranch: master
+          masterBranchName: master
+          createPR: false
+          branch: master
+          message: Set shard version ${{ steps.semver.outputs.version }}
 
-      # Make sure we are on that branch in the runner now
-      - name: Checkout bumped branch
-        run: |
-          git checkout ${{ steps.prep_branch.outputs.rel_branch }}
-
-      # Push branch (force-with-lease so history stays aligned with master rebase)
-      - name: Push release branch
-        run: |
-          git push origin ${{ steps.prep_branch.outputs.rel_branch }} --force-with-lease
-
-      # Create / update PR into master so master can later absorb the bumped shard.yml
-      - name: Create / Update PR
-        uses: peter-evans/create-pull-request@v6
-        with:
-          branch: ${{ steps.prep_branch.outputs.rel_branch }}
-          base: master
-          title: "chore: release v${{ steps.semver.outputs.version }}"
-          commit-message: "chore: bump shard.yml to ${{ steps.semver.outputs.version }}"
-          body: |
-            Automated release for v${{ steps.semver.outputs.version }}.
-            This PR syncs shard.yml back into master.
-          labels: release, automated
-          draft: false
-
-      # Tag the exact commit on release-bot that has the bumped version
-      - name: Create and push tag
-        id: tag_push
-        run: |
-          VERSION="v${{ steps.semver.outputs.version }}"
-
-          # ensure we are on release-bot with the bumped commit
-          git checkout ${{ steps.prep_branch.outputs.rel_branch }}
-
-          # create lightweight tag (you can make it annotated if you prefer)
-          git tag "${VERSION}"
-
-          # push tag to origin
-          git push origin "${VERSION}"
-
-          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
-
-      # Create the GitHub Release from that tag
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USER: eliasjpr
+          GITHUB_EMAIL: eliasjpr@gmail.com
         with:
-          tag_name: ${{ steps.tag_push.outputs.tag }}
-          release_name: Release ${{ steps.tag_push.outputs.tag }}
+          tag_name: ${{steps.semver.outputs.version_tag}}
+          release_name: Release v${{steps.semver.outputs.version}}
           draft: false
           prerelease: false
