@@ -1,5 +1,5 @@
 name: azu_cli
-version: 0.1.1
+version: 0.1.2
 authors:
   - Elias J. Perez <eliasjpr@gmail.com>
 crystal: 1.16.3
@@ -7,31 +7,23 @@ license: MIT
 targets:
   azu:
     main: ./src/azu_cli.cr
-
 dependencies:
   topia:
     github: azutoolkit/topia
-
   teeplate:
     github: amberframework/teeplate
     version: ~> 0.11.2
-
   cadmium_inflector:
     github: cadmiumcr/inflector
-
   pg:
     github: will/crystal-pg
-
   cql:
     github: azutoolkit/cql
-
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.9.0
-
   readline:
     github: crystal-lang/crystal-readline
-
 development_dependencies:
   spec2:
     github: waterlink/spec2.cr
