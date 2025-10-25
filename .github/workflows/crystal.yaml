@@ -7,8 +7,8 @@ on:
     branches: [master]
 
 permissions:
-  contents: write         # push branches, push tags, create release
-  pull-requests: write    # open / update PR
+  contents: write # push branches, push tags, create release
+  pull-requests: write # open / update PR
 
 jobs:
   build:
@@ -40,8 +40,8 @@ jobs:
 
       - name: Configure git identity
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "eliasjpr"
+          git config user.email "eliasjpr@gmail.com"
 
       - name: Compute Release Version
         id: semver
