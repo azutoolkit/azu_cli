@@ -7,13 +7,8 @@ on:
     branches: [master]
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write         # push branches, push tags, create release
+  pull-requests: write    # open / update PR
 
 jobs:
   build:
@@ -32,16 +27,22 @@ jobs:
         run: crystal tool format --check ./src
       - name: Run Specs
         run: crystal spec
+
   release:
     runs-on: ubuntu-latest
-    needs:
-      - build
+    needs: [build]
     if: ${{ success() }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Compute Release Version
         id: semver
         uses: paulhatch/semantic-version@v4.0.2
@@ -49,32 +50,93 @@ jobs:
           tag_prefix: "v"
           major_pattern: "(MAJOR)"
           minor_pattern: "(MINOR)"
-          # A string to determine the format of the version output
           format: "${major}.${minor}.${patch}"
-          # If this is set to true, *every* commit will be treated as a new version.
           bump_each_commit: false
 
+      # Prepare / sync the persistent release branch off master
+      - name: Prepare release branch
+        id: prep_branch
+        run: |
+          BASE_BRANCH="master"
+          REL_BRANCH="release-bot"
+
+          # make sure we have latest master
+          git checkout "$BASE_BRANCH"
+          git pull origin "$BASE_BRANCH"
+
+          # does release-bot already exist remotely?
+          if git ls-remote --exit-code origin "refs/heads/$REL_BRANCH" >/dev/null 2>&1; then
+            # fetch it locally and rebase it on master so it's up to date
+            git fetch origin "$REL_BRANCH":"$REL_BRANCH"
+            git checkout "$REL_BRANCH"
+            git rebase "origin/$BASE_BRANCH"
+          else
+            # create it fresh from master
+            git checkout -b "$REL_BRANCH"
+          fi
+
+          echo "rel_branch=$REL_BRANCH" >> $GITHUB_OUTPUT
+
+      # bump shard.yml version IN release-bot branch (not directly in master)
       - name: Bump Shard Version
-        id: bump-shard
         uses: fjogeleit/yaml-update-action@master
         with:
           valueFile: shard.yml
           propertyPath: version
-          value: ${{steps.semver.outputs.version}}
+          value: ${{ steps.semver.outputs.version }}
           commitChange: true
-          targetBranch: master
-          masterBranchName: master
-          createPR: false
-          branch: master
-          message: Set shard version ${{ steps.semver.outputs.version }}
+          branch: ${{ steps.prep_branch.outputs.rel_branch }}
+          message: "chore: set shard version ${{ steps.semver.outputs.version }}"
 
+      # Make sure we are on that branch in the runner now
+      - name: Checkout bumped branch
+        run: |
+          git checkout ${{ steps.prep_branch.outputs.rel_branch }}
+
+      # Push branch (force-with-lease so history stays aligned with master rebase)
+      - name: Push release branch
+        run: |
+          git push origin ${{ steps.prep_branch.outputs.rel_branch }} --force-with-lease
+
+      # Create / update PR into master so master can later absorb the bumped shard.yml
+      - name: Create / Update PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: ${{ steps.prep_branch.outputs.rel_branch }}
+          base: master
+          title: "chore: release v${{ steps.semver.outputs.version }}"
+          commit-message: "chore: bump shard.yml to ${{ steps.semver.outputs.version }}"
+          body: |
+            Automated release for v${{ steps.semver.outputs.version }}.
+            This PR syncs shard.yml back into master.
+          labels: release, automated
+          draft: false
+
+      # Tag the exact commit on release-bot that has the bumped version
+      - name: Create and push tag
+        id: tag_push
+        run: |
+          VERSION="v${{ steps.semver.outputs.version }}"
+
+          # ensure we are on release-bot with the bumped commit
+          git checkout ${{ steps.prep_branch.outputs.rel_branch }}
+
+          # create lightweight tag (you can make it annotated if you prefer)
+          git tag "${VERSION}"
+
+          # push tag to origin
+          git push origin "${VERSION}"
+
+          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+
+      # Create the GitHub Release from that tag
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{steps.semver.outputs.version_tag}}
-          release_name: Release v${{steps.semver.outputs.version}}
+          tag_name: ${{ steps.tag_push.outputs.tag }}
+          release_name: Release ${{ steps.tag_push.outputs.tag }}
           draft: false
           prerelease: false
