@@ -42,7 +42,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
       - name: Compute Release Version
         id: semver
         uses: paulhatch/semantic-version@v4.0.2
@@ -63,7 +62,6 @@ jobs:
           propertyPath: version
           value: ${{steps.semver.outputs.version}}
           commitChange: true
-          updateFile: true
           targetBranch: master
           masterBranchName: master
           createPR: false
