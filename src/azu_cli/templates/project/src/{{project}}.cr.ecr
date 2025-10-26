@@ -76,6 +76,10 @@ module <%= @module_name %>
       Azu::Handler::CSRF.new,
 <% end -%>
       Azu::Handler::RequestId.new,
+<% if @env == "development" -%>
+      Azu::Handler::DevDashboard.new,
+      Azu::Handler::PerformanceMonitor.new,
+<% end -%>
       Azu::Handler::Rescuer.new,
       Azu::Handler::Logger.new,
     ]
@@ -84,6 +88,14 @@ end
 
 require "./models/**"
 require "./requests/**"
+require "./validators/**"
+require "./services/**"
+require "./components/**"
+require "./middleware/**"
+<% if @project_type == "api" -%>
+require "./responses/**"
+<% elsif @project_type == "web" -%>
 require "./pages/**"
+<% end -%>
 require "./endpoints/**"
 <% end -%>

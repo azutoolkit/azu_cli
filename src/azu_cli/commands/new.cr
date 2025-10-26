@@ -295,7 +295,8 @@ module AzuCLI
             docker_support: @docker_support,
             git_init: @git_init,
             include_example: @include_example,
-            include_joobq: @include_joobq
+            include_joobq: @include_joobq,
+            env: "development"
           )
 
           # Generate the project in the target directory
