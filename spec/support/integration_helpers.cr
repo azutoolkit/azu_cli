@@ -4,7 +4,7 @@ require "http/client"
 
 module IntegrationHelpers
   # Create a temporary project and yield to the block
-  def with_temp_project(name : String, type : String = "web", &block)
+  def with_temp_project(name : String, type : String = "web", &block : String -> Nil)
     temp_dir = Dir.tempdir
     project_path = File.join(temp_dir, name)
 
@@ -17,12 +17,12 @@ module IntegrationHelpers
       result = Process.run(cmd.join(" "), shell: true, chdir: temp_dir, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
 
       unless result.success?
-        raise "Failed to create project: #{result.error_output}"
+        raise "Failed to create project"
       end
 
-      # Change to project directory
+      # Change to project directory and yield project path
       Dir.cd(project_path) do
-        block.call
+        block.call(project_path)
       end
     ensure
       # Cleanup
@@ -36,14 +36,31 @@ module IntegrationHelpers
     result.success?
   end
 
+  # Result wrapper to hold process status and output
+  struct CommandResult
+    property status : Process::Status
+    property output : String
+    property error : String
+
+    def initialize(@status : Process::Status, @output : String, @error : String)
+    end
+
+    def success?
+      @status.success?
+    end
+  end
+
   # Run a generator command
-  def run_generator(command : String, project_path : String)
+  def run_generator(command : String, project_path : String) : CommandResult
     full_command = "bin/azu #{command}"
-    Process.run(full_command, shell: true, chdir: project_path, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
+    output = IO::Memory.new
+    error = IO::Memory.new
+    status = Process.run(full_command, shell: true, chdir: project_path, output: output, error: error)
+    CommandResult.new(status, output.to_s, error.to_s)
   end
 
   # Start a server and yield to block, then stop it
-  def with_running_server(project_path : String, port : Int32 = 4000, &block)
+  def with_running_server(project_path : String, port : Int32 = 4000, &block : Int32 -> Nil)
     # Build the project first
     unless build_project(project_path)
       raise "Failed to build project"
@@ -53,8 +70,7 @@ module IntegrationHelpers
     server_process = Process.new("shards", ["run", "src/server.cr"], chdir: project_path, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
 
     # Wait for server to start
-    sleep 2
-
+    sleep 2.milliseconds
     begin
       block.call(port)
     ensure
@@ -100,14 +116,16 @@ module IntegrationHelpers
   end
 
   # Run crystal script and return output
-  def run_crystal_script(project_path : String, script_content : String) : Process::Result
+  def run_crystal_script(project_path : String, script_content : String) : CommandResult
     script_path = File.join(project_path, "test_script.cr")
     File.write(script_path, script_content)
 
-    result = Process.run("crystal", ["run", "test_script.cr"], chdir: project_path, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
+    output = IO::Memory.new
+    error = IO::Memory.new
+    status = Process.run("crystal", ["run", "test_script.cr"], chdir: project_path, output: output, error: error)
 
     File.delete(script_path) if File.exists?(script_path)
-    result
+    CommandResult.new(status, output.to_s, error.to_s)
   end
 
   # Make HTTP GET request with authentication header

@@ -1,5 +1,5 @@
 require "spec"
-require "../support/integration_helpers"
+require "../../support/integration_helpers"
 
 include IntegrationHelpers
 

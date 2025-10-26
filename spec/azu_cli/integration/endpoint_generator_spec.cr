@@ -1,5 +1,5 @@
 require "spec"
-require "../support/integration_helpers"
+require "../../support/integration_helpers"
 
 include IntegrationHelpers
 
@@ -56,7 +56,9 @@ describe "Endpoint Generator E2E" do
         response = http_get("/users", port)
         response.should_not be_nil
         response.not_nil!.status_code.should eq(200)
-        response.not_nil!.headers["Content-Type"]?.should contain("application/json")
+        content_type = response.not_nil!.headers["Content-Type"]?
+        content_type.should_not be_nil
+        content_type.not_nil!.should contain("application/json")
 
         response = http_get("/users/1", port)
         response.should_not be_nil

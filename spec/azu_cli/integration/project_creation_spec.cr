@@ -1,5 +1,5 @@
 require "spec"
-require "../support/integration_helpers"
+require "../../support/integration_helpers"
 
 include IntegrationHelpers
 
@@ -56,13 +56,17 @@ describe "Project Creation Integration" do
       build_project(project_path).should be_true
 
       # Test CLI commands
-      result = Process.run("./bin/testcli --version", shell: true, chdir: project_path, output: Process::Redirect::Pipe)
-      result.success?.should be_true
-      result.output.to_s.should contain("v0.1.0")
+      output = IO::Memory.new
+      error = IO::Memory.new
+      status = Process.run("./bin/testcli --version", shell: true, chdir: project_path, output: output, error: error)
+      status.success?.should be_true
+      output.to_s.should contain("v0.1.0")
 
-      result = Process.run("./bin/testcli --help", shell: true, chdir: project_path, output: Process::Redirect::Pipe)
-      result.success?.should be_true
-      result.output.to_s.should contain("Usage:")
+      output = IO::Memory.new
+      error = IO::Memory.new
+      status = Process.run("./bin/testcli --help", shell: true, chdir: project_path, output: output, error: error)
+      status.success?.should be_true
+      output.to_s.should contain("Usage:")
     end
   end
 end
