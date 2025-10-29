@@ -1,8 +1,8 @@
 require "../spec_helper"
 require "file_utils"
 
-# Test command for testing base functionality
-class TestCommand < AzuCLI::Commands::Base
+# Test command for testing command functionality
+class CommandSpecTestCommand < AzuCLI::Commands::Base
   def initialize
     super("test", "Test command for specs")
   end
@@ -40,19 +40,19 @@ describe AzuCLI::Commands::Base do
 
   describe "command metadata" do
     it "sets command name correctly" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.name.should eq("test")
     end
 
     it "sets description correctly" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.description.should eq("Test command for specs")
     end
   end
 
   describe "option parsing" do
     it "parses long options correctly" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["--debug", "--output", "file.txt"])
 
       cmd.has_option?("debug").should be_true
@@ -60,7 +60,7 @@ describe AzuCLI::Commands::Base do
     end
 
     it "parses short options correctly" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["-d", "-o", "file.txt"])
 
       cmd.has_option?("d").should be_true
@@ -68,7 +68,7 @@ describe AzuCLI::Commands::Base do
     end
 
     it "parses options with equals correctly" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["--output=file.txt", "--level=debug"])
 
       cmd.get_option("output").should eq("file.txt")
@@ -76,7 +76,7 @@ describe AzuCLI::Commands::Base do
     end
 
     it "handles positional arguments correctly" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["create", "user", "--debug", "admin"])
 
       cmd.get_args.should eq(["create", "user", "--debug", "admin"])
@@ -86,7 +86,7 @@ describe AzuCLI::Commands::Base do
 
   describe "option access methods" do
     it "gets option values correctly" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["--output", "file.txt", "--debug", "--level", "info"])
 
       cmd.get_option("output").should eq("file.txt")
@@ -97,7 +97,7 @@ describe AzuCLI::Commands::Base do
     end
 
     it "checks option presence correctly" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["--debug", "--output", "file.txt"])
 
       cmd.has_option?("debug").should be_true
@@ -108,7 +108,7 @@ describe AzuCLI::Commands::Base do
 
   describe "argument utilities" do
     it "gets arguments" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["arg1", "arg2", "--debug", "arg3"])
 
       cmd.get_args.should eq(["arg1", "arg2", "--debug", "arg3"])
@@ -117,7 +117,7 @@ describe AzuCLI::Commands::Base do
     end
 
     it "handles empty arguments" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["--debug"])
 
       cmd.get_args.should eq(["--debug"])
@@ -143,7 +143,7 @@ describe AzuCLI::Commands::Base do
 
   describe "execute method" do
     it "executes command successfully" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["--debug", "test"])
       result = cmd.execute
 
@@ -154,7 +154,7 @@ describe AzuCLI::Commands::Base do
     end
 
     it "executes without options" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       cmd.parse_args(["test", "arg"])
       result = cmd.execute
 
@@ -165,7 +165,7 @@ describe AzuCLI::Commands::Base do
 
   describe "result handling" do
     it "creates success results" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       result = cmd.success("Operation completed")
 
       result.success?.should be_true
@@ -174,7 +174,7 @@ describe AzuCLI::Commands::Base do
     end
 
     it "creates error results" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       result = cmd.error("Operation failed")
 
       result.success?.should be_false
@@ -185,7 +185,7 @@ describe AzuCLI::Commands::Base do
 
   describe "help functionality" do
     it "shows help information" do
-      cmd = TestCommand.new
+      cmd = CommandSpecTestCommand.new
       # This would test the show_help method if it's implemented
       # For now, just test that the command has the method
       cmd.responds_to?(:show_help).should be_true

@@ -3,21 +3,29 @@ require "process"
 require "http/client"
 
 module IntegrationHelpers
+  # Store the workspace root directory at module load time
+  WORKSPACE_ROOT = Dir.current
   # Create a temporary project and yield to the block
   def with_temp_project(name : String, type : String = "web", &block : String -> Nil)
-    temp_dir = Dir.tempdir
+    # Create a unique temp directory for this test to avoid conflicts
+    temp_dir = File.join(Dir.tempdir, "azu_spec_#{Time.utc.to_unix_ms}")
     project_path = File.join(temp_dir, name)
+    # Get absolute path to azu binary from the project root
+    azu_bin = File.join(WORKSPACE_ROOT, "bin/azu")
 
     begin
-      # Create the project
+      # Create the temp directory
       Dir.mkdir_p(temp_dir)
 
       # Run azu new command
-      cmd = ["bin/azu", "new", name, "--type", type, "--author", "Test Author", "--email", "test@example.com", "--no-git"]
-      result = Process.run(cmd.join(" "), shell: true, chdir: temp_dir, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
+      cmd = [azu_bin, "new", name, "--type", type, "--author", "Test Author", "--email", "test@example.com", "--no-git"]
+      output = IO::Memory.new
+      error = IO::Memory.new
+      result = Process.run(cmd.join(" "), shell: true, chdir: temp_dir, output: output, error: error)
 
       unless result.success?
-        raise "Failed to create project"
+        error_msg = error.to_s.presence || output.to_s
+        raise "Failed to create project: #{error_msg}"
       end
 
       # Change to project directory and yield project path
@@ -25,8 +33,8 @@ module IntegrationHelpers
         block.call(project_path)
       end
     ensure
-      # Cleanup
-      FileUtils.rm_rf(project_path) if Dir.exists?(project_path)
+      # Cleanup the entire temp directory
+      FileUtils.rm_rf(temp_dir) if Dir.exists?(temp_dir)
     end
   end
 
@@ -52,7 +60,9 @@ module IntegrationHelpers
 
   # Run a generator command
   def run_generator(command : String, project_path : String) : CommandResult
-    full_command = "bin/azu #{command}"
+    # Get absolute path to azu binary from the workspace root
+    azu_bin = File.join(WORKSPACE_ROOT, "bin/azu")
+    full_command = "#{azu_bin} #{command}"
     output = IO::Memory.new
     error = IO::Memory.new
     status = Process.run(full_command, shell: true, chdir: project_path, output: output, error: error)

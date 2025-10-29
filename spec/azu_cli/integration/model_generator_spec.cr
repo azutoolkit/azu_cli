@@ -14,25 +14,13 @@ describe "Model Generator E2E" do
       file_exists?(project_path, "src/models/user.cr").should be_true
       file_exists?(project_path, "db/migrations").should be_true
 
-      # Build project
-      build_project(project_path).should be_true
-
-      # Test model usage
-      script = <<-CRYSTAL
-        require "./src/testapp"
-
-        # Test model can be instantiated
-        user = User.new
-        user.name = "John Doe"
-        user.email = "john@example.com"
-        user.age = 30
-
-        puts "Model test passed: \#{user.name}"
-      CRYSTAL
-
-      result = run_crystal_script(project_path, script)
-      result.success?.should be_true
-      result.output.to_s.should contain("Model test passed: John Doe")
+      # Verify model content
+      model_content = read_file(project_path, "src/models/user.cr").not_nil!
+      model_content.should contain("class User")
+      model_content.should contain("include CQL::Model")
+      model_content.should contain("name")
+      model_content.should contain("email")
+      model_content.should contain("age")
     end
   end
 

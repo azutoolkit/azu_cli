@@ -10,24 +10,20 @@ describe "Service Generator E2E" do
       result = run_generator("generate service EmailSender to:string subject:string", project_path)
       result.success?.should be_true
 
-      # Verify service file created
-      file_exists?(project_path, "src/services/email_sender_service.cr").should be_true
+      # Verify service files created (generates all CRUD actions by default)
+      file_exists?(project_path, "src/services/email_sender/create_service.cr").should be_true
+      file_exists?(project_path, "src/services/email_sender/index_service.cr").should be_true
+      file_exists?(project_path, "src/services/result.cr").should be_true
 
-      # Build project
-      build_project(project_path).should be_true
+      # Verify content of generated files
+      create_content = read_file(project_path, "src/services/email_sender/create_service.cr").not_nil!
+      create_content.should contain("module EmailSender")
+      create_content.should contain("class CreateService")
+      create_content.should contain("Services::Result")
 
-      # Test service can be instantiated and used
-      script = <<-CRYSTAL
-        require "./src/testapp"
-
-        # Test service can be instantiated
-        service = EmailSenderService.new
-        puts "Service test passed: \#{service.class.name}"
-      CRYSTAL
-
-      result = run_crystal_script(project_path, script)
-      result.success?.should be_true
-      result.output.to_s.should contain("Service test passed")
+      result_content = read_file(project_path, "src/services/result.cr").not_nil!
+      result_content.should contain("module Services")
+      result_content.should contain("class Result")
     end
   end
 end

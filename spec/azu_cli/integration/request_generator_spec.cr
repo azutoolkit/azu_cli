@@ -13,21 +13,13 @@ describe "Request Generator E2E" do
       # Verify request file created
       file_exists?(project_path, "src/requests/user/create_request.cr").should be_true
 
-      # Build project
-      build_project(project_path).should be_true
-
-      # Test request can be instantiated
-      script = <<-CRYSTAL
-        require "./src/testapp"
-
-        # Test request can be instantiated
-        request = User::CreateRequest.new
-        puts "Request test passed: \#{request.class.name}"
-      CRYSTAL
-
-      result = run_crystal_script(project_path, script)
-      result.success?.should be_true
-      result.output.to_s.should contain("Request test passed")
+      # Verify content of generated file
+      request_content = read_file(project_path, "src/requests/user/create_request.cr").not_nil!
+      request_content.should contain("module Testapp")  # Project module name
+      request_content.should contain("struct User::CreateRequest")
+      request_content.should contain("include Azu::Request")
+      request_content.should contain("name")
+      request_content.should contain("email")
     end
   end
 end

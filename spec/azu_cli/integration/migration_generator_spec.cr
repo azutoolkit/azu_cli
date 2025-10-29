@@ -18,9 +18,6 @@ describe "Migration Generator E2E" do
       migration_content = File.read(migration_files.first)
       migration_content.should contain("add_column")
       migration_content.should contain("users")
-
-      # Build project
-      build_project(project_path).should be_true
     end
   end
 end

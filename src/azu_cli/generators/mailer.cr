@@ -6,7 +6,7 @@ module AzuCLI
     # Carbon: https://github.com/luckyframework/carbon
     class Mailer < Teeplate::FileTree
       directory "#{__DIR__}/../templates/mailer"
-      OUTPUT_DIR = "./src/mailers"
+      OUTPUT_DIR = "."
 
       property name : String
       property methods : Array(String)

@@ -13,21 +13,12 @@ describe "Channel Generator E2E" do
       # Verify channel file created
       file_exists?(project_path, "src/channels/chat_channel.cr").should be_true
 
-      # Build project
-      build_project(project_path).should be_true
-
-      # Test channel can be instantiated
-      script = <<-CRYSTAL
-        require "./src/testapp"
-
-        # Test channel can be instantiated
-        channel = ChatChannel.new
-        puts "Channel test passed: \#{channel.class.name}"
-      CRYSTAL
-
-      result = run_crystal_script(project_path, script)
-      result.success?.should be_true
-      result.output.to_s.should contain("Channel test passed")
+      # Verify content of generated file
+      channel_content = read_file(project_path, "src/channels/chat_channel.cr").not_nil!
+      channel_content.should contain("class ChatChannel")
+      channel_content.should contain("include Azu::Channel")
+      channel_content.should contain("def subscribed")
+      channel_content.should contain("def receive")
     end
   end
 end

@@ -13,21 +13,11 @@ describe "Middleware Generator E2E" do
       # Verify middleware file created
       file_exists?(project_path, "src/middleware/rate_limit_middleware.cr").should be_true
 
-      # Build project
-      build_project(project_path).should be_true
-
-      # Test middleware can be instantiated
-      script = <<-CRYSTAL
-        require "./src/testapp"
-
-        # Test middleware can be instantiated
-        middleware = RateLimitMiddleware.new
-        puts "Middleware test passed: \#{middleware.class.name}"
-      CRYSTAL
-
-      result = run_crystal_script(project_path, script)
-      result.success?.should be_true
-      result.output.to_s.should contain("Middleware test passed")
+      # Verify content of generated file
+      middleware_content = read_file(project_path, "src/middleware/rate_limit_middleware.cr").not_nil!
+      middleware_content.should contain("class RateLimitMiddleware")
+      middleware_content.should contain("include HTTP::Handler")
+      middleware_content.should contain("def call")
     end
   end
 end

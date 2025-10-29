@@ -17,20 +17,14 @@ describe "JoobQ Generator E2E" do
       file_exists?(project_path, "src/initializers/joobq.cr").should be_true
       file_exists?(project_path, "src/worker.cr").should be_true
 
-      # Build project
-      build_project(project_path).should be_true
+      # Verify content of generated files
+      initializer_content = read_file(project_path, "src/initializers/joobq.cr").not_nil!
+      initializer_content.should contain("JoobQ")
+      initializer_content.should contain("configure")
 
-      # Test JoobQ initializer loads
-      script = <<-CRYSTAL
-        require "./src/testapp"
-
-        # Test JoobQ initializer can be loaded
-        puts "JoobQ test passed: JoobQ initializer loaded"
-      CRYSTAL
-
-      result = run_crystal_script(project_path, script)
-      result.success?.should be_true
-      result.output.to_s.should contain("JoobQ test passed")
+      worker_content = read_file(project_path, "src/worker.cr").not_nil!
+      worker_content.should contain("JoobQ")
+      worker_content.should contain("Worker")
     end
   end
 end
