@@ -1,0 +1,9 @@
+module <%= project.camelcase %>::Auth
+  struct LogoutEndpoint
+    include Azu::Endpoint(Azu::Request::Empty, Azu::Response::Empty)
+
+    post "/auth/logout"
+  end
+end
+
+

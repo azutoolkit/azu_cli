@@ -1,0 +1,9 @@
+module <%= project.camelcase %>::Auth
+  struct RegisterEndpoint
+    include Azu::Endpoint(Auth::RegisterRequest, Azu::Response::Empty)
+
+    post "/auth/register"
+  end
+end
+
+

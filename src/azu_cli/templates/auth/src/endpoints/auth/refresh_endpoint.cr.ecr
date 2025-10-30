@@ -1,0 +1,11 @@
+<%- if using_jwt? || using_authly? %>
+module <%= project.camelcase %>::Auth
+  struct RefreshEndpoint
+    include Azu::Endpoint(Auth::RefreshTokenRequest, Azu::Response::Empty)
+
+    post "/auth/refresh"
+  end
+end
+<%- end %>
+
+

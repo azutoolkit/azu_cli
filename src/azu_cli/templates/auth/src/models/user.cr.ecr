@@ -7,7 +7,8 @@ require "crypto/bcrypt"
 require "json"
 <%- end %>
 
-class User < CQL::Model(Int64)
+class User
+  include CQL::Model(Int64)
   db_context Schema, :users
 
   # Columns
@@ -216,7 +217,8 @@ end
 
 <%- if rbac_enabled? %>
 # Role Model for RBAC
-class Role < CQL::Model(Int64)
+class Role
+  include CQL::Model(Int64)
   db_context Schema, :roles
 
   property name : String
@@ -265,7 +267,8 @@ class Role < CQL::Model(Int64)
 end
 
 # Permission Model for RBAC
-class Permission < CQL::Model(Int64)
+class Permission
+  include CQL::Model(Int64)
   db_context Schema, :permissions
 
   property name : String
@@ -285,7 +288,8 @@ class Permission < CQL::Model(Int64)
 end
 
 # UserRole Junction Model
-class UserRole < CQL::Model(Int64)
+class UserRole
+  include CQL::Model(Int64)
   db_context Schema, :user_roles
 
   property user_id : Int64
@@ -299,7 +303,8 @@ class UserRole < CQL::Model(Int64)
 end
 
 # RolePermission Junction Model
-class RolePermission < CQL::Model(Int64)
+class RolePermission
+  include CQL::Model(Int64)
   db_context Schema, :role_permissions
 
   property role_id : Int64
@@ -314,7 +319,8 @@ end
 
 <%- if using_authly? %>
 # OAuth Application Model for Authly integration
-class OAuthApplication < CQL::Model(Int64)
+class OAuthApplication
+  include CQL::Model(Int64)
   db_context Schema, :oauth_applications
 
   property name : String
@@ -343,7 +349,8 @@ class OAuthApplication < CQL::Model(Int64)
 end
 
 # OAuth Access Token Model
-class OAuthAccessToken < CQL::Model(Int64)
+class OAuthAccessToken
+  include CQL::Model(Int64)
   db_context Schema, :oauth_access_tokens
 
   property application_id : Int64

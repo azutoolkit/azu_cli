@@ -1,0 +1,11 @@
+<%- if using_authly? %>
+module <%= project.camelcase %>::Auth
+  struct OAuthCallbackEndpoint
+    include Azu::Endpoint(Azu::Request::Empty, Azu::Response::Empty)
+
+    get "/auth/oauth/:provider/callback"
+  end
+end
+<%- end %>
+
+

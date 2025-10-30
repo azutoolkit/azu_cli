@@ -1,0 +1,9 @@
+module <%= project.camelcase %>::Auth
+  struct LoginEndpoint
+    include Azu::Endpoint(Auth::LoginRequest, Azu::Response::Empty)
+
+    post "/auth/login"
+  end
+end
+
+

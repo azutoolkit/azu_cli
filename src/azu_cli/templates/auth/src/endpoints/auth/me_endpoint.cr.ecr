@@ -1,0 +1,9 @@
+module <%= project.camelcase %>::Auth
+  struct MeEndpoint
+    include Azu::Endpoint(Azu::Request::Empty, Azu::Response::Empty)
+
+    get "/auth/me"
+  end
+end
+
+
