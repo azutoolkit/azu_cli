@@ -109,7 +109,7 @@ module AzuCLI
       return {"Schema", "Schema"} unless File.exists?(schema_file_path)
 
       content = File.read(schema_file_path)
-      
+
       # Look for: schema :SchemaName do
       if match = content.match(/schema\s+:(\w+)\s+do/)
         schema_name = match[1]
@@ -508,7 +508,7 @@ module AzuCLI
     def run_command(command : String, args : Array(String) = [] of String) : {success: Bool, output: String, error: String}
       output = IO::Memory.new
       error = IO::Memory.new
-      
+
       status = Process.run(
         command,
         args,
@@ -572,6 +572,121 @@ module AzuCLI
       end
     rescue
       nil
+    end
+
+    # ========================================
+    # Security and Privacy Utilities
+    # ========================================
+
+    # Sanitize log messages to remove sensitive information
+    # CRITICAL for security - prevents password/token leaks in logs
+    def sanitize_log_message(message : String) : String
+      message
+        # Database URLs with passwords
+        .gsub(/postgresql:\/\/([^:]+):([^@]+)@/, "postgresql://\\1:***@")
+        .gsub(/mysql:\/\/([^:]+):([^@]+)@/, "mysql://\\1:***@")
+        .gsub(/mongodb:\/\/([^:]+):([^@]+)@/, "mongodb://\\1:***@")
+
+        # Password parameters
+        .gsub(/password[=:]\s*["']?[^"'\s,}]+["']?/i, "password=***")
+        .gsub(/pwd[=:]\s*["']?[^"'\s,}]+["']?/i, "pwd=***")
+
+        # API keys and tokens
+        .gsub(/api[_-]?key[=:]\s*["']?[A-Za-z0-9_-]{20,}["']?/i, "api_key=***")
+        .gsub(/token[=:]\s*["']?[A-Za-z0-9_.-]{20,}["']?/i, "token=***")
+        .gsub(/bearer\s+[A-Za-z0-9_.-]{20,}/i, "Bearer ***")
+
+        # AWS credentials
+        .gsub(/aws_access_key_id[=:]\s*["']?[A-Z0-9]{20}["']?/i, "aws_access_key_id=***")
+        .gsub(/aws_secret_access_key[=:]\s*["']?[A-Za-z0-9/+=]{40}["']?/i, "aws_secret_access_key=***")
+
+        # Generic secrets
+        .gsub(/secret[=:]\s*["']?[^"'\s,}]{8,}["']?/i, "secret=***")
+
+        # Email patterns (partial obfuscation)
+        .gsub(/([a-zA-Z0-9._%+-]{2})[a-zA-Z0-9._%+-]*@/, "\\1***@")
+
+        # IP addresses (last octet only for privacy)
+        .gsub(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.)\d{1,3}/, "\\1***")
+    end
+
+    # Sanitize database URL for safe logging
+    def sanitize_database_url(url : String) : String
+      # Remove password from connection string
+      url.gsub(/(:\/\/[^:]+:)[^@]+(@)/, "\\1***\\2")
+    end
+
+    # Sanitize hash/options for logging (removes sensitive keys)
+    def sanitize_hash_for_logging(hash : Hash) : Hash
+      sensitive_keys = %w[
+        password pwd secret token api_key access_key secret_key
+        private_key auth_token session_token csrf_token
+        credentials authorization
+      ]
+
+      hash.transform_values do |key, value|
+        if sensitive_keys.any? { |sk| key.to_s.downcase.includes?(sk) }
+          "***"
+        else
+          value
+        end
+      end
+    end
+
+    # ========================================
+    # Version Checking Utilities
+    # ========================================
+
+    # Required minimum Crystal version
+    REQUIRED_CRYSTAL_VERSION = "1.16.0"
+
+    # Check if current Crystal version meets requirements
+    def check_crystal_version : Bool
+      current_version = Crystal::VERSION
+      compare_versions(current_version, REQUIRED_CRYSTAL_VERSION) >= 0
+    end
+
+    # Check Crystal version and exit if incompatible
+    def enforce_crystal_version!
+      unless check_crystal_version
+        Logger.error("Crystal #{REQUIRED_CRYSTAL_VERSION}+ required (current: #{Crystal::VERSION})")
+        Logger.error("Please upgrade Crystal: https://crystal-lang.org/install/")
+        exit(Config::EXIT_FAILURE)
+      end
+    end
+
+    # Get Crystal version info
+    def crystal_version_info : {version: String, compatible: Bool}
+      {
+        version:    Crystal::VERSION,
+        compatible: check_crystal_version,
+      }
+    end
+
+    # Check if shard version is compatible
+    def check_shard_version(shard_name : String, required_version : String) : Bool
+      installed_version = dependency_version(shard_name)
+      return false if installed_version.nil?
+
+      compare_versions(installed_version, required_version) >= 0
+    end
+
+    # Get system information for debugging
+    def system_info : Hash(String, String)
+      info = {
+        "crystal_version"  => Crystal::VERSION,
+        "platform"         => {{ flag?(:darwin) ? "macOS" : flag?(:linux) ? "Linux" : flag?(:windows) ? "Windows" : "Unknown" }},
+        "architecture"     => {{ flag?(:x86_64) ? "x86_64" : flag?(:aarch64) ? "aarch64" : "Unknown" }},
+        "project_name"     => project_name,
+        "project_version"  => project_version,
+      } of String => String
+
+      # Add environment info (sanitized)
+      if env = ENV["AZU_ENV"]?
+        info["environment"] = env
+      end
+
+      info
     end
 
     # ========================================
