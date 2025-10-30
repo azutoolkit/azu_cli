@@ -288,6 +288,117 @@ module AzuCLI
     end
 
     # ========================================
+    # Input Sanitization Utilities
+    # ========================================
+
+    # Sanitize user input for use as Crystal identifier
+    # Removes/replaces invalid characters, ensures valid start
+    # This is critical for security - prevents code injection
+    def sanitize_identifier(name : String) : String
+      return "unnamed" if name.empty?
+
+      # Remove any path components (security: prevent path traversal)
+      name = File.basename(name)
+
+      # Replace invalid characters with underscore
+      sanitized = name.gsub(/[^A-Za-z0-9_]/, "_")
+
+      # Remove leading numbers (Crystal identifiers can't start with number)
+      sanitized = sanitized.gsub(/^[0-9]+/, "")
+
+      # Remove leading/trailing underscores
+      sanitized = sanitized.gsub(/^_+/, "").gsub(/_+$/, "")
+
+      # Collapse multiple underscores to single
+      sanitized = sanitized.gsub(/_+/, "_")
+
+      # If empty after sanitization, use default
+      sanitized = "unnamed" if sanitized.empty?
+
+      # If starts with underscore after removing numbers, that's OK
+      # But ensure it's not all underscores
+      sanitized = "unnamed" if sanitized.chars.all?('_')
+
+      sanitized
+    end
+
+    # Sanitize user input for use as file/directory name
+    # More restrictive than identifier - prevents path traversal
+    # This is CRITICAL for security
+    def sanitize_filename(name : String) : String
+      return "unnamed" if name.empty?
+
+      # SECURITY: Remove any path components - prevents ../../../ attacks
+      name = File.basename(name)
+
+      # SECURITY: Remove any remaining path separators
+      name = name.gsub(/[\/\\]/, "_")
+
+      # Remove dangerous characters
+      # Keep: letters, numbers, underscore, hyphen, dot
+      sanitized = name.gsub(/[^A-Za-z0-9._-]/, "_")
+
+      # Don't allow files starting with dot (hidden files)
+      sanitized = sanitized.gsub(/^\.+/, "")
+
+      # Collapse multiple special chars
+      sanitized = sanitized.gsub(/[._-]+/, "_")
+
+      # Remove leading/trailing underscores
+      sanitized = sanitized.gsub(/^_+/, "").gsub(/_+$/, "")
+
+      # Maximum length for filesystem compatibility
+      sanitized = sanitized[0...255] if sanitized.size > 255
+
+      sanitized = "unnamed" if sanitized.empty?
+      sanitized
+    end
+
+    # Sanitize path - prevents directory traversal attacks
+    # CRITICAL for security when dealing with user-provided paths
+    def sanitize_path(path : String, base_dir : String = ".") : String?
+      return nil if path.empty?
+
+      # Expand to absolute path to catch .. tricks
+      begin
+        absolute_path = File.expand_path(path, base_dir)
+        absolute_base = File.expand_path(base_dir)
+
+        # SECURITY: Ensure path is within base directory
+        unless absolute_path.starts_with?(absolute_base)
+          Logger.warn("Path traversal attempt blocked: #{path}") if Config.instance.debug_mode
+          return nil
+        end
+
+        absolute_path
+      rescue ex
+        Logger.warn("Invalid path: #{path} - #{ex.message}") if Config.instance.debug_mode
+        nil
+      end
+    end
+
+    # Validate and sanitize path component
+    # Use this for user-provided directory/file names in paths
+    def sanitize_path_component(component : String) : String?
+      return nil if component.empty?
+
+      # SECURITY: Reject any path separators
+      return nil if component.includes?("/") || component.includes?("\\")
+
+      # SECURITY: Reject relative path components
+      return nil if component == "." || component == ".."
+
+      # SECURITY: Reject if it starts with .
+      return nil if component.starts_with?(".")
+
+      # Sanitize as filename
+      sanitized = sanitize_filename(component)
+
+      # Verify it didn't get mangled too much
+      sanitized.empty? ? nil : sanitized
+    end
+
+    # ========================================
     # Validation Utilities
     # ========================================
 
@@ -317,6 +428,19 @@ module AzuCLI
       return false if name.empty?
       return false unless name[0].ascii_uppercase?
       valid_identifier?(name)
+    end
+
+    # Validate and sanitize user input for use as identifier
+    # Returns sanitized name or nil if invalid
+    # Use this when you need a guaranteed valid identifier
+    def safe_identifier(name : String) : String?
+      return nil if name.empty?
+
+      sanitized = sanitize_identifier(name)
+      return nil unless valid_identifier?(sanitized)
+      return nil if reserved_keyword?(sanitized)
+
+      sanitized
     end
 
     # ========================================
