@@ -21,6 +21,98 @@ module AzuCLI
       "~/.azu.yml",
     ]
 
+    # Standard project directory structure
+    module Paths
+      SRC          = "src"
+      SPEC         = "spec"
+      CONFIG       = "config"
+      PUBLIC       = "public"
+      TEMPLATES    = "public/templates"
+      LIB          = "lib"
+      BIN          = "bin"
+      DB           = "db"
+      MIGRATIONS   = "db/migrations"
+      MODELS       = "src/models"
+      ENDPOINTS    = "src/endpoints"
+      SERVICES     = "src/services"
+      MIDDLEWARE   = "src/middleware"
+      VALIDATORS   = "src/validators"
+      JOBS         = "src/jobs"
+      MAILERS      = "src/mailers"
+    end
+
+    # File patterns for watching and scanning
+    module Patterns
+      CRYSTAL_SOURCE  = "**/*.cr"
+      CRYSTAL_SPEC    = "**/*_spec.cr"
+      JINJA_TEMPLATE  = "**/*.jinja"
+      HTML_TEMPLATE   = "**/*.html"
+      ECR_TEMPLATE    = "**/*.ecr"
+      YAML_CONFIG     = "**/*.yml"
+      JSON_CONFIG     = "**/*.json"
+      
+      # Combined patterns for common use cases
+      ALL_CRYSTAL     = "#{CRYSTAL_SOURCE}"
+      ALL_TEMPLATES   = "{#{JINJA_TEMPLATE},#{HTML_TEMPLATE},#{ECR_TEMPLATE}}"
+      ALL_CONFIGS     = "{#{YAML_CONFIG},#{JSON_CONFIG}}"
+    end
+
+    # File extensions
+    module Extensions
+      CRYSTAL  = ".cr"
+      JINJA    = ".jinja"
+      HTML     = ".html"
+      ECR      = ".ecr"
+      YAML     = ".yml"
+      JSON     = ".json"
+      MARKDOWN = ".md"
+    end
+
+    # Default ports for various services
+    module Ports
+      DEV_SERVER     = 4000
+      TEST_SERVER    = 4001
+      PREVIEW_SERVER = 4002
+      DATABASE_PG    = 5432
+      DATABASE_MYSQL = 3306
+      REDIS          = 6379
+    end
+
+    # Default host names
+    module Hosts
+      LOCALHOST       = "localhost"
+      LOCAL_IPV4      = "127.0.0.1"
+      LOCAL_IPV6      = "::1"
+      ALL_INTERFACES  = "0.0.0.0"
+    end
+
+    # Database adapters
+    module Adapters
+      POSTGRESQL = "postgresql"
+      MYSQL      = "mysql"
+      SQLITE     = "sqlite"
+      SQLITE3    = "sqlite3"
+    end
+
+    # Template engines
+    module TemplateEngines
+      JINJA = "jinja"
+      ECR   = "ecr"
+    end
+
+    # Common HTTP status codes
+    module HttpStatus
+      OK                    = 200
+      CREATED               = 201
+      NO_CONTENT            = 204
+      BAD_REQUEST           = 400
+      UNAUTHORIZED          = 401
+      FORBIDDEN             = 403
+      NOT_FOUND             = 404
+      UNPROCESSABLE_ENTITY  = 422
+      INTERNAL_SERVER_ERROR = 500
+    end
+
     # Global configuration
     property debug_mode : Bool = false
     property verbose : Bool = false
@@ -31,19 +123,19 @@ module AzuCLI
     # Project configuration
     property project_name : String = ""
     property project_path : String = Dir.current
-    property database_adapter : String = "postgresql"
-    property template_engine : String = "jinja"
+    property database_adapter : String = Adapters::POSTGRESQL
+    property template_engine : String = TemplateEngines::JINJA
 
     # Development server configuration
-    property dev_server_host : String = "localhost"
-    property dev_server_port : Int32 = 4000
+    property dev_server_host : String = Hosts::LOCALHOST
+    property dev_server_port : Int32 = Ports::DEV_SERVER
     property? dev_server_watch : Bool = true
     property? dev_server_rebuild : Bool = true
 
     # Database configuration
     property database_url : String?
     property database_name : String?
-    property database_host : String = "localhost"
+    property database_host : String = Hosts::LOCALHOST
     property database_port : Int32 = 5432
     property database_user : String = "postgres"
     property database_password : String = ""
@@ -268,6 +360,29 @@ module AzuCLI
     # Check if running in production environment
     def production?
       @environment == "production"
+    end
+
+    # Get file watch patterns for development server
+    def watch_patterns : Array(String)
+      [
+        "#{Paths::SRC}/#{Patterns::CRYSTAL_SOURCE}",
+        "#{Paths::CONFIG}/#{Patterns::CRYSTAL_SOURCE}",
+        "#{Paths::TEMPLATES}/#{Patterns::JINJA_TEMPLATE}",
+        "#{Paths::TEMPLATES}/#{Patterns::HTML_TEMPLATE}",
+      ]
+    end
+
+    # Get file watch patterns for test runner
+    def test_watch_patterns : Array(String)
+      [
+        "#{Paths::SRC}/#{Patterns::CRYSTAL_SOURCE}",
+        "#{Paths::SPEC}/#{Patterns::CRYSTAL_SOURCE}",
+      ]
+    end
+
+    # Build path from segments
+    def self.build_path(*segments : String) : String
+      File.join(segments)
     end
 
     # Get full database URL
