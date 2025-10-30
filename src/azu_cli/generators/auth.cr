@@ -62,6 +62,20 @@ module AzuCLI
         @enable_oauth_providers.includes?("github")
       end
 
+      # Dynamic timestamp for migrations/templates
+      def timestamp : Time
+        Time.utc
+      end
+
+      # Infer project mode based on presence of pages directory
+      def api_mode? : Bool
+        !Dir.exists?(File.join(OUTPUT_DIR, "src/pages"))
+      end
+
+      def web_mode? : Bool
+        !api_mode?
+      end
+
       # Generate password hashing method with enhanced security
       def password_hash_method : String
         <<-METHOD

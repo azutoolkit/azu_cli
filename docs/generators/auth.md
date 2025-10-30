@@ -165,7 +165,25 @@ project/
 │   ├── models/
 │   │   └── user.cr                      # User model with auth
 │   ├── endpoints/
-│   │   └── auth_endpoint.cr             # Authentication endpoints
+│   │   └── auth/
+│   │       ├── register_endpoint.cr     # POST /auth/register
+│   │       ├── login_endpoint.cr        # POST /auth/login
+│   │       ├── logout_endpoint.cr       # POST /auth/logout
+│   │       ├── refresh_endpoint.cr      # POST /auth/refresh (jwt/authly)
+│   │       ├── me_endpoint.cr           # GET  /auth/me
+│   │       ├── change_password_endpoint.cr # POST /auth/change-password
+│   │       ├── permissions_endpoint.cr  # GET  /auth/permissions (rbac)
+│   │       ├── oauth_provider_endpoint.cr   # GET /auth/oauth/:provider (authly)
+│   │       └── oauth_callback_endpoint.cr   # GET /auth/oauth/:provider/callback (authly)
+│   ├── response/
+│   │   └── auth/
+│   │       ├── register_json.cr         # Register JSON response
+│   │       ├── login_json.cr            # Login JSON response
+│   │       ├── refresh_json.cr          # Refresh JSON response
+│   │       ├── logout_json.cr           # Logout JSON response
+│   │       ├── me_json.cr               # Me JSON response
+│   │       ├── change_password_json.cr  # Change Password JSON response
+│   │       └── permissions_json.cr      # Permissions JSON response (rbac)
 │   ├── requests/
 │   │   └── auth/
 │   │       ├── register_request.cr      # Registration validation
@@ -176,10 +194,16 @@ project/
 │   │   ├── csrf_protection.cr           # CSRF middleware
 │   │   └── security_headers.cr          # Security headers
 │   └── config/
-│       └── authly.cr                    # Authly configuration
+│       └── authly.cr                    # Authly configuration (authly)
 ├── db/
 │   ├── migrations/
-│   │   └── TIMESTAMP_create_auth_tables.cr # Auth migrations
+│   │   ├── <timestamp>_create_users.cr                 # Users
+│   │   ├── <timestamp>_create_roles.cr                 # RBAC (optional)
+│   │   ├── <timestamp>_create_user_roles.cr            # RBAC (optional)
+│   │   ├── <timestamp>_create_permissions.cr           # RBAC (optional)
+│   │   ├── <timestamp>_create_role_permissions.cr      # RBAC (optional)
+│   │   ├── <timestamp>_create_oauth_applications.cr    # Authly (optional)
+│   │   └── <timestamp>_create_oauth_access_tokens.cr   # Authly (optional)
 │   └── seed_rbac.cr                     # RBAC seed data
 └── .env.example                          # Environment variables template
 ```
@@ -224,19 +248,18 @@ class User < CQL::Model
 end
 ```
 
-#### Authentication Endpoints (`src/endpoints/auth_endpoint.cr`)
+#### Authentication Endpoints (`src/endpoints/auth/*_endpoint.cr`)
 
-RESTful authentication API:
+RESTful authentication API (per action files):
 
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
-- `POST /auth/logout` - User logout
-- `POST /auth/refresh` - Refresh access token
-- `POST /auth/forgot-password` - Request password reset
-- `POST /auth/reset-password` - Reset password with token
-- `POST /auth/change-password` - Change authenticated user password
-- `GET /auth/confirm/:token` - Confirm email address
-- `POST /auth/resend-confirmation` - Resend confirmation email
+- `POST /auth/register` - User registration (`register_endpoint.cr`)
+- `POST /auth/login` - User login (`login_endpoint.cr`)
+- `POST /auth/logout` - User logout (`logout_endpoint.cr`)
+- `POST /auth/refresh` - Refresh access token (`refresh_endpoint.cr`, jwt/authly)
+- `POST /auth/change-password` - Change authenticated user password (`change_password_endpoint.cr`)
+- `GET /auth/me` - Current user (`me_endpoint.cr`)
+- `GET /auth/permissions` - RBAC permissions (`permissions_endpoint.cr`)
+- `GET /auth/oauth/:provider` and `GET /auth/oauth/:provider/callback` (authly)
 
 #### CSRF Protection Middleware (`src/middleware/csrf_protection.cr`)
 

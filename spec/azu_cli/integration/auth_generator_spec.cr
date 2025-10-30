@@ -11,14 +11,21 @@ describe "Auth Generator E2E" do
       result = run_generator("generate auth", project_path)
       result.success?.should be_true
 
-      # Verify all auth files created
+      # Verify all auth files created (per-action endpoints and responses)
       auth_files = [
         "src/models/user.cr",
-        "src/endpoints/auth_endpoint.cr",
+        "src/endpoints/auth/register_endpoint.cr",
+        "src/endpoints/auth/login_endpoint.cr",
+        "src/endpoints/auth/logout_endpoint.cr",
+        "src/endpoints/auth/me_endpoint.cr",
+        "src/endpoints/auth/change_password_endpoint.cr",
         "src/requests/auth/login_request.cr",
         "src/requests/auth/register_request.cr",
         "src/requests/auth/refresh_token_request.cr",
         "src/requests/auth/change_password_request.cr",
+        "src/response/auth/register_json.cr",
+        "src/response/auth/login_json.cr",
+        "src/response/auth/me_json.cr",
         "src/config/authly.cr",
         "src/middleware/csrf_protection.cr",
         "src/middleware/security_headers.cr",
@@ -33,8 +40,8 @@ describe "Auth Generator E2E" do
       user_content.should contain("class User")
       user_content.should contain("email")
 
-      auth_endpoint_content = read_file(project_path, "src/endpoints/auth_endpoint.cr").not_nil!
-      auth_endpoint_content.should contain("AuthEndpoint")
+      register_endpoint = read_file(project_path, "src/endpoints/auth/register_endpoint.cr").not_nil!
+      register_endpoint.should contain("RegisterEndpoint")
 
       login_request_content = read_file(project_path, "src/requests/auth/login_request.cr").not_nil!
       login_request_content.should contain("LoginRequest")
@@ -51,12 +58,13 @@ describe "Auth Generator E2E" do
 
       # Verify JWT-specific files
       file_exists?(project_path, "src/models/user.cr").should be_true
-      file_exists?(project_path, "src/endpoints/auth_endpoint.cr").should be_true
+      file_exists?(project_path, "src/endpoints/auth/login_endpoint.cr").should be_true
 
-      # Verify JWT configuration
-      auth_endpoint_content = read_file(project_path, "src/endpoints/auth_endpoint.cr").not_nil!
-      auth_endpoint_content.should contain("AuthEndpoint")
-      auth_endpoint_content.should match(/JWT|token/)
+      # Verify JWT configuration present in login/refresh endpoints
+      login_ep = read_file(project_path, "src/endpoints/auth/login_endpoint.cr").not_nil!
+      login_ep.should match(/JWT|token/)
+      refresh_ep = read_file(project_path, "src/endpoints/auth/refresh_endpoint.cr").not_nil!
+      refresh_ep.should match(/JWT|refresh/i)
     end
   end
 
@@ -74,6 +82,10 @@ describe "Auth Generator E2E" do
       login_content = read_file(project_path, "src/requests/auth/login_request.cr").not_nil!
       login_content.should contain("email")
       login_content.should contain("password")
+
+      # Verify dynamic timestamp migrations exist
+      migrations = list_files(project_path, "db/migrations").select { |f| f.includes?("create_users") }
+      migrations.empty?.should be_false
     end
   end
 end
