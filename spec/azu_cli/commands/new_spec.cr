@@ -33,7 +33,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["test_project"])
+        command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -56,7 +56,7 @@ describe AzuCLI::Commands::New do
         result = command.execute
         result.success?.should be_false
         result.error.should contain("Invalid project name")
-        result.error.should contain("Use only letters, numbers, underscores, and hyphens")
+        result.error.should contain("Start with a letter")
       end
     end
 
@@ -95,7 +95,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["test_project"])
+        command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -113,7 +113,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--non-interactive", "test_project"])
+        command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -131,7 +131,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--type", "api", "test_api"])
+        command.parse_args(["--yes", "--type", "api", "test_api"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -148,7 +148,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--database", "mysql", "test_mysql"])
+        command.parse_args(["--yes", "--db", "mysql", "test_mysql"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -165,7 +165,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--author", "Test Author", "--email", "test@example.com", "test_project"])
+        command.parse_args(["--yes", "--author", "Test Author", "--email", "test@example.com", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -183,7 +183,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--license", "Apache-2.0", "test_project"])
+        command.parse_args(["--yes", "--license", "Apache-2.0", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -200,7 +200,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--docker", "test_project"])
+        command.parse_args(["--yes", "--docker", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -217,7 +217,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--no-git", "test_project"])
+        command.parse_args(["--yes", "--no-git", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -234,7 +234,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--no-example", "test_project"])
+        command.parse_args(["--yes", "--no-example", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -251,7 +251,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--no-joobq", "test_project"])
+        command.parse_args(["--yes", "--no-joobq", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -270,7 +270,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["test_project"])
+        command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -299,7 +299,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--type", "web", "test_web"])
+        command.parse_args(["--yes", "--type", "web", "test_web"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -321,7 +321,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--type", "api", "test_api"])
+        command.parse_args(["--yes", "--type", "api", "test_api"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -345,7 +345,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--author", "Test Author", "--email", "test@example.com", "test_project"])
+        command.parse_args(["--yes", "--author", "Test Author", "--email", "test@example.com", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -367,7 +367,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["test_project"])
+        command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -390,7 +390,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["test_project"])
+        command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -408,7 +408,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["--no-git", "test_project"])
+        command.parse_args(["--yes", "--no-git", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
@@ -428,12 +428,142 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["test_project"])
+        command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |capture|
           result = command.execute
           result.success?.should be_true
           capture.stderr.should contain("Installing dependencies")
+        end
+      end
+    end
+  end
+
+  describe "project name validation" do
+    it "rejects names starting with numbers" do
+      invalid_names = ["123invalid", "1app", "9project"]
+
+      invalid_names.each do |name|
+        command = AzuCLI::Commands::New.new
+        command.parse_args([name])
+
+        TestHelpers::TestSetup.with_captured_output do |_|
+          result = command.execute
+          result.success?.should be_false
+          result.error.should contain("Invalid project name")
+          result.error.should contain("Start with a letter")
+        end
+      end
+    end
+
+    it "rejects names with special characters" do
+      invalid_names = ["invalid name", "invalid@name", "invalid.name", "my-app!", "app$name"]
+
+      invalid_names.each do |name|
+        command = AzuCLI::Commands::New.new
+        command.parse_args([name])
+
+        TestHelpers::TestSetup.with_captured_output do |_|
+          result = command.execute
+          result.success?.should be_false
+          result.error.should contain("Invalid project name")
+        end
+      end
+    end
+
+    it "rejects Crystal reserved words" do
+      reserved_names = ["class", "module", "def", "end", "begin", "rescue", "ensure", "if", "else", "elsif"]
+
+      reserved_names.each do |name|
+        command = AzuCLI::Commands::New.new
+        command.parse_args([name])
+
+        TestHelpers::TestSetup.with_captured_output do |_|
+          result = command.execute
+          result.success?.should be_false
+          result.error.should contain("Invalid project name")
+          result.error.should contain("reserved word")
+        end
+      end
+    end
+
+    it "rejects names starting with underscore" do
+      command = AzuCLI::Commands::New.new
+      command.parse_args(["_invalid"])
+
+      TestHelpers::TestSetup.with_captured_output do |_|
+        result = command.execute
+        result.success?.should be_false
+        result.error.should contain("Invalid project name")
+      end
+    end
+
+    it "rejects names ending with underscore" do
+      command = AzuCLI::Commands::New.new
+      command.parse_args(["invalid_"])
+
+      TestHelpers::TestSetup.with_captured_output do |_|
+        result = command.execute
+        result.success?.should be_false
+        result.error.should contain("Invalid project name")
+      end
+    end
+
+    it "rejects names starting with hyphen" do
+      command = AzuCLI::Commands::New.new
+      # Need to handle this differently because "-invalid" is parsed as a flag
+      # Use the project_name setter directly to bypass option parsing
+      command.project_name = "-invalid"
+      command.parse_args([] of String)
+
+      TestHelpers::TestSetup.with_captured_output do |_|
+        result = command.execute
+        result.success?.should be_false
+        result.error.should contain("Invalid project name")
+      end
+    end
+
+    it "rejects names ending with hyphen" do
+      command = AzuCLI::Commands::New.new
+      command.parse_args(["invalid-"])
+
+      TestHelpers::TestSetup.with_captured_output do |_|
+        result = command.execute
+        result.success?.should be_false
+        result.error.should contain("Invalid project name")
+      end
+    end
+
+    it "rejects empty names" do
+      command = AzuCLI::Commands::New.new
+      command.parse_args([""])
+
+      TestHelpers::TestSetup.with_captured_output do |_|
+        result = command.execute
+        result.success?.should be_false
+        result.error.should contain("Invalid project name")
+      end
+    end
+
+    it "accepts valid project names" do
+      valid_names = ["myapp", "my_app", "my-app", "MyApp", "app123", "web_service_2024"]
+
+      valid_names.each do |name|
+        TestHelpers::TestSetup.with_temp_project("valid_name_test_#{name}") do |temp_project|
+          parent_dir = File.dirname(temp_project.path)
+          Dir.cd(parent_dir)
+
+          command = AzuCLI::Commands::New.new
+          command.parse_args(["--yes", name])
+
+          TestHelpers::TestSetup.with_captured_output do |_|
+            result = command.execute
+            result.success?.should be_true
+          end
+
+          # Clean up created project
+          project_path = File.join(parent_dir, name)
+          FileUtils.rm_rf(project_path) if Dir.exists?(project_path)
         end
       end
     end
@@ -470,7 +600,7 @@ describe AzuCLI::Commands::New do
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_false
-          result.error.should contain("Directory already exists")
+          result.error.should contain("already exists")
         end
       end
     end
@@ -483,7 +613,7 @@ describe AzuCLI::Commands::New do
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
-        command.parse_args(["test_project"])
+        command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |capture|
           result = command.execute

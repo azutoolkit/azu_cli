@@ -45,7 +45,14 @@ module AzuCLI
 
         # Validate project name
         unless valid_project_name?(@project_name)
-          return error("Invalid project name '#{@project_name}'. Use only letters, numbers, underscores, and hyphens.")
+          error_msg = "Invalid project name '#{@project_name}'.\n"
+          error_msg += "  Project names must:\n"
+          error_msg += "  • Start with a letter (not a number)\n"
+          error_msg += "  • Contain only letters, numbers, underscores, and hyphens\n"
+          error_msg += "  • Not be a Crystal reserved word (e.g., class, module, def)\n"
+          error_msg += "  • Be convertible to a valid Crystal module name\n"
+          error_msg += "\n  Example: my_app, blog, web_service"
+          return error(error_msg)
         end
 
         # Check if directory already exists
@@ -250,12 +257,36 @@ module AzuCLI
         nil
       end
 
+      # Crystal reserved words that cannot be used as project names
+      CRYSTAL_RESERVED_WORDS = %w[
+        abstract alias annotation as asm begin break case class def do else elsif end ensure enum
+        extend false for fun if include instance_sizeof is_a? lib macro module next nil of out
+        pointerof private protected require rescue responds_to? return select self sizeof struct
+        super then true type typeof union uninitialized unless until verbatim when while with yield
+      ]
+
       private def valid_project_name?(name : String) : Bool
         return false if name.empty?
+
+        # Project name must start with a letter
+        return false unless name[0].ascii_letter?
+
+        # Must not start or end with hyphen or underscore
         return false if name.starts_with?("-") || name.ends_with?("-")
         return false if name.starts_with?("_") || name.ends_with?("_")
 
-        name.matches?(/^[a-zA-Z0-9_-]+$/)
+        # Must contain only valid characters
+        return false unless name.matches?(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
+
+        # Cannot be a Crystal reserved word
+        return false if CRYSTAL_RESERVED_WORDS.includes?(name.downcase)
+
+        # Module name (derived from project name) must also be valid
+        module_name = name.split(/[-_]/).map(&.capitalize).join
+        return false unless module_name.matches?(/^[A-Z][a-zA-Z0-9]*$/)
+        return false if CRYSTAL_RESERVED_WORDS.includes?(module_name.downcase)
+
+        true
       end
 
       private def show_configuration_summary
