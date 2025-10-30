@@ -263,8 +263,8 @@ module AzuCLI
     def template_file?(path : String) : Bool
       File.file?(path) && (
         path.ends_with?(Config::Extensions::JINJA) ||
-        path.ends_with?(Config::Extensions::ECR) ||
-        path.ends_with?(Config::Extensions::HTML)
+          path.ends_with?(Config::Extensions::ECR) ||
+          path.ends_with?(Config::Extensions::HTML)
       )
     end
 
@@ -473,17 +473,17 @@ module AzuCLI
     def build_template_context(
       name : String,
       attributes : Hash(String, String) = {} of String => String,
-      options : Hash(String, String) = {} of String => String
+      options : Hash(String, String) = {} of String => String,
     ) : Hash(String, String | Array(String) | Hash(String, String))
       {
         # Name variations
-        "name"              => name,
-        "snake_case_name"   => snake_case(name),
-        "camel_case_name"   => camel_case(name),
-        "pascal_case_name"  => pascal_case(name),
-        "kebab_case_name"   => kebab_case(name),
-        "plural_name"       => pluralize(snake_case(name)),
-        "singular_name"     => singularize(snake_case(name)),
+        "name"             => name,
+        "snake_case_name"  => snake_case(name),
+        "camel_case_name"  => camel_case(name),
+        "pascal_case_name" => pascal_case(name),
+        "kebab_case_name"  => kebab_case(name),
+        "plural_name"      => pluralize(snake_case(name)),
+        "singular_name"    => singularize(snake_case(name)),
 
         # Project info
         "project_name"        => project_name,
@@ -491,8 +491,8 @@ module AzuCLI
         "project_version"     => project_version,
 
         # Timestamps
-        "timestamp"       => generate_timestamp,
-        "generated_at"    => Time.local.to_s("%Y-%m-%d %H:%M:%S"),
+        "timestamp"    => generate_timestamp,
+        "generated_at" => Time.local.to_s("%Y-%m-%d %H:%M:%S"),
 
         # Attributes and options
         "attributes" => attributes.to_s,
@@ -598,7 +598,7 @@ module AzuCLI
 
         # AWS credentials
         .gsub(/aws_access_key_id[=:]\s*["']?[A-Z0-9]{20}["']?/i, "aws_access_key_id=***")
-        .gsub(/aws_secret_access_key[=:]\s*["']?[A-Za-z0-9/+=]{40}["']?/i, "aws_secret_access_key=***")
+        .gsub(/aws_secret_access_key[=:]\s*["']?[A-Za-z0-9\/+=]{40}["']?/i, "aws_secret_access_key=***")
 
         # Generic secrets
         .gsub(/secret[=:]\s*["']?[^"'\s,}]{8,}["']?/i, "secret=***")
@@ -674,11 +674,11 @@ module AzuCLI
     # Get system information for debugging
     def system_info : Hash(String, String)
       info = {
-        "crystal_version"  => Crystal::VERSION,
-        "platform"         => {{ flag?(:darwin) ? "macOS" : flag?(:linux) ? "Linux" : flag?(:windows) ? "Windows" : "Unknown" }},
-        "architecture"     => {{ flag?(:x86_64) ? "x86_64" : flag?(:aarch64) ? "aarch64" : "Unknown" }},
-        "project_name"     => project_name,
-        "project_version"  => project_version,
+        "crystal_version" => Crystal::VERSION,
+        "platform"        => {{ flag?(:darwin) ? "macOS" : flag?(:linux) ? "Linux" : flag?(:windows) ? "Windows" : "Unknown" }},
+        "architecture"    => {{ flag?(:x86_64) ? "x86_64" : flag?(:aarch64) ? "aarch64" : "Unknown" }},
+        "project_name"    => project_name,
+        "project_version" => project_version,
       } of String => String
 
       # Add environment info (sanitized)
@@ -728,8 +728,8 @@ module AzuCLI
     # Compare semantic versions
     # Returns -1 if v1 < v2, 0 if equal, 1 if v1 > v2
     def compare_versions(v1 : String, v2 : String) : Int32
-      parts1 = v1.split(".").map(&.to_i? || 0)
-      parts2 = v2.split(".").map(&.to_i? || 0)
+      parts1 = v1.split(".").map { |p| p.to_i? || 0 }
+      parts2 = v2.split(".").map { |p| p.to_i? || 0 }
 
       max_length = [parts1.size, parts2.size].max
       parts1 += [0] * (max_length - parts1.size)
@@ -744,4 +744,3 @@ module AzuCLI
     end
   end
 end
-
