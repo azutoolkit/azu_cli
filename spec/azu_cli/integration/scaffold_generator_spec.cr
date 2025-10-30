@@ -5,7 +5,6 @@ require "json"
 include IntegrationHelpers
 
 describe "Scaffold Generator Integration" do
-
   describe "Scaffold Generator E2E" do
     it "generates complete CRUD scaffold, compiles, and tests all endpoints" do
       with_temp_project("scaffold_test", "web") do |project_path|
@@ -50,7 +49,7 @@ describe "Scaffold Generator Integration" do
           "src/templates/post/index.jinja",
           "src/templates/post/show.jinja",
           "src/templates/post/new.jinja",
-          "src/templates/post/edit.jinja"
+          "src/templates/post/edit.jinja",
         ]
 
         scaffold_files.each do |file_pattern|
@@ -81,10 +80,10 @@ describe "Scaffold Generator Integration" do
 
           # Test 3: POST /posts (create) - should create new post
           post_data = {
-            "title" => "Test Post",
-            "content" => "This is test content for the post",
+            "title"     => "Test Post",
+            "content"   => "This is test content for the post",
             "published" => true,
-            "views" => 0
+            "views"     => 0,
           }.to_json
 
           response = http_post("/posts", post_data, port)
@@ -113,10 +112,10 @@ describe "Scaffold Generator Integration" do
 
             # Test 7: PATCH /posts/1 (update) - should update the post
             update_data = {
-              "title" => "Updated Post Title",
-              "content" => "Updated content for the post",
+              "title"     => "Updated Post Title",
+              "content"   => "Updated content for the post",
               "published" => false,
-              "views" => 5
+              "views"     => 5,
             }.to_json
 
             response = http_put("/posts/1", update_data, port)
@@ -138,10 +137,10 @@ describe "Scaffold Generator Integration" do
 
           # Test 10: Test validation errors
           invalid_post_data = {
-            "title" => "",  # Empty title should fail validation
-            "content" => "Content without title",
-            "published" => "invalid_boolean",  # Invalid boolean
-            "views" => "not_a_number"  # Invalid number
+            "title"     => "", # Empty title should fail validation
+            "content"   => "Content without title",
+            "published" => "invalid_boolean", # Invalid boolean
+            "views"     => "not_a_number",    # Invalid number
           }.to_json
 
           response = http_post("/posts", invalid_post_data, port)
@@ -154,7 +153,7 @@ describe "Scaffold Generator Integration" do
           response.not_nil!.status_code.should be >= 404
 
           # Test 12: Test invalid HTTP methods
-          response = http_post("/posts/1", "{}", port)  # POST to show endpoint should fail
+          response = http_post("/posts/1", "{}", port) # POST to show endpoint should fail
           response.should_not be_nil
           response.not_nil!.status_code.should be >= 400
         end
@@ -172,7 +171,7 @@ describe "Scaffold Generator Integration" do
           "src/responses/user/index_response.cr",
           "src/responses/user/show_response.cr",
           "src/responses/user/create_response.cr",
-          "src/responses/user/update_response.cr"
+          "src/responses/user/update_response.cr",
         ]
 
         api_files.each do |file|
@@ -198,9 +197,9 @@ describe "Scaffold Generator Integration" do
 
           # Test POST to create user
           user_data = {
-            "name" => "John Doe",
+            "name"  => "John Doe",
             "email" => "john@example.com",
-            "age" => 30
+            "age"   => 30,
           }.to_json
 
           response = http_post("/users", user_data, port)
@@ -210,9 +209,9 @@ describe "Scaffold Generator Integration" do
 
           # Test PATCH to update user
           update_data = {
-            "name" => "John Smith",
+            "name"  => "John Smith",
             "email" => "johnsmith@example.com",
-            "age" => 31
+            "age"   => 31,
           }.to_json
 
           response = http_put("/users/1", update_data, port)
@@ -244,7 +243,7 @@ describe "Scaffold Generator Integration" do
           "src/pages/article/index_page.cr",
           "src/pages/article/show_page.cr",
           "src/pages/article/new_page.cr",
-          "src/pages/article/edit_page.cr"
+          "src/pages/article/edit_page.cr",
         ]
 
         skipped_files.each do |file|
@@ -256,7 +255,7 @@ describe "Scaffold Generator Integration" do
           "src/models/article.cr",
           "src/endpoints/article/index_endpoint.cr",
           "src/services/article/index_service.cr",
-          "src/requests/article/index_request.cr"
+          "src/requests/article/index_request.cr",
         ]
 
         required_files.each do |file|
@@ -316,13 +315,13 @@ describe "Scaffold Generator Integration" do
         # Test endpoints work with complex data
         with_running_server(".") do |port|
           product_data = {
-            "name" => "Test Product",
+            "name"        => "Test Product",
             "description" => "A test product with complex data",
-            "price" => 29.99,
-            "in_stock" => true,
+            "price"       => 29.99,
+            "in_stock"    => true,
             "category_id" => 1,
-            "tags" => ["electronics", "test"],
-            "created_at" => Time.utc.to_s
+            "tags"        => ["electronics", "test"],
+            "created_at"  => Time.utc.to_s,
           }.to_json
 
           response = http_post("/products", product_data, port)

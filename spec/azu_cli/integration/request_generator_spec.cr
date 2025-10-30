@@ -15,7 +15,7 @@ describe "Request Generator E2E" do
 
       # Verify content of generated file
       request_content = read_file(project_path, "src/requests/user/create_request.cr").not_nil!
-      request_content.should contain("module Testapp")  # Project module name
+      request_content.should contain("module Testapp") # Project module name
       request_content.should contain("struct User::CreateRequest")
       request_content.should contain("include Azu::Request")
       request_content.should contain("name")

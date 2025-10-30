@@ -21,7 +21,7 @@ describe "Auth Generator E2E" do
         "src/requests/auth/change_password_request.cr",
         "src/config/authly.cr",
         "src/middleware/csrf_protection.cr",
-        "src/middleware/security_headers.cr"
+        "src/middleware/security_headers.cr",
       ]
 
       auth_files.each do |file|

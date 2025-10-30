@@ -52,7 +52,7 @@ auth_files = [
   "src/endpoints/auth_endpoint.cr",
   "src/requests/auth/login_request.cr",
   "src/requests/auth/register_request.cr",
-  "src/config/authly.cr"
+  "src/config/authly.cr",
 ]
 
 auth_files.each do |file|
@@ -87,9 +87,9 @@ puts "🌍 Testing Auth endpoints with HTTP POST requests..."
 # Test register endpoint
 puts "\n📝 Testing POST /auth/register..."
 register_data = {
-  "email" => "test@example.com",
-  "password" => "password123",
-  "password_confirmation" => "password123"
+  "email"                 => "test@example.com",
+  "password"              => "password123",
+  "password_confirmation" => "password123",
 }.to_json
 
 result = Process.run("curl -s -X POST -H 'Content-Type: application/json' -d '#{register_data}' http://localhost:3000/auth/register", shell: true, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
@@ -106,8 +106,8 @@ end
 # Test login endpoint
 puts "\n🔑 Testing POST /auth/login..."
 login_data = {
-  "email" => "test@example.com",
-  "password" => "password123"
+  "email"    => "test@example.com",
+  "password" => "password123",
 }.to_json
 
 result = Process.run("curl -s -X POST -H 'Content-Type: application/json' -d '#{login_data}' http://localhost:3000/auth/login", shell: true, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
@@ -124,7 +124,7 @@ end
 # Test refresh token endpoint
 puts "\n🔄 Testing POST /auth/refresh..."
 refresh_data = {
-  "refresh_token" => "dummy_refresh_token"
+  "refresh_token" => "dummy_refresh_token",
 }.to_json
 
 result = Process.run("curl -s -X POST -H 'Content-Type: application/json' -d '#{refresh_data}' http://localhost:3000/auth/refresh", shell: true, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
@@ -141,9 +141,9 @@ end
 # Test change password endpoint
 puts "\n🔒 Testing POST /auth/change_password..."
 change_password_data = {
-  "current_password" => "password123",
-  "new_password" => "newpassword123",
-  "new_password_confirmation" => "newpassword123"
+  "current_password"          => "password123",
+  "new_password"              => "newpassword123",
+  "new_password_confirmation" => "newpassword123",
 }.to_json
 
 result = Process.run("curl -s -X POST -H 'Content-Type: application/json' -d '#{change_password_data}' http://localhost:3000/auth/change_password", shell: true, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
@@ -160,7 +160,7 @@ end
 # Test logout endpoint
 puts "\n🚪 Testing POST /auth/logout..."
 logout_data = {
-  "refresh_token" => "dummy_refresh_token"
+  "refresh_token" => "dummy_refresh_token",
 }.to_json
 
 result = Process.run("curl -s -X POST -H 'Content-Type: application/json' -d '#{logout_data}' http://localhost:3000/auth/logout", shell: true, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)

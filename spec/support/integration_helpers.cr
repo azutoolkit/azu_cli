@@ -5,6 +5,7 @@ require "http/client"
 module IntegrationHelpers
   # Store the workspace root directory at module load time
   WORKSPACE_ROOT = Dir.current
+
   # Create a temporary project and yield to the block
   def with_temp_project(name : String, type : String = "web", &block : String -> Nil)
     # Create a unique temp directory for this test to avoid conflicts
@@ -155,8 +156,8 @@ module IntegrationHelpers
     client = HTTP::Client.new("localhost", port)
     begin
       client.post(path, body: body, headers: HTTP::Headers{
-        "Content-Type" => "application/json",
-        "Authorization" => "Bearer #{token}"
+        "Content-Type"  => "application/json",
+        "Authorization" => "Bearer #{token}",
       })
     rescue
       nil
