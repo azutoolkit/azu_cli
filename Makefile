@@ -33,7 +33,7 @@ run:
 	$(AZU)
 
 .PHONY: install
-install: build | $(INSTALL_DIR)
+install: build install-man | $(INSTALL_DIR)
 	rm -f $(AZU_SYSTEM)
 	cp $(AZU) $(AZU_SYSTEM)
 
