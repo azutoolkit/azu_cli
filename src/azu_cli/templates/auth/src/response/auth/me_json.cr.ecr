@@ -1,14 +1,18 @@
 module <%= project.camelcase %>::Auth
   struct MeResponse
-    include Azu::Response::JSON
+    include Azu::Response
+    include JSON::Serializable
 
-    getter user : Hash(String, JSON::Any)?
+    getter id : Int64
+    getter email : String
+    getter name : String?
+    getter role : String
 
-    def initialize(@user : Hash(String, JSON::Any)? = nil)
+    def initialize(@id : Int64, @email : String, @name : String?, @role : String)
     end
 
-    def to_json(io : IO)
-      {user: @user}.to_json(io)
+    def render : String
+      to_json
     end
   end
 end

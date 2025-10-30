@@ -8,7 +8,7 @@ require "jwt"
 
 module <%= project.camelcase %>::Auth
   struct OAuthCallbackEndpoint
-    include Azu::Endpoint(Azu::Request::Empty, Azu::Response::Empty | Auth::LoginResponse)
+    include Azu::Endpoint(Azu::Request, Azu::Response::Empty | Auth::LoginResponse)
 
     get "/auth/oauth/:provider/callback"
 
@@ -16,8 +16,18 @@ module <%= project.camelcase %>::Auth
       provider = params[":provider"]? || params["provider"]?
       code = params["code"]?
       state = params["state"]?
-      halt 400, {error: "provider required"}.to_json unless provider
-      halt 400, {error: "code required"}.to_json unless code
+      unless provider
+        context.response.status = HTTP::Status::BAD_REQUEST
+        context.response.content_type = "application/json"
+        context.response.print({error: "provider required"}.to_json)
+        return Azu::Response::Empty.new
+      end
+      unless code
+        context.response.status = HTTP::Status::BAD_REQUEST
+        context.response.content_type = "application/json"
+        context.response.print({error: "code required"}.to_json)
+        return Azu::Response::Empty.new
+      end
 
       callback = oauth_callback_url(provider)
       token = Authly.exchange_code(provider, code, callback, state)
@@ -25,7 +35,12 @@ module <%= project.camelcase %>::Auth
 
       email = profile["email"]?.try(&.to_s)
       name = profile["name"]?.try(&.to_s)
-      halt 422, {error: "email not available from provider"}.to_json unless email
+      unless email
+        context.response.status = HTTP::Status::UNPROCESSABLE_ENTITY
+        context.response.content_type = "application/json"
+        context.response.print({error: "email not available from provider"}.to_json)
+        return Azu::Response::Empty.new
+      end
 
       user = ::User.find_by(email: email) || begin
         u = ::User.new

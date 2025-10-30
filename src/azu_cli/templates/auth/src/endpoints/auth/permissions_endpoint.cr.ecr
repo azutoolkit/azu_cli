@@ -1,34 +1,40 @@
 <%- if rbac_enabled? %>
 <%# Requires first (Crystal convention) %>
 require "../../models/user"
+require "../../requests/auth/permissions_request"
+require "../../response/auth/permissions_json"
 <%- if using_jwt? || using_authly? %>
 require "jwt"
 <%- end %>
 
 module <%= project.camelcase %>::Auth
   struct PermissionsEndpoint
-    include Azu::Endpoint(Azu::Request::Empty, Auth::PermissionsResponse | Azu::Response::Empty)
+    include Azu::Endpoint(Auth::PermissionsRequest, Auth::PermissionsResponse | Azu::Response::Empty)
 
     get "/auth/permissions"
 
     def call : Auth::PermissionsResponse | Azu::Response::Empty
       user = current_user
-      halt 401, {error: "Not authenticated"}.to_json unless user
+      unless user
+        context.response.status = HTTP::Status::UNAUTHORIZED
+        context.response.content_type = "application/json"
+        context.response.print({error: "Not authenticated"}.to_json)
+        return Azu::Response::Empty.new
+      end
 
       u = user.not_nil!
-      perms = u.permissions.map(&.name)
       roles = u.roles.map(&.name)
-      Auth::PermissionsResponse.new(perms, roles)
+      permissions = u.permissions.map(&.name)
+      Auth::PermissionsResponse.new(roles, permissions)
     end
 
     private def current_user : ::User?
       <%- if using_jwt? || using_authly? %>
-      token = request.headers["Authorization"]?.try(&.sub("Bearer ", ""))
+      token = context.request.headers["Authorization"]?.try(&.sub("Bearer ", ""))
       return nil unless token
+
       payload, header = JWT.decode(token, jwt_secret, JWT::Algorithm::HS256)
-      user_id = payload["sub"]?.try(&.as_s).try(&.to_i64)
-      return nil unless user_id
-      ::User.find(user_id)
+      ::User.find(payload["sub"].as_s.to_i64)
       <%- else %>
       id_val = session["user_id"]?
       return nil unless id_val

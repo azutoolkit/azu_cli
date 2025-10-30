@@ -1,5 +1,6 @@
 <%# Requires first (Crystal convention) %>
 require "../../models/user"
+require "../../response/auth/login_json"
 <%- if using_jwt? || using_authly? %>
 require "jwt"
 <%- end %>
@@ -13,12 +14,18 @@ module <%= project.camelcase %>::Auth
     def call : Auth::LoginResponse | Azu::Response::Empty
       req = login_request
       unless req.valid?
-        halt 422, {errors: req.errors}.to_json
+        context.response.status = HTTP::Status::UNPROCESSABLE_ENTITY
+        context.response.content_type = "application/json"
+        context.response.print({errors: req.errors}.to_json)
+        return Azu::Response::Empty.new
       end
 
       user = ::User.authenticate(req.email, req.password)
       unless user
-        halt 401, {error: "Invalid email or password"}.to_json
+        context.response.status = HTTP::Status::UNAUTHORIZED
+        context.response.content_type = "application/json"
+        context.response.print({error: "Invalid email or password"}.to_json)
+        return Azu::Response::Empty.new
       end
 
       <%- if using_jwt? || using_authly? %>

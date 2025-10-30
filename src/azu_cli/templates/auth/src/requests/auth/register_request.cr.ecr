@@ -3,6 +3,7 @@
 
 module <%= project.camelcase %>::Auth
 struct RegisterRequest
+  include Azu::Request
   include JSON::Serializable
 
   property email : String

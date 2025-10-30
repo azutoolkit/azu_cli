@@ -1,13 +1,14 @@
+require "../../requests/auth/logout_request"
+require "../../response/auth/logout_json"
+
 module <%= project.camelcase %>::Auth
   struct LogoutEndpoint
-    include Azu::Endpoint(Azu::Request::Empty, Auth::LogoutResponse | Azu::Response::Empty)
+    include Azu::Endpoint(Auth::LogoutRequest, Auth::LogoutResponse)
 
     post "/auth/logout"
 
-    def call : Auth::LogoutResponse | Azu::Response::Empty
-      <%- if using_session? %>
-      session.delete("user_id")
-      <%- end %>
+    def call : Auth::LogoutResponse
+      session.delete("_csrf_token") if respond_to?(:session)
       Auth::LogoutResponse.new
     end
   end

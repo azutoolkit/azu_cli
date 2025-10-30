@@ -9,7 +9,7 @@ require "json"
 
 class User
   include CQL::Model(Int64)
-  db_context Schema, :users
+  db_context <%= project.camelcase %>DB, :users
 
   # Columns
   property email : String
@@ -29,17 +29,6 @@ class User
 
   # Virtual attribute for password (not stored in database)
   @password : String?
-
-  # Validations
-  validates :email, presence: true, format: /\A[^@\s]+@[^@\s]+\z/
-  validates :password, presence: true, length: {minimum: 8}, on: :create
-  validates :role, inclusion: {in: ["user", "admin", "moderator"]}
-  validates :failed_login_attempts, numericality: {greater_than_or_equal_to: 0}
-
-  # Callbacks
-  before_save :hash_password, if: :password_changed?
-  before_save :update_timestamps
-  before_save :update_password_changed_at, if: :password_changed?
 
   # Virtual password getter/setter
   def password
@@ -219,15 +208,13 @@ end
 # Role Model for RBAC
 class Role
   include CQL::Model(Int64)
-  db_context Schema, :roles
+  db_context <%= project.camelcase %>DB, :roles
 
   property name : String
   property description : String?
   property permissions : String?  # JSON array of permissions
   property created_at : Time
   property updated_at : Time
-
-  validates :name, presence: true, uniqueness: true
 
   # Get permissions as array
   def get_permissions : Array(String)
@@ -269,17 +256,13 @@ end
 # Permission Model for RBAC
 class Permission
   include CQL::Model(Int64)
-  db_context Schema, :permissions
+  db_context <%= project.camelcase %>DB, :permissions
 
   property name : String
   property description : String?
   property resource : String?
   property action : String?
   property created_at : Time
-
-  validates :name, presence: true, uniqueness: true
-  validates :resource, presence: true
-  validates :action, presence: true
 
   # Get full permission name
   def full_name : String
@@ -290,30 +273,22 @@ end
 # UserRole Junction Model
 class UserRole
   include CQL::Model(Int64)
-  db_context Schema, :user_roles
+  db_context <%= project.camelcase %>DB, :user_roles
 
   property user_id : Int64
   property role_id : Int64
   property assigned_at : Time
   property assigned_by : Int64?
-
-  validates :user_id, presence: true
-  validates :role_id, presence: true
-  validates :user_id, uniqueness: {scope: :role_id}
 end
 
 # RolePermission Junction Model
 class RolePermission
   include CQL::Model(Int64)
-  db_context Schema, :role_permissions
+  db_context <%= project.camelcase %>DB, :role_permissions
 
   property role_id : Int64
   property permission_id : Int64
   property created_at : Time
-
-  validates :role_id, presence: true
-  validates :permission_id, presence: true
-  validates :role_id, uniqueness: {scope: :permission_id}
 end
 <%- end %>
 
@@ -321,7 +296,7 @@ end
 # OAuth Application Model for Authly integration
 class OAuthApplication
   include CQL::Model(Int64)
-  db_context Schema, :oauth_applications
+  db_context <%= project.camelcase %>DB, :oauth_applications
 
   property name : String
   property client_id : String
@@ -331,10 +306,6 @@ class OAuthApplication
   property confidential : Bool = true
   property created_at : Time
   property updated_at : Time
-
-  validates :name, presence: true
-  validates :client_id, presence: true, uniqueness: true
-  validates :client_secret, presence: true
 
   # Get scopes as array
   def get_scopes : Array(String)
@@ -351,7 +322,7 @@ end
 # OAuth Access Token Model
 class OAuthAccessToken
   include CQL::Model(Int64)
-  db_context Schema, :oauth_access_tokens
+  db_context <%= project.camelcase %>DB, :oauth_access_tokens
 
   property application_id : Int64
   property resource_owner_id : Int64
@@ -361,10 +332,6 @@ class OAuthAccessToken
   property scopes : String?
   property created_at : Time
   property revoked_at : Time?
-
-  validates :application_id, presence: true
-  validates :resource_owner_id, presence: true
-  validates :token, presence: true, uniqueness: true
 
   # Check if token is expired
   def expired? : Bool

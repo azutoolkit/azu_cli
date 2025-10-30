@@ -1,9 +1,15 @@
 module <%= project.camelcase %>::Auth
   struct LogoutResponse
-    include Azu::Response::JSON
+    include Azu::Response
+    include JSON::Serializable
 
-    def to_json(io : IO)
-      {message: "Logged out successfully"}.to_json(io)
+    getter message : String = "Logged out successfully"
+
+    def initialize(@message : String = "Logged out successfully")
+    end
+
+    def render : String
+      to_json
     end
   end
 end

@@ -1,19 +1,18 @@
-<%- if rbac_enabled? %>
 module <%= project.camelcase %>::Auth
   struct PermissionsResponse
-    include Azu::Response::JSON
+    include Azu::Response
+    include JSON::Serializable
 
-    getter permissions : Array(String)
     getter roles : Array(String)
+    getter permissions : Array(String)
 
-    def initialize(@permissions : Array(String) = [] of String, @roles : Array(String) = [] of String)
+    def initialize(@roles : Array(String), @permissions : Array(String))
     end
 
-    def to_json(io : IO)
-      {permissions: @permissions, roles: @roles}.to_json(io)
+    def render : String
+      to_json
     end
   end
 end
-<%- end %>
 
 

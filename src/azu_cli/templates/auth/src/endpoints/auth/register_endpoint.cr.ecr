@@ -1,5 +1,6 @@
 <%# Requires first (Crystal convention) %>
 require "../../models/user"
+require "../../response/auth/register_json"
 <%- if using_jwt? || using_authly? %>
 require "jwt"
 <%- end %>
@@ -13,11 +14,17 @@ module <%= project.camelcase %>::Auth
     def call : Auth::RegisterResponse | Azu::Response::Empty
       req = register_request
       unless req.valid?
-        halt 422, {errors: req.errors}.to_json
+        context.response.status = HTTP::Status::UNPROCESSABLE_ENTITY
+        context.response.content_type = "application/json"
+        context.response.print({errors: req.errors}.to_json)
+        return Azu::Response::Empty.new
       end
 
       if ::User.find_by(email: req.email)
-        halt 422, {errors: {email: ["already exists"]}}.to_json
+        context.response.status = HTTP::Status::UNPROCESSABLE_ENTITY
+        context.response.content_type = "application/json"
+        context.response.print({errors: {email: ["already exists"]}}.to_json)
+        return Azu::Response::Empty.new
       end
 
       user = ::User.new
@@ -26,7 +33,10 @@ module <%= project.camelcase %>::Auth
       user.name = req.name
 
       unless user.save
-        halt 422, {errors: user.errors}.to_json
+        context.response.status = HTTP::Status::UNPROCESSABLE_ENTITY
+        context.response.content_type = "application/json"
+        context.response.print({errors: user.errors}.to_json)
+        return Azu::Response::Empty.new
       end
 
       <%- if using_jwt? || using_authly? %>

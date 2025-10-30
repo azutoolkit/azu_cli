@@ -1,7 +1,8 @@
 <%- if using_jwt? || using_authly? %>
 module <%= project.camelcase %>::Auth
   struct RefreshResponse
-    include Azu::Response::JSON
+    include Azu::Response
+    include JSON::Serializable
 
     getter access_token : String?
     getter refresh_token : String?
@@ -9,8 +10,8 @@ module <%= project.camelcase %>::Auth
     def initialize(@access_token : String? = nil, @refresh_token : String? = nil)
     end
 
-    def to_json(io : IO)
-      {access_token: @access_token, refresh_token: @refresh_token}.to_json(io)
+    def render : String
+      to_json
     end
   end
 end

@@ -1,6 +1,7 @@
 <%- if using_jwt? || using_authly? %>
 <%# Requires first (Crystal convention) %>
 require "../../models/user"
+require "../../response/auth/refresh_json"
 require "jwt"
 
 module <%= project.camelcase %>::Auth
@@ -12,57 +13,66 @@ module <%= project.camelcase %>::Auth
     def call : Auth::RefreshResponse | Azu::Response::Empty
       req = refresh_token_request
       unless req.valid?
-        halt 422, {errors: req.errors}.to_json
+        context.response.status = HTTP::Status::UNPROCESSABLE_ENTITY
+        context.response.content_type = "application/json"
+        context.response.print({errors: req.errors}.to_json)
+        return Azu::Response::Empty.new
       end
 
+      <%- if using_jwt? || using_authly? %>
       payload, header = JWT.decode(req.refresh_token, jwt_refresh_secret, JWT::Algorithm::HS256)
       unless payload["type"]? == "refresh"
-        halt 401, {error: "Invalid refresh token"}.to_json
+        context.response.status = HTTP::Status::UNAUTHORIZED
+        context.response.content_type = "application/json"
+        context.response.print({error: "Invalid refresh token"}.to_json)
+        return Azu::Response::Empty.new
       end
 
-      user_id = payload["sub"]?.try(&.as_s).try(&.to_i64)
-      user = user_id ? ::User.find(user_id) : nil
-      unless user
-        halt 401, {error: "User not found"}.to_json
-      end
-
-      access = generate_access_token(user.not_nil!)
-      refresh = generate_refresh_token(user.not_nil!)
-      Auth::RefreshResponse.new(access, refresh)
-    rescue JWT::Error
-      halt 401, {error: "Invalid refresh token"}.to_json
+      access = generate_access_from_payload(payload)
+      new_refresh = generate_refresh_from_payload(payload)
+      Auth::RefreshResponse.new(access, new_refresh)
+      <%- else %>
+      context.response.status = HTTP::Status::BAD_REQUEST
+      context.response.content_type = "application/json"
+      context.response.print({error: "Refresh tokens require JWT strategy"}.to_json)
+      return Azu::Response::Empty.new
+      <%- end %>
     end
 
-    private def generate_access_token(user : ::User) : String
+    <%- if using_jwt? || using_authly? %>
+    private def generate_access_from_payload(payload : Hash(String, JSON::Any)) : String
       now = Time.utc
-      payload = {
-        "sub" => user.id.to_s,
+      sub = payload["sub"].as_s
+      role = payload["role"]?.try(&.as_s) || "user"
+      new_payload = {
+        "sub" => sub,
         "iat" => now.to_unix,
         "exp" => (now + 15.minutes).to_unix,
         "iss" => jwt_issuer,
         "aud" => jwt_audience,
-        "role" => user.role,
+        "role" => role,
       }
-      JWT.encode(payload, jwt_secret, JWT::Algorithm::HS256)
+      JWT.encode(new_payload, jwt_secret, JWT::Algorithm::HS256)
     end
 
-    private def generate_refresh_token(user : ::User) : String
+    private def generate_refresh_from_payload(payload : Hash(String, JSON::Any)) : String
       now = Time.utc
-      payload = {
-        "sub" => user.id.to_s,
+      sub = payload["sub"].as_s
+      new_payload = {
+        "sub" => sub,
         "iat" => now.to_unix,
         "exp" => (now + 7.days).to_unix,
         "type" => "refresh",
       }
-      JWT.encode(payload, jwt_refresh_secret, JWT::Algorithm::HS256)
-    end
-
-    private def jwt_secret : String
-      ENV["JWT_SECRET"]? || raise "JWT_SECRET environment variable not set"
+      JWT.encode(new_payload, jwt_refresh_secret, JWT::Algorithm::HS256)
     end
 
     private def jwt_refresh_secret : String
       ENV["JWT_REFRESH_SECRET"]? || raise "JWT_REFRESH_SECRET environment variable not set"
+    end
+
+    private def jwt_secret : String
+      ENV["JWT_SECRET"]? || raise "JWT_SECRET environment variable not set"
     end
 
     private def jwt_issuer : String
@@ -72,8 +82,10 @@ module <%= project.camelcase %>::Auth
     private def jwt_audience : String
       ENV["JWT_AUDIENCE"]? || "<%= project.downcase %>-client"
     end
+    <%- end %>
   end
 end
+
 <%- end %>
 
 

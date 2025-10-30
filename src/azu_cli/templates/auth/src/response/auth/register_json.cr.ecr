@@ -1,6 +1,7 @@
 module <%= project.camelcase %>::Auth
   struct RegisterResponse
-    include Azu::Response::JSON
+    include Azu::Response
+    include JSON::Serializable
 
     getter user_id : Int64?
     getter access_token : String?
@@ -9,8 +10,8 @@ module <%= project.camelcase %>::Auth
     def initialize(@user_id : Int64? = nil, @access_token : String? = nil, @refresh_token : String? = nil)
     end
 
-    def to_json(io : IO)
-      {user_id: @user_id, access_token: @access_token, refresh_token: @refresh_token}.to_json(io)
+    def render : String
+      to_json
     end
   end
 end

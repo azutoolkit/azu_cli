@@ -3,6 +3,7 @@
 
 module <%= project.camelcase %>::Auth
 struct RefreshTokenRequest
+  include Azu::Request
   include JSON::Serializable
 
   property refresh_token : String
