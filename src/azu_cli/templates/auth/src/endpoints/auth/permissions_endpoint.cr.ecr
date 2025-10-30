@@ -1,6 +1,6 @@
 <%- if rbac_enabled? %>
 <%# Requires first (Crystal convention) %>
-require "../models/user"
+require "../../models/user"
 <%- if using_jwt? || using_authly? %>
 require "jwt"
 <%- end %>

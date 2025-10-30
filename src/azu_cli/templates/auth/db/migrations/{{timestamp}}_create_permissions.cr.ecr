@@ -1,7 +1,7 @@
 <%- if rbac_enabled? %>
 require "cql"
 
-class CreatePermissions < CQL::Migration(<%= timestamp.to_i64 %>)
+class CreatePermissions < CQL::Migration(<%= timestamp %>)
   def up
     schema.table :permissions do
       primary :id, Int64

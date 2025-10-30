@@ -2,7 +2,9 @@
 # Implements security headers for enhanced protection
 
 module <%=project.camelcase%>::Middleware
-  class SecurityHeaders < Azu::Middleware
+  class SecurityHeaders
+    include HTTP::Handler
+
     def call(context : HTTP::Server::Context)
       response = context.response
 

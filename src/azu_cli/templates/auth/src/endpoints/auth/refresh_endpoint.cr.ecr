@@ -1,6 +1,6 @@
 <%- if using_jwt? || using_authly? %>
 <%# Requires first (Crystal convention) %>
-require "../models/user"
+require "../../models/user"
 require "jwt"
 
 module <%= project.camelcase %>::Auth

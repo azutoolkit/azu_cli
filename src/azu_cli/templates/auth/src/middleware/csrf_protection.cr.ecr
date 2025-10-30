@@ -2,10 +2,11 @@
 # Implements Cross-Site Request Forgery protection
 
 require "openssl"
-require "secure_random"
+require "base64"
 
 module <%=project.camelcase%>::Middleware
-  class CSRFProtection < Azu::Middleware
+  class CSRFProtection
+    include HTTP::Handler
     CSRF_TOKEN_HEADER = "X-CSRF-Token"
     CSRF_TOKEN_PARAM = "_csrf_token"
     CSRF_TOKEN_COOKIE = "_csrf_token"
@@ -94,7 +95,8 @@ module <%=project.camelcase%>::Middleware
 
     # Generate a new CSRF token
     def self.generate_token : String
-      SecureRandom.urlsafe_base64(32)
+      bytes = Random::Secure.random_bytes(32)
+      Base64.urlsafe_encode(bytes).gsub(/=+$/, "")
     end
 
     # Store CSRF token in session

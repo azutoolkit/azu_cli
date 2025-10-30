@@ -62,9 +62,12 @@ module AzuCLI
         @enable_oauth_providers.includes?("github")
       end
 
-      # Dynamic timestamp for migrations/templates
-      def timestamp : Time
-        Time.utc
+      # Dynamic timestamp for migrations/templates (Int64)
+      @timestamp : Int64?
+
+      def timestamp : Int64
+        @timestamp ||= Time.utc.to_unix
+        @timestamp.not_nil!
       end
 
       # Infer project mode based on presence of pages directory
@@ -213,11 +216,9 @@ module AzuCLI
         # Add Authly OAuth2 library
         deps << "authly" if using_authly?
 
-        # Add session support
-        deps << "secure_random" if using_session?
-
         # Add CSRF protection
         deps << "openssl" if csrf_enabled?
+        deps << "base64" if csrf_enabled?
 
         deps
       end

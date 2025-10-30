@@ -1,6 +1,6 @@
 require "cql"
 
-class CreateUsers < CQL::Migration(<%= timestamp.to_i64 %>)
+class CreateUsers < CQL::Migration(<%= timestamp %>)
   def up
     schema.table :users do
       primary :id, Int64

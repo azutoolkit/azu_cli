@@ -1,7 +1,7 @@
 <%- if using_authly? %>
 require "cql"
 
-class CreateOAuthApplications < CQL::Migration(<%= timestamp.to_i64 %>)
+class CreateOAuthApplications < CQL::Migration(<%= timestamp %>)
   def up
     schema.table :oauth_applications do
       primary :id, Int64

@@ -1,7 +1,7 @@
 <%- if rbac_enabled? %>
 require "cql"
 
-class CreateUserRoles < CQL::Migration(<%= timestamp.to_i64 %>)
+class CreateUserRoles < CQL::Migration(<%= timestamp %>)
   def up
     schema.table :user_roles do
       primary :id, Int64
