@@ -1,0 +1,138 @@
+.\" Azu CLI manual page
+.TH AZU 1 "October 2025" "Azu CLI 0.0.1" "User Commands"
+.SH NAME
+azu \- Azu Toolkit command line interface
+.SH SYNOPSIS
+.B azu
+[
+.I command
+]
+[
+.I options
+]
+[
+.I arguments
+]
+.SH DESCRIPTION
+The Azu CLI is a comprehensive command line tool for the Azu Toolkit ecosystem, providing project scaffolding, development server with hot reload, code generators, database management (via CQL), background jobs, testing and more.
+.SH COMMANDS
+.SS Project
+.TP
+.B new
+Create a new Azu project.
+.TP
+.B init
+Initialize Azu in an existing project.
+.TP
+.B version
+Show CLI version.
+.TP
+.B help
+Show help and available commands.
+.SS Generators
+.TP
+.B generate, g
+Run a generator (model, endpoint, service, scaffold, page, migration, etc.).
+.SS Database
+.TP
+.B db:create
+Create database.
+.TP
+.B db:drop
+Drop database.
+.TP
+.B db:migrate
+Run pending migrations.
+.TP
+.B db:rollback
+Rollback migrations.
+.TP
+.B db:seed
+Seed database with data.
+.TP
+.B db:reset
+Drop, create and migrate database.
+.TP
+.B db:status
+Show migration status.
+.TP
+.B db:setup
+Create and migrate database.
+.SS Development
+.TP
+.B serve, server, s
+Start development server with hot reload.
+.SS Testing
+.TP
+.B test, t
+Run tests (optionally with watch mode).
+.SS Jobs (JoobQ)
+.TP
+.B jobs:worker
+Start background job workers.
+.TP
+.B jobs:status
+Show queue status and statistics.
+.TP
+.B jobs:clear
+Clear job queues.
+.TP
+.B jobs:retry
+Retry failed jobs.
+.TP
+.B jobs:ui
+Start JoobQ UI.
+.SS Session
+.TP
+.B session:setup
+Setup session management.
+.TP
+.B session:clear
+Clear all sessions.
+.SS OpenAPI
+.TP
+.B openapi:generate
+Generate code from OpenAPI specification.
+.TP
+.B openapi:export
+Export endpoints and schemas to OpenAPI.
+.SS Plugins
+.TP
+.B plugin
+Plugin management.
+.SH OPTIONS
+Global options are command dependent. Run:
+.PP
+.nf
+  azu help
+  azu <command> --help
+.fi
+.PP
+for detailed options and usage.
+.SH EXAMPLES
+.nf
+  azu new my-app
+  azu generate model User name:string email:string
+  azu db:create && azu db:migrate
+  azu serve
+  azu test --watch
+.fi
+.SH ENVIRONMENT
+Configuration is loaded via Azu CLI configuration files and environment; see project documentation.
+.SH FILES
+Project templates and generators are included with the CLI. See
+.I README.md
+and
+.I CLI_REFERENCE.md
+in the repository for details.
+.SH SEE ALSO
+Project documentation: https://azutopia.gitbook.io/azu/
+.br
+CQL ORM: https://github.com/azutoolkit/cql
+.br
+Azu Framework: https://github.com/azutoolkit/azu
+.SH AUTHORS
+Elias J. Perez and contributors.
+.SH REPORTING BUGS
+Open issues at https://github.com/azutoolkit/azu_cli/issues
+

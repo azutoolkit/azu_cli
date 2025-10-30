@@ -94,6 +94,16 @@ make install
 
 The `azu` command will be available system-wide.
 
+### Manual page
+
+```bash
+# Install manual page (may require sudo)
+sudo make install-man
+
+# Then view it
+man azu
+```
+
 ## Quick Start
 
 ```bash
