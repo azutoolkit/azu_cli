@@ -96,7 +96,7 @@ module AzuCLI
         scan_files(file_mtimes)
 
         loop do
-          sleep 0.5.seconds
+          sleep(0.5.seconds)
 
           changed_files = detect_changes(file_mtimes)
 

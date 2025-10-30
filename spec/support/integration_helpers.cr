@@ -81,7 +81,7 @@ module IntegrationHelpers
     server_process = Process.new("shards", ["run", "src/server.cr"], chdir: project_path, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
 
     # Wait for server to start
-    sleep 2.milliseconds
+    sleep(2.milliseconds)
     begin
       block.call(port)
     ensure
