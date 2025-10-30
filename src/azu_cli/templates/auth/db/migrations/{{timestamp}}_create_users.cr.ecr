@@ -1,0 +1,37 @@
+require "cql"
+
+class CreateUsers < CQL::Migration(<%= timestamp.to_i64 %>)
+  def up
+    schema.table :users do
+      primary :id, Int64
+      column :email, String
+      column :password_hash, String
+      column :name, String
+      column :role, String
+      column :confirmed_at, Time
+      column :locked_at, Time
+      column :failed_login_attempts, Int32
+      column :last_login_at, Time
+      column :password_changed_at, Time
+      column :two_factor_enabled, Bool
+      column :two_factor_secret, String
+      column :recovery_codes, String
+      timestamps
+    end
+
+    schema.users.create!
+
+    schema.alter :users do
+      create_index :users_email_idx, [:email]
+      create_index :users_role_idx, [:role]
+      create_index :users_confirmed_at_idx, [:confirmed_at]
+      create_index :users_locked_at_idx, [:locked_at]
+    end
+  end
+
+  def down
+    schema.users.drop!
+  end
+end
+
+

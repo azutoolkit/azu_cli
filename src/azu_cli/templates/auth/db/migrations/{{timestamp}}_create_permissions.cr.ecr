@@ -1,0 +1,30 @@
+<%- if rbac_enabled? %>
+require "cql"
+
+class CreatePermissions < CQL::Migration(<%= timestamp.to_i64 %>)
+  def up
+    schema.table :permissions do
+      primary :id, Int64
+      column :name, String
+      column :description, String
+      column :resource, String
+      column :action, String
+      timestamps
+    end
+
+    schema.permissions.create!
+
+    schema.alter :permissions do
+      create_index :permissions_name_idx, [:name]
+      create_index :permissions_resource_idx, [:resource]
+      create_index :permissions_resource_action_uniq, [:resource, :action], unique: true
+    end
+  end
+
+  def down
+    schema.permissions.drop!
+  end
+end
+<%- end %>
+
+

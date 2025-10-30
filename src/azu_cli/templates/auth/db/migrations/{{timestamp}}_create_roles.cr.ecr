@@ -1,0 +1,27 @@
+<%- if rbac_enabled? %>
+require "cql"
+
+class CreateRoles < CQL::Migration(<%= timestamp.to_i64 %>)
+  def up
+    schema.table :roles do
+      primary :id, Int64
+      column :name, String
+      column :description, String
+      column :permissions, String
+      timestamps
+    end
+
+    schema.roles.create!
+
+    schema.alter :roles do
+      create_index :roles_name_idx, [:name]
+    end
+  end
+
+  def down
+    schema.roles.drop!
+  end
+end
+<%- end %>
+
+

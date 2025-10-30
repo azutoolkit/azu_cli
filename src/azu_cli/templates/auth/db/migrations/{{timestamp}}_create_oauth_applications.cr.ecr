@@ -1,0 +1,30 @@
+<%- if using_authly? %>
+require "cql"
+
+class CreateOAuthApplications < CQL::Migration(<%= timestamp.to_i64 %>)
+  def up
+    schema.table :oauth_applications do
+      primary :id, Int64
+      column :name, String
+      column :client_id, String
+      column :client_secret, String
+      column :redirect_uri, String
+      column :scopes, String
+      column :confidential, Bool
+      timestamps
+    end
+
+    schema.oauth_applications.create!
+
+    schema.alter :oauth_applications do
+      create_index :oauth_applications_client_id_idx, [:client_id]
+    end
+  end
+
+  def down
+    schema.oauth_applications.drop!
+  end
+end
+<%- end %>
+
+

@@ -1,0 +1,28 @@
+<%- if rbac_enabled? %>
+require "cql"
+
+class CreateRolePermissions < CQL::Migration(<%= timestamp.to_i64 %>)
+  def up
+    schema.table :role_permissions do
+      primary :id, Int64
+      column :role_id, Int64
+      column :permission_id, Int64
+      timestamps
+    end
+
+    schema.role_permissions.create!
+
+    schema.alter :role_permissions do
+      create_index :role_permissions_role_id_idx, [:role_id]
+      create_index :role_permissions_permission_id_idx, [:permission_id]
+      create_index :role_permissions_role_perm_uniq, [:role_id, :permission_id], unique: true
+    end
+  end
+
+  def down
+    schema.role_permissions.drop!
+  end
+end
+<%- end %>
+
+
