@@ -11,11 +11,25 @@ class <%=camel_case_name%>Service
 
   private def validate_params(params : Hash) : Bool
     # TODO: Add validation logic
+    # Example:
+    #   return false if params["email"]?.nil?
+    #   return false if params["name"].to_s.empty?
+    #   true
     true
   end
 
   private def handle_error(error : Exception)
     # TODO: Add error handling logic
+    # Example:
+    #   case error
+    #   when ValidationError
+    #     Log.warn { "Validation failed: #{error.message}" }
+    #   when DatabaseError
+    #     Log.error(exception: error) { "Database error" }
+    #     # Notify error tracking service
+    #   else
+    #     Log.error(exception: error) { "Unexpected error" }
+    #   end
     Log.error(exception: error) { "Service error in <%=camel_case_name%>Service" }
     raise error
   end
