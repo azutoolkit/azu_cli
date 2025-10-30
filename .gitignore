@@ -8,3 +8,17 @@
 /playground/example/
 /playground/azu/
 .DS_Store
+
+# Test/playground projects
+/test_*/
+/tmp_*/
+/playground_*/
+*_test_project/
+/tmp/
+test_*.cr
+*_test.cr
+
+# Invalid/example project names
+/123*/
+/*invalid*/
+/example_*/

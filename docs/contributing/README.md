@@ -187,6 +187,99 @@ describe UserService do
 end
 ```
 
+### Testing CLI Commands and Generators
+
+When testing CLI commands, especially those that generate projects or files, follow these conventions:
+
+#### Use Temporary Directories
+
+**Always** create test projects in temporary directories, not in the main repository:
+
+```crystal
+# Good: Use a temporary directory
+it "generates a new project" do
+  Dir.cd("/tmp") do
+    Azu::Commands::New.new("test_project", {} of String => String).call
+    Dir.exists?("/tmp/test_project").should be_true
+    FileUtils.rm_rf("/tmp/test_project") # Clean up
+  end
+end
+
+# Bad: Creates files in the repository
+it "generates a new project" do
+  Azu::Commands::New.new("test_project", {} of String => String).call
+  Dir.exists?("test_project").should be_true
+end
+```
+
+#### Manual Testing Cleanup
+
+If you manually test CLI commands during development:
+
+1. **Always use `/tmp` or a dedicated test directory**:
+
+   ```bash
+   # Good: Test in /tmp
+   cd /tmp
+   azu new test_project
+   cd test_project
+   # ... test functionality
+   cd ..
+   rm -rf test_project
+   ```
+
+2. **Clean up immediately after testing**:
+
+   ```bash
+   # Clean up test projects
+   rm -rf /tmp/test_*
+   rm -rf /tmp/*_test_project
+   ```
+
+3. **Never commit test projects** - The `.gitignore` file is configured to ignore:
+   - `/test_*/` - Test projects starting with "test\_"
+   - `/tmp_*/` - Temporary test projects
+   - `/playground_*/` - Playground projects
+   - `*_test_project/` - Projects ending with "\_test_project"
+   - `/tmp/` - Temporary directory
+   - `test_*.cr` - Test script files (except in `spec/`)
+   - `/123*/` and `/*invalid*/` - Invalid project names
+
+#### Integration Testing Best Practices
+
+```crystal
+# Use helper method for test projects
+def with_test_project(name : String, &)
+  test_dir = "/tmp/azu_test_#{Random::Secure.hex(8)}"
+  Dir.mkdir_p(test_dir)
+
+  begin
+    Dir.cd(test_dir) do
+      yield
+    end
+  ensure
+    FileUtils.rm_rf(test_dir)
+  end
+end
+
+# Usage
+it "generates project structure" do
+  with_test_project("myapp") do
+    Azu::Commands::New.new("myapp", {} of String => String).call
+    Dir.exists?("myapp/src").should be_true
+  end
+  # Cleanup happens automatically
+end
+```
+
+#### Checklist Before Committing
+
+- [ ] No test projects in repository root
+- [ ] All test scripts removed or in proper location
+- [ ] Manual test files cleaned up
+- [ ] Integration tests use temporary directories
+- [ ] Test cleanup code is present
+
 ## Adding New Commands
 
 ### 1. Create Command File

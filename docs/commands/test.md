@@ -245,6 +245,57 @@ azu test --filter "User authentication" --watch
 azu test
 ```
 
+### 6. Test in Temporary Directories
+
+When testing CLI commands that generate files or projects, **always use temporary directories**:
+
+```crystal
+# Good: Use temporary directory
+it "generates project files" do
+  Dir.cd("/tmp") do
+    # Test file generation
+    FileUtils.rm_rf("test_project") # Cleanup
+  end
+end
+
+# Bad: Creates files in repository
+it "generates project files" do
+  # This pollutes the repository!
+end
+```
+
+**Manual testing should also use temporary directories:**
+
+```bash
+# Good: Test in /tmp
+cd /tmp
+azu new test_project
+cd test_project
+azu test
+cd ..
+rm -rf test_project
+
+# Bad: Test in repository root
+azu new test_project  # Don't do this!
+```
+
+**Patterns automatically ignored by `.gitignore`:**
+- `/test_*/` - Test projects
+- `/tmp_*/` - Temporary projects
+- `/playground_*/` - Playground projects
+- `*_test_project/` - Test project directories
+- `test_*.cr` - Test script files (outside `spec/`)
+- `/123*/` and `/*invalid*/` - Invalid names
+
+**Always clean up after manual testing:**
+
+```bash
+# Clean up test artifacts
+rm -rf /tmp/test_*
+rm -rf /tmp/*_test_project
+rm test_*.cr  # Remove any test scripts
+```
+
 ## Troubleshooting
 
 ### Tests Not Running
