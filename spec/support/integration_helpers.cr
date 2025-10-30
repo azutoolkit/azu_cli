@@ -201,4 +201,11 @@ module IntegrationHelpers
       client.close
     end
   end
+
+  # List files in a directory relative to project path
+  def list_files(project_path : String, dir_path : String) : Array(String)
+    full_path = File.join(project_path, dir_path)
+    return [] of String unless Dir.exists?(full_path)
+    Dir.entries(full_path).reject { |f| f == "." || f == ".." }
+  end
 end
