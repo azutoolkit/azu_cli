@@ -132,7 +132,102 @@ module AzuCLI
 
       # Error result
       def error(message : String) : Result
+        Logger.error(message)
         Result.error(message)
+      end
+
+      # Error result with category
+      def error(message : String, category : String) : Result
+        Logger.error("[#{category}] #{message}")
+        Result.error(message)
+      end
+
+      # Handle error with proper logging and optional exit
+      def handle_error(
+        message : String,
+        category : String = Config::ErrorCategory::UNKNOWN,
+        severity : Int32 = Config::ErrorSeverity::ERROR,
+        exit_code : Int32 = Config::EXIT_FAILURE,
+        should_exit : Bool = false,
+      ) : Result
+        # Format error message with category if provided
+        formatted_message = category == Config::ErrorCategory::UNKNOWN ? message : "[#{category}] #{message}"
+
+        # Log based on severity
+        case severity
+        when Config::ErrorSeverity::DEBUG
+          Logger.debug(formatted_message) if Config.instance.debug_mode
+        when Config::ErrorSeverity::INFO
+          Logger.info(formatted_message)
+        when Config::ErrorSeverity::WARN
+          Logger.warn(formatted_message)
+        when Config::ErrorSeverity::ERROR
+          Logger.error(formatted_message)
+        when Config::ErrorSeverity::FATAL
+          Logger.fatal(formatted_message)
+        end
+
+        # Exit if requested or if fatal
+        if should_exit || severity == Config::ErrorSeverity::FATAL
+          # In debug mode, raise exception for better stack traces
+          if Config.instance.debug_mode
+            raise Exception.new(formatted_message)
+          else
+            exit(exit_code)
+          end
+        end
+
+        Result.error(message)
+      end
+
+      # Handle fatal error (always exits)
+      def fatal_error(message : String, category : String = Config::ErrorCategory::UNKNOWN) : NoReturn
+        handle_error(
+          message,
+          category: category,
+          severity: Config::ErrorSeverity::FATAL,
+          exit_code: Config::EXIT_FAILURE,
+          should_exit: true
+        )
+        exit(Config::EXIT_FAILURE) # Explicit exit for NoReturn
+      end
+
+      # Handle warning (logs but doesn't fail)
+      def warning(message : String, category : String = Config::ErrorCategory::UNKNOWN)
+        formatted_message = category == Config::ErrorCategory::UNKNOWN ? message : "[#{category}] #{message}"
+        Logger.warn(formatted_message)
+      end
+
+      # Handle validation error with proper context
+      def validation_error(message : String) : Result
+        handle_error(
+          message,
+          category: Config::ErrorCategory::INVALID_INPUT,
+          severity: Config::ErrorSeverity::ERROR
+        )
+      end
+
+      # Handle file system error
+      def filesystem_error(message : String, category : String = Config::ErrorCategory::IO_ERROR) : Result
+        handle_error(
+          message,
+          category: category,
+          severity: Config::ErrorSeverity::ERROR
+        )
+      end
+
+      # Wrap exception handling with consistent error reporting
+      def with_error_handling(category : String = Config::ErrorCategory::RUNTIME_ERROR, &block)
+        begin
+          yield
+        rescue ex : Exception
+          error_message = Config.instance.debug_mode ? "#{ex.message}\n#{ex.backtrace?.try(&.join("\n"))}" : ex.message.to_s
+          handle_error(
+            error_message,
+            category: category,
+            severity: Config::ErrorSeverity::ERROR
+          )
+        end
       end
 
       # Validate required arguments

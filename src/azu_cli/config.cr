@@ -23,38 +23,38 @@ module AzuCLI
 
     # Standard project directory structure
     module Paths
-      SRC          = "src"
-      SPEC         = "spec"
-      CONFIG       = "config"
-      PUBLIC       = "public"
-      TEMPLATES    = "public/templates"
-      LIB          = "lib"
-      BIN          = "bin"
-      DB           = "db"
-      MIGRATIONS   = "db/migrations"
-      MODELS       = "src/models"
-      ENDPOINTS    = "src/endpoints"
-      SERVICES     = "src/services"
-      MIDDLEWARE   = "src/middleware"
-      VALIDATORS   = "src/validators"
-      JOBS         = "src/jobs"
-      MAILERS      = "src/mailers"
+      SRC        = "src"
+      SPEC       = "spec"
+      CONFIG     = "config"
+      PUBLIC     = "public"
+      TEMPLATES  = "public/templates"
+      LIB        = "lib"
+      BIN        = "bin"
+      DB         = "db"
+      MIGRATIONS = "db/migrations"
+      MODELS     = "src/models"
+      ENDPOINTS  = "src/endpoints"
+      SERVICES   = "src/services"
+      MIDDLEWARE = "src/middleware"
+      VALIDATORS = "src/validators"
+      JOBS       = "src/jobs"
+      MAILERS    = "src/mailers"
     end
 
     # File patterns for watching and scanning
     module Patterns
-      CRYSTAL_SOURCE  = "**/*.cr"
-      CRYSTAL_SPEC    = "**/*_spec.cr"
-      JINJA_TEMPLATE  = "**/*.jinja"
-      HTML_TEMPLATE   = "**/*.html"
-      ECR_TEMPLATE    = "**/*.ecr"
-      YAML_CONFIG     = "**/*.yml"
-      JSON_CONFIG     = "**/*.json"
-      
+      CRYSTAL_SOURCE = "**/*.cr"
+      CRYSTAL_SPEC   = "**/*_spec.cr"
+      JINJA_TEMPLATE = "**/*.jinja"
+      HTML_TEMPLATE  = "**/*.html"
+      ECR_TEMPLATE   = "**/*.ecr"
+      YAML_CONFIG    = "**/*.yml"
+      JSON_CONFIG    = "**/*.json"
+
       # Combined patterns for common use cases
-      ALL_CRYSTAL     = "#{CRYSTAL_SOURCE}"
-      ALL_TEMPLATES   = "{#{JINJA_TEMPLATE},#{HTML_TEMPLATE},#{ECR_TEMPLATE}}"
-      ALL_CONFIGS     = "{#{YAML_CONFIG},#{JSON_CONFIG}}"
+      ALL_CRYSTAL   = "#{CRYSTAL_SOURCE}"
+      ALL_TEMPLATES = "{#{JINJA_TEMPLATE},#{HTML_TEMPLATE},#{ECR_TEMPLATE}}"
+      ALL_CONFIGS   = "{#{YAML_CONFIG},#{JSON_CONFIG}}"
     end
 
     # File extensions
@@ -80,10 +80,10 @@ module AzuCLI
 
     # Default host names
     module Hosts
-      LOCALHOST       = "localhost"
-      LOCAL_IPV4      = "127.0.0.1"
-      LOCAL_IPV6      = "::1"
-      ALL_INTERFACES  = "0.0.0.0"
+      LOCALHOST      = "localhost"
+      LOCAL_IPV4     = "127.0.0.1"
+      LOCAL_IPV6     = "::1"
+      ALL_INTERFACES = "0.0.0.0"
     end
 
     # Database adapters
@@ -111,6 +111,52 @@ module AzuCLI
       NOT_FOUND             = 404
       UNPROCESSABLE_ENTITY  = 422
       INTERNAL_SERVER_ERROR = 500
+    end
+
+    # Error severity levels for consistent error handling
+    module ErrorSeverity
+      DEBUG = 0 # Debug information only
+      INFO  = 1 # Informational message
+      WARN  = 2 # Warning that doesn't prevent operation
+      ERROR = 3 # Error that prevents operation
+      FATAL = 4 # Fatal error requiring immediate termination
+    end
+
+    # Error categories for better error classification
+    module ErrorCategory
+      # User input errors
+      INVALID_INPUT    = "invalid_input"
+      MISSING_ARGUMENT = "missing_argument"
+      INVALID_OPTION   = "invalid_option"
+
+      # File system errors
+      FILE_NOT_FOUND    = "file_not_found"
+      FILE_EXISTS       = "file_exists"
+      PERMISSION_DENIED = "permission_denied"
+      IO_ERROR          = "io_error"
+
+      # Compilation and build errors
+      COMPILATION_FAILED = "compilation_failed"
+      BUILD_FAILED       = "build_failed"
+      SYNTAX_ERROR       = "syntax_error"
+
+      # Database errors
+      DATABASE_ERROR    = "database_error"
+      MIGRATION_FAILED  = "migration_failed"
+      CONNECTION_FAILED = "connection_failed"
+
+      # Configuration errors
+      CONFIG_ERROR   = "config_error"
+      INVALID_CONFIG = "invalid_config"
+      MISSING_CONFIG = "missing_config"
+
+      # Runtime errors
+      RUNTIME_ERROR  = "runtime_error"
+      TIMEOUT        = "timeout"
+      RESOURCE_ERROR = "resource_error"
+
+      # General
+      UNKNOWN = "unknown"
     end
 
     # Global configuration
