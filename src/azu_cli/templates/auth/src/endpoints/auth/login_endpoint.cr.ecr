@@ -1,8 +1,77 @@
+<%# Requires first (Crystal convention) %>
+require "../models/user"
+<%- if using_jwt? || using_authly? %>
+require "jwt"
+<%- end %>
+
 module <%= project.camelcase %>::Auth
   struct LoginEndpoint
-    include Azu::Endpoint(Auth::LoginRequest, Azu::Response::Empty)
+    include Azu::Endpoint(Auth::LoginRequest, Auth::LoginResponse | Azu::Response::Empty)
 
     post "/auth/login"
+
+    def call : Auth::LoginResponse | Azu::Response::Empty
+      req = login_request
+      unless req.valid?
+        halt 422, {errors: req.errors}.to_json
+      end
+
+      user = ::User.authenticate(req.email, req.password)
+      unless user
+        halt 401, {error: "Invalid email or password"}.to_json
+      end
+
+      <%- if using_jwt? || using_authly? %>
+      access = generate_access_token(user)
+      refresh = generate_refresh_token(user)
+      Auth::LoginResponse.new(user.id, access, refresh)
+      <%- else %>
+      session["user_id"] = user.id
+      Auth::LoginResponse.new(user.id)
+      <%- end %>
+    end
+
+    <%- if using_jwt? || using_authly? %>
+    private def generate_access_token(user : ::User) : String
+      now = Time.utc
+      payload = {
+        "sub" => user.id.to_s,
+        "iat" => now.to_unix,
+        "exp" => (now + 15.minutes).to_unix,
+        "iss" => jwt_issuer,
+        "aud" => jwt_audience,
+        "role" => user.role,
+      }
+      JWT.encode(payload, jwt_secret, JWT::Algorithm::HS256)
+    end
+
+    private def generate_refresh_token(user : ::User) : String
+      now = Time.utc
+      payload = {
+        "sub" => user.id.to_s,
+        "iat" => now.to_unix,
+        "exp" => (now + 7.days).to_unix,
+        "type" => "refresh",
+      }
+      JWT.encode(payload, jwt_refresh_secret, JWT::Algorithm::HS256)
+    end
+
+    private def jwt_secret : String
+      ENV["JWT_SECRET"]? || raise "JWT_SECRET environment variable not set"
+    end
+
+    private def jwt_refresh_secret : String
+      ENV["JWT_REFRESH_SECRET"]? || raise "JWT_REFRESH_SECRET environment variable not set"
+    end
+
+    private def jwt_issuer : String
+      ENV["JWT_ISSUER"]? || "<%= project.downcase %>-api"
+    end
+
+    private def jwt_audience : String
+      ENV["JWT_AUDIENCE"]? || "<%= project.downcase %>-client"
+    end
+    <%- end %>
   end
 end
 

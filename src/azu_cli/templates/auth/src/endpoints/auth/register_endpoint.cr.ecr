@@ -1,8 +1,85 @@
+<%# Requires first (Crystal convention) %>
+require "../models/user"
+<%- if using_jwt? || using_authly? %>
+require "jwt"
+<%- end %>
+
 module <%= project.camelcase %>::Auth
   struct RegisterEndpoint
-    include Azu::Endpoint(Auth::RegisterRequest, Azu::Response::Empty)
+    include Azu::Endpoint(Auth::RegisterRequest, Auth::RegisterResponse | Azu::Response::Empty)
 
     post "/auth/register"
+
+    def call : Auth::RegisterResponse | Azu::Response::Empty
+      req = register_request
+      unless req.valid?
+        halt 422, {errors: req.errors}.to_json
+      end
+
+      if ::User.find_by(email: req.email)
+        halt 422, {errors: {email: ["already exists"]}}.to_json
+      end
+
+      user = ::User.new
+      user.email = req.email
+      user.password = req.password
+      user.name = req.name
+
+      unless user.save
+        halt 422, {errors: user.errors}.to_json
+      end
+
+      <%- if using_jwt? || using_authly? %>
+      access = generate_access_token(user)
+      refresh = generate_refresh_token(user)
+      Auth::RegisterResponse.new(user.id, access, refresh)
+      <%- else %>
+      session["user_id"] = user.id
+      Auth::RegisterResponse.new(user.id)
+      <%- end %>
+    end
+
+    <%- if using_jwt? || using_authly? %>
+    private def generate_access_token(user : ::User) : String
+      now = Time.utc
+      payload = {
+        "sub" => user.id.to_s,
+        "iat" => now.to_unix,
+        "exp" => (now + 15.minutes).to_unix,
+        "iss" => jwt_issuer,
+        "aud" => jwt_audience,
+        "role" => user.role,
+      }
+      JWT.encode(payload, jwt_secret, JWT::Algorithm::HS256)
+    end
+
+    private def generate_refresh_token(user : ::User) : String
+      now = Time.utc
+      payload = {
+        "sub" => user.id.to_s,
+        "iat" => now.to_unix,
+        "exp" => (now + 7.days).to_unix,
+        "type" => "refresh",
+      }
+      JWT.encode(payload, jwt_refresh_secret, JWT::Algorithm::HS256)
+    end
+
+    private def jwt_secret : String
+      ENV["JWT_SECRET"]? || raise "JWT_SECRET environment variable not set"
+    end
+
+    private def jwt_refresh_secret : String
+      ENV["JWT_REFRESH_SECRET"]? || raise "JWT_REFRESH_SECRET environment variable not set"
+    end
+
+    private def jwt_issuer : String
+      ENV["JWT_ISSUER"]? || "<%= project.downcase %>-api"
+    end
+
+    private def jwt_audience : String
+      ENV["JWT_AUDIENCE"]? || "<%= project.downcase %>-client"
+    end
+    <%- end %>
   end
 end
 

@@ -3,12 +3,14 @@ module <%= project.camelcase %>::Auth
     include Azu::Response::JSON
 
     getter user_id : Int64?
+    getter access_token : String?
+    getter refresh_token : String?
 
-    def initialize(@user_id : Int64? = nil)
+    def initialize(@user_id : Int64? = nil, @access_token : String? = nil, @refresh_token : String? = nil)
     end
 
     def to_json(io : IO)
-      {user_id: @user_id}.to_json(io)
+      {user_id: @user_id, access_token: @access_token, refresh_token: @refresh_token}.to_json(io)
     end
   end
 end

@@ -1,9 +1,48 @@
 <%- if rbac_enabled? %>
+<%# Requires first (Crystal convention) %>
+require "../models/user"
+<%- if using_jwt? || using_authly? %>
+require "jwt"
+<%- end %>
+
 module <%= project.camelcase %>::Auth
   struct PermissionsEndpoint
-    include Azu::Endpoint(Azu::Request::Empty, Azu::Response::Empty)
+    include Azu::Endpoint(Azu::Request::Empty, Auth::PermissionsResponse | Azu::Response::Empty)
 
     get "/auth/permissions"
+
+    def call : Auth::PermissionsResponse | Azu::Response::Empty
+      user = current_user
+      halt 401, {error: "Not authenticated"}.to_json unless user
+
+      u = user.not_nil!
+      perms = u.permissions.map(&.name)
+      roles = u.roles.map(&.name)
+      Auth::PermissionsResponse.new(perms, roles)
+    end
+
+    private def current_user : ::User?
+      <%- if using_jwt? || using_authly? %>
+      token = request.headers["Authorization"]?.try(&.sub("Bearer ", ""))
+      return nil unless token
+      payload, header = JWT.decode(token, jwt_secret, JWT::Algorithm::HS256)
+      user_id = payload["sub"]?.try(&.as_s).try(&.to_i64)
+      return nil unless user_id
+      ::User.find(user_id)
+      <%- else %>
+      id_val = session["user_id"]?
+      return nil unless id_val
+      ::User.find(id_val.as(Int64))
+      <%- end %>
+    rescue
+      nil
+    end
+
+    <%- if using_jwt? || using_authly? %>
+    private def jwt_secret : String
+      ENV["JWT_SECRET"]? || raise "JWT_SECRET environment variable not set"
+    end
+    <%- end %>
   end
 end
 <%- end %>

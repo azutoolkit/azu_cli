@@ -1,9 +1,32 @@
 <%- if using_authly? %>
+<%# Requires first (Crystal convention) %>
+require "authly"
+require "../models/user"
+<%- if using_jwt? %>
+require "jwt"
+<%- end %>
+
 module <%= project.camelcase %>::Auth
   struct OAuthProviderEndpoint
-    include Azu::Endpoint(Azu::Request::Empty, Azu::Response::Empty)
+    include Azu::Endpoint(Azu::Request::Empty, Azu::Response::Empty | Auth::LoginResponse)
 
     get "/auth/oauth/:provider"
+
+    def call : Azu::Response::Empty | Auth::LoginResponse
+      provider = params[":provider"]? || params["provider"]?
+      halt 400, {error: "provider required"}.to_json unless provider
+
+      callback = oauth_callback_url(provider)
+
+      auth_url = Authly.authorization_url(provider, callback)
+
+      redirect to: auth_url
+    end
+
+    private def oauth_callback_url(provider : String) : String
+      base = ENV["APP_URL"]? || "http://localhost:4000"
+      "#{base}/auth/oauth/#{provider}/callback"
+    end
   end
 end
 <%- end %>

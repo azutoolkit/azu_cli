@@ -1,8 +1,51 @@
+<%# Requires first (Crystal convention) %>
+require "../models/user"
+<%- if using_jwt? || using_authly? %>
+require "jwt"
+<%- end %>
+
 module <%= project.camelcase %>::Auth
   struct MeEndpoint
-    include Azu::Endpoint(Azu::Request::Empty, Azu::Response::Empty)
+    include Azu::Endpoint(Azu::Request::Empty, Auth::MeResponse | Azu::Response::Empty)
 
     get "/auth/me"
+
+    def call : Auth::MeResponse | Azu::Response::Empty
+      user = current_user
+      halt 401, {error: "Not authenticated"}.to_json unless user
+
+      u = user.not_nil!
+      data = {
+        "id" => JSON::Any.new(u.id),
+        "email" => JSON::Any.new(u.email),
+        "name" => JSON::Any.new(u.name || ""),
+        "role" => JSON::Any.new(u.role),
+      } of String => JSON::Any
+      Auth::MeResponse.new(data)
+    end
+
+    private def current_user : ::User?
+      <%- if using_jwt? || using_authly? %>
+      token = request.headers["Authorization"]?.try(&.sub("Bearer ", ""))
+      return nil unless token
+      payload, header = JWT.decode(token, jwt_secret, JWT::Algorithm::HS256)
+      user_id = payload["sub"]?.try(&.as_s).try(&.to_i64)
+      return nil unless user_id
+      ::User.find(user_id)
+      <%- else %>
+      id_val = session["user_id"]?
+      return nil unless id_val
+      ::User.find(id_val.as(Int64))
+      <%- end %>
+    rescue
+      nil
+    end
+
+    <%- if using_jwt? || using_authly? %>
+    private def jwt_secret : String
+      ENV["JWT_SECRET"]? || raise "JWT_SECRET environment variable not set"
+    end
+    <%- end %>
   end
 end
 
