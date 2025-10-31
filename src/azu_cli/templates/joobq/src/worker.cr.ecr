@@ -1,0 +1,22 @@
+require "./initializers/joobq"
+require "./jobs/**"
+
+# JoobQ Worker
+# This file starts the JoobQ background job worker
+
+module <%= @project_name.camelcase %>
+  class Worker
+    def self.start
+      puts "Starting JoobQ Worker..."
+      puts "Queue: <%= @default_queue %>"
+      puts "Workers: <%= @workers %>"
+      puts "Redis URL: <%= @redis_url %>"
+
+      # Start the JoobQ worker
+      JoobQ::Worker.start
+    end
+  end
+end
+
+# Start the worker when this file is run directly
+<%= @project_name.camelcase %>::Worker.start if __FILE__ == PROGRAM_NAME

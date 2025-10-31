@@ -60,14 +60,16 @@ module AzuCLI
 
         # Generate the Jinja2 HTML template only for web projects
         if @project_type == "web" && @generate_template
-          @template_generator.render("#{output_dir}/../public", force: force, interactive: interactive, list: list, color: color)
+          # Calculate public/templates directory path - go up from src/pages to project root, then into public/templates
+          templates_dir = "#{output_dir}/../../public/templates"
+          @template_generator.render(templates_dir, force: force, interactive: interactive, list: list, color: color)
         end
       end
 
       # Get the appropriate output directory based on project type
-      # All pages/responses are generated in ./src/pages directory
+      # API projects use ./src/responses, web projects use ./src/pages
       def self.output_dir_for_type(project_type : String) : String
-        "./src/pages"
+        project_type == "api" ? "./src/responses" : "./src/pages"
       end
 
       # Convert name to page response struct name based on project type (nested under resource module)

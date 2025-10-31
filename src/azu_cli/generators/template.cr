@@ -47,14 +47,22 @@ module AzuCLI
         "#{@module_path}/#{template_filename}"
       end
 
+      # Filter which template files to render based on action
+      def filter(entries)
+        entries.select do |entry|
+          # Only render the template file for this specific action
+          entry.path.includes?("#{@action}_page.jinja.ecr") || entry.path.includes?("helpers/")
+        end
+      end
+
       # Override render to create proper directory structure
       def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
-        # Create the full module path directory
-        full_path = File.join(output_dir, @module_path)
-        Dir.mkdir_p(full_path) unless Dir.exists?(full_path)
+        # Teeplate will handle the {{module_path}} variable in the directory structure
+        # Just ensure the base output directory exists
+        Dir.mkdir_p(output_dir) unless Dir.exists?(output_dir)
 
-        # Use Teeplate's render method with the correct output directory
-        super(full_path, force: force, interactive: interactive, list: list, color: color)
+        # Use Teeplate's render method - it will create the module_path subdirectories
+        super(output_dir, force: force, interactive: interactive, list: list, color: color)
       end
 
       # Get page title for the action

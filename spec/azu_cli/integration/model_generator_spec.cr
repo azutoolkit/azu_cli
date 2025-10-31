@@ -12,12 +12,12 @@ describe "Model Generator E2E" do
 
       # Verify files created
       file_exists?(project_path, "src/models/user.cr").should be_true
-      file_exists?(project_path, "db/migrations").should be_true
+      file_exists?(project_path, "src/db/migrations").should be_true
 
       # Verify model content
       model_content = read_file(project_path, "src/models/user.cr").not_nil!
-      model_content.should contain("class User")
-      model_content.should contain("include CQL::Model")
+      model_content.should contain("struct User")
+      model_content.should contain("include CQL::ActiveRecord::Model")
       model_content.should contain("name")
       model_content.should contain("email")
       model_content.should contain("age")
@@ -31,12 +31,12 @@ describe "Model Generator E2E" do
       result.success?.should be_true
 
       # Verify migration file exists
-      migration_files = Dir.glob(File.join(project_path, "db/migrations/*.cr"))
+      migration_files = Dir.glob(File.join(project_path, "src/db/migrations/*.cr"))
       migration_files.size.should be > 0
 
       # Check migration content
       migration_content = File.read(migration_files.first)
-      migration_content.should contain("create_table")
+      migration_content.should contain("schema.table :posts")
       migration_content.should contain("title")
       migration_content.should contain("body")
       migration_content.should contain("published")

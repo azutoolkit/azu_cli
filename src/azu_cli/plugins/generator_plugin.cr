@@ -41,14 +41,15 @@ module AzuCLI
         # Allow help and version flags to pass through
         return if generator_type.starts_with?("--help") || generator_type.starts_with?("--version") || generator_type.starts_with?("-h")
 
-        valid_types = ["model", "endpoint", "service", "request", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "response", "template", "job", "mailer", "auth", "authentication", "validate"]
+        valid_types = ["model", "endpoint", "service", "request", "contract", "page", "migration", "scaffold", "component", "middleware", "validator", "channel", "handler", "response", "template", "job", "mailer", "auth", "authentication", "validate", "joobq"]
 
         unless valid_types.includes?(generator_type)
           raise ArgumentError.new("Invalid generator type: #{generator_type}. Valid types: #{valid_types.join(", ")}")
         end
 
         # Validate command doesn't require a name
-        if args.size < 2 && generator_type != "validate"
+        generators_without_name = ["auth", "authentication", "validate", "joobq"]
+        if args.size < 2 && !generators_without_name.includes?(generator_type)
           raise ArgumentError.new("Generator name is required. Use: azu generate #{generator_type} <name>")
         end
       end

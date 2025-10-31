@@ -389,7 +389,8 @@ module AzuCLI
         super(output_path, force: force, interactive: interactive, list: list, color: color)
         if @generate_migration
           migration = AzuCLI::Generate::Migration.new(@name, @attributes, @timestamps)
-          migration_dir = File.join(output_path, "db", "migrations")
+          # Migration should be in src/db/migrations to match CQL conventions
+          migration_dir = AzuCLI::Generate::Migration::OUTPUT_DIR
           Dir.mkdir_p(migration_dir) unless Dir.exists?(migration_dir)
           migration.render(migration_dir, force: force, interactive: interactive, list: list, color: color)
         end

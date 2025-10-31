@@ -8,6 +8,10 @@ describe "JoobQ Generator E2E" do
     with_temp_project("testapp", "web") do |project_path|
       # Generate JoobQ
       result = run_generator("generate joobq", project_path)
+      unless result.success?
+        puts "ERROR OUTPUT: #{result.error}"
+        puts "STDOUT: #{result.output}"
+      end
       result.success?.should be_true
 
       # Verify JoobQ files created

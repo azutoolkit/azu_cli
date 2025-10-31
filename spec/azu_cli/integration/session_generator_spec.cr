@@ -7,7 +7,7 @@ describe "Session Generator E2E" do
   it "generates session support, compiles, and stores" do
     with_temp_project("testapp", "web") do |project_path|
       # Generate session
-      result = run_generator("generate session", project_path)
+      result = run_generator("session:setup", project_path)
       result.success?.should be_true
 
       # Verify session files created

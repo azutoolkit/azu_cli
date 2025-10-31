@@ -22,7 +22,7 @@ describe "Project Creation Integration" do
       main_content.should contain("module Testweb")
 
       server_content = read_file(project_path, "src/server.cr").not_nil!
-      server_content.should contain("Azu")
+      server_content.should contain("Testweb")
       server_content.should contain("start")
     end
   end

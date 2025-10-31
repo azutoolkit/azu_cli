@@ -11,13 +11,13 @@ describe "Migration Generator E2E" do
       result.success?.should be_true
 
       # Verify migration file created
-      migration_files = Dir.glob(File.join(project_path, "db/migrations/*add_email_to_users*.cr"))
+      migration_files = Dir.glob(File.join(project_path, "src/db/migrations/*add_email_to_users*.cr"))
       migration_files.size.should be > 0
 
       # Check migration content
       migration_content = File.read(migration_files.first)
-      migration_content.should contain("add_column")
-      migration_content.should contain("users")
+      migration_content.should contain("alter :users")
+      migration_content.should contain("email")
     end
   end
 end

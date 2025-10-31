@@ -16,7 +16,7 @@ describe "Channel Generator E2E" do
       # Verify content of generated file
       channel_content = read_file(project_path, "src/channels/chat_channel.cr").not_nil!
       channel_content.should contain("class ChatChannel")
-      channel_content.should contain("include Azu::Channel")
+      channel_content.should contain("< Azu::Channel::Base")
       channel_content.should contain("def subscribed")
       channel_content.should contain("def receive")
     end

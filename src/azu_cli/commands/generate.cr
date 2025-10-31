@@ -18,6 +18,7 @@ module AzuCLI
       property web_only : Bool = false
       property skip_tests : Bool = false
       property skip_components : Array(String) = [] of String
+      property parse_error : String? = nil
 
       def initialize
         super("generate", "Generate code from templates")
@@ -33,13 +34,26 @@ module AzuCLI
           Logger.debug("API project detected, using API-only mode")
         end
 
-        # Some generators don't require a name (like auth, validate)
-        generators_without_name = ["auth", "authentication", "validate"]
+        # Some generators don't require a name (like auth, validate, joobq)
+        generators_without_name = ["auth", "authentication", "validate", "joobq"]
 
         @generator_type = get_arg(0) || ""
 
+        # Show help if no generator type provided
+        if @generator_type.empty?
+          show_help
+          return success("Help information displayed")
+        end
+
         if generators_without_name.includes?(@generator_type.downcase)
-          @generator_name = @generator_type == "validate" ? "Templates" : "Auth" # Default name for auth
+          case @generator_type.downcase
+          when "validate"
+            @generator_name = "Templates"
+          when "joobq"
+            @generator_name = "JoobQ"
+          else # auth, authentication
+            @generator_name = "Auth"
+          end
         else
           # Validate required arguments for other generators
           unless validate_required_args(2)
@@ -50,6 +64,11 @@ module AzuCLI
 
         # Parse attributes from remaining arguments
         parse_attributes
+
+        # Check for parse errors
+        if @parse_error
+          return error(@parse_error.not_nil!)
+        end
 
         # Show what we're generating
         Logger.info("Generating #{@generator_type}: #{@generator_name}")
@@ -152,7 +171,15 @@ module AzuCLI
           if arg.includes?(":")
             # Parse attribute:type format
             parts = arg.split(":", 2)
-            @attributes[parts[0]] = parts[1]
+            field_name = parts[0]
+
+            # Check for duplicate field names
+            if @attributes.has_key?(field_name)
+              Logger.error("Duplicate field name '#{field_name}' found in attributes.")
+              @parse_error = "Duplicate field name '#{field_name}'"
+            else
+              @attributes[field_name] = parts[1]
+            end
           else
             # Treat as action for endpoints/services
             @actions << arg unless @actions.includes?(arg)
@@ -646,25 +673,26 @@ module AzuCLI
           components_generated << "request"
         end
 
-        # Generate Responses
-        unless should_skip_component?("response")
-          Logger.info("🔨 Generating responses...")
-          project_type = @api_only ? "api" : "web"
-          output_dir = AzuCLI::Generate::Page.output_dir_for_type(project_type)
+        # Generate Responses (API mode only)
+        unless should_skip_component?("response") || @web_only
+          if @api_only
+            Logger.info("🔨 Generating responses...")
+            output_dir = AzuCLI::Generate::Page.output_dir_for_type("api")
 
-          # Generate responses for each CRUD action
-          crud_actions.each do |action|
-            response_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, project_type)
-            render_generator(response_generator, output_dir)
+            # Generate responses for each CRUD action
+            crud_actions.each do |action|
+              response_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, "api")
+              render_generator(response_generator, output_dir)
+            end
+            components_generated << "response"
           end
-          components_generated << "response"
         end
 
         # Generate Pages (Web mode)
         unless should_skip_component?("page") || @api_only
           Logger.info("🔨 Generating pages...")
           output_dir = AzuCLI::Generate::Page.output_dir_for_type("web")
-          ["index", "show", "new", "edit"].each do |action|
+          crud_actions.each do |action|
             page_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, "web")
             render_generator(page_generator, output_dir)
           end
@@ -712,11 +740,6 @@ module AzuCLI
         @attributes.each do |field, type|
           unless supported_types.includes?(type.downcase)
             return error("Unsupported attribute type '#{type}' for field '#{field}'. Supported types: #{supported_types.join(", ")}")
-          end
-
-          # Check for duplicate field names
-          if @attributes.keys.count(field) > 1
-            return error("Duplicate field name '#{field}' found in attributes.")
           end
 
           # Warn about reserved field names

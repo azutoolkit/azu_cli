@@ -5,7 +5,7 @@ module AzuCLI
     # WebSocket channel generator
     class Channel < Teeplate::FileTree
       directory "#{__DIR__}/../templates/channel"
-      OUTPUT_DIR = "./src/channels"
+      OUTPUT_DIR = "."
 
       property name : String
       property actions : Array(String)
