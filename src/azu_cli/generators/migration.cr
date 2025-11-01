@@ -5,7 +5,7 @@ module AzuCLI
     # Migration generator that creates CQL::Migration classes
     class Migration < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/migrations"
-      OUTPUT_DIR = "./src/db/migrations"
+      OUTPUT_DIR = "./db/migrations"
       # Migration configuration properties
       property name : String
       property attributes : Hash(String, String)

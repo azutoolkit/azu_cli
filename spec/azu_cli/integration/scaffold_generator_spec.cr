@@ -45,11 +45,11 @@ describe "Scaffold Generator Integration" do
           "src/pages/post/show_page.cr",
           "src/pages/post/new_page.cr",
           "src/pages/post/edit_page.cr",
-          # Templates (in public/templates, nested directory)
-          "public/templates/post/post/index_page.jinja",
-          "public/templates/post/post/show_page.jinja",
-          "public/templates/post/post/new_page.jinja",
-          "public/templates/post/post/edit_page.jinja",
+          # Templates (in public/templates)
+          "public/templates/post/index_page.jinja",
+          "public/templates/post/show_page.jinja",
+          "public/templates/post/new_page.jinja",
+          "public/templates/post/edit_page.jinja",
         ]
 
         Dir.cd(project_path) do
@@ -101,10 +101,10 @@ describe "Scaffold Generator Integration" do
         Dir.cd(project_path) do
           # Verify skipped files don't exist
           skipped_files = [
-            "public/templates/article/article/index_page.jinja",
-            "public/templates/article/article/show_page.jinja",
-            "public/templates/article/article/new_page.jinja",
-            "public/templates/article/article/edit_page.jinja",
+            "public/templates/article/index_page.jinja",
+            "public/templates/article/show_page.jinja",
+            "public/templates/article/new_page.jinja",
+            "public/templates/article/edit_page.jinja",
             "src/pages/article/index_page.cr",
             "src/pages/article/show_page.cr",
             "src/pages/article/new_page.cr",

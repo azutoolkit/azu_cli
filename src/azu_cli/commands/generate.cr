@@ -595,9 +595,9 @@ module AzuCLI
           end
         end
 
-        # Generate separate Migration if not skipped and not generated with model
+        # Generate separate Migration only if model was skipped (otherwise model generator already created it)
         unless should_skip_component?("migration")
-          unless should_skip_component?("model") # If model was generated, migration might already be created
+          if should_skip_component?("model") # Only generate separate migration if model was skipped
             Logger.info("🔨 Generating migration...")
             begin
               migration_generator = AzuCLI::Generate::Migration.new(
