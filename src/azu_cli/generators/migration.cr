@@ -42,7 +42,7 @@ module AzuCLI
 
       # Detect migration type based on name pattern
       def migration_type : String
-        case @name.downcase
+        case @snake_case_name
         when /^add_index_to_/
           "add_index"
         when /^remove_index_from_/
@@ -71,7 +71,7 @@ module AzuCLI
         case migration_type
         when "add_columns", "remove_columns", "change_columns"
           # Extract table name from "AddXToY" or "add_x_to_y"
-          parts = @name.downcase.split(/_/)
+          parts = @snake_case_name.split(/_/)
           if parts.size >= 3 && parts[-2] == "to"
             parts.last
           else
@@ -79,7 +79,7 @@ module AzuCLI
           end
         when "add_index", "remove_index"
           # Extract table name from "AddIndexToX" or "add_index_to_x"
-          parts = @name.downcase.split(/_/)
+          parts = @snake_case_name.split(/_/)
           if parts.size >= 4 && parts[-2] == "to"
             parts.last
           else
@@ -95,7 +95,7 @@ module AzuCLI
         case migration_type
         when "add_columns", "remove_columns", "change_columns"
           # Extract column names from "AddXToY" or "add_x_to_y"
-          parts = @name.downcase.split(/_/)
+          parts = @snake_case_name.split(/_/)
           if parts.size >= 3 && parts[-2] == "to"
             # For "add_name_and_email_to_users", extract ["name", "email"]
             parts[1..-3].reject { |p| p == "and" }

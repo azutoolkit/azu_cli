@@ -216,6 +216,9 @@ module AzuCLI
         # Add Authly OAuth2 library
         deps << "authly" if using_authly?
 
+        # Add secure random for session-based auth
+        deps << "secure_random" if using_session?
+
         # Add CSRF protection
         deps << "openssl" if csrf_enabled?
         deps << "base64" if csrf_enabled?

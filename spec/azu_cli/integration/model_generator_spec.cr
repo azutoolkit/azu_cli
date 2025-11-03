@@ -12,7 +12,7 @@ describe "Model Generator E2E" do
 
       # Verify files created
       file_exists?(project_path, "src/models/user.cr").should be_true
-      file_exists?(project_path, "src/db/migrations").should be_true
+      file_exists?(project_path, "db/migrations").should be_true
 
       # Verify model content
       model_content = read_file(project_path, "src/models/user.cr").not_nil!
@@ -31,7 +31,7 @@ describe "Model Generator E2E" do
       result.success?.should be_true
 
       # Verify migration file exists
-      migration_files = Dir.glob(File.join(project_path, "src/db/migrations/*.cr"))
+      migration_files = Dir.glob(File.join(project_path, "db/migrations/*.cr"))
       migration_files.size.should be > 0
 
       # Check migration content

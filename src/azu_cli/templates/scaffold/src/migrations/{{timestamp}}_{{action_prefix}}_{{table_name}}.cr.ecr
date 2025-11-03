@@ -1,10 +1,26 @@
 require "cql"
 
+<% if migration_type == "create_table" -%>
 # Migration to create <%= table_name %> table
+<% elsif migration_type == "add_columns" -%>
+# Migration to add columns to <%= table_name %> table
+<% elsif migration_type == "remove_columns" -%>
+# Migration to remove columns from <%= table_name %> table
+<% elsif migration_type == "change_columns" -%>
+# Migration to change columns in <%= table_name %> table
+<% elsif migration_type == "drop_table" || migration_type == "delete_table" -%>
+# Migration to drop <%= table_name %> table
+<% elsif migration_type == "add_index" -%>
+# Migration to add index to <%= table_name %> table
+<% elsif migration_type == "remove_index" -%>
+# Migration to remove index from <%= table_name %> table
+<% else -%>
+# Migration for <%= table_name %> table
+<% end -%>
 # Generated at <%= Time.utc %>
-# Model location: <%= name.camelcase %>::<%= name.camelcase %>Model
 class <%= migration_class_name %> < CQL::Migration(<%= timestamp.to_i64 %>)
   def up
+<% if migration_type == "create_table" -%>
     # Create <%= table_name %> table
     schema.table :<%= table_name %> do
       primary :id, Int64
@@ -43,10 +59,97 @@ class <%= migration_class_name %> < CQL::Migration(<%= timestamp.to_i64 %>)
 <% end -%>
     end
 <% end -%>
+<% elsif migration_type == "add_columns" -%>
+    # Add columns to <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+<% attr_type = attributes[col]? || "String" -%>
+      add_column :<%= col %>, <%= crystal_type(attr_type) %>
+<% end -%>
+    end
+<% elsif migration_type == "remove_columns" -%>
+    # Remove columns from <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+      drop_column :<%= col %>
+<% end -%>
+    end
+<% elsif migration_type == "change_columns" -%>
+    # Change columns in <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+<% attr_type = attributes[col]? || "String" -%>
+      change_column :<%= col %>, <%= crystal_type(attr_type) %>
+<% end -%>
+    end
+<% elsif migration_type == "drop_table" || migration_type == "delete_table" -%>
+    # Drop <%= table_name %> table
+    schema.<%= table_name %>.drop!
+<% elsif migration_type == "add_index" -%>
+    # Add index to <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+      create_index :<%= col %>_idx, [:<%= col %>]
+<% end -%>
+    end
+<% elsif migration_type == "remove_index" -%>
+    # Remove index from <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+      drop_index :<%= col %>_idx
+<% end -%>
+    end
+<% else -%>
+    # Add your migration code here
+    schema.alter :<%= table_name %> do
+      # Your changes here
+    end
+<% end -%>
   end
 
   def down
+<% if migration_type == "create_table" -%>
     # Drop <%= table_name %> table
     schema.<%= table_name %>.drop!
+<% elsif migration_type == "add_columns" -%>
+    # Remove added columns from <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+      drop_column :<%= col %>
+<% end -%>
+    end
+<% elsif migration_type == "remove_columns" -%>
+    # Re-add removed columns to <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+<% attr_type = attributes[col]? || "String" -%>
+      add_column :<%= col %>, <%= crystal_type(attr_type) %>
+<% end -%>
+    end
+<% elsif migration_type == "change_columns" -%>
+    # Revert column changes in <%= table_name %> table (manual implementation required)
+    # schema.alter :<%= table_name %> do
+    #   # Revert your changes here
+    # end
+<% elsif migration_type == "drop_table" || migration_type == "delete_table" -%>
+    # Cannot automatically recreate dropped table
+    # Manual implementation required
+<% elsif migration_type == "add_index" -%>
+    # Remove added index from <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+      drop_index :<%= col %>_idx
+<% end -%>
+    end
+<% elsif migration_type == "remove_index" -%>
+    # Re-add removed index to <%= table_name %> table
+    schema.alter :<%= table_name %> do
+<% column_names.each do |col| -%>
+      create_index :<%= col %>_idx, [:<%= col %>]
+<% end -%>
+    end
+<% else -%>
+    # Add your rollback code here
+<% end -%>
   end
 end
