@@ -408,7 +408,7 @@ module ScaffoldTestHelpers
     File.exists?("src/models/#{snake_case}.cr").should be_true
 
     # Migration
-    Dir.glob("src/db/migrations/*_create_#{plural}.cr").size.should eq(1)
+    Dir.glob("db/migrations/*_create_#{plural}.cr").size.should eq(1)
 
     # Endpoints
     %w[index show new create edit update destroy].each do |action|
