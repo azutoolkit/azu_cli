@@ -57,7 +57,7 @@ module <%= project.camelcase %>::Auth
       refresh = generate_refresh_token(user)
       Auth::LoginResponse.new(user.id, access, refresh)
       <%- else %>
-      session["user_id"] = user.id
+      context.session["user_id"] = user.id
       redirect to: "/"
       <%- end %>
     end

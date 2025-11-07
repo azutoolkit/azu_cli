@@ -44,7 +44,7 @@ module <%= project.camelcase %>::Auth
       refresh = generate_refresh_token(user)
       Auth::RegisterResponse.new(user.id, access, refresh)
       <%- else %>
-      session["user_id"] = user.id
+      context.session["user_id"] = user.id
       Auth::RegisterResponse.new(user.id)
       <%- end %>
     end
