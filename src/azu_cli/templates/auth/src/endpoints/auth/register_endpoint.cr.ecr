@@ -20,14 +20,14 @@ module <%= project.camelcase %>::Auth
         return Azu::Response::Empty.new
       end
 
-      if ::User.find_by(email: req.email)
+      if ::<%= user_model_class %>.find_by(email: req.email)
         context.response.status = HTTP::Status::UNPROCESSABLE_ENTITY
         context.response.content_type = "application/json"
         context.response.print({errors: {email: ["already exists"]}}.to_json)
         return Azu::Response::Empty.new
       end
 
-      user = ::User.new
+      user = ::<%= user_model_class %>.new
       user.email = req.email
       user.password = req.password
       user.name = req.name
@@ -50,7 +50,7 @@ module <%= project.camelcase %>::Auth
     end
 
     <%- if using_jwt? || using_authly? %>
-    private def generate_access_token(user : ::User) : String
+    private def generate_access_token(user : ::<%= user_model_class %>) : String
       now = Time.utc
       payload = {
         "sub" => user.id.to_s,
@@ -63,7 +63,7 @@ module <%= project.camelcase %>::Auth
       JWT.encode(payload, jwt_secret, JWT::Algorithm::HS256)
     end
 
-    private def generate_refresh_token(user : ::User) : String
+    private def generate_refresh_token(user : ::<%= user_model_class %>) : String
       now = Time.utc
       payload = {
         "sub" => user.id.to_s,

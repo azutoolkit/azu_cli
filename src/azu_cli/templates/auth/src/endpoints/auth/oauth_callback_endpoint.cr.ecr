@@ -42,8 +42,8 @@ module <%= project.camelcase %>::Auth
         return Azu::Response::Empty.new
       end
 
-      user = ::User.find_by(email: email) || begin
-        u = ::User.new
+      user = ::<%= user_model_class %>.find_by(email: email) || begin
+        u = ::<%= user_model_class %>.new
         u.email = email
         u.name = name
         # set random password to allow later password flow if desired
@@ -68,7 +68,7 @@ module <%= project.camelcase %>::Auth
     end
 
     <%- if using_jwt? %>
-    private def generate_access_token(user : ::User) : String
+    private def generate_access_token(user : ::<%= user_model_class %>) : String
       now = Time.utc
       payload = {
         "sub" => user.id.to_s,
@@ -81,7 +81,7 @@ module <%= project.camelcase %>::Auth
       JWT.encode(payload, jwt_secret, JWT::Algorithm::HS256)
     end
 
-    private def generate_refresh_token(user : ::User) : String
+    private def generate_refresh_token(user : ::<%= user_model_class %>) : String
       now = Time.utc
       payload = {
         "sub" => user.id.to_s,

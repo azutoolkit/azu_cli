@@ -1,4 +1,5 @@
 require "teeplate"
+require "cadmium_inflector"
 
 module AzuCLI
   module Generate
@@ -60,6 +61,23 @@ module AzuCLI
       # Check if GitHub OAuth is enabled
       def github_oauth_enabled? : Bool
         @enable_oauth_providers.includes?("github")
+      end
+
+      # User model helper methods
+      def user_model_class : String
+        @user_model
+      end
+
+      def user_model_singular : String
+        @user_model.downcase
+      end
+
+      def user_model_plural : String
+        @user_model.downcase.pluralize
+      end
+
+      def user_model_table : String
+        user_model_plural
       end
 
       # Dynamic timestamp for migrations/templates (Int64)

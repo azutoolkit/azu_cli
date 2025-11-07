@@ -144,6 +144,9 @@ module AzuCLI
           parser.on("--strategy STRATEGY", "Authentication strategy (jwt, session, oauth)") do |strategy|
             @options["strategy"] = strategy
           end
+          parser.on("--user-model MODEL", "User model name for authentication") do |model|
+            @options["user_model"] = model
+          end
           parser.on("--backend BACKEND", "Backend type (redis, memory, database)") do |backend|
             @options["backend"] = backend
           end
@@ -507,6 +510,7 @@ module AzuCLI
         Logger.info("Generating authentication system")
 
         strategy = @options["strategy"]? || "authly"
+        user_model = @options["user_model"]? || "User"
         proj_name = project_name
 
         # Parse boolean options
@@ -519,12 +523,14 @@ module AzuCLI
         generator = AzuCLI::Generate::Auth.new(
           project: proj_name,
           strategy: strategy,
+          user_model: user_model,
           enable_rbac: enable_rbac,
           enable_csrf: enable_csrf,
           enable_oauth_providers: oauth_providers
         )
 
         Logger.info("Strategy: #{strategy}")
+        Logger.info("User model: #{user_model}")
         Logger.info("RBAC enabled: #{enable_rbac}")
         Logger.info("CSRF protection: #{enable_csrf}")
         Logger.info("OAuth providers: #{oauth_providers.join(", ")}")

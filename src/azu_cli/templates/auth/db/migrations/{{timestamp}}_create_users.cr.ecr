@@ -1,8 +1,8 @@
 require "cql"
 
-class CreateUsers < CQL::Migration(<%= timestamp %>)
+class Create<%= user_model_class.gsub(/[^a-zA-Z0-9]/, "") %>s < CQL::Migration(<%= timestamp %>)
   def up
-    schema.table :users do
+    schema.table :<%= user_model_table %> do
       primary :id, Int64
       column :email, String
       column :password_hash, String
@@ -19,18 +19,18 @@ class CreateUsers < CQL::Migration(<%= timestamp %>)
       timestamps
     end
 
-    schema.users.create!
+    schema.<%= user_model_table %>.create!
 
-    schema.alter :users do
-      create_index :users_email_idx, [:email]
-      create_index :users_role_idx, [:role]
-      create_index :users_confirmed_at_idx, [:confirmed_at]
-      create_index :users_locked_at_idx, [:locked_at]
+    schema.alter :<%= user_model_table %> do
+      create_index :<%= user_model_table %>_email_idx, [:email]
+      create_index :<%= user_model_table %>_role_idx, [:role]
+      create_index :<%= user_model_table %>_confirmed_at_idx, [:confirmed_at]
+      create_index :<%= user_model_table %>_locked_at_idx, [:locked_at]
     end
   end
 
   def down
-    schema.users.drop!
+    schema.<%= user_model_table %>.drop!
   end
 end
 

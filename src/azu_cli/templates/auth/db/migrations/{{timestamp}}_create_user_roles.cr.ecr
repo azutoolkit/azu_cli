@@ -1,28 +1,28 @@
 <%- if rbac_enabled? %>
 require "cql"
 
-class CreateUserRoles < CQL::Migration(<%= timestamp %>)
+class Create<%= user_model_class.gsub(/[^a-zA-Z0-9]/, "") %>Roles < CQL::Migration(<%= timestamp %>)
   def up
-    schema.table :user_roles do
+    schema.table :<%= user_model_singular %>_roles do
       primary :id, Int64
-      column :user_id, Int64
+      column :<%= user_model_singular %>_id, Int64
       column :role_id, Int64
       column :assigned_at, Time
       column :assigned_by, Int64
       timestamps
     end
 
-    schema.user_roles.create!
+    schema.<%= user_model_singular %>_roles.create!
 
-    schema.alter :user_roles do
-      create_index :user_roles_user_id_idx, [:user_id]
-      create_index :user_roles_role_id_idx, [:role_id]
-      create_index :user_roles_user_role_uniq, [:user_id, :role_id], unique: true
+    schema.alter :<%= user_model_singular %>_roles do
+      create_index :<%= user_model_singular %>_roles_<%= user_model_singular %>_id_idx, [:<%= user_model_singular %>_id]
+      create_index :<%= user_model_singular %>_roles_role_id_idx, [:role_id]
+      create_index :<%= user_model_singular %>_roles_<%= user_model_singular %>_role_uniq, [:<%= user_model_singular %>_id, :role_id], unique: true
     end
   end
 
   def down
-    schema.user_roles.drop!
+    schema.<%= user_model_singular %>_roles.drop!
   end
 end
 <%- end %>

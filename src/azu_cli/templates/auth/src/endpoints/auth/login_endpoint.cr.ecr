@@ -20,7 +20,7 @@ module <%= project.camelcase %>::Auth
         return Azu::Response::Empty.new
       end
 
-      user = ::User.authenticate(req.email, req.password)
+      user = ::<%= user_model_class %>.authenticate(req.email, req.password)
       unless user
         context.response.status = HTTP::Status::UNAUTHORIZED
         context.response.content_type = "application/json"
@@ -39,7 +39,7 @@ module <%= project.camelcase %>::Auth
     end
 
     <%- if using_jwt? || using_authly? %>
-    private def generate_access_token(user : ::User) : String
+    private def generate_access_token(user : ::<%= user_model_class %>) : String
       now = Time.utc
       payload = {
         "sub" => user.id.to_s,
@@ -52,7 +52,7 @@ module <%= project.camelcase %>::Auth
       JWT.encode(payload, jwt_secret, JWT::Algorithm::HS256)
     end
 
-    private def generate_refresh_token(user : ::User) : String
+    private def generate_refresh_token(user : ::<%= user_model_class %>) : String
       now = Time.utc
       payload = {
         "sub" => user.id.to_s,
