@@ -566,11 +566,39 @@ module AzuCLI
 
       # Fix auth migration timestamps to be unique (increment by 1 second each)
       private def fix_auth_migration_timestamps
-        migrations_dir = "./src/db/migrations"
-        return unless Dir.exists?(migrations_dir)
+        # Check both possible locations
+        migrations_dir = if Dir.exists?("./src/db/migrations")
+                          "./src/db/migrations"
+                        elsif Dir.exists?("./db/migrations")
+                          "./db/migrations"
+                        else
+                          Logger.debug("No migrations directory found for timestamp fix")
+                          return
+                        end
+
+        Logger.info("Fixing migration timestamps in: #{migrations_dir}")
 
         # Find all migration files with the same timestamp
         migration_files = Dir.glob("#{migrations_dir}/*.cr").sort
+        if migration_files.empty?
+          Logger.info("No migration files found to fix")
+          return
+        end
+        
+        Logger.info("Found #{migration_files.size} migration files to check")
+
+        # Remove empty migration files (from conditional templates)
+        migration_files.reject! do |file|
+          content = File.read(file)
+          if content.strip.empty? || content.size < 50 # suspiciously small
+            Logger.info("Removing empty/invalid migration: #{File.basename(file)}")
+            File.delete(file)
+            true
+          else
+            false
+          end
+        end
+
         return if migration_files.empty?
 
         # Group by timestamp to find duplicates
@@ -583,6 +611,8 @@ module AzuCLI
         # Fix duplicates by incrementing timestamps
         grouped.each do |timestamp, files|
           next if files.size <= 1 || timestamp.nil?
+
+          Logger.info("Found #{files.size} migrations with duplicate timestamp #{timestamp}, fixing...")
 
           # Define the order for auth migrations
           migration_order = [
@@ -603,20 +633,42 @@ module AzuCLI
 
           # Rename files with incrementing timestamps
           sorted_files.each_with_index do |file, index|
-            next if index == 0 # Keep first file as-is
-
             old_basename = File.basename(file)
             new_timestamp = timestamp.to_i64 + index
-            new_basename = old_basename.sub(/^\d+/, new_timestamp.to_s)
+            
+            # Read the content to extract the actual class name
+            content = File.read(file)
+            
+            # Extract class name from the file
+            class_name = if match = content.match(/class\s+(\w+)\s+<\s+CQL::Migration/)
+                          match[1]
+                        else
+                          nil
+                        end
+            
+            # If we have a class name, use it to construct the filename
+            new_basename = if class_name
+                            # Convert class name to snake_case for filename
+                            snake_name = class_name
+                              .gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
+                              .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
+                              .downcase
+                            "#{new_timestamp}_#{snake_name}.cr"
+                          else
+                            # Fallback to just updating the timestamp
+                            old_basename.sub(/^\d+/, new_timestamp.to_s)
+                          end
+            
             new_path = File.join(migrations_dir, new_basename)
 
-            # Rename the file
-            File.rename(file, new_path)
-
-            # Update the migration class timestamp inside the file
-            content = File.read(new_path)
+            # Update the migration class timestamp inside the content
             updated_content = content.sub(/CQL::Migration\(#{timestamp}\)/, "CQL::Migration(#{new_timestamp})")
+            
+            # Write the updated content to the new file
             File.write(new_path, updated_content)
+            
+            # Delete old file if it's different
+            File.delete(file) if file != new_path
           end
         end
       end

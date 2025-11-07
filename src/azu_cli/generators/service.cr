@@ -56,11 +56,29 @@ module AzuCLI
         params.join(", ")
       end
 
+      # Generate constructor parameters from request object
+      def constructor_params_from_request : String
+        params = [] of String
+        @attributes.each do |field, _|
+          params << "#{field}: request.#{field}"
+        end
+        params.join(", ")
+      end
+
       # Generate update parameters hash
       def update_params : String
         params = [] of String
         @attributes.each do |field, _|
           params << "#{field}: #{field}"
+        end
+        "{#{params.join(", ")}}"
+      end
+
+      # Generate update parameters hash from request object
+      def update_params_from_request : String
+        params = [] of String
+        @attributes.each do |field, _|
+          params << "#{field}: request.#{field}"
         end
         "{#{params.join(", ")}}"
       end
@@ -261,20 +279,20 @@ require "../result"
 
 module #{@module_name}
   class CreateService
-    def call(#{param_list}) : Services::Result(#{model_class})
+    def call(request : #{@module_name}::CreateRequest) : Services::Result(#{model_class})
       Log.info { "Creating new #{@snake_case_name}" }
 
-      #{@snake_case_name} = #{model_class}.new(#{constructor_params})
+      #{@snake_case_name} = #{model_class}.new(#{constructor_params_from_request})
 
       if #{@snake_case_name}.save
-        Log.info { "Successfully created \#{@snake_case_name} with ID: \#{#{@snake_case_name}.id}" }
+        Log.info { "Successfully created #{@snake_case_name} with ID: \#{#{@snake_case_name}.id}" }
         Services::Result.success(#{@snake_case_name})
       else
-        Log.warn { "Failed to create \#{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(", ")}" }
+        Log.warn { "Failed to create #{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(\", \")}" }
         Services::Result.failure(#{@snake_case_name}.errors)
       end
     rescue ex
-      Log.error(exception: ex) { "Error creating \#{@snake_case_name}" }
+      Log.error(exception: ex) { "Error creating #{@snake_case_name}" }
       errors = CQL::ActiveRecord::Validations::Errors.new
       errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: \#{ex.message}")
       Services::Result.failure(errors)
@@ -341,25 +359,25 @@ require "../result"
 
 module #{@module_name}
   class UpdateService
-    def call(id : #{id_type}, #{param_list}) : Services::Result(#{model_class})
+    def call(id : #{id_type}, request : #{@module_name}::UpdateRequest) : Services::Result(#{model_class})
       Log.info { "Updating #{@snake_case_name} with ID: \#{id}" }
 
       #{@snake_case_name} = #{model_class}.find(id)
 
-      if #{@snake_case_name}.update(#{update_params})
-        Log.info { "Successfully updated \#{@snake_case_name} with ID: \#{id}" }
+      if #{@snake_case_name}.update(#{update_params_from_request})
+        Log.info { "Successfully updated #{@snake_case_name} with ID: \#{id}" }
         Services::Result.success(#{@snake_case_name})
       else
-        Log.warn { "Failed to update \#{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(", ")}" }
+        Log.warn { "Failed to update #{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(\", \")}" }
         Services::Result.failure(#{@snake_case_name}.errors)
       end
     rescue CQL::RecordNotFound
-      Log.warn { "\#{@snake_case_name.camelcase} with ID \#{id} not found" }
+      Log.warn { "#{@module_name} with ID \#{id} not found" }
       errors = CQL::ActiveRecord::Validations::Errors.new
       errors << CQL::ActiveRecord::Validations::Error.new(:base, "Record not found")
       Services::Result.failure(errors)
     rescue ex
-      Log.error(exception: ex) { "Error updating \#{@snake_case_name} with ID \#{id}" }
+      Log.error(exception: ex) { "Error updating #{@snake_case_name} with ID \#{id}" }
       errors = CQL::ActiveRecord::Validations::Errors.new
       errors << CQL::ActiveRecord::Validations::Error.new(:base, "An unexpected error occurred: \#{ex.message}")
       Services::Result.failure(errors)

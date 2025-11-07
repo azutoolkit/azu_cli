@@ -179,13 +179,14 @@ module #{@module_name}::#{@name.camelcase}
     get "#{action_path("index")}"
 
     def call : #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"}
-      # Basic implementation - customize as needed
-      begin
-        # Add your business logic here
-        #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"}.new
-      rescue ex
-        Log.error(exception: ex) { "Error in index action" }
-        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"}.new"}
+      result = IndexService.new.call
+
+      if result.success?
+        #{@resource_plural} = result.data.not_nil!
+        #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"}.new(#{@resource_plural}: #{@resource_plural})
+      else
+        # Handle error - return empty list with error message
+        #{@name.camelcase}::Index#{@endpoint_type == "api" ? "Response" : "Page"}.new(#{@resource_plural}: [] of #{@name.camelcase}::#{@name.camelcase})
       end
     end
   end
@@ -202,13 +203,14 @@ module #{@module_name}::#{@name.camelcase}
     get "#{action_path("show")}"
 
     def call : #{@name.camelcase}::Show#{@endpoint_type == "api" ? "Response" : "Page"}
-      # Basic implementation - customize as needed
-      begin
-        # Add your business logic here
-        #{@name.camelcase}::Show#{@endpoint_type == "api" ? "Response" : "Page"}.new
-      rescue ex
-        Log.error(exception: ex) { "Error in show action" }
-        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; #{@name.camelcase}::Show#{@endpoint_type == "api" ? "Response" : "Page"}.new"}
+      id = show_request.id
+      result = ShowService.new.call(id)
+
+      if result.success?
+        #{@resource_singular} = result.data.not_nil!
+        #{@name.camelcase}::Show#{@endpoint_type == "api" ? "Response" : "Page"}.new(#{@resource_singular}: #{@resource_singular})
+      else
+        #{@endpoint_type == "api" ? "error(\"Not found\", 404, [\"#{@name.camelcase} not found\"])" : "redirect to: \"/#{@resource_plural}\""}
       end
     end
   end
@@ -225,13 +227,13 @@ module #{@module_name}::#{@name.camelcase}
     post "#{action_path("create")}"
 
     def call : #{@name.camelcase}::Create#{@endpoint_type == "api" ? "Response" : "Page"}
-      # Basic implementation - customize as needed
-      begin
-        # Add your business logic here
-        #{@name.camelcase}::Create#{@endpoint_type == "api" ? "Response" : "Page"}.new
-      rescue ex
-        Log.error(exception: ex) { "Error in create action" }
-        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; redirect \"/#{@resource_plural}/new\""}
+      result = CreateService.new.call(create_request)
+
+      if result.success?
+        #{@resource_singular} = result.data.not_nil!
+        #{@endpoint_type == "api" ? "#{@name.camelcase}::CreateResponse.new(#{@resource_singular}: #{@resource_singular})" : "redirect to: \"/#{@resource_plural}/\#{#{@resource_singular}.id}\""}
+      else
+        #{@endpoint_type == "api" ? "error(\"Validation failed\", 422, result.errors)" : "redirect to: \"/#{@resource_plural}/new\""}
       end
     end
   end
@@ -248,13 +250,14 @@ module #{@module_name}::#{@name.camelcase}
     patch "#{action_path("update")}"
 
     def call : #{@name.camelcase}::Update#{@endpoint_type == "api" ? "Response" : "Page"}
-      # Basic implementation - customize as needed
-      begin
-        # Add your business logic here
-        #{@name.camelcase}::Update#{@endpoint_type == "api" ? "Response" : "Page"}.new
-      rescue ex
-        Log.error(exception: ex) { "Error in update action" }
-        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; redirect \"/#{@resource_plural}\""}
+      id = update_request.id
+      result = UpdateService.new.call(id, update_request)
+
+      if result.success?
+        #{@resource_singular} = result.data.not_nil!
+        #{@endpoint_type == "api" ? "#{@name.camelcase}::UpdateResponse.new(#{@resource_singular}: #{@resource_singular})" : "redirect to: \"/#{@resource_plural}/\#{#{@resource_singular}.id}\""}
+      else
+        #{@endpoint_type == "api" ? "error(\"Validation failed\", 422, result.errors)" : "redirect to: \"/#{@resource_plural}/\#{id}/edit\""}
       end
     end
   end
@@ -271,13 +274,13 @@ module #{@module_name}::#{@name.camelcase}
     delete "#{action_path("destroy")}"
 
     def call : #{@name.camelcase}::Destroy#{@endpoint_type == "api" ? "Response" : "Page"}
-      # Basic implementation - customize as needed
-      begin
-        # Add your business logic here
-        #{@name.camelcase}::Destroy#{@endpoint_type == "api" ? "Response" : "Page"}.new
-      rescue ex
-        Log.error(exception: ex) { "Error in destroy action" }
-        #{@endpoint_type == "api" ? "error(\"Internal server error\", 500, [\"An unexpected error occurred\"])" : "flash[\"error\"] = \"An unexpected error occurred\"; redirect \"/#{@resource_plural}\""}
+      id = destroy_request.id
+      result = DestroyService.new.call(id)
+
+      if result.success?
+        #{@endpoint_type == "api" ? "#{@name.camelcase}::DestroyResponse.new(success: true)" : "redirect to: \"/#{@resource_plural}\""}
+      else
+        #{@endpoint_type == "api" ? "error(\"Not found\", 404, [\"#{@name.camelcase} not found\"])" : "redirect to: \"/#{@resource_plural}\""}
       end
     end
   end
@@ -311,8 +314,15 @@ module #{@module_name}::#{@name.camelcase}
     get "#{action_path("edit")}"
 
     def call : #{@name.camelcase}::Edit#{@endpoint_type == "api" ? "Response" : "Page"}
-      # Render form page
-      #{@name.camelcase}::Edit#{@endpoint_type == "api" ? "Response" : "Page"}.new
+      id = edit_request.id
+      result = ShowService.new.call(id)
+
+      if result.success?
+        #{@resource_singular} = result.data.not_nil!
+        #{@name.camelcase}::Edit#{@endpoint_type == "api" ? "Response" : "Page"}.new(#{@resource_singular}: #{@resource_singular})
+      else
+        #{@endpoint_type == "api" ? "error(\"Not found\", 404, [\"#{@name.camelcase} not found\"])" : "redirect to: \"/#{@resource_plural}\""}
+      end
     end
   end
 end
