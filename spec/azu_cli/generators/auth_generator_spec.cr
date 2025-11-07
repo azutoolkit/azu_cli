@@ -199,7 +199,9 @@ describe AzuCLI::Generate::Auth do
       generator = AzuCLI::Generate::Auth.new("myapp", "session")
 
       deps = generator.dependencies
-      deps.should contain("secure_random")
+      deps.should contain("session")
+      deps.should_not contain("jwt")
+      deps.should_not contain("authly")
     end
 
     it "includes CSRF dependency when CSRF is enabled" do
