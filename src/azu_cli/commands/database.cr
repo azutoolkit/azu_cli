@@ -270,7 +270,7 @@ module AzuCLI
 
         # Extract schema constant name (e.g., "BlogDB")
         # Support both CQL::Schema.define and CQL::Schema.build
-        if match = schema_content.match(/^(\w+DB)\s*=\s*CQL::Schema\.(define|build)/)
+        if match = schema_content.match(/(\w+DB)\s*=\s*CQL::Schema\.(define|build)/)
           schema_name = match[1]
           # Convert to symbol format (e.g., "BlogDB" → "blog_db")
           schema_symbol = schema_name.gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
