@@ -584,7 +584,7 @@ module AzuCLI
           Logger.info("No migration files found to fix")
           return
         end
-        
+
         Logger.info("Found #{migration_files.size} migration files to check")
 
         # Remove empty migration files (from conditional templates)
@@ -635,17 +635,17 @@ module AzuCLI
           sorted_files.each_with_index do |file, index|
             old_basename = File.basename(file)
             new_timestamp = timestamp.to_i64 + index
-            
+
             # Read the content to extract the actual class name
             content = File.read(file)
-            
+
             # Extract class name from the file
             class_name = if match = content.match(/class\s+(\w+)\s+<\s+CQL::Migration/)
                           match[1]
                         else
                           nil
                         end
-            
+
             # If we have a class name, use it to construct the filename
             new_basename = if class_name
                             # Convert class name to snake_case for filename
@@ -658,15 +658,15 @@ module AzuCLI
                             # Fallback to just updating the timestamp
                             old_basename.sub(/^\d+/, new_timestamp.to_s)
                           end
-            
+
             new_path = File.join(migrations_dir, new_basename)
 
             # Update the migration class timestamp inside the content
             updated_content = content.sub(/CQL::Migration\(#{timestamp}\)/, "CQL::Migration(#{new_timestamp})")
-            
+
             # Write the updated content to the new file
             File.write(new_path, updated_content)
-            
+
             # Delete old file if it's different
             File.delete(file) if file != new_path
           end
