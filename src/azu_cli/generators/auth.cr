@@ -81,11 +81,10 @@ module AzuCLI
       end
 
       # Dynamic timestamp for migrations/templates (Int64)
-      @timestamp : Int64?
+      @timestamp : Int64 = Time.utc.to_unix
 
       def timestamp : Int64
-        @timestamp ||= Time.utc.to_unix
-        @timestamp.not_nil!
+        @timestamp
       end
 
       # Infer project mode based on presence of pages directory

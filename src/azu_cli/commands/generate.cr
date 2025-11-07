@@ -537,6 +537,9 @@ module AzuCLI
 
         render_generator(generator, AzuCLI::Generate::Auth::OUTPUT_DIR)
 
+        # Fix migration timestamps to be unique
+        fix_auth_migration_timestamps
+
         Logger.info("✓ Authentication system generated")
         Logger.info("")
         Logger.info("Next steps:")
@@ -559,6 +562,63 @@ module AzuCLI
         Logger.info("7. Configure your application to use the auth endpoints")
 
         success("Generated authentication system successfully")
+      end
+
+      # Fix auth migration timestamps to be unique (increment by 1 second each)
+      private def fix_auth_migration_timestamps
+        migrations_dir = "./src/db/migrations"
+        return unless Dir.exists?(migrations_dir)
+
+        # Find all migration files with the same timestamp
+        migration_files = Dir.glob("#{migrations_dir}/*.cr").sort
+        return if migration_files.empty?
+
+        # Group by timestamp to find duplicates
+        grouped = migration_files.group_by do |file|
+          if match = File.basename(file).match(/^(\d+)_/)
+            match[1]
+          end
+        end
+
+        # Fix duplicates by incrementing timestamps
+        grouped.each do |timestamp, files|
+          next if files.size <= 1 || timestamp.nil?
+
+          # Define the order for auth migrations
+          migration_order = [
+            "create_users",
+            "create_roles",
+            "create_permissions",
+            "create_user_roles",
+            "create_role_permissions",
+            "create_oauth_applications"
+          ]
+
+          # Sort files according to the desired order
+          sorted_files = files.sort_by do |file|
+            basename = File.basename(file, ".cr")
+            name_part = basename.sub(/^\d+_/, "")
+            migration_order.index(name_part) || 999
+          end
+
+          # Rename files with incrementing timestamps
+          sorted_files.each_with_index do |file, index|
+            next if index == 0 # Keep first file as-is
+
+            old_basename = File.basename(file)
+            new_timestamp = timestamp.to_i64 + index
+            new_basename = old_basename.sub(/^\d+/, new_timestamp.to_s)
+            new_path = File.join(migrations_dir, new_basename)
+
+            # Rename the file
+            File.rename(file, new_path)
+
+            # Update the migration class timestamp inside the file
+            content = File.read(new_path)
+            updated_content = content.sub(/CQL::Migration\(#{timestamp}\)/, "CQL::Migration(#{new_timestamp})")
+            File.write(new_path, updated_content)
+          end
+        end
       end
 
       private def generate_api_resource : Result
