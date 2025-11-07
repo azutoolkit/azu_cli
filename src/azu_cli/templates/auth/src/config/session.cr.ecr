@@ -1,0 +1,45 @@
+<%- if using_session? %>
+require "session"
+
+# Strongly typed session payload for <%= project.camelcase %>
+struct <%= project.camelcase %>::Sessions::<%= user_model_class %>Session
+  include Session::SessionData
+  property <%= user_model_singular %>_id : Int64?
+  property login_attempts : Int32 = 0
+  property last_activity : Time = Time.utc
+  
+  def authenticated? : Bool
+    !<%= user_model_singular %>_id.nil?
+  end
+  
+  def increment_login_attempts
+    @login_attempts += 1
+  end
+  
+  def reset_login_attempts
+    @login_attempts = 0
+  end
+end
+
+Session.configure do |config|
+  config.session_key = "_<%= project.underscore %>_session"
+  config.secret      = ENV["SESSION_SECRET"]? || raise "SESSION_SECRET environment variable not set"
+  config.timeout     = <%= csrf_enabled? ? "1.hour" : "24.hours" %>
+  config.provider    = Session::MemoryStore(<%= project.camelcase %>::Sessions::<%= user_model_class %>Session).provider
+  
+  config.on_started = ->(sid : String, data : Session::SessionData) do
+    Log.info { "Session started: #{sid}" }
+  end
+  
+  config.on_deleted = ->(sid : String, data : Session::SessionData) do
+    Log.info { "Session deleted: #{sid}" }
+  end
+end
+
+module <%= project.camelcase %>
+  def self.session : Session::Provider
+    Session.session.not_nil!
+  end
+end
+<%- end %>
+

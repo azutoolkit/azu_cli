@@ -540,28 +540,67 @@ module AzuCLI
         # Fix migration timestamps to be unique
         fix_auth_migration_timestamps
 
+        # Add session dependency to shard.yml if using session strategy
+        if strategy == "session"
+          add_session_dependency
+        end
+
         Logger.info("✓ Authentication system generated")
         Logger.info("")
         Logger.info("Next steps:")
-        Logger.info("1. Run 'azu db:migrate' to create authentication tables")
+        Logger.info("1. Run 'shards install' to install dependencies")
+        Logger.info("2. Run 'azu db:migrate' to create authentication tables")
 
-        if strategy == "jwt" || strategy == "authly"
-          Logger.info("2. Set JWT_SECRET and JWT_REFRESH_SECRET environment variables")
-          Logger.info("3. Set JWT_ISSUER and JWT_AUDIENCE environment variables")
+        if strategy == "session"
+          Logger.info("3. Set SESSION_SECRET environment variable")
+          Logger.info("4. Add Session::SessionHandler to your HTTP middleware stack")
+          Logger.info("5. Load session config: require \"./config/session\"")
+        elsif strategy == "jwt" || strategy == "authly"
+          Logger.info("3. Set JWT_SECRET and JWT_REFRESH_SECRET environment variables")
+          Logger.info("4. Set JWT_ISSUER and JWT_AUDIENCE environment variables")
         end
 
         if strategy == "authly"
-          Logger.info("4. Configure OAuth providers in your application")
-          Logger.info("5. Set up Authly configuration")
+          Logger.info("5. Configure OAuth providers in your application")
+          Logger.info("6. Set up Authly configuration")
         end
 
         if enable_csrf
-          Logger.info("6. Configure CSRF protection middleware")
+          Logger.info("7. Configure CSRF protection middleware")
         end
 
-        Logger.info("7. Configure your application to use the auth endpoints")
+        Logger.info("8. Configure your application to use the auth endpoints")
 
         success("Generated authentication system successfully")
+      end
+
+      # Add session dependency to shard.yml
+      private def add_session_dependency
+        shard_yml_path = "./shard.yml"
+        return unless File.exists?(shard_yml_path)
+
+        content = File.read(shard_yml_path)
+        
+        # Check if session dependency already exists
+        return if content.includes?("github: azutoolkit/session")
+
+        # Find the dependencies section and add session
+        if content.includes?("dependencies:")
+          # Add session dependency
+          session_dep = "  session:\n    github: azutoolkit/session\n    version: ~> 1.0.15"
+
+          # Insert after dependencies: line (with or without trailing whitespace/newline)
+          updated_content = content.sub(/dependencies:(\s*)$/) do |match|
+            "dependencies:#{$1}\n#{session_dep}"
+          end
+
+          File.write(shard_yml_path, updated_content)
+          Logger.info("✓ Added session dependency to shard.yml")
+        else
+          Logger.warn("Could not find dependencies section in shard.yml")
+        end
+      rescue ex
+        Logger.warn("Failed to add session dependency: #{ex.message}")
       end
 
       # Fix auth migration timestamps to be unique (increment by 1 second each)

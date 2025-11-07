@@ -33,10 +33,17 @@ module <%= project.camelcase %>::Auth
       refresh = generate_refresh_token(user)
       Auth::LoginResponse.new(user.id, access, refresh)
       <%- else %>
-      context.session["user_id"] = user.id
+      current_session.data.<%= user_model_singular %>_id = user.id
+      current_session.data.reset_login_attempts
       Auth::LoginResponse.new(user.id)
       <%- end %>
     end
+
+    <%- if using_session? %>
+    private def current_session : Session::Provider
+      <%= project.camelcase %>.session
+    end
+    <%- end %>
 
     <%- if using_jwt? || using_authly? %>
     private def generate_access_token(user : ::<%= user_model_class %>) : String

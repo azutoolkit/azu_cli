@@ -362,15 +362,74 @@ AzuCLI::Logger.level = :debug
 7. **Security Headers**: Enable all security headers
 8. **Regular Updates**: Keep dependencies updated
 
+## Session-Based Authentication Setup
+
+If you chose the session strategy, follow these additional steps:
+
+### 1. Install Dependencies
+
+```bash
+shards install
+```
+
+### 2. Configure Session Middleware
+
+Add the session handler to your HTTP server (in `src/server.cr` or similar):
+
+```crystal
+require "./config/session"
+
+# Add to your handlers array
+handlers = [
+  <%= project.camelcase %>::Middleware::SessionHandler.new(<%= project.camelcase %>.session),
+  # ... other handlers ...
+]
+
+server = HTTP::Server.new(handlers)
+```
+
+### 3. Set Environment Variables
+
+```bash
+# Session Configuration
+SESSION_SECRET=your-super-secret-session-key-minimum-32-chars
+```
+
+### 4. Session Usage in Endpoints
+
+Access the current session:
+
+```crystal
+# Get current user from session
+if user_id = <%= project.camelcase %>.session.data.<%= user_model_singular %>_id
+  user = <%= user_model_class %>.find(user_id)
+end
+
+# Set session data
+<%= project.camelcase %>.session.data.<%= user_model_singular %>_id = user.id
+
+# Delete session (logout)
+<%= project.camelcase %>.session.delete
+```
+
+### Session Features
+
+- **Strongly Typed**: Session data is type-safe
+- **Configurable Backend**: Memory (default), Redis, or Database
+- **Auto-expiration**: Configurable timeout (default: 1 hour)
+- **Secure**: Encrypted and signed cookies
+
+For more information, see the [Session shard documentation](https://github.com/azutoolkit/session).
+
 ## Dependencies
 
 The authentication system uses these Crystal shards:
 
 - `crypto/bcrypt` - Password hashing
-- `jwt` - JWT token handling
+- `jwt` - JWT token handling (if using JWT/Authly)
 - `uuid` - Unique identifier generation
+- `session` - Session management (if using session strategy)
 - `authly` - OAuth2/OIDC implementation (if using Authly)
-- `secure_random` - Secure random number generation
 - `openssl` - Cryptographic operations
 
 ## Support

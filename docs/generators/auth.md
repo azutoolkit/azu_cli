@@ -93,17 +93,30 @@ Features:
 
 #### Session-Based
 
-Traditional session authentication:
+Traditional session authentication using the [Session shard](https://github.com/azutoolkit/session):
 
 ```bash
 azu generate auth --strategy session
+azu generate auth --strategy session --user-model Account
 ```
 
 Features:
 
-- Server-side sessions
-- Cookie-based auth
-- Session store integration
+- **Server-side encrypted sessions**: Secure cookie-based authentication
+- **Strongly-typed session data**: Type-safe session payload with Crystal structs
+- **Multiple storage backends**: Memory (default), Redis, or Database
+- **Auto-expiration**: Configurable timeout (default: 1 hour for CSRF, 24 hours without)
+- **Session lifecycle callbacks**: on_started, on_deleted events
+- **Automatic integration**: Generates session config, middleware, and helper methods
+- **Dependency management**: Automatically adds session shard to shard.yml
+
+What gets generated:
+- Session configuration file (`src/config/session.cr`)
+- Session HTTP handler middleware (`src/middleware/session_handler.cr`)
+- Strongly-typed session struct (`Sessions::AccountSession` or `Sessions::UserSession`)
+- Session helper method (`YourApp.session`)
+- Updated endpoints to use session storage
+- Environment variable template for SESSION_SECRET
 
 #### OAuth
 
@@ -147,7 +160,7 @@ azu generate auth \
 | Option                     | Type            | Default         | Description                                                  |
 | -------------------------- | --------------- | --------------- | ------------------------------------------------------------ |
 | `--strategy <type>`        | string          | `authly`        | Authentication strategy: `authly`, `jwt`, `session`, `oauth` |
-| `--user-model <name>`      | string          | `User`          | Name of the user model class                                 |
+| `--user-model <name>`      | string          | `User`          | Custom name for the user model class (e.g., `Account`)      |
 | `--enable-rbac`            | flag            | `true`          | Enable role-based access control                             |
 | `--no-rbac`                | flag            |                 | Disable RBAC features                                        |
 | `--enable-csrf`            | flag            | `true`          | Enable CSRF protection                                       |
@@ -155,98 +168,135 @@ azu generate auth \
 | `--oauth-providers <list>` | comma-separated | `google,github` | OAuth providers to enable                                    |
 | `--force`                  | flag            | `false`         | Overwrite existing files                                     |
 
+### Custom User Model
+
+The `--user-model` option allows you to use a custom name for your user model instead of the default `User`. This is useful when:
+
+- You need to avoid naming conflicts
+- Your domain uses different terminology (Account, Member, etc.)
+- You're integrating with existing systems
+
+Example:
+```bash
+azu generate auth --user-model Account --strategy session
+```
+
+This generates:
+- Model class: `Account` (not `User`)
+- Table: `accounts` (not `users`)
+- RBAC tables: `account_roles` (not `user_roles`)
+- All migrations and endpoints use the custom model name
+
 ## Generated Files
 
 ### Directory Structure
+
+The generator creates different files based on your chosen strategy:
 
 ```
 project/
 ├── src/
 │   ├── models/
-│   │   └── user.cr                      # User model with auth
+│   │   └── user.cr                      # User model with auth (or custom name)
 │   ├── endpoints/
 │   │   └── auth/
 │   │       ├── register_endpoint.cr     # POST /auth/register
 │   │       ├── login_endpoint.cr        # POST /auth/login
 │   │       ├── logout_endpoint.cr       # POST /auth/logout
-│   │       ├── refresh_endpoint.cr      # POST /auth/refresh (jwt/authly)
+│   │       ├── refresh_endpoint.cr      # POST /auth/refresh (jwt/authly only)
 │   │       ├── me_endpoint.cr           # GET  /auth/me
 │   │       ├── change_password_endpoint.cr # POST /auth/change-password
-│   │       ├── permissions_endpoint.cr  # GET  /auth/permissions (rbac)
-│   │       ├── oauth_provider_endpoint.cr   # GET /auth/oauth/:provider (authly)
-│   │       └── oauth_callback_endpoint.cr   # GET /auth/oauth/:provider/callback (authly)
+│   │       ├── permissions_endpoint.cr  # GET  /auth/permissions (rbac only)
+│   │       ├── oauth_provider_endpoint.cr   # GET /auth/oauth/:provider (authly only)
+│   │       └── oauth_callback_endpoint.cr   # GET /auth/oauth/:provider/callback (authly only)
 │   ├── response/
 │   │   └── auth/
 │   │       ├── register_json.cr         # Register JSON response
 │   │       ├── login_json.cr            # Login JSON response
-│   │       ├── refresh_json.cr          # Refresh JSON response
+│   │       ├── refresh_json.cr          # Refresh JSON response (jwt/authly only)
 │   │       ├── logout_json.cr           # Logout JSON response
 │   │       ├── me_json.cr               # Me JSON response
 │   │       ├── change_password_json.cr  # Change Password JSON response
-│   │       └── permissions_json.cr      # Permissions JSON response (rbac)
+│   │       └── permissions_json.cr      # Permissions JSON response (rbac only)
 │   ├── requests/
 │   │   └── auth/
 │   │       ├── register_request.cr      # Registration validation
 │   │       ├── login_request.cr         # Login validation
-│   │       ├── refresh_token_request.cr # Token refresh
-│   │       └── change_password_request.cr # Password change
+│   │       ├── refresh_token_request.cr # Token refresh (jwt/authly only)
+│   │       ├── logout_request.cr        # Logout request
+│   │       ├── me_request.cr            # Me request
+│   │       └── change_password_request.cr # Password change validation
 │   ├── middleware/
-│   │   ├── csrf_protection.cr           # CSRF middleware
-│   │   └── security_headers.cr          # Security headers
+│   │   ├── csrf_protection.cr           # CSRF middleware (if enabled)
+│   │   ├── security_headers.cr          # Security headers
+│   │   └── session_handler.cr           # Session HTTP handler (session only)
 │   └── config/
-│       └── authly.cr                    # Authly configuration (authly)
-├── db/
+│       ├── authly.cr                    # Authly configuration (authly only)
+│       └── session.cr                   # Session configuration (session only)
+├── src/db/
 │   ├── migrations/
-│   │   ├── <timestamp>_create_users.cr                 # Users
-│   │   ├── <timestamp>_create_roles.cr                 # RBAC (optional)
-│   │   ├── <timestamp>_create_user_roles.cr            # RBAC (optional)
-│   │   ├── <timestamp>_create_permissions.cr           # RBAC (optional)
-│   │   ├── <timestamp>_create_role_permissions.cr      # RBAC (optional)
-│   │   ├── <timestamp>_create_oauth_applications.cr    # Authly (optional)
-│   │   └── <timestamp>_create_oauth_access_tokens.cr   # Authly (optional)
-│   └── seed_rbac.cr                     # RBAC seed data
-└── .env.example                          # Environment variables template
+│   │   ├── <timestamp>_create_users.cr                 # Users table (or custom name)
+│   │   ├── <timestamp>_create_roles.cr                 # RBAC (if enabled)
+│   │   ├── <timestamp>_create_user_roles.cr            # RBAC (if enabled)
+│   │   ├── <timestamp>_create_permissions.cr           # RBAC (if enabled)
+│   │   ├── <timestamp>_create_role_permissions.cr      # RBAC (if enabled)
+│   │   └── <timestamp>_create_oauth_applications.cr    # Authly (authly only)
+│   └── seed_rbac.cr                     # RBAC seed data (if enabled)
+├── env.example                          # Environment variables template
+└── README.md                            # Auth system documentation
 ```
+
+**Note**: Migrations are generated in `src/db/migrations/` with unique incremental timestamps to avoid conflicts.
 
 ### File Descriptions
 
 #### User Model (`src/models/user.cr`)
 
-Complete user model with:
+Complete user model with CQL ORM (name depends on `--user-model` option):
 
 ```crystal
-class User < CQL::Model
-  db_table "users"
+# Example with default User model
+class User 
+  include CQL::Model(Int64)
+  db_context AppDB, :users
 
-  getter id : Int64
-  getter email : String
-  getter password_hash : String
-  getter name : String?
-  getter role : String
-  getter confirmed_at : Time?
-  getter locked_at : Time?
-  getter failed_login_attempts : Int32
-  getter last_login_at : Time?
-  getter password_changed_at : Time?
-  getter two_factor_enabled : Bool
-  getter two_factor_secret : String?
-  getter created_at : Time
-  getter updated_at : Time
-
-  # Associations
-  has_many :user_roles
-  has_many :roles, through: :user_roles
+  property id : Int64
+  property email : String
+  property password_hash : String
+  property name : String?
+  property role : String
+  property confirmed_at : Time?
+  property locked_at : Time?
+  property failed_login_attempts : Int32
+  property last_login_at : Time?
+  property password_changed_at : Time?
+  property two_factor_enabled : Bool
+  property two_factor_secret : String?
+  property recovery_codes : String?
+  property created_at : Time
+  property updated_at : Time
 
   # Authentication methods
-  def hash_password(password : String) : String
+  def self.authenticate(email : String, password : String) : User?
   def verify_password(password : String) : Bool
-  def generate_token : String
   def locked? : Bool
   def confirmed? : Bool
-  def has_role?(role : String) : Bool
-  def can?(permission : String) : Bool
+  def has_role?(role_name : String) : Bool
+  def has_permission?(permission : String) : Bool
+  def record_failed_login!
+  def reset_failed_login_attempts!
+end
+
+# Example with custom Account model (--user-model Account)
+class Account
+  include CQL::Model(Int64)
+  db_context BlogDB, :accounts
+
+  # Same properties and methods as above...
 end
 ```
+
+**Note**: The model name and table name automatically adjust based on the `--user-model` option.
 
 #### Authentication Endpoints (`src/endpoints/auth/*_endpoint.cr`)
 

@@ -1,0 +1,21 @@
+<%- if using_session? %>
+require "session/http_handler"
+
+module <%= project.camelcase %>::Middleware
+  # HTTP Handler for session management
+  # Automatically loads and saves session data for each request
+  class SessionHandler
+    include HTTP::Handler
+
+    def initialize(@session_provider : Session::Provider)
+    end
+
+    def call(context : HTTP::Server::Context)
+      @session_provider.load_from context.request.cookies
+      call_next(context)
+      @session_provider.set_cookies context.response.cookies
+    end
+  end
+end
+<%- end %>
+

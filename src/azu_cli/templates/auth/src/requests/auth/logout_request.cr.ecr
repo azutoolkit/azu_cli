@@ -1,6 +1,9 @@
 module <%= project.camelcase %>::Auth
   struct LogoutRequest
     include Azu::Request
-    # No parameters needed for logout
+
+    def valid? : Bool
+      true
+    end
   end
 end

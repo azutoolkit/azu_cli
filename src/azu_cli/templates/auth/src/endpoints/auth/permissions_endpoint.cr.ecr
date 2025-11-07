@@ -28,6 +28,10 @@ module <%= project.camelcase %>::Auth
       Auth::PermissionsResponse.new(roles, permissions)
     end
 
+    private def current_session : Session::Provider
+      <%= project.camelcase %>.session
+    end
+
     private def current_user : ::<%= user_model_class %>?
       <%- if using_jwt? || using_authly? %>
       token = context.request.headers["Authorization"]?.try(&.sub("Bearer ", ""))
@@ -36,9 +40,9 @@ module <%= project.camelcase %>::Auth
       payload, header = JWT.decode(token, jwt_secret, JWT::Algorithm::HS256)
       ::<%= user_model_class %>.find(payload["sub"].as_s.to_i64)
       <%- else %>
-      id_val = context.session["user_id"]?
+      id_val = current_session.data.<%= user_model_singular %>_id
       return nil unless id_val
-      ::<%= user_model_class %>.find(id_val.as(Int64))
+      ::<%= user_model_class %>.find(id_val)
       <%- end %>
     rescue
       nil

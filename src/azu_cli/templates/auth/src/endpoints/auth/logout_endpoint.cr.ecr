@@ -1,17 +1,25 @@
-require "../../requests/auth/logout_request"
+<%# Requires first (Crystal convention) %>
+require "../../models/user"
 require "../../response/auth/logout_json"
 
 module <%= project.camelcase %>::Auth
   struct LogoutEndpoint
-    include Azu::Endpoint(Auth::LogoutRequest, Auth::LogoutResponse)
+    include Azu::Endpoint(Auth::LogoutRequest, Auth::LogoutResponse | Azu::Response::Empty)
 
     post "/auth/logout"
 
-    def call : Auth::LogoutResponse
-      session.delete("_csrf_token") if respond_to?(:session)
+    def call : Auth::LogoutResponse | Azu::Response::Empty
+      <%- if using_session? %>
+      current_session.delete
+      <%- end %>
+      
       Auth::LogoutResponse.new
     end
+
+    <%- if using_session? %>
+    private def current_session : Session::Provider
+      <%= project.camelcase %>.session
+    end
+    <%- end %>
   end
 end
-
-
