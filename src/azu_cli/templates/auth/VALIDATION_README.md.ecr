@@ -1,0 +1,194 @@
+# Authentication Validation System
+
+This authentication system uses [Schema](https://github.com/azutoolkit/schema) for request validation through `Azu::Request`.
+
+## Overview
+
+All request structs inherit from `Azu::Request`, which includes:
+- `Schema::Definition` - Defines the schema structure
+- `Schema::Validation` - Provides validation capabilities
+
+## Request Validation
+
+### Built-in Predicates
+
+The following predicates are available for use in `validate` declarations:
+
+```crystal
+validate :field, presence: true           # Field must not be nil or empty
+validate :field, size: (8..128)           # Field size must be in range
+validate :field, match: /regex/           # Field must match regex
+validate :field, eq: value                # Field must equal value
+validate :field, gte: 18                  # Field must be >= value
+validate :field, lte: 25                  # Field must be <= value
+validate :field, in: ["a", "b"]           # Field must be in array
+```
+
+### Custom Validators
+
+Custom validators are defined in `src/validators/` and inherit from `Schema::Validator`:
+
+#### EmailValidator
+
+Validates email format using regex pattern.
+
+```crystal
+use EmailValidator
+
+validate :email, match: /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
+```
+
+#### StrongPasswordValidator
+
+Ensures password contains:
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character
+
+```crystal
+use StrongPasswordValidator
+
+validate :password, size: (8..128)
+```
+
+#### PasswordConfirmationValidator
+
+Validates that password_confirmation matches password.
+
+```crystal
+use PasswordConfirmationValidator
+```
+
+#### NewPasswordConfirmationValidator
+
+Validates that new_password_confirmation matches new_password (for password change).
+
+```crystal
+use NewPasswordConfirmationValidator
+```
+
+## Request Examples
+
+### LoginRequest
+
+```crystal
+struct LoginRequest
+  include Azu::Request
+
+  property email : String
+  property password : String
+
+  use EmailValidator
+
+  validate :password, presence: true, message: "Password is required"
+end
+```
+
+### RegisterRequest
+
+```crystal
+struct RegisterRequest
+  include Azu::Request
+
+  property email : String
+  property password : String
+  property password_confirmation : String
+  property name : String?
+
+  use EmailValidator, StrongPasswordValidator, PasswordConfirmationValidator
+
+  validate :password, size: (8..128), message: "Password must be at least 8 characters"
+  validate :name, size: (1..255), message: "Name is too long", nilable: true
+end
+```
+
+## Creating Custom Validators
+
+To create a new validator:
+
+1. Create a file in `src/validators/` named `{name}_validator.cr`
+2. Inherit from `Schema::Validator`
+3. Implement required methods:
+
+```crystal
+class MyCustomValidator < Schema::Validator
+  getter record, field, message
+
+  def initialize(@record : Schema::Validation)
+    @field = :my_field
+    @message = "My custom error message"
+  end
+
+  def valid? : Array(Schema::Error)
+    errors = [] of Schema::Error
+
+    # Access record properties
+    value = @record.as(YourRequest).my_field
+
+    # Add errors if validation fails
+    unless some_condition(value)
+      errors << Schema::Error.new(@field, @message)
+    end
+
+    errors
+  end
+end
+```
+
+## Error Handling
+
+When validation fails, Schema returns an array of `Schema::Error` objects. The endpoints convert these to a hash format for JSON responses:
+
+```crystal
+unless req.valid?
+  error_hash = {} of String => Array(String)
+  req.errors.each do |error|
+    field = error.field.to_s
+    error_hash[field] ||= [] of String
+    error_hash[field] << error.message
+  end
+  # Return error_hash as JSON
+end
+```
+
+Response format:
+
+```json
+{
+  "errors": {
+    "email": ["Email must be valid"],
+    "password": ["Password must be at least 8 characters", "must contain at least one uppercase letter..."]
+  }
+}
+```
+
+## Custom Predicates
+
+You can define custom predicates in request structs:
+
+```crystal
+predicates do
+  def presence?(value : String, _other : Bool) : Bool
+    !value.nil? && !value.empty?
+  end
+
+  def custom_check?(value : String, expected : String) : Bool
+    # Your custom logic here
+    value.includes?(expected)
+  end
+end
+```
+
+Then use them in validations:
+
+```crystal
+validate :field, presence: true
+validate :field, custom_check: "expected_value"
+```
+
+## References
+
+- [Schema Documentation](https://github.com/azutoolkit/schema)
+- [Azu Framework](https://github.com/azutoolkit/azu)
+

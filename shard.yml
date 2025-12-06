@@ -10,20 +10,26 @@ targets:
 dependencies:
   topia:
     github: azutoolkit/topia
+    branch: main
   teeplate:
     github: amberframework/teeplate
     version: ~> 0.11.2
   cadmium_inflector:
     github: cadmiumcr/inflector
+    branch: master
   pg:
     github: will/crystal-pg
+    version: ~> 0.28.0
   cql:
     github: azutoolkit/cql
+    branch: main
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.9.0
   readline:
     github: crystal-lang/crystal-readline
+    branch: master
 development_dependencies:
   spec2:
     github: waterlink/spec2.cr
+    branch: master

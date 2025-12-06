@@ -1,0 +1,32 @@
+# Email Validator
+# Validates email format and domain
+
+module <%= project.camelcase %>::Validators
+  class EmailValidator < Schema::Validator
+    getter record, field, message
+
+    def initialize(@record : Schema::Validation)
+      @field = :email
+      @message = "Email must be valid"
+    end
+
+    def valid? : Array(Schema::Error)
+      errors = [] of Schema::Error
+      email = @record.as(Azu::Request).email
+
+      if email.nil? || email.to_s.empty?
+        errors << Schema::Error.new(@field, "is required")
+      elsif !valid_email_format?(email.to_s)
+        errors << Schema::Error.new(@field, @message)
+      end
+
+      errors
+    end
+
+    private def valid_email_format?(email : String) : Bool
+      email.match(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/) != nil
+    end
+  end
+end
+
+

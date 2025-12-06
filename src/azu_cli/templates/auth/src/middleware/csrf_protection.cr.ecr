@@ -4,7 +4,7 @@
 require "openssl"
 require "base64"
 
-module <%=project.camelcase%>::Middleware
+module <%= project.camelcase %>::Middleware
   class CSRFProtection
     include HTTP::Handler
     CSRF_TOKEN_HEADER = "X-CSRF-Token"

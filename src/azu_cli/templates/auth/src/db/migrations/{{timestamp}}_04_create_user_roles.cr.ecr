@@ -1,7 +1,7 @@
 <%- if rbac_enabled? %>
 require "cql"
 
-class Create<%= user_model_class.gsub(/[^a-zA-Z0-9]/, "") %>Roles < CQL::Migration(<%= timestamp %>)
+class Create<%= user_model_class %>Roles < CQL::Migration(<%= timestamp %>)
   def up
     schema.table :<%= user_model_singular %>_roles do
       primary :id, Int64

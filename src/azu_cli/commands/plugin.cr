@@ -15,7 +15,10 @@ module AzuCLI
           return error("Usage: azu plugin <operation> [options]")
         end
 
-        operation = get_arg(0).not_nil!
+        operation = get_arg(0) || ""
+        if operation.empty?
+          return error("Operation is required. Usage: azu plugin <operation> [options]")
+        end
 
         case operation
         when "list"

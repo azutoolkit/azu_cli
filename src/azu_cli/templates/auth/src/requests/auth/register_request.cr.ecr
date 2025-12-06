@@ -2,72 +2,21 @@
 # Validates user registration data
 
 module <%= project.camelcase %>::Auth
-struct RegisterRequest
-  include Azu::Request
-  include JSON::Serializable
+  struct RegisterRequest
+    include Azu::Request
 
-  property email : String
-  property password : String
-  property password_confirmation : String
-  property name : String?
+    property email : String
+    property password : String
+    property password_confirmation : String
+    property name : String?
 
-  property errors : Hash(String, Array(String)) = {} of String => Array(String)
+    # Use custom validators
+    use EmailValidator, StrongPasswordValidator, PasswordConfirmationValidator
 
-  def initialize(params : Hash)
-    @email = params["email"]?.to_s
-    @password = params["password"]?.to_s
-    @password_confirmation = params["password_confirmation"]?.to_s
-    @name = params["name"]?.to_s if params["name"]?
-  end
+    # Validate password length
+    validate :password, size: (8..128), message: "Password must be at least 8 characters"
 
-  def valid? : Bool
-    @errors.clear
-
-    validate_email
-    validate_password
-    validate_password_confirmation
-
-    @errors.empty?
-  end
-
-  private def validate_email
-    if @email.empty?
-      add_error("email", "is required")
-    elsif !@email.match(/\A[^@\s]+@[^@\s]+\z/)
-      add_error("email", "is invalid")
-    end
-  end
-
-  private def validate_password
-    if @password.empty?
-      add_error("password", "is required")
-    elsif @password.size < 8
-      add_error("password", "must be at least 8 characters")
-    elsif !strong_password?(@password)
-      add_error("password", "must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
-    end
-  end
-
-  private def strong_password?(password : String) : Bool
-    # Check for uppercase, lowercase, number, and special character
-    has_upper = password.match(/[A-Z]/)
-    has_lower = password.match(/[a-z]/)
-    has_number = password.match(/[0-9]/)
-    has_special = password.match(/[^A-Za-z0-9]/)
-
-    has_upper && has_lower && has_number && has_special
-  end
-
-  private def validate_password_confirmation
-    if @password != @password_confirmation
-      add_error("password_confirmation", "does not match password")
-    end
-  end
-
-  private def add_error(field : String, message : String)
-    @errors[field] ||= [] of String
-    @errors[field] << message
+    # Validate name if present
+    validate :name, size: (1..255), message: "Name is too long", nilable: true
   end
 end
-end
-

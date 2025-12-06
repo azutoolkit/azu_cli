@@ -59,15 +59,19 @@ module AzuCLI
           unless validate_required_args(2)
             return error("Usage: azu generate <type> <name> [attributes] [options]")
           end
-          @generator_name = get_arg(1).not_nil!
+          if name = get_arg(1)
+            @generator_name = name
+          else
+            return error("Generator name is required")
+          end
         end
 
         # Parse attributes from remaining arguments
         parse_attributes
 
         # Check for parse errors
-        if @parse_error
-          return error(@parse_error.not_nil!)
+        if parse_err = @parse_error
+          return error(parse_err)
         end
 
         # Show what we're generating
@@ -264,7 +268,8 @@ module AzuCLI
         return "app" unless File.exists?("./shard.yml")
         shard_yml = YAML.parse(File.read("./shard.yml"))
         shard_yml["name"].as_s
-      rescue
+      rescue ex : Exception
+        Logger.debug("Failed to read project name from shard.yml: #{ex.message}")
         "app"
       end
 
@@ -701,7 +706,9 @@ module AzuCLI
             new_path = File.join(migrations_dir, new_basename)
 
             # Update the migration class timestamp inside the content
-            updated_content = content.sub(/CQL::Migration\(#{timestamp}\)/, "CQL::Migration(#{new_timestamp})")
+            # Use Regex.escape for safety even though timestamps should be numeric
+            escaped_timestamp = Regex.escape(timestamp.to_s)
+            updated_content = content.sub(/CQL::Migration\(#{escaped_timestamp}\)/, "CQL::Migration(#{new_timestamp})")
 
             # Write the updated content to the new file
             File.write(new_path, updated_content)

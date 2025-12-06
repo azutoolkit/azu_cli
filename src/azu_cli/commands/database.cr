@@ -86,7 +86,16 @@ module AzuCLI
       # Infer database name from current directory
       private def infer_database_name : String
         project_name = Dir.current.split("/").last
-        "#{project_name}_#{@environment}"
+        # Sanitize project name to be a valid database identifier:
+        # - Replace spaces and hyphens with underscores
+        # - Remove any characters that aren't alphanumeric or underscores
+        # - Ensure it starts with a letter or underscore
+        sanitized_name = project_name
+          .gsub(/[\s\-]/, "_")
+          .gsub(/[^a-zA-Z0-9_]/, "")
+        sanitized_name = "_#{sanitized_name}" if sanitized_name.matches?(/^\d/)
+        sanitized_name = "app" if sanitized_name.empty?
+        "#{sanitized_name}_#{@environment}"
       end
 
       # Get connection URL for database server (without database name)
@@ -228,7 +237,8 @@ module AzuCLI
         else
           false
         end
-      rescue
+      rescue ex : Exception
+        Logger.debug("Failed to check database existence: #{ex.message}")
         false
       end
 
@@ -280,7 +290,8 @@ module AzuCLI
         else
           {"AppSchema", "app_schema"} # Fallback
         end
-      rescue
+      rescue ex : Exception
+        Logger.debug("Failed to detect schema info: #{ex.message}")
         {"AppSchema", "app_schema"} # Fallback on error
       end
 

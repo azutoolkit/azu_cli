@@ -54,18 +54,25 @@ module AzuCLI
           end
 
           # Handle specific file
-          if @file
-            unless File.exists?(@file.not_nil!)
-              return error("Seed file not found: #{@file}")
+          if file = @file
+            # Validate path to prevent directory traversal attacks
+            seeds_dir = File.expand_path("./src/db/seeds")
+            resolved_path = File.expand_path(file)
+            unless resolved_path.starts_with?(seeds_dir) || resolved_path.starts_with?(File.expand_path("."))
+              return error("Invalid seed file path: file must be within the project directory")
             end
 
-            Logger.info("Running seed file: #{@file}")
+            unless File.exists?(file)
+              return error("Seed file not found: #{file}")
+            end
+
+            Logger.info("Running seed file: #{file}")
             show_database_info if @verbose
 
             if @force
-              success = seed_runner.force_run_seed(@file.not_nil!)
+              success = seed_runner.force_run_seed(file)
             else
-              success = seed_runner.run_seed_file(@file.not_nil!)
+              success = seed_runner.run_seed_file(file)
             end
 
             if success
@@ -77,8 +84,8 @@ module AzuCLI
           end
 
           # Handle only specific seeds
-          if @only
-            seed_files = @only.not_nil!.split(",").map(&.strip)
+          if only = @only
+            seed_files = only.split(",").map(&.strip)
             Logger.info("Running specific seeds: #{seed_files.join(", ")}")
             show_database_info if @verbose
 

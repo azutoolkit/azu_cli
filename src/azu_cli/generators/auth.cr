@@ -18,6 +18,37 @@ module AzuCLI
       def initialize(@project : String, @strategy : String = "authly", @user_model : String = "User", @enable_rbac : Bool = true, @enable_csrf : Bool = true, @enable_oauth_providers : Array(String) = ["google", "github"])
       end
 
+      # Override rendered_file_entries to filter files based on strategy and configuration
+      # Returns only the entries that should be included
+      def rendered_file_entries
+        file_entries.select do |entry|
+          path = entry.path.to_s
+
+          # Skip session files if not using session strategy
+          next false if !using_session? && path.includes?("initializers/session.cr")
+          next false if !using_session? && path.includes?("middleware/session_handler.cr")
+
+          # Skip JWT-specific files if not using JWT
+          next false if !using_jwt? && !using_authly? && path.includes?("endpoints/auth/refresh_endpoint.cr")
+
+          # Skip OAuth/Authly files if not using Authly strategy
+          next false if !using_authly? && path.includes?("initializers/authly.cr")
+          next false if !using_authly? && path.includes?("endpoints/auth/oauth")
+          next false if !using_authly? && path.includes?("_06_create_oauth_applications.cr")
+
+          # Skip RBAC files if RBAC is disabled
+          next false if !rbac_enabled? && path.includes?("_02_create_roles.cr")
+          next false if !rbac_enabled? && path.includes?("_03_create_permissions.cr")
+          next false if !rbac_enabled? && path.includes?("_05_create_role_permissions.cr")
+          next false if !rbac_enabled? && path.includes?("_04_create_user_roles.cr")
+          next false if !rbac_enabled? && path.includes?("seed_rbac.cr")
+          next false if !rbac_enabled? && path.includes?("endpoints/auth/permissions_endpoint.cr")
+
+          # Include this entry
+          true
+        end
+      end
+
       # Check if using JWT
       def using_jwt? : Bool
         @strategy == "jwt"
@@ -81,10 +112,56 @@ module AzuCLI
       end
 
       # Dynamic timestamp for migrations/templates (Int64)
+      # This is used by Teeplate to evaluate {{timestamp}} in filenames
       @timestamp : Int64 = Time.utc.to_unix
 
+      # Returns the base timestamp (used in template evaluation)
       def timestamp : Int64
         @timestamp
+      end
+
+      # Override render to handle file renaming after generation
+      def render(out_dir : String)
+        super(out_dir)
+
+        # Post-process migration files to rename with unique timestamps and custom user model
+        rename_migration_files(out_dir)
+      end
+
+      private def rename_migration_files(out_dir : String)
+        migrations_dir = File.join(out_dir, "src/db/migrations")
+        return unless Dir.exists?(migrations_dir)
+
+        # Sort files to ensure consistent ordering
+        files = Dir.glob(File.join(migrations_dir, "*.cr")).sort
+
+        files.each_with_index do |file, index|
+          filename = File.basename(file)
+
+          # Create unique timestamps by adding seconds to base timestamp
+          # Files are named with _01, _02, etc. which we'll replace with unique timestamps
+          unique_timestamp = @timestamp + index + 1
+
+          # Handle timestamp replacement with unique incremental timestamps
+          # The pattern is: {{timestamp}}_01_create_users.cr.ecr -> 1234567891_create_users.cr
+          new_filename = filename
+
+          # Replace the Teeplate-rendered timestamp pattern (e.g., "1234567890_01_" -> "1234567891_")
+          # This handles the case where Teeplate has already replaced {{timestamp}} with actual value
+          new_filename = new_filename.gsub(/^(\d+)_0[1-6]_/) { "#{unique_timestamp}_" }
+
+          # Also handle if somehow the literal {{timestamp}} is still there
+          new_filename = new_filename.gsub(/\{\{timestamp\}\}_0[1-6]_/) { "#{unique_timestamp}_" }
+
+          # Replace user model names
+          new_filename = new_filename.gsub("create_users.cr", "create_#{user_model_table}.cr")
+          new_filename = new_filename.gsub("create_user_roles.cr", "create_#{user_model_singular}_roles.cr")
+
+          if filename != new_filename
+            new_path = File.join(migrations_dir, new_filename)
+            File.rename(file, new_path)
+          end
+        end
       end
 
       # Infer project mode based on presence of pages directory

@@ -1,4 +1,3 @@
-<%- if using_authly? %>
 <%# Requires first (Crystal convention) %>
 require "authly"
 require "../../models/user"
@@ -34,6 +33,3 @@ module <%= project.camelcase %>::Auth
     end
   end
 end
-<%- end %>
-
-

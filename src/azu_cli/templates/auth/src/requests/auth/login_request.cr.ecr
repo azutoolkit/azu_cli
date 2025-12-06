@@ -2,47 +2,16 @@
 # Validates user login data
 
 module <%= project.camelcase %>::Auth
-struct LoginRequest
-  include Azu::Request
-  include JSON::Serializable
+  struct LoginRequest
+    include Azu::Request
 
-  property email : String
-  property password : String
+    property email : String
+    property password : String
 
-  property errors : Hash(String, Array(String)) = {} of String => Array(String)
+    # Use custom validator
+    use EmailValidator
 
-  def initialize(params : Hash)
-    @email = params["email"]?.to_s
-    @password = params["password"]?.to_s
-  end
-
-  def valid? : Bool
-    @errors.clear
-
-    validate_email
-    validate_password
-
-    @errors.empty?
-  end
-
-  private def validate_email
-    if @email.empty?
-      add_error("email", "is required")
-    elsif !@email.match(/\A[^@\s]+@[^@\s]+\z/)
-      add_error("email", "is invalid")
-    end
-  end
-
-  private def validate_password
-    if @password.empty?
-      add_error("password", "is required")
-    end
-  end
-
-  private def add_error(field : String, message : String)
-    @errors[field] ||= [] of String
-    @errors[field] << message
+    # Validate password presence
+    validate :password, presence: true, message: "Password is required"
   end
 end
-end
-

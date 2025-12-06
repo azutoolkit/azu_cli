@@ -1,6 +1,10 @@
 <%# Requires first (Crystal convention) %>
 require "../../models/user"
+require "../../requests/auth/register_request"
 require "../../response/auth/register_json"
+require "../../validators/email_validator"
+require "../../validators/strong_password_validator"
+require "../../validators/password_confirmation_validator"
 <%- if using_jwt? || using_authly? %>
 require "jwt"
 <%- end %>
@@ -13,10 +17,19 @@ module <%= project.camelcase %>::Auth
 
     def call : Auth::RegisterResponse | Azu::Response::Empty
       req = register_request
+
+      # Validate request using Schema validation
       unless req.valid?
         context.response.status = HTTP::Status::UNPROCESSABLE_ENTITY
         context.response.content_type = "application/json"
-        context.response.print({errors: req.errors}.to_json)
+        # Schema errors format: errors is a collection of Schema::Error objects
+        error_hash = {} of String => Array(String)
+        req.errors.each do |error|
+          field = error.field.to_s
+          error_hash[field] ||= [] of String
+          error_hash[field] << error.message
+        end
+        context.response.print({errors: error_hash}.to_json)
         return Azu::Response::Empty.new
       end
 

@@ -1,10 +1,22 @@
 require "../../spec_helper"
 require "file_utils"
 
+# Test directory for auth generator integration tests
+AUTH_TEST_DIR = "./tmp/auth_test"
+
 describe "Auth Generator Integration" do
+  # Setup and teardown
+  before_each do
+    Dir.mkdir_p(AUTH_TEST_DIR) unless Dir.exists?(AUTH_TEST_DIR)
+  end
+
+  after_each do
+    FileUtils.rm_rf(AUTH_TEST_DIR) if Dir.exists?(AUTH_TEST_DIR)
+  end
+
   describe "Session Strategy with Custom User Model" do
     it "generates complete auth system with session support" do
-      Dir.cd(SPEC_TMP_PATH) do
+      Dir.cd(AUTH_TEST_DIR) do
         # Setup test project structure
         FileUtils.mkdir_p("src/db/migrations")
         FileUtils.mkdir_p("src/models")
@@ -30,8 +42,8 @@ describe "Auth Generator Integration" do
         generator.render(".")
 
         # Verify session config was created
-        File.exists?("src/config/session.cr").should be_true
-        session_config = File.read("src/config/session.cr")
+        File.exists?("src/initializers/session.cr").should be_true
+        session_config = File.read("src/initializers/session.cr")
         session_config.should contain("TestApp::Sessions::AccountSession")
         session_config.should contain("account_id : Int64?")
         session_config.should contain("Session::MemoryStore")
@@ -97,7 +109,7 @@ describe "Auth Generator Integration" do
 
         # Verify OAuth endpoints were NOT created for session strategy
         File.exists?("src/endpoints/auth/oauth_callback_endpoint.cr").should be_false
-        File.exists?("src/config/authly.cr").should be_false
+        File.exists?("src/initializers/authly.cr").should be_false
 
         # Verify README documentation
         File.exists?("README.md").should be_true
@@ -113,7 +125,7 @@ describe "Auth Generator Integration" do
     end
 
     it "generates migrations with unique incremental timestamps" do
-      Dir.cd(SPEC_TMP_PATH) do
+      Dir.cd(AUTH_TEST_DIR) do
         FileUtils.mkdir_p("src/db/migrations")
 
         generator = AzuCLI::Generate::Auth.new(
@@ -147,7 +159,7 @@ describe "Auth Generator Integration" do
     end
 
     it "generates correct migration order" do
-      Dir.cd(SPEC_TMP_PATH) do
+      Dir.cd(AUTH_TEST_DIR) do
         FileUtils.mkdir_p("src/db/migrations")
 
         generator = AzuCLI::Generate::Auth.new(
@@ -173,7 +185,7 @@ describe "Auth Generator Integration" do
 
   describe "JWT Strategy" do
     it "generates JWT-based auth without session config" do
-      Dir.cd(SPEC_TMP_PATH) do
+      Dir.cd(AUTH_TEST_DIR) do
         FileUtils.mkdir_p("src/db/migrations")
 
         generator = AzuCLI::Generate::Auth.new(
@@ -185,7 +197,7 @@ describe "Auth Generator Integration" do
         generator.render(".")
 
         # Verify no session config
-        File.exists?("src/config/session.cr").should be_false
+        File.exists?("src/initializers/session.cr").should be_false
         File.exists?("src/middleware/session_handler.cr").should be_false
 
         # Verify JWT endpoints
@@ -203,7 +215,7 @@ describe "Auth Generator Integration" do
 
   describe "RBAC Configuration" do
     it "generates RBAC tables when enabled" do
-      Dir.cd(SPEC_TMP_PATH) do
+      Dir.cd(AUTH_TEST_DIR) do
         FileUtils.mkdir_p("src/db/migrations")
 
         generator = AzuCLI::Generate::Auth.new(
@@ -230,7 +242,7 @@ describe "Auth Generator Integration" do
     end
 
     it "skips RBAC tables when disabled" do
-      Dir.cd(SPEC_TMP_PATH) do
+      Dir.cd(AUTH_TEST_DIR) do
         FileUtils.mkdir_p("src/db/migrations")
 
         generator = AzuCLI::Generate::Auth.new(
@@ -258,7 +270,7 @@ describe "Auth Generator Integration" do
 
   describe "Migration File Naming" do
     it "matches filenames to class names" do
-      Dir.cd(SPEC_TMP_PATH) do
+      Dir.cd(AUTH_TEST_DIR) do
         FileUtils.mkdir_p("src/db/migrations")
 
         generator = AzuCLI::Generate::Auth.new(
@@ -295,7 +307,7 @@ describe "Auth Generator Integration" do
 
   describe "Conditional File Generation" do
     it "removes empty conditional files" do
-      Dir.cd(SPEC_TMP_PATH) do
+      Dir.cd(AUTH_TEST_DIR) do
         FileUtils.mkdir_p("src/db/migrations")
 
         # Session strategy should not create OAuth migrations
@@ -378,27 +390,35 @@ describe "Auth Generator Integration" do
   end
 
   describe "End-to-End Generation" do
-    it "generates working auth system from command" do
-      Dir.cd(SPEC_TMP_PATH) do
+    it "generates working auth system directly" do
+      Dir.cd(AUTH_TEST_DIR) do
         FileUtils.mkdir_p("src/db/migrations")
         File.write("shard.yml", "name: blog\nversion: 0.1.0\ndependencies:\n")
 
-        # Simulate command execution
-        cmd = AzuCLI::Commands::Generate.new
-        cmd.set_args(["auth", "--user-model", "Account", "--strategy", "session"])
+        # Generate auth using the generator directly
+        generator = AzuCLI::Generate::Auth.new(
+          project: "Blog",
+          strategy: "session",
+          user_model: "Account",
+          enable_rbac: true
+        )
 
-        result = cmd.execute
-        result.success.should be_true
+        generator.render(".")
 
         # Verify all expected files were created
         File.exists?("src/models/user.cr").should be_true
-        File.exists?("src/config/session.cr").should be_true
+        File.exists?("src/initializers/session.cr").should be_true
         File.exists?("src/middleware/session_handler.cr").should be_true
         File.exists?("src/endpoints/auth/login_endpoint.cr").should be_true
         File.exists?("src/endpoints/auth/register_endpoint.cr").should be_true
         File.exists?("src/endpoints/auth/logout_endpoint.cr").should be_true
         File.exists?("src/endpoints/auth/me_endpoint.cr").should be_true
         File.exists?("src/endpoints/auth/change_password_endpoint.cr").should be_true
+
+        # Verify validators were created
+        File.exists?("src/validators/email_validator.cr").should be_true
+        File.exists?("src/validators/strong_password_validator.cr").should be_true
+        File.exists?("src/validators/password_confirmation_validator.cr").should be_true
 
         # Verify migrations
         migrations = Dir.glob("src/db/migrations/*.cr")

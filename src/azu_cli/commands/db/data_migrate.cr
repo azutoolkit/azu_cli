@@ -151,8 +151,8 @@ module AzuCLI
 
         # Execute the data migration runner script
         private def execute_runner_script(script_path : String) : Bool
-          success = system("crystal run #{script_path}")
-          success
+          status = Process.run("crystal", ["run", script_path], output: STDOUT, error: STDERR)
+          status.success?
         end
 
         # Execute dry-run mode

@@ -35,13 +35,14 @@ module AzuCLI
       def execute : Result
         parse_arguments
 
-        # If project name wasn't provided as argument or flag, this is an error
-        if @project_name.empty? && get_arg(0).nil?
-          return error("Project name is required. Usage: azu new <project-name> [options]")
-        end
-
         # Set project name from argument if not set by flag
-        @project_name = get_arg(0).not_nil! if @project_name.empty?
+        if @project_name.empty?
+          if name = get_arg(0)
+            @project_name = name
+          else
+            return error("Project name is required. Usage: azu new <project-name> [options]")
+          end
+        end
 
         # Validate project name
         unless valid_project_name?(@project_name)
@@ -251,9 +252,19 @@ module AzuCLI
       end
 
       private def get_git_config(key : String) : String?
-        output = `git config --global #{key} 2>/dev/null`.strip
+        # Validate key to prevent shell injection - only allow safe git config keys
+        unless key.matches?(/^[a-z][a-z0-9.\-]*$/i)
+          Logger.debug("Invalid git config key format: #{key}")
+          return nil
+        end
+
+        # Use Process.run for safer execution
+        process = Process.new("git", ["config", "--global", key], output: Process::Redirect::Pipe, error: Process::Redirect::Close)
+        output = process.output.gets_to_end.strip
+        process.wait
         output.empty? ? nil : output
-      rescue
+      rescue ex : Exception
+        Logger.debug("Failed to get git config #{key}: #{ex.message}")
         nil
       end
 

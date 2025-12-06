@@ -1,6 +1,6 @@
 require "cql"
 
-class Create<%= user_model_class.gsub(/[^a-zA-Z0-9]/, "") %>s < CQL::Migration(<%= timestamp %>)
+class Create<%= user_model_table.camelcase %> < CQL::Migration(<%= timestamp %>)
   def up
     schema.table :<%= user_model_table %> do
       primary :id, Int64

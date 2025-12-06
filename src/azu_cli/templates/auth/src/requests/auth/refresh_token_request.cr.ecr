@@ -2,35 +2,12 @@
 # Validates refresh token data
 
 module <%= project.camelcase %>::Auth
-struct RefreshTokenRequest
-  include Azu::Request
-  include JSON::Serializable
+  struct RefreshTokenRequest
+    include Azu::Request
 
-  property refresh_token : String
+    property refresh_token : String
 
-  property errors : Hash(String, Array(String)) = {} of String => Array(String)
-
-  def initialize(params : Hash)
-    @refresh_token = params["refresh_token"]?.to_s
+    # Validate refresh token presence
+    validate :refresh_token, presence: true, message: "Refresh token is required"
   end
-
-  def valid? : Bool
-    @errors.clear
-
-    validate_refresh_token
-
-    @errors.empty?
-  end
-
-  private def validate_refresh_token
-    if @refresh_token.empty?
-      add_error("refresh_token", "is required")
-    end
-  end
-
-  private def add_error(field : String, message : String)
-    @errors[field] ||= [] of String
-    @errors[field] << message
-  end
-end
 end

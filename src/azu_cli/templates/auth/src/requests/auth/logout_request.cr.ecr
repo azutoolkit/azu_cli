@@ -1,9 +1,9 @@
+# Logout Request
+# No validation needed for logout
+
 module <%= project.camelcase %>::Auth
   struct LogoutRequest
     include Azu::Request
-
-    def valid? : Bool
-      true
-    end
+    # No parameters needed for logout endpoint
   end
 end

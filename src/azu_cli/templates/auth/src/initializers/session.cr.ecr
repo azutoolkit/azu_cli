@@ -1,4 +1,3 @@
-<%- if using_session? %>
 require "session"
 
 # Strongly typed session payload for <%= project.camelcase %>
@@ -41,5 +40,3 @@ module <%= project.camelcase %>
     Session.session.not_nil!
   end
 end
-<%- end %>
-

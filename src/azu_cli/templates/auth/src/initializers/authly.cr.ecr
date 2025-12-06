@@ -1,10 +1,9 @@
 # Authly Configuration
 # OAuth2 and OpenID Connect configuration using Authly
 
-<%- if using_authly? %>
 require "authly"
 
-module <%=project.camelcase%>::Config
+module <%= project.camelcase %>::Config
   class AuthlyConfig
     def self.configure
       Authly.configure do |config|
@@ -141,7 +140,4 @@ module <%=project.camelcase%>::Config
     end
   end
 end
-<%- else %>
-# Authly configuration is disabled
-# This file is included for completeness but Authly is not configured
-<%- end %>
+
