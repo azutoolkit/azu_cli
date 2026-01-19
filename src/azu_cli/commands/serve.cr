@@ -5,8 +5,8 @@ module AzuCLI
   module Commands
     # Development server with hot reloading
     class Serve < Base
-      property port : Int32 = Config::Ports::DEV_SERVER
-      property host : String = Config::Hosts::LOCALHOST
+      property port : Int32 = 4000
+      property host : String = "localhost"
       property environment : String = "development"
       property watch : Bool = true
       property verbose : Bool = false
@@ -14,7 +14,7 @@ module AzuCLI
 
       @server_process : Process?
       @last_reload : Time = Time.utc
-      @watched_patterns : Array(String) = Config.instance.watch_patterns
+      @watched_patterns : Array(String) = AzuCLI::Config.instance.watch_patterns
 
       def initialize
         super("serve", "Start development server with hot reloading")

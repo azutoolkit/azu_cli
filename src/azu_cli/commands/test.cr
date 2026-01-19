@@ -156,7 +156,7 @@ module AzuCLI
       end
 
       private def scan_files(mtimes : Hash(String, Time))
-        patterns = Config.instance.test_watch_patterns
+        patterns = AzuCLI::Config.instance.test_watch_patterns
 
         patterns.each do |pattern|
           Dir.glob(pattern).each do |file|
@@ -171,7 +171,7 @@ module AzuCLI
       private def detect_changes(mtimes : Hash(String, Time)) : Array(String)
         changed = [] of String
 
-        patterns = Config.instance.test_watch_patterns
+        patterns = AzuCLI::Config.instance.test_watch_patterns
 
         patterns.each do |pattern|
           Dir.glob(pattern).each do |file|

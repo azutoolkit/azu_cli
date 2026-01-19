@@ -156,7 +156,7 @@ module AzuCLI
         # Log based on severity
         case severity
         when Config::ErrorSeverity::DEBUG
-          Logger.debug(formatted_message) if Config.instance.debug_mode
+          Logger.debug(formatted_message) if AzuCLI::Config.instance.debug_mode
         when Config::ErrorSeverity::INFO
           Logger.info(formatted_message)
         when Config::ErrorSeverity::WARN
@@ -170,7 +170,7 @@ module AzuCLI
         # Exit if requested or if fatal
         if should_exit || severity == Config::ErrorSeverity::FATAL
           # In debug mode, raise exception for better stack traces
-          if Config.instance.debug_mode
+          if AzuCLI::Config.instance.debug_mode
             raise Exception.new(formatted_message)
           else
             exit(exit_code)
@@ -221,7 +221,7 @@ module AzuCLI
         begin
           yield
         rescue ex : Exception
-          error_message = Config.instance.debug_mode ? "#{ex.message}\n#{ex.backtrace?.try(&.join("\n"))}" : ex.message.to_s
+          error_message = AzuCLI::Config.instance.debug_mode ? "#{ex.message}\n#{ex.backtrace?.try(&.join("\n"))}" : ex.message.to_s
           handle_error(
             error_message,
             category: category,

@@ -61,6 +61,14 @@ module AzuCLI
 
       # Plugin commands
       register_command("plugin", Commands::Plugin)
+
+      # Config commands
+      register_command("config:show", Commands::Config::Show)
+      register_command("config:validate", Commands::Config::Validate)
+      register_command("config:env", Commands::Config::Env)
+
+      # Completion command
+      register_command("completion", Commands::Completion)
     end
 
     # Register a command
