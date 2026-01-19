@@ -1,5 +1,7 @@
-struct Health::HealthRequest
-  include Azu::Request
-  # No parameters needed for health check
+module <%= @module_name %>::Health
+  struct HealthRequest
+    include Azu::Request
+    # No parameters needed for health check
+  end
 end
 

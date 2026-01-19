@@ -73,6 +73,20 @@ module AzuCLI
         end
       end
 
+      # Get CQL adapter class name based on database choice
+      def cql_adapter_class : String
+        case @database
+        when "postgresql", "postgres", "pg"
+          "CQL::Adapter::Postgres"
+        when "mysql"
+          "CQL::Adapter::MySql"
+        when "sqlite", "sqlite3"
+          "CQL::Adapter::SQLite"
+        else
+          "CQL::Adapter::Postgres"
+        end
+      end
+
       def database_env_url : String
         case @database
         when "postgresql", "postgres", "pg"

@@ -1,19 +1,21 @@
 require "json"
 
-struct Health::HealthPage
-  include Azu::Response
-  include Azu::Templates::Renderable
-  include JSON::Serializable
+module <%= @module_name %>::Health
+  struct HealthPage
+    include Azu::Response
+    include Azu::Templates::Renderable
+    include JSON::Serializable
 
-  getter status : String
-  getter version : String
-  getter timestamp : Time
+    getter status : String
+    getter version : String
+    getter timestamp : Time
 
-  def initialize(@status : String, @version : String, @timestamp : Time)
-  end
+    def initialize(@status : String, @version : String, @timestamp : Time)
+    end
 
-  def render : String
-    to_json
+    def render : String
+      to_json
+    end
   end
 end
 

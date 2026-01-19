@@ -1,14 +1,16 @@
-struct Health::HealthEndpoint
-  include Azu::Endpoint(Health::HealthRequest, Health::HealthPage)
+module <%= @module_name %>::Health
+  struct HealthEndpoint
+    include Azu::Endpoint(HealthRequest, HealthPage)
 
-  get "/health"
+    get "/health"
 
-  def call : Health::HealthPage
-    Health::HealthPage.new(
-      status: "ok",
-      version: "<%= @module_name %>::VERSION",
-      timestamp: Time.utc
-    )
+    def call : HealthPage
+      HealthPage.new(
+        status: "ok",
+        version: <%= @module_name %>::VERSION,
+        timestamp: Time.utc
+      )
+    end
   end
 end
 

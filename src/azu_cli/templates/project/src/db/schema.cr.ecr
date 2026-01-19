@@ -1,7 +1,7 @@
 <%= schema_name %> = CQL::Schema.define(
   :<%= schema_symbol %>,
-  adapter: CQL::Adapter::Postgres,
-  uri: "postgres://postgres:@localhost:5432/<%= @project %>_development_db") do
+  adapter: <%= cql_adapter_class %>,
+  uri: ENV["DATABASE_URL"]? || "<%= database_env_url %>") do
   table :cql_schema_migrations do
     primary :id, Int32
     text :name
