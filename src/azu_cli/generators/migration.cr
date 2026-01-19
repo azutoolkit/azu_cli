@@ -15,8 +15,9 @@ module AzuCLI
       property table_name : String
       property action_prefix : String
       property table_name_for_template : String
+      property id_type : String
 
-      def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true)
+      def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true, @id_type : String = "Int64")
         @snake_case_name = to_snake_case(@name)
         @timestamp = generate_timestamp
         @table_name = extract_table_name(@snake_case_name)

@@ -104,22 +104,30 @@ module AzuCLI
 
     # Detect schema name from database configuration
     # Returns tuple of {schema_name, schema_symbol}
+    # Matches CQL schema patterns like: BlogDB = CQL::Schema.define(...) or CQL::Schema.build(...)
     def detect_schema_info : {String, String}
       schema_file_path = schema_file_path()
-      return {"Schema", "Schema"} unless File.exists?(schema_file_path)
+      return {"AppDB", "app_db"} unless File.exists?(schema_file_path)
 
       content = File.read(schema_file_path)
 
-      # Look for: schema :SchemaName do
+      # Look for CQL schema definition: BlogDB = CQL::Schema.define(...) or .build(...)
+      if match = content.match(/(\w+DB)\s*=\s*CQL::Schema\.(define|build)/)
+        schema_name = match[1]
+        schema_symbol = snake_case(schema_name)
+        return {schema_name, schema_symbol}
+      end
+
+      # Fallback for older schema :SchemaName do pattern
       if match = content.match(/schema\s+:(\w+)\s+do/)
         schema_name = match[1]
-        return {schema_name, schema_name}
+        return {schema_name, snake_case(schema_name)}
       end
 
       # Fallback to default
-      {"Schema", "Schema"}
+      {"AppDB", "app_db"}
     rescue
-      {"Schema", "Schema"}
+      {"AppDB", "app_db"}
     end
 
     # Get schema file path

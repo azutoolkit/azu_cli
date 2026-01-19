@@ -10,7 +10,7 @@ targets:
 dependencies:
   topia:
     github: azutoolkit/topia
-    branch: main
+    branch: master
   teeplate:
     github: amberframework/teeplate
     version: ~> 0.11.2
@@ -22,7 +22,7 @@ dependencies:
     version: ~> 0.28.0
   cql:
     github: azutoolkit/cql
-    branch: main
+    branch: master
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.9.0

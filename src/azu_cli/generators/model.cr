@@ -12,7 +12,7 @@ module AzuCLI
       property attributes : Hash(String, String)
       property fields : Hash(String, String)
       property timestamps : Bool
-      property database : String = "AppSchema"
+      property database : String = "AppDB"
       property id_type : String
       property validations : Hash(String, Array(String))
       property snake_case_name : String
@@ -22,14 +22,14 @@ module AzuCLI
       property generate_migration : Bool = true
 
       def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true,
-                     @database : String = "AppSchema", @id_type : String = "UUID", @generate_migration : Bool = true)
+                     @database : String = "AppDB", @id_type : String = "Int64", @generate_migration : Bool = true)
         @snake_case_name = @name.underscore
         @resource_plural = @snake_case_name.pluralize
         @fields = @attributes
         @validations = extract_validations(@attributes)
         @associations = extract_associations(@attributes)
         @scopes = generate_scopes(@attributes)
-        @database = detect_schema_name if @database == "AppSchema"
+        @database = detect_schema_name if @database == "AppDB"
       end
 
       # Convert name to snake_case for file naming
@@ -48,18 +48,9 @@ module AzuCLI
       end
 
       # Detect schema name from the project's schema file
+      # Uses centralized Utils.detect_schema_info for consistency
       private def detect_schema_name : String
-        schema_file = "./src/db/schema.cr"
-        return "AppSchema" unless File.exists?(schema_file)
-
-        content = File.read(schema_file)
-        if match = content.match(/^(\w+DB)\s*=\s*CQL::Schema\.define/)
-          match[1]
-        else
-          "AppSchema"
-        end
-      rescue
-        "AppSchema"
+        Utils.detect_schema_info[0]
       end
 
       # Get the resource module name (for nesting the model)
@@ -113,14 +104,17 @@ module AzuCLI
         attributes.each do |field, type|
           case type.downcase
           when "references", "belongs_to"
-            model_name = field.gsub(/_id$/, "").camelcase
-            associations[field] = "belongs_to :#{field.gsub(/_id$/, "")}, #{model_name}"
+            # For references like user_id:references, generate belongs_to with foreign_key
+            relation_name = field.gsub(/_id$/, "")
+            model_name = relation_name.camelcase
+            associations[field] = "belongs_to :#{relation_name}, #{model_name}, foreign_key: :#{field}"
           when "has_many"
             model_name = field.singularize.camelcase
-            associations[field] = "has_many :#{field}, #{model_name}"
+            # Use the current model's snake_case_name to infer foreign_key
+            associations[field] = "has_many :#{field}, #{model_name}, foreign_key: :#{@snake_case_name}_id"
           when "has_one"
             model_name = field.camelcase
-            associations[field] = "has_one :#{field}, #{model_name}"
+            associations[field] = "has_one :#{field}, #{model_name}, foreign_key: :#{@snake_case_name}_id"
           end
         end
 
@@ -139,8 +133,9 @@ module AzuCLI
           when "time", "datetime"
             scopes << "scope :recent, -> { order(#{field}: :desc) }"
           when "string", "text"
+            # Use simple equality matching (database-agnostic)
             if field.includes?("name") || field.includes?("title")
-              scopes << "scope :by_#{field}, ->(value : String) { where(\"#{field} ILIKE ?\", \"%\" + value + \"%\") }"
+              scopes << "scope :by_#{field}, ->(value : String) { where(#{field}: value) }"
             end
           end
         end
@@ -388,9 +383,11 @@ module AzuCLI
       def render(output_path : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
         super(output_path, force: force, interactive: interactive, list: list, color: color)
         if @generate_migration
-          migration = AzuCLI::Generate::Migration.new(@name, @attributes, @timestamps)
-          # Migration should be in src/db/migrations to match CQL conventions
-          migration_dir = AzuCLI::Generate::Migration::OUTPUT_DIR
+          migration = AzuCLI::Generate::Migration.new(@name, @attributes, @timestamps, @id_type)
+          # Compute migration directory relative to the output path
+          # If output_path is ./tmp_test (test) or ./src/models (real), compute db/migrations relative to parent
+          base_dir = output_path == OUTPUT_DIR ? "." : output_path
+          migration_dir = File.join(base_dir, "db", "migrations")
           Dir.mkdir_p(migration_dir) unless Dir.exists?(migration_dir)
           migration.render(migration_dir, force: force, interactive: interactive, list: list, color: color)
         end

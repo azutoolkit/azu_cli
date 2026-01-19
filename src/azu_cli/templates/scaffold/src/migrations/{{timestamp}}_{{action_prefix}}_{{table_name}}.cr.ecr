@@ -23,7 +23,7 @@ class <%= migration_class_name %> < CQL::Migration(<%= timestamp.to_i64 %>)
 <% if migration_type == "create_table" -%>
     # Create <%= table_name %> table
     schema.table :<%= table_name %> do
-      primary :id, Int64
+      primary :id, <%= crystal_type(@id_type || "Int64") %><% if (@id_type || "Int64").downcase != "uuid" %>, auto_increment: true<% end %>
 <% attributes.each do |field, type| -%>
 <% next if type.downcase == "references" || type.downcase == "belongs_to" -%>
       column :<%= field %>, <%= crystal_type(type) %><% if type.downcase == "bool" || type.downcase == "boolean" %>, default: false<% end %>

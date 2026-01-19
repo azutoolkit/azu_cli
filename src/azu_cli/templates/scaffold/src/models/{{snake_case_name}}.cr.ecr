@@ -1,38 +1,56 @@
 require "cql"
 
-module <%= module_name %>::<%= @name.camelcase %>
-  struct <%= @name.camelcase %>
-    include CQL::ActiveRecord::Model(Int64)
-    db_context <%= module_name %>DB, :<%= @resource_plural %>
+struct <%= @name.camelcase %>
+  include CQL::ActiveRecord::Model(<%= crystal_type(@id_type) %>)
+  db_context <%= @database %>, :<%= @resource_plural %>
 
-    # Attribute accessors
+  # Primary key
+  getter id : <%= crystal_type(@id_type) %>?
+
+  # Attribute accessors
 <% @fields.each do |field_name, field_type| -%>
-    getter <%= field_name %> : <%= crystal_type(field_type) %>
-<% end %>
+<% next if field_name == "id" -%>
+<% if nullable_type?(field_type) -%>
+  getter <%= field_name %> : <%= crystal_type(field_type) %>?
+<% else -%>
+  getter <%= field_name %> : <%= crystal_type(field_type) %>
+<% end -%>
+<% end -%>
+<% if @timestamps -%>
 
-    # Validations
+  # Timestamps
+  getter created_at : Time?
+  getter updated_at : Time?
+<% end -%>
+<% if has_associations? -%>
+
+  # Associations
+<% @associations.each do |field, declaration| -%>
+  <%= declaration %>
+<% end -%>
+<% end -%>
+<% if has_validations? -%>
+
+  # Validations
 <% @fields.each do |field_name, field_type| -%>
 <% if field_name == "title" || field_name == "name" -%>
-    validate :<%= field_name %>, presence: true
-    validate :<%= field_name %>, size: 2..100
+  validate :<%= field_name %>, presence: true, size: 2..100
 <% elsif field_name == "body" || field_name == "content" || field_name == "description" -%>
-    validate :<%= field_name %>, presence: true
-    validate :<%= field_name %>, size: 2..100
+  validate :<%= field_name %>, presence: true
+<% elsif field_name == "email" -%>
+  validate :<%= field_name %>, presence: true
 <% end -%>
-<% end %>
+<% end -%>
+<% end -%>
+<% if has_scopes? -%>
 
-    # Constructor
-    def initialize(<% @fields.reject { |k, v| ["id", "created_at", "updated_at"].includes?(k) }.each_with_index do |(field_name, field_type), i| %>@<%= field_name %> : <%= crystal_type(field_type) %><% unless i == @fields.reject { |k, v| ["id", "created_at", "updated_at"].includes?(k) }.size - 1 %>, <% end %><% end %>)
-    end
+  # Scopes
+<% @scopes.each do |scope_declaration| -%>
+  <%= scope_declaration %>
+<% end -%>
+<% end -%>
 
-    # Scopes
-<% @fields.each do |field_name, field_type| -%>
-<% if field_type == "string" -%>
-    scope :by_<%= field_name %>, ->(value : String) { where("<%= field_name %> ILIKE ?", "%" + value + "%") }
-<% end -%>
-<% end -%>
-<% if @fields.has_key?("published") -%>
-    scope :published, -> { where(published: true) }
-<% end -%>
+  # Constructor
+  def initialize(<%= constructor_params %>)
   end
 end

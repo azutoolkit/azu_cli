@@ -273,26 +273,9 @@ module AzuCLI
       # Detect schema name from project's schema file
       # Returns tuple of {schema_name, schema_symbol}
       # Examples: "BlogDB" → {"BlogDB", "blog_db"}
+      # Uses centralized Utils.detect_schema_info for consistency
       protected def detect_schema_info : {String, String}
-        return {"AppSchema", "app_schema"} unless File.exists?(schema_file_path)
-
-        schema_content = File.read(schema_file_path)
-
-        # Extract schema constant name (e.g., "BlogDB")
-        # Support both CQL::Schema.define and CQL::Schema.build
-        if match = schema_content.match(/(\w+DB)\s*=\s*CQL::Schema\.(define|build)/)
-          schema_name = match[1]
-          # Convert to symbol format (e.g., "BlogDB" → "blog_db")
-          schema_symbol = schema_name.gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
-            .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
-            .downcase
-          {schema_name, schema_symbol}
-        else
-          {"AppSchema", "app_schema"} # Fallback
-        end
-      rescue ex : Exception
-        Logger.debug("Failed to detect schema info: #{ex.message}")
-        {"AppSchema", "app_schema"} # Fallback on error
+        Utils.detect_schema_info
       end
 
       # Map adapter string to CQL::Adapter enum

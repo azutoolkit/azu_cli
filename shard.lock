@@ -6,7 +6,7 @@ shards:
 
   cql:
     git: https://github.com/azutoolkit/cql.git
-    version: 0.0.435
+    version: 0.0.483+git.commit.83d576699f7ff255ae6cb082403f8cd7f7187dc2
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -18,7 +18,7 @@ shards:
 
   pg:
     git: https://github.com/will/crystal-pg.git
-    version: 0.29.0
+    version: 0.28.0
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
@@ -26,7 +26,7 @@ shards:
 
   readline:
     git: https://github.com/crystal-lang/crystal-readline.git
-    version: 0.1.1
+    version: 0.1.1+git.commit.42fb15fc28b308de6114e8ae0fe60f90bae7b08b
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
@@ -34,7 +34,7 @@ shards:
 
   spec2:
     git: https://github.com/waterlink/spec2.cr.git
-    version: 0.11.0
+    version: 0.11.0+git.commit.f3d8aca8165d8a6ec7681b4355b5ee8b1d597a68
 
   teeplate:
     git: https://github.com/amberframework/teeplate.git
