@@ -711,7 +711,7 @@ module AzuCLI
         return unless File.exists?(shard_yml_path)
 
         content = File.read(shard_yml_path)
-        
+
         # Check if session dependency already exists
         return if content.includes?("github: azutoolkit/session")
 
@@ -738,13 +738,13 @@ module AzuCLI
       private def fix_auth_migration_timestamps
         # Check both possible locations
         migrations_dir = if Dir.exists?("./src/db/migrations")
-                          "./src/db/migrations"
-                        elsif Dir.exists?("./db/migrations")
-                          "./db/migrations"
-                        else
-                          Logger.debug("No migrations directory found for timestamp fix")
-                          return
-                        end
+                           "./src/db/migrations"
+                         elsif Dir.exists?("./db/migrations")
+                           "./db/migrations"
+                         else
+                           Logger.debug("No migrations directory found for timestamp fix")
+                           return
+                         end
 
         Logger.info("Fixing migration timestamps in: #{migrations_dir}")
 
@@ -791,7 +791,7 @@ module AzuCLI
             "create_permissions",
             "create_user_roles",
             "create_role_permissions",
-            "create_oauth_applications"
+            "create_oauth_applications",
           ]
 
           # Sort files according to the desired order
@@ -811,23 +811,23 @@ module AzuCLI
 
             # Extract class name from the file
             class_name = if match = content.match(/class\s+(\w+)\s+<\s+CQL::Migration/)
-                          match[1]
-                        else
-                          nil
-                        end
+                           match[1]
+                         else
+                           nil
+                         end
 
             # If we have a class name, use it to construct the filename
             new_basename = if class_name
-                            # Convert class name to snake_case for filename
-                            snake_name = class_name
-                              .gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
-                              .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
-                              .downcase
-                            "#{new_timestamp}_#{snake_name}.cr"
-                          else
-                            # Fallback to just updating the timestamp
-                            old_basename.sub(/^\d+/, new_timestamp.to_s)
-                          end
+                             # Convert class name to snake_case for filename
+                             snake_name = class_name
+                               .gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
+                               .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
+                               .downcase
+                             "#{new_timestamp}_#{snake_name}.cr"
+                           else
+                             # Fallback to just updating the timestamp
+                             old_basename.sub(/^\d+/, new_timestamp.to_s)
+                           end
 
             new_path = File.join(migrations_dir, new_basename)
 

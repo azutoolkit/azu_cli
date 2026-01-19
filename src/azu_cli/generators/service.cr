@@ -288,7 +288,7 @@ module #{@module_name}
         Log.info { "Successfully created #{@snake_case_name} with ID: \#{#{@snake_case_name}.id}" }
         Services::Result.success(#{@snake_case_name})
       else
-        Log.warn { "Failed to create #{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(\", \")}" }
+        Log.warn { "Failed to create #{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(", ")}" }
         Services::Result.failure(#{@snake_case_name}.errors)
       end
     rescue ex
@@ -368,7 +368,7 @@ module #{@module_name}
         Log.info { "Successfully updated #{@snake_case_name} with ID: \#{id}" }
         Services::Result.success(#{@snake_case_name})
       else
-        Log.warn { "Failed to update #{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(\", \")}" }
+        Log.warn { "Failed to update #{@snake_case_name}: \#{#{@snake_case_name}.errors.to_a.map(&.message).join(", ")}" }
         Services::Result.failure(#{@snake_case_name}.errors)
       end
     rescue CQL::RecordNotFound
