@@ -31,4 +31,41 @@ describe "JoobQ Generator E2E" do
       worker_content.should contain("Worker")
     end
   end
+
+  it "generates example job file by default" do
+    with_temp_project("testapp", "web") do |project_path|
+      result = run_generator("generate joobq", project_path)
+      result.success?.should be_true
+
+      # Verify example job file is created
+      file_exists?(project_path, "src/jobs/example_job.cr").should be_true
+
+      # Verify example job content
+      job_content = read_file(project_path, "src/jobs/example_job.cr").not_nil!
+      job_content.should contain("struct ExampleJob")
+      job_content.should contain("include JoobQ::Job")
+      job_content.should contain("def perform")
+      job_content.should contain("@queue")
+      job_content.should contain("@retries")
+    end
+  end
+
+  it "generates config files for all environments" do
+    with_temp_project("testapp", "web") do |project_path|
+      result = run_generator("generate joobq", project_path)
+      result.success?.should be_true
+
+      # Verify development config
+      dev_config = read_file(project_path, "config/joobq.development.yml").not_nil!
+      dev_config.should contain("redis")
+
+      # Verify production config
+      prod_config = read_file(project_path, "config/joobq.production.yml").not_nil!
+      prod_config.should contain("redis")
+
+      # Verify test config
+      test_config = read_file(project_path, "config/joobq.test.yml").not_nil!
+      test_config.should contain("redis")
+    end
+  end
 end

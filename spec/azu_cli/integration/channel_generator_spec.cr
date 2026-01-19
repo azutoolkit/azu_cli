@@ -17,8 +17,44 @@ describe "Channel Generator E2E" do
       channel_content = read_file(project_path, "src/channels/chat_channel.cr").not_nil!
       channel_content.should contain("class ChatChannel")
       channel_content.should contain("< Azu::Channel::Base")
+      # Verify all default action methods are generated
       channel_content.should contain("def subscribed")
+      channel_content.should contain("def unsubscribed")
       channel_content.should contain("def receive")
+    end
+  end
+
+  it "generates channel with all lifecycle callbacks" do
+    with_temp_project("testapp", "web") do |project_path|
+      result = run_generator("generate channel Notification", project_path)
+      result.success?.should be_true
+
+      channel_content = read_file(project_path, "src/channels/notification_channel.cr").not_nil!
+
+      # Verify subscribed callback with logging
+      channel_content.should contain("def subscribed")
+      channel_content.should contain("Log.info")
+
+      # Verify unsubscribed callback
+      channel_content.should contain("def unsubscribed")
+      channel_content.should contain("unsubscribed from NotificationChannel")
+
+      # Verify receive callback with data parameter
+      channel_content.should contain("def receive(data : JSON::Any)")
+    end
+  end
+
+  it "generates channel with proper class inheritance" do
+    with_temp_project("testapp", "web") do |project_path|
+      result = run_generator("generate channel LiveUpdate", project_path)
+      result.success?.should be_true
+
+      channel_content = read_file(project_path, "src/channels/live_update_channel.cr").not_nil!
+
+      # Verify class name uses CamelCase
+      channel_content.should contain("class LiveUpdateChannel")
+      # Verify proper inheritance
+      channel_content.should contain("< Azu::Channel::Base")
     end
   end
 end

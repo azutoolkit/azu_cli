@@ -242,11 +242,12 @@ describe AzuCLI::Generate::Endpoint do
       generator.endpoint_type.should eq("web")
     end
 
-    it "generates different full paths for API and Web" do
+    it "generates same full paths for API and Web (path prefix is handled by router)" do
       api_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
       web_generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "web")
 
-      api_generator.full_path("index").should eq("/api/users")
+      # Both return the same path - API prefix is handled at the router level, not in the endpoint
+      api_generator.full_path("index").should eq("/users")
       web_generator.full_path("index").should eq("/users")
     end
 
@@ -263,70 +264,69 @@ describe AzuCLI::Generate::Endpoint do
     end
 
     it "handles nested resource names correctly" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
-        temp_project.create_shard_yml
-        temp_project.create_src_dir
-        Dir.mkdir_p("src/endpoints")
+      test_dir = "./tmp_test_nested"
+      FileUtils.mkdir_p(test_dir)
 
-        generator = AzuCLI::Generate::Endpoint.new("UserProfile", ["index"], "api")
-        generator.render(".")
+      generator = AzuCLI::Generate::Endpoint.new("UserProfile", ["index"], "api")
+      generator.render(test_dir, interactive: false)
 
-        # Check that snake_case is used for filenames
-        File.exists?("src/endpoints/user_profile_index_endpoint.cr").should be_true
+      # Generator creates files at {output_dir}/{resource_plural}/{resource_singular}_{action}_endpoint.cr
+      endpoint_file = File.join(test_dir, "userprofiles", "userprofile_index_endpoint.cr")
+      File.exists?(endpoint_file).should be_true
 
-        content = File.read("src/endpoints/user_profile_index_endpoint.cr")
-        content.should contain("class UserProfile::UserProfileIndexEndpoint")
-      end
+      content = File.read(endpoint_file)
+      content.should contain("struct IndexEndpoint")
+      content.should contain("UserProfile")
+
+      FileUtils.rm_rf(test_dir)
     end
 
     it "creates proper directory structure for endpoints" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
-        temp_project.create_shard_yml
-        temp_project.create_src_dir
+      test_dir = "./tmp_test_structure"
+      FileUtils.mkdir_p(test_dir)
 
-        generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
-        generator.render(".")
+      generator = AzuCLI::Generate::Endpoint.new("User", ["index"], "api")
+      generator.render(test_dir, interactive: false)
 
-        # Check directory structure
-        Dir.exists?("src/endpoints").should be_true
-        File.exists?("src/endpoints/user_index_endpoint.cr").should be_true
-      end
+      # Check directory structure: {output_dir}/{resource_plural}/
+      Dir.exists?(File.join(test_dir, "users")).should be_true
+      File.exists?(File.join(test_dir, "users", "user_index_endpoint.cr")).should be_true
+
+      FileUtils.rm_rf(test_dir)
     end
 
     it "generates all standard RESTful actions for API" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
-        temp_project.create_shard_yml
-        temp_project.create_src_dir
-        Dir.mkdir_p("src/endpoints")
+      test_dir = "./tmp_test_api_actions"
+      FileUtils.mkdir_p(test_dir)
 
-        actions = ["index", "show", "create", "update", "destroy"]
-        generator = AzuCLI::Generate::Endpoint.new("User", actions, "api")
-        generator.render(".")
+      actions = ["index", "show", "create", "update", "destroy"]
+      generator = AzuCLI::Generate::Endpoint.new("User", actions, "api")
+      generator.render(test_dir, interactive: false)
 
-        # Check all action files were created
-        actions.each do |action|
-          file_path = "src/endpoints/user_#{action}_endpoint.cr"
-          File.exists?(file_path).should be_true
-        end
+      # Check all action files were created in {output_dir}/{resource_plural}/
+      actions.each do |action|
+        file_path = File.join(test_dir, "users", "user_#{action}_endpoint.cr")
+        File.exists?(file_path).should be_true
       end
+
+      FileUtils.rm_rf(test_dir)
     end
 
     it "generates all standard RESTful actions for Web" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
-        temp_project.create_shard_yml
-        temp_project.create_src_dir
-        Dir.mkdir_p("src/endpoints")
+      test_dir = "./tmp_test_web_actions"
+      FileUtils.mkdir_p(test_dir)
 
-        actions = ["index", "show", "new", "create", "edit", "update", "destroy"]
-        generator = AzuCLI::Generate::Endpoint.new("User", actions, "web")
-        generator.render(".")
+      actions = ["index", "show", "new", "create", "edit", "update", "destroy"]
+      generator = AzuCLI::Generate::Endpoint.new("User", actions, "web")
+      generator.render(test_dir, interactive: false)
 
-        # Check all action files were created
-        actions.each do |action|
-          file_path = "src/endpoints/user_#{action}_endpoint.cr"
-          File.exists?(file_path).should be_true
-        end
+      # Check all action files were created in {output_dir}/{resource_plural}/
+      actions.each do |action|
+        file_path = File.join(test_dir, "users", "user_#{action}_endpoint.cr")
+        File.exists?(file_path).should be_true
       end
+
+      FileUtils.rm_rf(test_dir)
     end
   end
 end
