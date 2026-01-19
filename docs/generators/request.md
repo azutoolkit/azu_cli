@@ -1,477 +1,269 @@
-# Contract Generator
+# Request Generator
 
-The Contract Generator creates validation contracts that define the structure and validation rules for incoming data in your Azu application.
+The Request Generator creates request structs that define the structure and validation rules for incoming data in your Azu application. These align with the `Azu::Request` convention.
+
+> **Deprecation Notice**: The `contract` generator is deprecated. Use `request` instead. Running `azu generate contract` will automatically redirect to `request`.
 
 ## Usage
 
 ```bash
-azu generate contract CONTRACT_NAME [OPTIONS]
+azu generate request REQUEST_NAME [attr:type...] [OPTIONS]
 ```
 
 ## Description
 
-Contracts in Azu applications provide a way to validate and structure incoming data from HTTP requests, API calls, or form submissions. They ensure data integrity and provide clear error messages when validation fails.
+Requests in Azu applications provide a way to validate and structure incoming data from HTTP requests, API calls, or form submissions. They ensure data integrity and provide clear error messages when validation fails.
 
 ## Options
 
-- `CONTRACT_NAME` - Name of the contract to generate (required)
-- `-d, --description DESCRIPTION` - Description of the contract
-- `-f, --fields FIELDS` - Comma-separated list of fields with types and validations
-- `-t, --template TEMPLATE` - Template to use (default: basic)
-- `-f, --force` - Overwrite existing files
-- `-h, --help` - Show help message
+- `REQUEST_NAME` - Name of the request to generate (required)
+- `attr:type` - Field definitions (e.g., `name:string email:string age:int32`)
+- `--force` - Overwrite existing files
+- `--help` - Show help message
 
 ## Examples
 
-### Generate a basic contract
+### Generate a basic request
 
 ```bash
-azu generate contract UserContract
+azu generate request User name:string email:string
 ```
 
 This creates:
+- `src/requests/user/index_request.cr` - The request struct
 
-- `src/contracts/user_contract.cr` - The contract class
-- `spec/contracts/user_contract_spec.cr` - Test file
-
-### Generate a contract with fields
+### Generate request for specific action
 
 ```bash
-azu generate contract UserContract --fields "name:string:required,email:string:required:email,age:integer:min:18"
+azu generate request User create name:string email:string password:string
 ```
 
-### Generate a contract with description
+### Generate request with various field types
 
 ```bash
-azu generate contract PostContract --description "Validates blog post creation and updates"
+azu generate request Post title:string content:text published:bool views:int32
 ```
 
-## Generated Files
+## Field Types
 
-### Contract Class (`src/contracts/CONTRACT_NAME.cr`)
+The request generator supports these field types:
+
+| Type | Crystal Type | Description |
+|------|--------------|-------------|
+| `string` | `String` | Text strings |
+| `text` | `String` | Long text |
+| `int32`, `integer` | `Int32` | 32-bit integers |
+| `int64` | `Int64` | 64-bit integers |
+| `float32` | `Float32` | 32-bit floats |
+| `float64`, `float` | `Float64` | 64-bit floats |
+| `bool`, `boolean` | `Bool` | Boolean values |
+| `time`, `datetime` | `Time` | Date and time |
+| `date` | `Date` | Date only |
+| `json` | `JSON::Any` | JSON data |
+| `reference`, `belongs_to` | `Int64` | Foreign key reference |
+
+## Generated File Structure
+
+```
+src/requests/
+└── user/
+    ├── index_request.cr
+    ├── show_request.cr
+    ├── create_request.cr
+    ├── update_request.cr
+    └── destroy_request.cr
+```
+
+## Generated Code Example
+
+### Request Struct (`src/requests/user/create_request.cr`)
 
 ```crystal
-# <%= @description || @name.underscore.humanize %> contract for data validation
-class <%= @name %>Contract < Azu::Contract
-  # Define your contract fields here
-  # Example:
-  # field :name, String, required: true
-  # field :email, String, required: true, format: /^[^@]+@[^@]+\.[^@]+$/
-  # field :age, Int32, min: 18, max: 120
+module App::User
+  struct CreateRequest
+    include Azu::Request
 
-  # Custom validation methods
-  # def validate_custom_rule
-  #   # Add custom validation logic
-  # end
+    getter name : String
+    getter email : String
+    getter age : Int32?
+  end
 end
 ```
 
-### Test File (`spec/contracts/CONTRACT_NAME_spec.cr`)
+## Using Requests in Endpoints
+
+### Basic Usage
 
 ```crystal
-require "../spec_helper"
+struct Users::CreateEndpoint
+  include Azu::Endpoint(User::CreateRequest, User::CreateResponse)
 
-describe <%= @name %>Contract do
-  describe "#valid?" do
-    it "validates required fields" do
-      contract = <%= @name %>Contract.new
+  post "/users"
 
-      # Add your test cases here
-      # contract.valid?.should be_true
+  def call : User::CreateResponse
+    # Access validated request data
+    user = Models::User.create!(
+      name: request.name,
+      email: request.email
+    )
+
+    User::CreateResponse.new(user: user)
+  end
+end
+```
+
+### With Validation
+
+```crystal
+module App::User
+  struct CreateRequest
+    include Azu::Request
+
+    getter name : String
+    getter email : String
+
+    def valid? : Bool
+      !name.empty? && email.includes?("@")
+    end
+
+    def errors : Array(String)
+      errors = [] of String
+      errors << "Name is required" if name.empty?
+      errors << "Invalid email format" unless email.includes?("@")
+      errors
     end
   end
 end
 ```
 
-## Contract Patterns
+## Request Patterns
 
-### Basic Contract Pattern
+### Basic Request Pattern
 
 ```crystal
-class UserContract < Azu::Contract
-  field :name, String, required: true, min_length: 2, max_length: 50
-  field :email, String, required: true, format: /^[^@]+@[^@]+\.[^@]+$/
-  field :age, Int32, min: 18, max: 120
-  field :bio, String?, max_length: 500
+module App::User
+  struct IndexRequest
+    include Azu::Request
+
+    getter page : Int32 = 1
+    getter per_page : Int32 = 25
+    getter sort : String = "created_at"
+    getter order : String = "desc"
+  end
 end
 ```
 
-### Contract with Custom Validations
+### Request with Optional Fields
 
 ```crystal
-class RegistrationContract < Azu::Contract
-  field :email, String, required: true, format: /^[^@]+@[^@]+\.[^@]+$/
-  field :password, String, required: true, min_length: 8
-  field :password_confirmation, String, required: true
+module App::User
+  struct UpdateRequest
+    include Azu::Request
 
-  def validate_password_confirmation
-    return unless password && password_confirmation
+    getter name : String?
+    getter email : String?
+    getter bio : String?
+  end
+end
+```
 
-    unless password == password_confirmation
-      errors.add(:password_confirmation, "must match password")
+### Request with Nested Data
+
+```crystal
+module App::Order
+  struct CreateRequest
+    include Azu::Request
+
+    getter customer_id : Int64
+    getter items : Array(OrderItem)
+
+    struct OrderItem
+      getter product_id : Int64
+      getter quantity : Int32
     end
   end
-
-  def validate_unique_email
-    return unless email
-
-    if User.find_by(email: email)
-      errors.add(:email, "is already taken")
-    end
-  end
-end
-```
-
-### Nested Contract Pattern
-
-```crystal
-class AddressContract < Azu::Contract
-  field :street, String, required: true
-  field :city, String, required: true
-  field :postal_code, String, required: true
-end
-
-class UserContract < Azu::Contract
-  field :name, String, required: true
-  field :email, String, required: true
-  field :address, AddressContract
-end
-```
-
-### Array Contract Pattern
-
-```crystal
-class TagContract < Azu::Contract
-  field :name, String, required: true, max_length: 20
-end
-
-class PostContract < Azu::Contract
-  field :title, String, required: true, max_length: 200
-  field :content, String, required: true
-  field :tags, Array(TagContract), max_size: 10
-end
-```
-
-## Field Types and Validations
-
-### Supported Field Types
-
-```crystal
-class ExampleContract < Azu::Contract
-  # Basic types
-  field :string_field, String
-  field :integer_field, Int32
-  field :float_field, Float64
-  field :boolean_field, Bool
-  field :time_field, Time
-
-  # Optional types (can be nil)
-  field :optional_string, String?
-  field :optional_integer, Int32?
-
-  # Array types
-  field :string_array, Array(String)
-  field :integer_array, Array(Int32)
-
-  # Nested contracts
-  field :nested_contract, NestedContract
-  field :nested_contract_array, Array(NestedContract)
-end
-```
-
-### Common Validations
-
-```crystal
-class ValidationContract < Azu::Contract
-  # Required fields
-  field :required_field, String, required: true
-
-  # String validations
-  field :name, String,
-    required: true,
-    min_length: 2,
-    max_length: 50,
-    format: /^[a-zA-Z\s]+$/
-
-  # Numeric validations
-  field :age, Int32,
-    required: true,
-    min: 0,
-    max: 150
-
-  field :price, Float64,
-    required: true,
-    min: 0.0,
-    max: 10000.0
-
-  # Array validations
-  field :tags, Array(String),
-    max_size: 10,
-    min_size: 1
-
-  # Custom validation
-  field :custom_field, String, required: true
-end
-```
-
-## Using Contracts
-
-### In Controllers
-
-```crystal
-class UsersController < ApplicationController
-  def create
-    contract = UserContract.new(params.to_h)
-
-    if contract.valid?
-      user = User.create(contract.valid_data)
-      render json: user, status: :created
-    else
-      render json: {errors: contract.errors}, status: :unprocessable_entity
-    end
-  end
-
-  def update
-    contract = UserContract.new(params.to_h)
-
-    if contract.valid?
-      user = User.find(params["id"])
-      user.update(contract.valid_data)
-      render json: user
-    else
-      render json: {errors: contract.errors}, status: :unprocessable_entity
-    end
-  end
-end
-```
-
-### In Services
-
-```crystal
-class UserService
-  def create_user(data : Hash) : User
-    contract = UserContract.new(data)
-
-    unless contract.valid?
-      raise InvalidUserDataError.new(contract.errors)
-    end
-
-    User.create(contract.valid_data)
-  end
-end
-```
-
-### Accessing Validated Data
-
-```crystal
-contract = UserContract.new(params.to_h)
-
-if contract.valid?
-  # Access individual fields
-  name = contract.name
-  email = contract.email
-
-  # Access all valid data as hash
-  user_data = contract.valid_data
-
-  # Access specific field with type safety
-  age = contract.age.try(&.to_i) || 0
-end
-```
-
-## Error Handling
-
-### Accessing Validation Errors
-
-```crystal
-contract = UserContract.new(params.to_h)
-
-unless contract.valid?
-  # Get all errors
-  all_errors = contract.errors
-
-  # Get errors for specific field
-  name_errors = contract.errors_for(:name)
-
-  # Check if field has errors
-  if contract.has_errors_for?(:email)
-    # Handle email errors
-  end
-
-  # Get first error for field
-  first_name_error = contract.first_error_for(:name)
-end
-```
-
-### Custom Error Messages
-
-```crystal
-class CustomContract < Azu::Contract
-  field :email, String,
-    required: true,
-    format: /^[^@]+@[^@]+\.[^@]+$/,
-    messages: {
-      required: "Email address is required",
-      format: "Please provide a valid email address"
-    }
 end
 ```
 
 ## Best Practices
 
-### 1. Keep Contracts Focused
+### 1. Keep Requests Focused
 
-Each contract should validate a specific use case:
+Each request should validate a specific use case:
 
 ```crystal
-# Good: Separate contracts for different operations
-class CreateUserContract < Azu::Contract
-  field :name, String, required: true
-  field :email, String, required: true
-  field :password, String, required: true
+# Good: Separate requests for different operations
+struct CreateUserRequest
+  include Azu::Request
+  getter name : String
+  getter email : String
+  getter password : String
 end
 
-class UpdateUserContract < Azu::Contract
-  field :name, String, required: true
-  field :email, String, required: true
+struct UpdateUserRequest
+  include Azu::Request
+  getter name : String?
+  getter email : String?
   # No password field for updates
 end
 ```
 
-### 2. Use Descriptive Field Names
+### 2. Use Type-Safe Fields
 
 ```crystal
-# Good
-field :email_address, String, required: true
-field :phone_number, String, required: true
-
-# Avoid
-field :email, String, required: true
-field :phone, String, required: true
-```
-
-### 3. Implement Custom Validations
-
-```crystal
-class UserContract < Azu::Contract
-  field :username, String, required: true
-
-  def validate_username_format
-    return unless username
-
-    unless username.match(/^[a-zA-Z0-9_]+$/)
-      errors.add(:username, "can only contain letters, numbers, and underscores")
-    end
-  end
-
-  def validate_username_availability
-    return unless username
-
-    if User.find_by(username: username)
-      errors.add(:username, "is already taken")
-    end
-  end
+# Good: Explicit types
+struct UserRequest
+  include Azu::Request
+  getter age : Int32
+  getter active : Bool
+  getter rating : Float64
 end
 ```
 
-### 4. Reuse Common Validations
+### 3. Provide Default Values
 
 ```crystal
-module CommonValidations
-  def self.email_field(name = :email)
-    field name, String,
-      required: true,
-      format: /^[^@]+@[^@]+\.[^@]+$/,
-      messages: {
-        required: "Email is required",
-        format: "Invalid email format"
-      }
-  end
-end
-
-class UserContract < Azu::Contract
-  include CommonValidations
-
-  CommonValidations.email_field
-  field :name, String, required: true
+struct PaginationRequest
+  include Azu::Request
+  getter page : Int32 = 1
+  getter per_page : Int32 = 25
 end
 ```
 
-## Testing Contracts
+### 4. Document Expected Formats
+
+```crystal
+struct DateRangeRequest
+  include Azu::Request
+
+  # Expected format: YYYY-MM-DD
+  getter start_date : String
+
+  # Expected format: YYYY-MM-DD
+  getter end_date : String
+end
+```
+
+## Testing Requests
 
 ### Unit Testing
 
 ```crystal
-describe UserContract do
-  describe "#valid?" do
-    it "is valid with correct data" do
-      data = {
-        "name" => "John Doe",
-        "email" => "john@example.com",
-        "age" => "25"
-      }
+describe User::CreateRequest do
+  it "parses valid request data" do
+    params = HTTP::Params.parse("name=John&email=john@example.com")
+    request = User::CreateRequest.from_params(params)
 
-      contract = UserContract.new(data)
-      contract.valid?.should be_true
-    end
-
-    it "is invalid with missing required fields" do
-      data = {"name" => "John Doe"}
-
-      contract = UserContract.new(data)
-      contract.valid?.should be_false
-      contract.errors_for(:email).should contain("is required")
-    end
-
-    it "validates email format" do
-      data = {
-        "name" => "John Doe",
-        "email" => "invalid-email",
-        "age" => "25"
-      }
-
-      contract = UserContract.new(data)
-      contract.valid?.should be_false
-      contract.errors_for(:email).should contain("invalid format")
-    end
+    request.name.should eq("John")
+    request.email.should eq("john@example.com")
   end
 
-  describe "#valid_data" do
-    it "returns cleaned data" do
-      data = {
-        "name" => "  John Doe  ",
-        "email" => "john@example.com",
-        "age" => "25"
-      }
+  it "handles missing optional fields" do
+    params = HTTP::Params.parse("name=John")
+    request = User::UpdateRequest.from_params(params)
 
-      contract = UserContract.new(data)
-      contract.valid_data["name"].should eq("John Doe")
-    end
-  end
-end
-```
-
-### Integration Testing
-
-```crystal
-describe "Contract integration" do
-  it "works with controller" do
-    post "/users", {
-      "name" => "John Doe",
-      "email" => "john@example.com"
-    }
-
-    response.status_code.should eq(201)
-  end
-
-  it "returns validation errors" do
-    post "/users", {
-      "name" => "",
-      "email" => "invalid-email"
-    }
-
-    response.status_code.should eq(422)
-    response.body.should contain("validation errors")
+    request.name.should eq("John")
+    request.email.should be_nil
   end
 end
 ```
@@ -481,19 +273,25 @@ end
 - `azu generate endpoint` - Generate API endpoints
 - `azu generate model` - Generate data models
 - `azu generate service` - Generate business logic services
-- `azu generate middleware` - Generate middleware components
+- `azu generate scaffold` - Generate complete CRUD resources
 
-## Templates
+## Migration from Contract
 
-The contract generator supports different templates:
+If you're migrating from the deprecated `contract` generator:
 
-- `basic` - Simple contract with basic structure
-- `user` - User registration/update contract template
-- `api` - API request/response contract template
-- `form` - Form submission contract template
+1. Rename `contract` to `request` in your generator commands
+2. Update class inheritance from `Azu::Contract` to `include Azu::Request`
+3. Replace validation methods with the request pattern
 
-To use a specific template:
+```crystal
+# Old (Contract pattern)
+class UserContract < Azu::Contract
+  field :name, String, required: true
+end
 
-```bash
-azu generate contract ApiRequestContract --template api
+# New (Request pattern)
+struct UserRequest
+  include Azu::Request
+  getter name : String
+end
 ```

@@ -56,7 +56,7 @@
 - [Model Generator](generators/model.md)
 - [Service Generator](generators/service.md)
 - [Middleware Generator](generators/middleware.md)
-- [Contract Generator](generators/contract.md)
+- [Request Generator](generators/request.md)
 - [Page Generator](generators/page.md)
 - [Component Generator](generators/component.md)
 - [Custom Validator Generator](generators/custom-validator.md)

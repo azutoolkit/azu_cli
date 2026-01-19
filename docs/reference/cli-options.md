@@ -34,27 +34,37 @@ Create a new Azu project.
 azu new <project_name> [options]
 ```
 
-| Option           | Description                  | Default      | Example            |
-| ---------------- | ---------------------------- | ------------ | ------------------ |
-| `--framework`    | Framework to use             | `azu`        | `--framework=azu`  |
-| `--orm`          | ORM to use                   | `cql`        | `--orm=cql`        |
-| `--template`     | Project template             | `web`        | `--template=api`   |
-| `--database`     | Database adapter             | `postgresql` | `--database=mysql` |
-| `--skip-git`     | Skip Git initialization      | `false`      | `--skip-git`       |
-| `--skip-install` | Skip dependency installation | `false`      | `--skip-install`   |
-| `--force`        | Overwrite existing directory | `false`      | `--force`          |
+| Option          | Description                             | Default          | Example                     |
+| --------------- | --------------------------------------- | ---------------- | --------------------------- |
+| `--type TYPE`   | Project type (web, api, cli)            | `web`            | `--type api`                |
+| `--api`         | Shorthand for --type api                | -                | `--api`                     |
+| `--db DATABASE` | Database adapter                        | `postgresql`     | `--db mysql`                |
+| `--module NAME` | Module name (PascalCase)                | (from project)   | `--module MyApp`            |
+| `--author NAME` | Author name                             | (from git)       | `--author "John Doe"`       |
+| `--email EMAIL` | Author email                            | (from git)       | `--email john@example.com`  |
+| `--license LIC` | License (MIT, Apache-2.0, etc.)         | `MIT`            | `--license Apache-2.0`      |
+| `--ci CI`       | CI setup                                | `GitHub Actions` | `--ci "GitLab CI"`          |
+| `--docker`      | Include Docker support                  | `false`          | `--docker`                  |
+| `--no-docker`   | Skip Docker support                     | -                | `--no-docker`               |
+| `--git`         | Initialize Git repository               | `true`           | `--git`                     |
+| `--no-git`      | Skip Git initialization                 | -                | `--no-git`                  |
+| `--example`     | Include example code                    | `true`           | `--example`                 |
+| `--no-example`  | Skip example code                       | -                | `--no-example`              |
+| `--joobq`       | Include JoobQ for background jobs       | `true`           | `--joobq`                   |
+| `--no-joobq`    | Skip JoobQ integration                  | -                | `--no-joobq`                |
+| `--yes`         | Non-interactive mode (use defaults)     | `false`          | `--yes`                     |
 
 **Examples:**
 
 ```bash
-# Create basic web project
+# Create basic web project (interactive)
 azu new myapp
 
-# Create API project with MySQL
-azu new myapi --template=api --database=mysql
+# Create API project with MySQL (non-interactive)
+azu new myapi --type api --db mysql --yes
 
-# Create project with custom framework
-azu new myapp --framework=custom --skip-git
+# Create CLI project without Docker or Git
+azu new mytool --type cli --no-docker --no-git --yes
 ```
 
 ### `azu init`
@@ -94,13 +104,13 @@ azu generate <generator> <name> [options]
 
 #### Common Generator Options
 
-| Option        | Description              | Default           | Example             |
-| ------------- | ------------------------ | ----------------- | ------------------- |
-| `--namespace` | Custom namespace         | Project namespace | `--namespace=Admin` |
-| `--skip-spec` | Skip test generation     | `false`           | `--skip-spec`       |
-| `--skip-docs` | Skip documentation       | `false`           | `--skip-docs`       |
-| `--template`  | Custom template          | Default template  | `--template=custom` |
-| `--force`     | Overwrite existing files | `false`           | `--force`           |
+| Option         | Description              | Default           | Example              |
+| -------------- | ------------------------ | ----------------- | -------------------- |
+| `--force`      | Overwrite existing files | `false`           | `--force`            |
+| `--skip-tests` | Skip test generation     | `false`           | `--skip-tests`       |
+| `--api-only`   | Generate API components  | `false`           | `--api-only`         |
+| `--web-only`   | Generate web components  | `false`           | `--web-only`         |
+| `--skip COMP`  | Skip specific components | None              | `--skip model,page`  |
 
 #### Endpoint Generator
 
@@ -148,17 +158,20 @@ azu generate model <name> [fields] [options]
 
 **Field Types:**
 
-- `string` - String field
-- `text` - Text field
-- `integer` - Integer field
-- `float` - Float field
-- `decimal` - Decimal field
-- `boolean` - Boolean field
-- `datetime` - DateTime field
-- `date` - Date field
-- `time` - Time field
-- `json` - JSON field
-- `uuid` - UUID field
+- `string` - String field (String)
+- `text` - Text field (String)
+- `int32` - 32-bit integer (Int32)
+- `int64` - 64-bit integer (Int64)
+- `float32` - 32-bit float (Float32)
+- `float64` - 64-bit float (Float64)
+- `bool`, `boolean` - Boolean field (Bool)
+- `time`, `datetime` - DateTime field (Time)
+- `date` - Date field (Date)
+- `json` - JSON field (JSON::Any)
+- `uuid` - UUID field (UUID)
+- `email` - Email field (String with validation)
+- `url` - URL field (String with validation)
+- `references`, `belongs_to` - Foreign key reference (Int64)
 
 **Examples:**
 
@@ -668,16 +681,12 @@ azu version [options]
 
 ## Exit Codes
 
-| Code | Description         |
-| ---- | ------------------- |
-| `0`  | Success             |
-| `1`  | General error       |
-| `2`  | Configuration error |
-| `3`  | Database error      |
-| `4`  | Generation error    |
-| `5`  | Validation error    |
-| `6`  | Network error       |
-| `7`  | Permission error    |
+| Code | Description                    |
+| ---- | ------------------------------ |
+| `0`  | Success (EXIT_SUCCESS)         |
+| `1`  | General failure (EXIT_FAILURE) |
+| `2`  | Invalid usage/arguments        |
+| `3`  | Not found                      |
 
 ## Examples
 
