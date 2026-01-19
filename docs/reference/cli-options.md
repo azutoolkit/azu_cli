@@ -125,7 +125,7 @@ azu generate endpoint <name> [options]
 | `--response-format` | Response format          | `json`                                      | `--response-format=html`      |
 | `--auth`            | Require authentication   | `false`                                     | `--auth`                      |
 | `--authorization`   | Add authorization        | `false`                                     | `--authorization`             |
-| `--contract`        | Generate contracts       | `true`                                      | `--skip-contract`             |
+| `--request`         | Generate requests        | `true`                                      | `--skip-request`              |
 | `--page`            | Generate pages           | `false`                                     | `--page`                      |
 
 **Examples:**
@@ -235,26 +235,28 @@ azu generate page users/index
 azu generate page users/show --template-engine=ecr --css-framework=tailwind
 ```
 
-#### Contract Generator
+#### Request Generator
+
+> **Note:** The `contract` generator is deprecated. Use `request` instead.
 
 ```bash
-azu generate contract <name> [options]
+azu generate request <name> [attr:type...] [options]
 ```
 
-| Option          | Description          | Default   | Example                             |
-| --------------- | -------------------- | --------- | ----------------------------------- |
-| `--fields`      | Contract fields      | None      | `--fields=email:string,name:string` |
-| `--validations` | Add validations      | `true`    | `--skip-validations`                |
-| `--framework`   | Validation framework | `crystal` | `--framework=custom`                |
+| Option    | Description              | Default | Example    |
+| --------- | ------------------------ | ------- | ---------- |
+| `--force` | Overwrite existing files | `false` | `--force`  |
+
+**Field Types:** string, text, int32, int64, float32, float64, bool, time, date, json, uuid, references
 
 **Examples:**
 
 ```bash
-# Generate basic contract
-azu generate contract CreateUser
+# Generate request with fields
+azu generate request User name:string email:string age:int32
 
-# Generate contract with fields
-azu generate contract UpdateUser --fields=email:string,name:string,age:integer
+# Generate request for a specific resource
+azu generate request Post title:string content:text published:bool
 ```
 
 #### Component Generator
@@ -338,7 +340,7 @@ azu generate scaffold <name> [fields] [options]
 | `--skip-model`    | Skip model generation    | `false` | `--skip-model`    |
 | `--skip-endpoint` | Skip endpoint generation | `false` | `--skip-endpoint` |
 | `--skip-page`     | Skip page generation     | `false` | `--skip-page`     |
-| `--skip-contract` | Skip contract generation | `false` | `--skip-contract` |
+| `--skip-request`  | Skip request generation  | `false` | `--skip-request`  |
 | `--skip-service`  | Skip service generation  | `false` | `--skip-service`  |
 
 **Examples:**
