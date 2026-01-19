@@ -209,6 +209,21 @@ module AzuCLI
         )
 
         render_generator(generator, AzuCLI::Generate::Model::OUTPUT_DIR)
+
+        # Show helpful next steps
+        Logger.success("✓ Model #{@generator_name} created: src/models/#{@generator_name.underscore}.cr")
+        unless @skip_tests
+          Logger.success("✓ Migration created: db/migrations/*_create_#{@generator_name.underscore.pluralize}.cr")
+        end
+
+        Logger.info("")
+        Logger.info("Next steps:")
+        Logger.info("  1. Run migrations: azu db:migrate")
+        Logger.info("  2. Add validations to src/models/#{@generator_name.underscore}.cr")
+        Logger.info("  3. Generate endpoints: azu generate endpoint #{@generator_name}")
+        Logger.info("")
+        Logger.info("Documentation: https://azutoolkit.github.io/cql/")
+
         success("Generated model #{@generator_name} successfully")
       end
 
@@ -225,6 +240,40 @@ module AzuCLI
 
         # Endpoint generator has custom render method
         generator.render(AzuCLI::Generate::Endpoint::OUTPUT_DIR, force: @force, interactive: false)
+
+        # Show helpful next steps
+        resource_path = "/#{@generator_name.underscore.pluralize}"
+        Logger.success("✓ Endpoint #{@generator_name} created")
+
+        Logger.info("")
+        Logger.info("Generated endpoints:")
+        @actions.each do |action|
+          case action
+          when "index"
+            Logger.info("  GET    #{resource_path}")
+          when "show"
+            Logger.info("  GET    #{resource_path}/:id")
+          when "new"
+            Logger.info("  GET    #{resource_path}/new")
+          when "create"
+            Logger.info("  POST   #{resource_path}")
+          when "edit"
+            Logger.info("  GET    #{resource_path}/:id/edit")
+          when "update"
+            Logger.info("  PATCH  #{resource_path}/:id")
+          when "destroy"
+            Logger.info("  DELETE #{resource_path}/:id")
+          end
+        end
+
+        Logger.info("")
+        Logger.info("Next steps:")
+        Logger.info("  1. Implement endpoint logic in src/endpoints/")
+        Logger.info("  2. Create corresponding requests: azu generate request #{@generator_name}")
+        Logger.info("  3. Create service layer: azu generate service #{@generator_name}")
+        Logger.info("")
+        Logger.info("Documentation: https://azutoolkit.github.io/azu/")
+
         success("Generated endpoint #{@generator_name} successfully")
       end
 
@@ -242,6 +291,21 @@ module AzuCLI
           )
           render_generator(generator, AzuCLI::Generate::Service::OUTPUT_DIR)
         end
+
+        # Show helpful next steps
+        Logger.success("✓ Services created in src/services/#{@generator_name.underscore}/")
+        actions_to_generate.each do |action|
+          Logger.info("  - #{action}_service.cr")
+        end
+
+        Logger.info("")
+        Logger.info("Next steps:")
+        Logger.info("  1. Implement business logic in each service")
+        Logger.info("  2. Call services from endpoints:")
+        Logger.info("     result = #{@generator_name.camelcase}::CreateService.new.call(request)")
+        Logger.info("  3. Handle service results in endpoints")
+        Logger.info("")
+        Logger.info("Documentation: https://azutoolkit.github.io/azu/")
 
         success("Generated service #{@generator_name} successfully")
       end
@@ -299,6 +363,37 @@ module AzuCLI
         )
 
         render_generator(generator, AzuCLI::Generate::Job::OUTPUT_DIR)
+
+        # Show helpful next steps
+        job_name = "#{@generator_name.gsub(/Job$/i, "").camelcase}Job"
+        Logger.success("✓ Job #{job_name} created: src/jobs/#{@generator_name.underscore}_job.cr")
+
+        Logger.info("")
+        Logger.info("Usage examples:")
+        if @attributes.empty?
+          Logger.info("  # Enqueue job")
+          Logger.info("  #{job_name}.enqueue")
+          Logger.info("")
+          Logger.info("  # Schedule for later")
+          Logger.info("  #{job_name}.delay(for: 5.minutes)")
+        else
+          params = @attributes.keys.map { |k| "#{k}: value" }.join(", ")
+          Logger.info("  # Enqueue job")
+          Logger.info("  #{job_name}.enqueue(#{params})")
+          Logger.info("")
+          Logger.info("  # Schedule for later")
+          Logger.info("  #{job_name}.delay(for: 5.minutes, #{params})")
+        end
+
+        Logger.info("")
+        Logger.info("Next steps:")
+        Logger.info("  1. Register job in src/initializers/joobq.cr:")
+        Logger.info("     JoobQ::QueueFactory.register_job_type(#{job_name})")
+        Logger.info("  2. Implement job logic in the perform method")
+        Logger.info("  3. Start worker: azu jobs:worker")
+        Logger.info("")
+        Logger.info("Documentation: https://azutoolkit.github.io/joobq/")
+
         success("Generated job #{@generator_name} successfully")
       end
 
@@ -374,6 +469,22 @@ module AzuCLI
         )
 
         render_generator(generator, AzuCLI::Generate::Migration::OUTPUT_DIR)
+
+        # Show helpful next steps
+        Logger.success("✓ Migration created: db/migrations/#{generator.migration_filename}")
+
+        Logger.info("")
+        Logger.info("Next steps:")
+        Logger.info("  1. Review the migration file")
+        Logger.info("  2. Run migration: azu db:migrate")
+        Logger.info("  3. Check status: azu db:status")
+        Logger.info("")
+        Logger.info("Rollback commands:")
+        Logger.info("  azu db:rollback          # Rollback last migration")
+        Logger.info("  azu db:rollback --steps 2  # Rollback last 2 migrations")
+        Logger.info("")
+        Logger.info("Documentation: https://azutoolkit.github.io/cql/")
+
         success("Generated migration #{@generator_name} successfully")
       end
 
@@ -508,6 +619,21 @@ module AzuCLI
         )
 
         render_generator(generator, AzuCLI::Generate::Channel::OUTPUT_DIR)
+
+        # Show helpful next steps
+        channel_name = "#{@generator_name.camelcase}Channel"
+        Logger.success("✓ Channel #{channel_name} created: src/channels/#{@generator_name.underscore}_channel.cr")
+
+        Logger.info("")
+        Logger.info("Next steps:")
+        Logger.info("  1. Add WebSocket route in your app configuration:")
+        Logger.info("     c.router.ws \"/#{@generator_name.underscore}\", #{channel_name}")
+        Logger.info("  2. Implement channel logic (subscribed, receive, etc.)")
+        Logger.info("  3. Connect from client:")
+        Logger.info("     const ws = new WebSocket('ws://localhost:4000/#{@generator_name.underscore}')")
+        Logger.info("")
+        Logger.info("Documentation: https://azutoolkit.github.io/azu/")
+
         success("Generated channel #{@generator_name} successfully")
       end
 

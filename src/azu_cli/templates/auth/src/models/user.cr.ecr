@@ -7,8 +7,8 @@ require "crypto/bcrypt"
 require "json"
 <%- end %>
 
-class <%= user_model_class %>
-  include CQL::Model(Int64)
+struct <%= user_model_class %>
+  include CQL::ActiveRecord::Model(Int64)
   db_context <%= project.camelcase %>DB, :<%= user_model_table %>
 
   # Columns
@@ -206,8 +206,8 @@ end
 
 <%- if rbac_enabled? %>
 # Role Model for RBAC
-class Role
-  include CQL::Model(Int64)
+struct Role
+  include CQL::ActiveRecord::Model(Int64)
   db_context <%= project.camelcase %>DB, :roles
 
   property name : String
@@ -254,8 +254,8 @@ class Role
 end
 
 # Permission Model for RBAC
-class Permission
-  include CQL::Model(Int64)
+struct Permission
+  include CQL::ActiveRecord::Model(Int64)
   db_context <%= project.camelcase %>DB, :permissions
 
   property name : String
@@ -271,8 +271,8 @@ class Permission
 end
 
 # <%= user_model_class %>Role Junction Model
-class <%= user_model_class %>Role
-  include CQL::Model(Int64)
+struct <%= user_model_class %>Role
+  include CQL::ActiveRecord::Model(Int64)
   db_context <%= project.camelcase %>DB, :<%= user_model_singular %>_roles
 
   property <%= user_model_singular %>_id : Int64
@@ -282,8 +282,8 @@ class <%= user_model_class %>Role
 end
 
 # RolePermission Junction Model
-class RolePermission
-  include CQL::Model(Int64)
+struct RolePermission
+  include CQL::ActiveRecord::Model(Int64)
   db_context <%= project.camelcase %>DB, :role_permissions
 
   property role_id : Int64
@@ -294,8 +294,8 @@ end
 
 <%- if using_authly? %>
 # OAuth Application Model for Authly integration
-class OAuthApplication
-  include CQL::Model(Int64)
+struct OAuthApplication
+  include CQL::ActiveRecord::Model(Int64)
   db_context <%= project.camelcase %>DB, :oauth_applications
 
   property name : String
@@ -320,8 +320,8 @@ class OAuthApplication
 end
 
 # OAuth Access Token Model
-class OAuthAccessToken
-  include CQL::Model(Int64)
+struct OAuthAccessToken
+  include CQL::ActiveRecord::Model(Int64)
   db_context <%= project.camelcase %>DB, :oauth_access_tokens
 
   property application_id : Int64
