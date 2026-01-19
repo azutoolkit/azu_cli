@@ -677,5 +677,5 @@ For more detailed information about each command, see the individual command doc
 **Next Steps:**
 
 - [Generators Guide](../generators/README.md) - Learn about code generation
-- [Development Workflows](../workflows/README.md) - Common development patterns
+- [Development Workflows](../examples/README.md) - Common development patterns
 - [Configuration](../configuration/README.md) - Advanced configuration options

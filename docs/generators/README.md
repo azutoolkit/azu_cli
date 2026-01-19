@@ -457,7 +457,7 @@ The generator system is designed to accelerate your development while maintainin
 
 - [Endpoint Generator](endpoint.md) - Generate HTTP request handlers
 - [Model Generator](model.md) - Create database models
-- [Development Workflows](../workflows/README.md) - Use generators in real projects
+- [Development Workflows](../examples/README.md) - Use generators in real projects
 
 # README Generator
 

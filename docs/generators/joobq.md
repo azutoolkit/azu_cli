@@ -476,10 +476,10 @@ end
 
 See complete examples:
 
-- [Basic Job Processing](../examples/joobq/basic.cr)
-- [Scheduled Jobs](../examples/joobq/scheduled.cr)
-- [Email Processing](../examples/joobq/emails.cr)
-- [Data Import](../examples/joobq/import.cr)
+- [Basic Job Processing](../examples/README.md)
+- [Scheduled Jobs](../examples/README.md)
+- [Email Processing](../examples/README.md)
+- [Data Import](../examples/README.md)
 
 ## Related Documentation
 

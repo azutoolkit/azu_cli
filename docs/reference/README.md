@@ -685,5 +685,5 @@ development_dependencies:
 - [Getting Started](getting-started/quick-start.md) - Quick start guide
 - [Command Reference](commands/README.md) - Detailed command documentation
 - [Generators](generators/README.md) - Generator documentation
-- [Workflows](workflows/README.md) - Development workflows
+- [Workflows](examples/README.md) - Development workflows
 - [Architecture](architecture/README.md) - System architecture

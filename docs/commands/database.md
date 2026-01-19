@@ -1,479 +1,78 @@
 # Database Commands
 
-Azu CLI provides a comprehensive set of database commands for managing your application's database. These commands work with CQL ORM and support PostgreSQL, MySQL, and SQLite.
+Azu CLI provides database management commands that work with CQL ORM.
 
-## Overview
+## Command Overview
 
-All database commands follow the pattern:
+| Command           | Description                        |
+| ----------------- | ---------------------------------- |
+| `azu db:create`   | Create the database                |
+| `azu db:drop`     | Drop the database                  |
+| `azu db:migrate`  | Run pending migrations             |
+| `azu db:rollback` | Rollback migrations                |
+| `azu db:reset`    | Drop, create, and migrate          |
+| `azu db:setup`    | Create and migrate                 |
+| `azu db:seed`     | Run seed data                      |
+| `azu db:status`   | Show migration status              |
 
-```bash
-azu db:<command> [options]
-```
-
-## Available Commands
-
-| Command           | Description                         |
-| ----------------- | ----------------------------------- |
-| `azu db:create`   | Create the database                 |
-| `azu db:migrate`  | Run pending migrations              |
-| `azu db:rollback` | Rollback migrations                 |
-| `azu db:reset`    | Drop, create, and migrate database  |
-| `azu db:seed`     | Run seed data                       |
-| `azu db:status`   | Show migration status               |
-| `azu db:setup`    | Setup database (create and migrate) |
-| `azu db:drop`     | Drop the database                   |
-
-## Database Configuration
+## Configuration
 
 ### Environment Variables
 
 ```bash
-# Database URL (recommended)
-export DATABASE_URL="postgresql://username:password@localhost/my_app_development"
+# Using DATABASE_URL (recommended)
+export DATABASE_URL="postgresql://user:pass@localhost/myapp_dev"
 
-# Or individual components
+# Or individual variables
 export AZU_DB_HOST="localhost"
 export AZU_DB_PORT="5432"
-export AZU_DB_NAME="my_app_development"
+export AZU_DB_NAME="myapp_dev"
 export AZU_DB_USER="username"
 export AZU_DB_PASSWORD="password"
-```
-
-### Configuration File
-
-```yaml
-# config/database.yml
-development:
-  adapter: postgres
-  database: my_app_development
-  host: localhost
-  port: 5432
-  username: username
-  password: password
-
-test:
-  adapter: postgres
-  database: my_app_test
-  host: localhost
-  port: 5432
-  username: username
-  password: password
-
-production:
-  adapter: postgres
-  url: <%= ENV["DATABASE_URL"] %>
 ```
 
 ## azu db:create
 
 Creates the database for the current environment.
 
-### Basic Usage
-
 ```bash
-# Create database for current environment
 azu db:create
-
-# Create with custom database name
-azu db:create --database my_custom_db
-```
-
-#### Options
-
-| Option                | Description                     | Default       |
-| --------------------- | ------------------------------- | ------------- |
-| `--env <environment>` | Target environment              | development   |
-| `--database <name>`   | Database name                   | auto-detected |
-| `--force`             | Force creation (drop if exists) | false         |
-
-#### Examples
-
-```bash
-# Create development database
-azu db:create
-# Created database 'my_app_development'
-
-# Create with custom name
-azu db:create --database my_custom_db
-# Created database 'my_custom_db'
-```
-
-### Troubleshooting
-
-```bash
-# Permission denied
-sudo -u postgres createdb my_app_development
-
-# Database already exists
-azu db create --force
-
-# Connection refused
-# Check if database server is running
-sudo systemctl status postgresql
-```
-
-## azu db:reset
-
-Resets the database by dropping, creating, migrating, and optionally seeding.
-
-### Basic Usage
-
-```bash
-# Reset database for current environment
-azu db:reset
-
-# Reset with confirmation
-azu db:reset --force
-```
-
-### Options
-
-| Option    | Description              | Default |
-| --------- | ------------------------ | ------- |
-| `--force` | Skip confirmation prompt | false   |
-
-### Examples
-
-```bash
-# Reset development database
-azu db:reset
-# Are you sure? [y/N]: y
-# Reset database 'my_app_development'
-
-# Reset without confirmation
-azu db:reset --force
-# Reset database 'my_app_development'
-```
-
-## azu db:migrate
-
-Runs pending database migrations using CQL's built-in Migrator to update the database schema.
-
-**Key Features:**
-
-- Uses CQL's `Migrator` class for type-safe migrations
-- Automatically updates `src/db/schema.cr` after running migrations
-- Tracks migrations in `cql_schema_migrations` table
-- Generates temporary Crystal script for execution
-
-### Basic Usage
-
-```bash
-# Run all pending migrations
-azu db:migrate
-
-# Run specific number of migrations
-azu db:migrate --steps 2
-
-# Run with verbose output
-azu db:migrate --verbose
-```
-
-### Options
-
-| Option                | Description                 | Default     |
-| --------------------- | --------------------------- | ----------- |
-| `--env <environment>` | Target environment          | development |
-| `--version <version>` | Migrate to specific version | latest      |
-| `--steps <number>`    | Number of migrations to run | all         |
-| `--verbose`           | Show detailed output        | false       |
-
-### Examples
-
-```bash
-# Run all pending migrations
-azu db:migrate
-# Running migrations...
-# ✓ All migrations completed successfully
-# ✓ Schema file updated: src/db/schema.cr
-
-# Run specific number of migrations
-azu db:migrate --steps 2
-
-# Migrate to specific version
-azu db:migrate --version 20240115103045
-
-# View migration status with verbose output
-azu db:migrate --verbose
-```
-
-### How It Works
-
-1. CLI generates a temporary Crystal script in the project root
-2. Script loads `src/db/schema.cr` and all migration files from `src/db/migrations/`
-3. CQL Migrator runs pending migrations in order using the generated script
-4. Schema file is automatically synchronized with the database
-5. Migration status is tracked in the `schema_migrations` table
-6. Temporary script is cleaned up after execution
-
-### Migration File Example
-
-```crystal
-require "cql"
-
-class CreateUsers < CQL::Migration(20240115103045_i64)
-  def up
-    schema.table :users do
-      primary :id, Int64
-      column :name, String
-      column :email, String
-      timestamps
-    end
-    schema.users.create!
-  end
-
-  def down
-    schema.users.drop!
-  end
-end
-```
-
-## azu db:rollback
-
-Rolls back database migrations using CQL's Migrator. Automatically updates the schema file after rollback.
-
-### Basic Usage
-
-```bash
-# Rollback last migration
-azu db:rollback
-
-# Rollback multiple migrations
-azu db:rollback --steps 3
-
-# Rollback to specific version
-azu db:rollback --version 20240115103045
-```
-
-### Options
-
-| Option                | Description                      | Default |
-| --------------------- | -------------------------------- | ------- |
-| `--steps <number>`    | Number of migrations to rollback | 1       |
-| `--version <version>` | Rollback to specific version     | -       |
-| `--verbose`           | Show detailed output             | false   |
-
-### Examples
-
-```bash
-# Rollback last migration
-azu db:rollback
-# Rolling back 1 migration(s)...
-# ✓ Rollback completed successfully
-# ✓ Schema file updated: src/db/schema.cr
-
-# Rollback last 3 migrations
-azu db:rollback --steps 3
-
-# Rollback to specific version (all migrations after this version)
-azu db:rollback --version 20240115103045
-```
-
-### How It Works
-
-1. CLI generates a temporary Crystal script in the project root
-2. Script loads `src/db/schema.cr` and all migration files from `src/db/migrations/`
-3. CQL Migrator executes the `down` method for each migration in reverse order
-4. Removes migration records from `schema_migrations` table
-5. Schema file is automatically synchronized with the database
-6. Temporary script is cleaned up after execution
-
-## azu db:reset
-
-Drops, creates, and migrates the database in one command.
-
-### Basic Usage
-
-```bash
-# Reset database for current environment
-azu db:reset
-
-# Reset with seed data
-azu db:reset --seed
-```
-
-### Options
-
-| Option    | Description               | Default |
-| --------- | ------------------------- | ------- |
-| `--seed`  | Run seed data after reset | false   |
-| `--force` | Skip confirmation prompt  | false   |
-
-### Examples
-
-```bash
-# Reset development database
-azu db:reset
-# Dropped database 'my_app_development'
-# Created database 'my_app_development'
-# == 20231201000001 CreateUsers: migrating ========================
-# == 20231201000001 CreateUsers: migrated (0.1234s) ===============
-
-# Reset with seed data
-azu db:reset --seed
-# ... database operations ...
-# Seeding database...
-# Created 10 users
-# Created 25 posts
-```
-
-## azu db:setup
-
-Sets up the database by creating it (if it doesn't exist) and running all migrations.
-
-### Basic Usage
-
-```bash
-# Setup database for current environment
-azu db:setup
-
-# Setup with seed data
-azu db:setup --seed
-```
-
-### Options
-
-| Option   | Description               | Default |
-| -------- | ------------------------- | ------- |
-| `--seed` | Run seed data after setup | false   |
-
-### Examples
-
-```bash
-# Setup development database
-azu db:setup
-# Database already exists
-# Running migrations...
-# ✓ Database setup completed successfully
-
-# Setup with seed data
-azu db:setup --seed
-# Database already exists
-# Running migrations...
-# Seeding database...
-# ✓ Database setup completed successfully
+azu db:create --database custom_name
+azu db:create --force  # Drop existing and recreate
 ```
 
 ## azu db:drop
 
 Drops the database for the current environment.
 
-### Basic Usage
-
 ```bash
-# Drop database for current environment
 azu db:drop
-
-# Drop with force (no confirmation)
-azu db:drop --force
+azu db:drop --force  # Skip confirmation
 ```
 
-### Options
+## azu db:migrate
 
-| Option    | Description              | Default |
-| --------- | ------------------------ | ------- |
-| `--force` | Skip confirmation prompt | false   |
-
-### Examples
+Runs pending migrations using CQL's Migrator. Automatically updates `src/db/schema.cr`.
 
 ```bash
-# Drop development database
-azu db:drop
-# Are you sure you want to drop database 'my_app_development'? [y/N]: y
-# Dropped database 'my_app_development'
-
-# Drop without confirmation
-azu db:drop --force
-# Dropped database 'my_app_development'
+azu db:migrate
+azu db:migrate --steps 2      # Run only 2 migrations
+azu db:migrate --verbose      # Show detailed output
 ```
 
-## azu db:seed
-
-Runs seed data to populate the database with initial data.
-
-### Basic Usage
-
-```bash
-# Run seed data for current environment
-azu db:seed
-```
-
-### Examples
-
-```bash
-# Run all seed files
-azu db:seed
-# Seeding database...
-# Created 10 users
-# Created 25 posts
-# Created 5 categories
-```
-
-### Seed File Structure
+### Migration File Format
 
 ```crystal
-# db/seeds/users.cr
-require "../src/models/**"
-
-# Create admin user
-admin = User.create!(
-  name: "Admin User",
-  email: "admin@example.com",
-  role: "admin"
-)
-
-puts "Created admin user: #{admin.email}"
-
-# Create sample users
-10.times do |i|
-  user = User.create!(
-    name: "User #{i + 1}",
-    email: "user#{i + 1}@example.com",
-    role: "user"
-  )
-  puts "Created user: #{user.email}"
-end
-```
-
-## azu generate migration
-
-Creates a new CQL migration file with proper Schema DSL syntax.
-
-### Basic Usage
-
-```bash
-# Generate a migration
-azu generate migration CreateUsers name:string email:string
-
-# Generate a simple migration
-azu generate migration AddIndexToUsers
-```
-
-### Examples
-
-```bash
-# Generate migration with attributes
-azu generate migration CreateUsers name:string email:string age:int32
-# Created: src/db/migrations/20240115103045_create_users.cr
-
-# Generated content uses CQL Schema DSL:
-require "cql"
-
-class CreateUsers < CQL::Migration(20240115103045_i64)
+class CreateUsers < CQL::Migration(20240115103045)
   def up
     schema.table :users do
       primary :id, Int64
-      column :name, String
-      column :email, String
-      column :age, Int32
+      text :name
+      text :email
+      boolean :active, default: "1"
       timestamps
     end
     schema.users.create!
-
-    # Indexes automatically added if needed
-    schema.alter :users do
-      create_index :email_idx, [:email], unique: true
-    end
   end
 
   def down
@@ -482,131 +81,149 @@ class CreateUsers < CQL::Migration(20240115103045_i64)
 end
 ```
 
-### Supported Attribute Types
+### Column Types
 
-- `string`, `text` → `String`
-- `int32`, `integer` → `Int32`
-- `int64` → `Int64`
-- `float`, `float64` → `Float64`
-- `bool`, `boolean` → `Bool`
-- `datetime`, `time` → `Time`
-- `date` → `Date`
-- `json` → `JSON::Any`
-- `uuid` → `UUID`
-- `references`, `belongs_to` → Foreign key (Int64)
+| Method      | Crystal Type | Description       |
+| ----------- | ------------ | ----------------- |
+| `primary`   | Int64/UUID   | Primary key       |
+| `text`      | String       | Text field        |
+| `integer`   | Int32        | 32-bit integer    |
+| `bigint`    | Int64        | 64-bit integer    |
+| `boolean`   | Bool         | Boolean value     |
+| `decimal`   | Float64      | Decimal number    |
+| `timestamps`| Time         | created/updated_at|
+
+## azu db:rollback
+
+Rolls back migrations. Automatically updates the schema file.
+
+```bash
+azu db:rollback              # Rollback last migration
+azu db:rollback --steps 3    # Rollback last 3 migrations
+```
+
+## azu db:reset
+
+Drops, creates, and migrates the database.
+
+```bash
+azu db:reset
+azu db:reset --seed   # Also run seeds
+azu db:reset --force  # Skip confirmation
+```
+
+## azu db:setup
+
+Creates the database (if needed) and runs migrations.
+
+```bash
+azu db:setup
+azu db:setup --seed   # Also run seeds
+```
+
+## azu db:seed
+
+Runs seed data from `src/db/seed.cr`.
+
+```bash
+azu db:seed
+```
+
+### Seed File Example
+
+```crystal
+# src/db/seed.cr
+User.create!(name: "Admin", email: "admin@example.com")
+
+10.times do |i|
+  User.create!(name: "User #{i}", email: "user#{i}@example.com")
+end
+```
 
 ## azu db:status
 
-Shows the current migration status.
-
-### Basic Usage
+Shows migration status.
 
 ```bash
-# Show migration status
 azu db:status
 ```
 
-### Examples
+Output:
 
-```bash
-# Check migration status
-azu db:status
-# Migration Status:
-#   [✓] 20231201000001_create_users
-#   [✓] 20231201000002_add_email_to_users
-#   [ ] 20231201000003_add_phone_to_users
+```text
+Migration Status:
+  [✓] 20240115103045_create_users
+  [✓] 20240116103045_create_posts
+  [ ] 20240117103045_add_avatar_to_users
 ```
 
-## Database Adapters
+## azu generate migration
 
-### PostgreSQL
+Creates a new migration file.
 
 ```bash
-# Install PostgreSQL adapter
-# Add to shard.yml:
-# dependencies:
-#   cql:
-#     github: azutoolkit/cql
-#     version: ~> 0.8.0
-
-# Configuration
-export DATABASE_URL="postgres://username:password@localhost/my_app_development"
+azu generate migration CreateUsers name:string email:string
+azu generate migration AddAvatarToUsers avatar_url:string
 ```
 
-### MySQL
+### Add Column Migration
 
-```bash
-# Install MySQL adapter
-# Add to shard.yml:
-# dependencies:
-#   cql:
-#     github: azutoolkit/cql
-#     version: ~> 0.8.0
+```crystal
+class AddAvatarToUsers < CQL::Migration(20240116103045)
+  def up
+    schema.alter :users do
+      add_column :avatar_url, String, null: true
+    end
+  end
 
-# Configuration
-export DATABASE_URL="mysql://username:password@localhost/my_app_development"
+  def down
+    schema.alter :users do
+      drop_column :avatar_url
+    end
+  end
+end
 ```
 
-### SQLite
+### Add Index Migration
 
-```bash
-# Install SQLite adapter
-# Add to shard.yml:
-# dependencies:
-#   cql:
-#     github: azutoolkit/cql
-#     version: ~> 0.8.0
+```crystal
+class AddEmailIndexToUsers < CQL::Migration(20240117103045)
+  def up
+    schema.alter :users do
+      create_index :idx_users_email, [:email], unique: true
+    end
+  end
 
-# Configuration
-export DATABASE_URL="sqlite://./db/development.db"
+  def down
+    schema.alter :users do
+      drop_index :idx_users_email
+    end
+  end
+end
 ```
 
 ## Common Workflows
 
-### Development Workflow
+### Development
 
 ```bash
-# Start new feature
-azu db:migrate
-
-# Make changes to models
-# Generate new migration
-azu generate migration add_field_to_table
-
-# Run migration
-azu db:migrate
-
-# If something goes wrong
-azu db:rollback
-
-# Reset for clean slate
-azu db:reset --seed
+azu db:migrate              # Apply changes
+azu db:rollback             # Undo if needed
+azu db:reset --seed         # Fresh start
 ```
 
-### Testing Workflow
+### Testing
 
 ```bash
-# Setup test database
-azu db:setup
-
-# Run tests
-crystal spec
-
-# Clean up
-azu db:reset
+azu db:setup                # Prepare test DB
+crystal spec                # Run tests
 ```
 
-### Production Workflow
+### Production
 
 ```bash
-# Deploy to production
-azu db:migrate
-
-# If migration fails
-azu db:rollback
-
-# Check current status
-azu db:status
+azu db:migrate              # Apply migrations
+azu db:status               # Verify status
 ```
 
 ## Troubleshooting
@@ -614,104 +231,33 @@ azu db:status
 ### Connection Issues
 
 ```bash
-# Check database server status
+# Check database server
 sudo systemctl status postgresql
 
 # Test connection
-psql -h localhost -U username -d my_app_development
+psql -h localhost -U username -d myapp_dev
 
-# Check environment variables
+# Verify environment
 echo $DATABASE_URL
 ```
 
 ### Permission Issues
 
 ```bash
-# Create database user
 sudo -u postgres createuser -s username
-
-# Grant permissions
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE my_app_development TO username;"
+sudo -u postgres psql -c "GRANT ALL ON DATABASE myapp_dev TO username;"
 ```
 
 ### Migration Issues
 
 ```bash
-# Check migration status
-azu db:status
-
-# Reset migrations
-azu db:reset
-
-# Check migration files
-ls -la src/db/migrations/
-```
-
-### Seed Issues
-
-```bash
-# Run seed data
-azu db:seed
-
-# Check seed files
-ls -la src/db/
-
-# Check seed file content
-cat src/db/seed.cr
-```
-
-## Best Practices
-
-### 1. Environment Management
-
-```bash
-# Use different databases for each environment
-azu db:setup
-# Database name will be based on project name and environment
-```
-
-### 2. Migration Safety
-
-```bash
-# Always backup before migrations
-pg_dump my_app_production > backup.sql
-
-# Test migrations in development first
-azu db:migrate
-
-# Check migration status
-azu db:status
-```
-
-### 3. Seed Data
-
-```bash
-# Keep seeds idempotent
-# Use create_or_find instead of create
-
-# Separate seeds by environment
-db/seeds/
-├── development/
-├── test/
-└── production/
-```
-
-### 4. Database URLs
-
-```bash
-# Use DATABASE_URL for all environments
-export DATABASE_URL="postgres://username:password@localhost/my_app_development"
-
-# Use .env files for local development
-echo "DATABASE_URL=postgres://..." > .env
+azu db:status               # Check status
+ls -la src/db/migrations/   # Verify files exist
 ```
 
 ---
 
-The database commands provide a complete workflow for managing your Azu application's database, from creation to migration to seeding.
-
 **Next Steps:**
 
-- [Migration Generator](../generators/migration.md) - Create database migrations
-- [Model Generator](../generators/model.md) - Create database models
-- [Development Workflows](../workflows/README.md) - Learn database workflows
+- [Migration Generator](../generators/migration.md) - Create migrations
+- [Model Generator](../generators/model.md) - Create models

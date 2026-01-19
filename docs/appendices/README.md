@@ -359,7 +359,7 @@ export PORT=3000
 - [GitHub Repository](https://github.com/azutoolkit/azu_cli) - Source code and issues
 - [Documentation](README.md) - Comprehensive guides
 - [Discord Server](https://discord.gg/azutoolkit) - Community chat
-- [Examples](examples/) - Code examples and tutorials
+- [Examples](examples/README.md) - Code examples and tutorials
 
 ### Third-Party Resources
 
@@ -406,7 +406,7 @@ When reporting issues, include:
 - [Getting Started](getting-started/quick-start.md) - Quick start guide
 - [Command Reference](commands/README.md) - CLI commands
 - [Generators](generators/README.md) - Code generation
-- [Workflows](workflows/README.md) - Development workflows
+- [Workflows](examples/README.md) - Development workflows
 - [Architecture](architecture/README.md) - System architecture
 - [Configuration](configuration/README.md) - Configuration management
 - [Examples](examples/README.md) - Code examples

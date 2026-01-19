@@ -181,7 +181,7 @@ Azu CLI is open source software licensed under the [MIT License](https://github.
 - **[Azu Web Framework](https://github.com/azutoolkit/azu)**: The core web framework
 - **[CQL ORM](https://github.com/azutoolkit/cql)**: Crystal Query Language ORM
 - **[Topia](https://github.com/azutoolkit/topia)**: CLI framework used by Azu CLI
-- **[CQL ORM](https://github.com/azutoolkit/cql)**: Crystal Query Language ORM
+- **[JoobQ](https://github.com/azutoolkit/joobq)**: Background job processing
 
 ---
 

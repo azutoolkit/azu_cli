@@ -653,4 +653,4 @@ The OpenAPI commands provide powerful integration between OpenAPI specifications
 - [Generate Command](generate.md) - Learn about code generation
 - [Model Generator](../generators/model.md) - Create database models
 - [Endpoint Generator](../generators/endpoint.md) - Create HTTP endpoints
-- [API Development Workflows](../workflows/building-apis.md) - Learn API development patterns
+- [API Development Workflows](../examples/README.md) - Learn API development patterns

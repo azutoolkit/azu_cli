@@ -630,7 +630,7 @@ We follow [Semantic Versioning](https://semver.org/):
 ### Resources
 
 - [Documentation](README.md) - Comprehensive guides
-- [Examples](examples/) - Code examples and tutorials
+- [Examples](examples/README.md) - Code examples and tutorials
 - [GitHub Issues](https://github.com/azutoolkit/azu_cli/issues) - Bug reports and discussions
 - [Discord](https://discord.gg/azutoolkit) - Community chat
 

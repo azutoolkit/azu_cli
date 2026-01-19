@@ -547,6 +547,6 @@ The `azu dev` command provides an enhanced development environment with dashboar
 
 **Next Steps:**
 
-- [Development Workflows](../workflows/README.md) - Learn development patterns
-- [Testing Your Application](../workflows/testing.md) - Comprehensive testing
+- [Development Workflows](../examples/README.md) - Learn development patterns
+- [Testing Your Application](../examples/README.md) - Comprehensive testing
 - [Database Commands](database.md) - Manage your database

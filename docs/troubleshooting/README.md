@@ -447,8 +447,8 @@ For bug reports and feature requests:
 
 - [Official Documentation](README.md)
 - [API Reference](reference/)
-- [Examples](examples/)
-- [Best Practices](workflows/)
+- [Examples](examples/README.md)
+- [Best Practices](examples/README.md)
 
 ## Contributing to Troubleshooting
 

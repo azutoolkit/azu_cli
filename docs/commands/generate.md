@@ -570,4 +570,4 @@ azu generate endpoint users  # not controller
 
 - [Generators Guide](../generators/README.md) - Detailed generator documentation
 - [Project Structure](../getting-started/project-structure.md) - Understanding generated files
-- [Development Workflows](../workflows/README.md) - Using generators in development
+- [Development Workflows](../examples/README.md) - Using generators in development

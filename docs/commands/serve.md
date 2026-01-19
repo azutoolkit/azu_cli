@@ -446,6 +446,6 @@ The `azu serve` command is essential for Azu development, providing a fast, reli
 
 **Next Steps:**
 
-- [Development Workflows](../workflows/README.md) - Learn development patterns
+- [Development Workflows](../examples/README.md) - Learn development patterns
 - [Database Commands](database.md) - Manage your database
 - [Generate Command](generate.md) - Create new components

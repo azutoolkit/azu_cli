@@ -504,4 +504,4 @@ This structure provides a solid foundation for building maintainable, testable, 
 
 - [Command Reference](../commands/README.md) - Learn about CLI commands
 - [Generators Guide](../generators/README.md) - Generate code efficiently
-- [Development Workflows](../workflows/README.md) - Common development patterns
+- [Examples](../examples/README.md) - Common development patterns
