@@ -33,6 +33,32 @@ jobs:
         run: crystal tool format --check ./src
       - name: Run Specs
         run: crystal spec
+  generated-app:
+    name: generated app (Crystal ${{ matrix.crystal }}, ${{ matrix.db }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { crystal: "1.19.1", db: sqlite }
+          - { crystal: "latest", db: sqlite }
+          - { crystal: "latest", db: postgresql }
+    container:
+      image: crystallang/crystal:${{ matrix.crystal }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev curl
+      - name: Build the CLI
+        run: |
+          shards install --ignore-crystal-version
+          mkdir -p bin
+          crystal build src/azu_cli.cr -o bin/azu --no-debug
+      - name: Generate, build, boot and request a new project
+        run: E2E_DB=${{ matrix.db }} scripts/e2e_generated_app.sh
   release:
     runs-on: ubuntu-latest
     needs:
