@@ -38,15 +38,15 @@ To develop your CLI application:
 To start your Azu server:
 
 1. Install dependencies with `shards install`
-2. Configure your database in `src/initializers/database.cr`
-3. Create and migrate your database with `azu db create migrate`
+2. Configure your database in `src/initializers/cql_config.cr`
+3. Create and migrate your database with `azu db:create` and `azu db:migrate`
 4. Start the development server with `azu serve`
 
 Now you can visit http://localhost:3000/ from your browser.
 
 ## Configuration
 
-- **Database**: Configure your database connection in `src/initializers/database.cr`
+- **Database**: Configure your database connection in `src/initializers/cql_config.cr`
 - **Server**: Adjust server settings in `src/server.cr`
 - **Environment**: Use environment variables for configuration
 

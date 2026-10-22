@@ -108,20 +108,9 @@ module AzuCLI
         private def create_data_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
           project_root = Dir.current
           script_path = File.join(project_root, "tmp_data_migrate_#{Time.utc.to_unix}.cr")
-          schema_name, schema_symbol = detect_schema_info
 
           script_content = String.build do |io|
-            io << "require \"cql\"\n"
-            io << "require \"pg\"\n"
-            io << "require \"./src/db/schema.cr\"\n"
-            io << "require \"./src/db/data_migrations/*\"\n\n"
-            io << "config = CQL::MigratorConfig.new(\n"
-            io << "  schema_file_path: \"src/db/schema.cr\",\n"
-            io << "  schema_name: :#{schema_name},\n"
-            io << "  schema_symbol: :#{schema_symbol},\n"
-            io << "  auto_sync: false\n" # Data migrations don't affect schema
-            io << ")\n\n"
-            io << "migrator = #{schema_name}.migrator(config)\n\n"
+            io << migrator_script_header("./src/db/data_migrations/*")
 
             case action
             when "up"

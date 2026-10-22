@@ -1,7 +1,5 @@
-<%= schema_name %> = CQL::Schema.define(
-  :<%= schema_symbol %>,
-  adapter: <%= cql_adapter_class %>,
-  uri: ENV["DATABASE_URL"]? || "<%= database_env_url %>") do
+# URL, adapter and pool settings come from CQL.config (src/initializers/cql_config.cr).
+<%= schema_name %> = Azu::CQL.schema :<%= schema_symbol %> do
   table :cql_schema_migrations do
     primary :id, Int32
     text :name

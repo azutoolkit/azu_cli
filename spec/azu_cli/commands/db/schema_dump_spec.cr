@@ -41,25 +41,35 @@ describe AzuCLI::Commands::Database, "schema dumping" do
       schema_symbol.should eq("my_blog_db")
     end
 
-    it "falls back to AppSchema when file doesn't exist" do
+    it "detects an Azu::CQL.schema definition and its symbol" do
+      File.write(schema_path, "BlogDB = Azu::CQL.schema :blog do\n  table :posts do\n  end\nend")
+
+      command = AzuCLI::Commands::DB::Migrate.new
+      schema_name, schema_symbol = command.test_detect_schema_info
+
+      schema_name.should eq("BlogDB")
+      schema_symbol.should eq("blog")
+    end
+
+    it "falls back to AppDB when file doesn't exist" do
       File.delete(schema_path) if File.exists?(schema_path)
 
       command = AzuCLI::Commands::DB::Migrate.new
       schema_name, schema_symbol = command.test_detect_schema_info
 
-      schema_name.should eq("AppSchema")
-      schema_symbol.should eq("app_schema")
+      schema_name.should eq("AppDB")
+      schema_symbol.should eq("app_db")
     end
 
-    it "falls back to AppSchema when pattern doesn't match" do
+    it "falls back to AppDB when pattern doesn't match" do
       # Create a schema file without the expected pattern
       File.write(schema_path, "# Invalid schema file")
 
       command = AzuCLI::Commands::DB::Migrate.new
       schema_name, schema_symbol = command.test_detect_schema_info
 
-      schema_name.should eq("AppSchema")
-      schema_symbol.should eq("app_schema")
+      schema_name.should eq("AppDB")
+      schema_symbol.should eq("app_db")
     end
   end
 

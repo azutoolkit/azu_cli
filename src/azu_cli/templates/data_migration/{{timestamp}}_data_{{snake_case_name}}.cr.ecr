@@ -15,9 +15,9 @@
 #     end
 #   end
 
-require "../models/**"
+require "../../models/**"
 
-class <%= @migration_class_name %> < CQL::DataMigration(<%= @timestamp %>)
+class <%= @migration_class_name %> < CQL::Migration(<%= @timestamp %>_i64)
   def up
     # Transform data here
     # Example: Update existing records

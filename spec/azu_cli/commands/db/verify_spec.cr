@@ -61,5 +61,4 @@ describe AzuCLI::Commands::DB::Verify do
       command.environment.should eq("test")
     end
   end
-
 end

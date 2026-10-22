@@ -433,7 +433,7 @@ module AzuCLI
 
         puts "Next steps:"
         puts "  1. cd #{@project_name}"
-        puts "  2. Configure your database in config/database.yml"
+        puts "  2. Configure your database in src/initializers/cql_config.cr"
 
         case @project_type
         when "web"

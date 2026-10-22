@@ -74,5 +74,4 @@ describe AzuCLI::Commands::DB::Validate do
       command.environment.should eq("test")
     end
   end
-
 end

@@ -1,4 +1,5 @@
 require "../../../spec_helper"
+require "file_utils"
 
 describe AzuCLI::Commands::DB::SchemaLoad do
   describe "#initialize" do
@@ -69,4 +70,29 @@ describe AzuCLI::Commands::DB::SchemaLoad do
     end
   end
 
+  describe "schema load script" do
+    it "creates the tables of the schema after loading the initializers" do
+      dir = File.join(Dir.tempdir, "azu_schema_load_spec_#{Random::Secure.hex(4)}")
+      Dir.mkdir_p(File.join(dir, "src", "initializers"))
+      Dir.mkdir_p(File.join(dir, "src", "db"))
+      File.write(File.join(dir, "src", "initializers", "cql_config.cr"), "")
+      File.write(File.join(dir, "src", "db", "schema.cr"), "BlogDB = Azu::CQL.schema :blog do\nend\n")
+
+      begin
+        Dir.cd(dir) do
+          command = AzuCLI::Commands::DB::SchemaLoad.new
+          script_path = command.test_create_schema_load_script("./src/db/schema.cr")
+          script_content = File.read(script_path)
+          File.delete(script_path)
+
+          script_content.should contain("require \"./src/initializers/**\"")
+          script_content.should contain("BlogDB.tables.each_value")
+          script_content.should contain("table.create!")
+          script_content.should_not contain("drop!")
+        end
+      ensure
+        FileUtils.rm_rf(dir)
+      end
+    end
+  end
 end

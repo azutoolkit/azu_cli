@@ -76,16 +76,46 @@ module AzuCLI
           "./src/db/schema.cr"
         end
 
-        # Load Crystal schema file
+        # Load Crystal schema file: creates every table the schema declares
         private def load_crystal_schema(schema_path : String)
           Logger.info("Loading Crystal schema file...")
 
-          # For Crystal schema files, we need to execute the schema definition
-          # This is more complex and would require loading the schema file
-          # and executing the table creation commands
+          script = create_schema_load_script(schema_path)
+          begin
+            unless Process.run("crystal", ["run", script], output: STDOUT, error: STDERR).success?
+              raise "schema script failed (use --force to drop and recreate existing tables)"
+            end
+          ensure
+            File.delete(script) if File.exists?(script)
+          end
+        end
 
-          Logger.warn("Crystal schema loading not fully implemented")
-          Logger.info("Consider using 'azu db:migrate' instead")
+        # Temporary script that evaluates the schema file with the project's initializers loaded
+        private def create_schema_load_script(schema_path : String) : String
+          schema_name, _ = detect_schema_info
+          script_path = File.join(Dir.current, "tmp_schema_load_#{Time.utc.to_unix}.cr")
+
+          script_content = String.build do |io|
+            io << "require \"cql\"\n"
+            io << "require \"#{adapter_shard}\"\n"
+            if initializers?
+              io << "require \"azu\"\n"
+              io << "require \"./src/initializers/**\"\n"
+            end
+            io << "require \"./#{Path[File.expand_path(schema_path)].relative_to(Dir.current)}\"\n\n"
+            io << "#{schema_name}.tables.each_value do |table|\n"
+            io << "  table.drop! rescue nil\n" if @force
+            io << "  table.create!\n"
+            io << "end\n"
+          end
+
+          File.write(script_path, script_content)
+          script_path
+        end
+
+        # Public test helper to access private method for testing
+        def test_create_schema_load_script(schema_path : String) : String
+          create_schema_load_script(schema_path)
         end
 
         # Load SQL schema file

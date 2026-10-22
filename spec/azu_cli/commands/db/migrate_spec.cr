@@ -1,4 +1,5 @@
 require "../../../spec_helper"
+require "file_utils"
 
 describe AzuCLI::Commands::DB::Migrate do
   describe "#initialize" do
@@ -143,14 +144,40 @@ describe AzuCLI::Commands::DB::Migrate do
       script_content = File.read(script_path)
 
       # Verify CQL configuration is present
-      script_content.should contain("CQL::MigratorConfig.new")
-      script_content.should contain("schema_file_path: \"src/db/schema.cr\"")
-      script_content.should contain("schema_name: :")   # Schema name is dynamic
-      script_content.should contain("schema_symbol: :") # Schema symbol is dynamic
-      script_content.should contain("auto_sync: true")
+      script_content.should contain("CQL::MigratorConfig.new(auto_sync: false)")
+      script_content.should contain(".migrator(config)")
+      script_content.should_not contain("auto_sync: true")
 
       # Clean up
       File.delete(script_path) if File.exists?(script_path)
+    end
+
+    it "loads the initializers before the schema when the project has them" do
+      dir = File.join(Dir.tempdir, "azu_migrate_spec_#{Random::Secure.hex(4)}")
+      Dir.mkdir_p(File.join(dir, "src", "initializers"))
+      Dir.mkdir_p(File.join(dir, "src", "db"))
+      File.write(File.join(dir, "src", "initializers", "cql_config.cr"), "")
+      File.write(File.join(dir, "src", "db", "schema.cr"), "BlogDB = Azu::CQL.schema :blog do\nend\n")
+
+      begin
+        Dir.cd(dir) do
+          script_path = AzuCLI::Commands::DB::Migrate.new.test_create_migration_runner_script("up", nil, nil)
+          script_content = File.read(script_path)
+          File.delete(script_path)
+
+          initializers = script_content.index("require \"./src/initializers/**\"")
+          schema = script_content.index("require \"./src/db/schema.cr\"")
+          azu = script_content.index("require \"azu\"\n")
+          azu.should_not be_nil
+          initializers.should_not be_nil
+          schema.should_not be_nil
+          azu.not_nil!.should be < initializers.not_nil!
+          initializers.not_nil!.should be < schema.not_nil!
+          script_content.should contain("migrator = BlogDB.migrator(config)")
+        end
+      ensure
+        FileUtils.rm_rf(dir)
+      end
     end
 
     it "generates script with version migration command" do

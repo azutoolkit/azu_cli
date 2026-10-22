@@ -90,13 +90,13 @@ module AzuCLI
       def database_env_url : String
         case @database
         when "postgresql", "postgres", "pg"
-          "postgresql://localhost/#{@project}_\#{config.env.downcase}"
+          %(postgresql://localhost/#{@project}_\#{ENV["CRYSTAL_ENV"]? || "development"})
         when "mysql"
-          "mysql://localhost/#{@project}_\#{config.env.downcase}"
+          %(mysql://localhost/#{@project}_\#{ENV["CRYSTAL_ENV"]? || "development"})
         when "sqlite", "sqlite3"
-          "sqlite3://./db/#{@project}_\#{config.env.downcase}.db"
+          %(sqlite3://./db/#{@project}_\#{ENV["CRYSTAL_ENV"]? || "development"}.db)
         else
-          "postgresql://localhost/#{@project}_\#{config.env.downcase}"
+          %(postgresql://localhost/#{@project}_\#{ENV["CRYSTAL_ENV"]? || "development"})
         end
       end
 

@@ -1,8 +1,7 @@
 require "spec"
-require "../src/<%= @project %>"
 
+# CQL reads CRYSTAL_ENV when its configuration is first created (src/initializers/cql_config.cr),
+# so it has to be set before the application is required.
 ENV["CRYSTAL_ENV"] = "test"
 
-CQL.configure do |config|
-  config.env = ENV["CRYSTAL_ENV"]? || "test"
-end
+require "../src/<%= @project %>"

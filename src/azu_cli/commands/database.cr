@@ -292,6 +292,47 @@ module AzuCLI
         end
       end
 
+      # Header shared by the temporary runner scripts (migrate, rollback, verify, data:migrate).
+      #
+      # Azu is required first (as in the application's main file: `azu/cql` needs `Azu::CONFIG`),
+      # then the initializers are loaded before the schema so `CQL.config` and `Azu::CQL` exist when
+      # `src/db/schema.cr` is evaluated: the schema takes its URL, adapter and pool from CQL's
+      # configuration. The migrator never rewrites `src/db/schema.cr` (`auto_sync: false`), which
+      # would otherwise replace it with a plain dump that embeds the database URI and password.
+      protected def migrator_script_header(migrations_glob : String = "./src/db/migrations/*") : String
+        schema_name, _ = detect_schema_info
+
+        String.build do |io|
+          io << "require \"cql\"\n"
+          io << "require \"#{adapter_shard}\"\n"
+          if initializers?
+            io << "require \"azu\"\n"
+            io << "require \"./src/initializers/**\"\n"
+          end
+          io << "require \"./src/db/schema.cr\"\n"
+          io << "require \"#{migrations_glob}\"\n\n"
+          io << "config = CQL::MigratorConfig.new(auto_sync: false)\n\n"
+          io << "migrator = #{schema_name}.migrator(config)\n\n"
+        end
+      end
+
+      # Shard that provides the database driver for the configured adapter
+      protected def adapter_shard : String
+        case @adapter
+        when "mysql"
+          "mysql"
+        when "sqlite", "sqlite3"
+          "sqlite3"
+        else
+          "pg"
+        end
+      end
+
+      # Whether the project has initializers to load (they configure CQL)
+      protected def initializers? : Bool
+        !Dir.glob("./src/initializers/*.cr").empty?
+      end
+
       # Dump current database schema to file
       def dump_schema
         return unless Dir.exists?("./src/db")

@@ -434,4 +434,3 @@ describe "Auth Generator Integration" do
     end
   end
 end
-

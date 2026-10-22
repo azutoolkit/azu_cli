@@ -179,7 +179,7 @@ describe AzuCLI::Generate::Project do
     end
   end
 
-  it "generates spec_helper with CQL configuration" do
+  it "generates spec_helper that sets CRYSTAL_ENV before loading the app" do
     generator = AzuCLI::Generate::Project.new(
       "myapp",
       "MyApp",
@@ -191,19 +191,75 @@ describe AzuCLI::Generate::Project do
     FileUtils.mkdir_p(test_dir)
     generator.render(test_dir)
 
-    # Check spec_helper file
     spec_helper_file = File.join(test_dir, "spec", "spec_helper.cr")
     File.exists?(spec_helper_file).should be_true
 
     content = File.read(spec_helper_file)
     content.should contain("require \"spec\"")
-    content.should contain("require \"../src/myapp\"")
     content.should contain("ENV[\"CRYSTAL_ENV\"] = \"test\"")
-    content.should contain("CQL.configure do |config|")
-    content.should contain("config.env = ENV[\"CRYSTAL_ENV\"]? || \"test\"")
-    content.should contain("end")
+    content.should_not contain("CQL.configure")
+    content.index("ENV[\"CRYSTAL_ENV\"]").not_nil!.should be < content.index("require \"../src/myapp\"").not_nil!
 
     # Clean up
     FileUtils.rm_rf(test_dir)
+  end
+
+  describe "Azu + CQL setup" do
+    it "generates a single cql_config initializer and no database initializer" do
+      generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com")
+
+      test_dir = "./tmp_test_cql_config"
+      FileUtils.mkdir_p(test_dir)
+      generator.render(test_dir)
+
+      File.exists?(File.join(test_dir, "src", "initializers", "database.cr")).should be_false
+
+      content = File.read(File.join(test_dir, "src", "initializers", "cql_config.cr"))
+      content.should contain("require \"pg\"")
+      content.should contain("require \"azu/cql\"")
+      content.should contain("Azu::CQL.configure do |c|")
+      content.should contain("c.db = ENV[\"DATABASE_URL\"]? || \"postgresql://localhost/myapp_\#{ENV[\"CRYSTAL_ENV\"]? || \"development\"}\"")
+      content.should contain("c.pool.size")
+      content.should contain("Azu::CQL.attach { MyAppDB }")
+      # Flags CQL never reads and the env assignment are gone
+      content.should_not contain("auto_sync")
+      content.should_not contain("bootstrap")
+      content.should_not contain("config.env")
+
+      FileUtils.rm_rf(test_dir)
+    end
+
+    it "generates a schema that takes its connection from CQL.config" do
+      generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com")
+
+      test_dir = "./tmp_test_cql_schema"
+      FileUtils.mkdir_p(test_dir)
+      generator.render(test_dir)
+
+      content = File.read(File.join(test_dir, "src", "db", "schema.cr"))
+      content.should contain("MyAppDB = Azu::CQL.schema :myapp_db do")
+      content.should contain("table :cql_schema_migrations do")
+      content.should_not contain("CQL::Schema.define")
+      content.should_not contain("DATABASE_URL")
+      content.should_not contain("uri:")
+
+      FileUtils.rm_rf(test_dir)
+    end
+
+    it "uses the mysql and sqlite3 drivers in the initializer" do
+      {"mysql" => "mysql", "sqlite3" => "sqlite3"}.each do |database, driver|
+        generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database)
+
+        test_dir = "./tmp_test_cql_#{database}"
+        FileUtils.mkdir_p(test_dir)
+        generator.render(test_dir)
+
+        content = File.read(File.join(test_dir, "src", "initializers", "cql_config.cr"))
+        content.should contain("require \"#{driver}\"")
+        content.should_not contain("require \"pg\"")
+
+        FileUtils.rm_rf(test_dir)
+      end
+    end
   end
 end

@@ -148,7 +148,7 @@ src/templates/
 │   │   ├── main.cr.ecr
 │   │   ├── server.cr.ecr
 │   │   └── initializers/
-│   │       ├── database.cr.ecr
+│   │       ├── cql_config.cr.ecr
 │   │       └── logger.cr.ecr
 │   └── spec/
 │       ├── spec_helper.cr.ecr

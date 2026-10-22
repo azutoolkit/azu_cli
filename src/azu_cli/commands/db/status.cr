@@ -103,9 +103,9 @@ module AzuCLI
 
         private def get_applied_migrations : Array(String)
           migrations = [] of String
-          query_database("SELECT version FROM schema_migrations ORDER BY version") do |rs|
+          query_database("SELECT version FROM cql_schema_migrations ORDER BY version") do |rs|
             rs.each do
-              migrations << rs.read(String)
+              migrations << rs.read(Int64).to_s
             end
           end
           migrations
@@ -116,7 +116,7 @@ module AzuCLI
         # Get applied migration versions as Int64 array
         private def get_applied_migration_versions : Array(Int64)
           versions = [] of Int64
-          query_database("SELECT version FROM schema_migrations ORDER BY version") do |rs|
+          query_database("SELECT version FROM cql_schema_migrations ORDER BY version") do |rs|
             rs.each do
               versions << rs.read(Int64)
             end
@@ -128,7 +128,7 @@ module AzuCLI
 
         # Get when a migration was applied
         private def get_migration_applied_at(version : Int64) : String
-          query_database("SELECT executed_at FROM schema_migrations WHERE version = #{version}") do |rs|
+          query_database("SELECT created_at FROM cql_schema_migrations WHERE version = #{version}") do |rs|
             rs.each do
               return rs.read(Time).to_s("%Y-%m-%d %H:%M:%S")
             end

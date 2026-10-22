@@ -122,20 +122,9 @@ module AzuCLI
         private def create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
           project_root = Dir.current
           script_path = File.join(project_root, "tmp_rollback_#{Time.utc.to_unix}.cr")
-          schema_name, schema_symbol = detect_schema_info
 
           script_content = String.build do |io|
-            io << "require \"cql\"\n"
-            io << "require \"pg\"\n"
-            io << "require \"./src/db/schema.cr\"\n"
-            io << "require \"./src/db/migrations/*\"\n\n"
-            io << "config = CQL::MigratorConfig.new(\n"
-            io << "  schema_file_path: \"src/db/schema.cr\",\n"
-            io << "  schema_name: :#{schema_name},\n"
-            io << "  schema_symbol: :#{schema_symbol},\n"
-            io << "  auto_sync: true\n"
-            io << ")\n\n"
-            io << "migrator = #{schema_name}.migrator(config)\n\n"
+            io << migrator_script_header
 
             case action
             when "up"
@@ -223,7 +212,7 @@ module AzuCLI
         # Get applied migration versions from database
         private def get_applied_migration_versions : Array(Int64)
           versions = [] of Int64
-          query_database("SELECT version FROM schema_migrations ORDER BY version") do |rs|
+          query_database("SELECT version FROM cql_schema_migrations ORDER BY version") do |rs|
             rs.each do
               versions << rs.read(Int64)
             end

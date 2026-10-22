@@ -215,16 +215,35 @@ require "./initializers/**"
 Azu::Server.start
 ```
 
-**`src/initializers/database.cr`** - Database setup:
+**`src/initializers/cql_config.cr`** - Azu + CQL setup:
 
 ```crystal
-require "cql"
+require "pg"
+require "azu/cql"
 
-CQL.setup do |config|
-  config.database_url = ENV.fetch("DATABASE_URL", "postgres://localhost/my_app_development")
-  config.log_level = :debug
+Azu::CQL.configure do |c|
+  c.db = ENV["DATABASE_URL"]? || "postgresql://localhost/my_app_#{ENV["CRYSTAL_ENV"]? || "development"}"
+  c.pool.size = 10
+end
+
+# The schema (src/db/schema.cr) loads after the initializers, so it is attached lazily
+Azu::CQL.attach { MyAppDB }
+```
+
+```crystal
+# src/db/schema.cr: URL, adapter and pool come from CQL.config
+MyAppDB = Azu::CQL.schema :my_app_db do
+  table :users do
+    primary :id, Int64
+    column :name, String
+  end
 end
 ```
+
+Azu's dev dashboard (`/dev-dashboard`) then shows a **Database** tab with every query. See the
+[azu database dashboard guide](https://github.com/azutoolkit/azu/blob/master/docs/reference/database-dashboard.md).
+Tables used by models must be declared in `src/db/schema.cr`; migrations are run with
+`auto_sync: false`, so they never rewrite that file.
 
 ## Examples
 
