@@ -3,6 +3,22 @@ module <%= @module_name %>
     include Azu::Response
     include Azu::Templates::Renderable
 
+    # Version of the Azu shard this app was compiled against, read at compile time from the
+    # resolved version in shard.lock ("unknown" if the lock file is missing or has no azu entry).
+    AZU_VERSION = {% begin %}
+      {% lock = read_file?("#{__DIR__}/../../../shard.lock") %}
+      {% if lock && lock.includes?("\n  azu:\n") %}
+        {% versions = lock.split("\n  azu:\n")[1].lines.select { |line| line.starts_with?("    version:") } %}
+        {% if versions.size > 0 %}
+          {{ versions[0].split(":")[1].strip.split("+")[0] }}
+        {% else %}
+          "unknown"
+        {% end %}
+      {% else %}
+        "unknown"
+      {% end %}
+    {% end %}
+
     def initialize(@project : String = "<%= @project %>",
                    @csrf_token : String = "",
                    @csrf_tag : String = "",
@@ -11,10 +27,17 @@ module <%= @module_name %>
 
     def render
       view data: {
-        "project"      => @project,
-        "csrf_token"   => @csrf_token,
-        "csrf_tag"     => @csrf_tag,
-        "csrf_metatag" => @csrf_metatag,
+        "project"         => @project,
+        "project_title"   => "<%= @module_name %>",
+        "module_name"     => "<%= @module_name %>",
+        "section"         => "home",
+        "azu_version"     => AZU_VERSION,
+        "crystal_version" => Crystal::VERSION,
+        "app_version"     => <%= @module_name %>::VERSION,
+        "environment"     => Azu.current_config.env.to_s,
+        "csrf_token"      => @csrf_token,
+        "csrf_tag"        => @csrf_tag,
+        "csrf_metatag"    => @csrf_metatag,
       }
     end
   end
