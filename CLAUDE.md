@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Azu CLI** is a feature-complete, production-ready command-line interface for the Azu Toolkit - a Rails-like framework for Crystal that provides database management, code generation, hot reloading, and comprehensive development tools.
 
-- **Language**: Crystal 1.16.3
+- **Language**: Crystal 1.19.1 or newer (CI tests 1.19.1 and the latest release)
 - **CLI Framework**: Topia (https://github.com/azutoolkit/topia)
 - **Target Frameworks**:
   - Azu Web Framework (https://github.com/azutoolkit/azu)
