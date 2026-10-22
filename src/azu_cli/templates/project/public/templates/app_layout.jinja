@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="{% block description %}A new Azu application{% endblock %}">
+  {% block head %}{% endblock %}
+  <title>{% block title %}{{ project_title | default("Azu") }}{% endblock %}</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  {#- Same-origin assets only (no CDN, no inline scripts or styles), so a strict CSP works.
+      theme.js runs synchronously to set the stored theme before first paint. -#}
+  <script src="/assets/theme.js"></script>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M5 19 12 5l7 14M8.5 14h7"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4M3.3 17a10 10 0 1 1 17.4 0"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></symbol>
+    <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+  </svg>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="site-header__bar">
+      <a class="brand" href="/">
+        <svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg>
+        <span>{{ project_title }}</span>
+        <span class="brand__tag">Azu</span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="/"{% if section == "home" %} aria-current="page"{% endif %}>Welcome</a></li>
+          <li><a href="https://azutoolkit.org" rel="noopener noreferrer">Docs</a></li>
+          <li><a href="https://github.com/azutoolkit/azu" rel="noopener noreferrer">GitHub</a></li>
+        </ul>
+      </nav>
+      <button type="button" class="btn btn--ghost btn--sm theme-toggle" data-theme-toggle hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-theme"/></svg>
+        <span data-theme-label>Auto</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="shell" id="main" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p>Built with <a href="https://github.com/azutoolkit/azu" rel="noopener noreferrer">Azu</a> and <a href="https://crystal-lang.org" rel="noopener noreferrer">Crystal</a>.</p>
+      <p>Replace this page by editing <span class="path">src/endpoints/welcome/index_endpoint.cr</span></p>
+    </div>
+  </footer>
+</body>
+</html>

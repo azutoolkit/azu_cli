@@ -1,129 +1,157 @@
-{% extends "layout.jinja" %}
+{% extends "app_layout.jinja" %}
 
-{% block page_header %}
-<title>Welcome to {{ project.camelcase }} - Azu App</title>
-<meta name="description" content="Welcome to your new Azu application">
-{{ csrf_metatag }}
-{% endblock %}
+{% block title %}Welcome to {{ project_title }}{% endblock %}
+{% block description %}Your new Azu application is running. Typed request and response contracts with real-time built in.{% endblock %}
+{% block head %}{{ csrf_metatag }}{% endblock %}
 
-{% block page_body %}
-<div class="container-lg py-4">
-  <!-- Page Header -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="text-center">
-        <h1 class="h1 mb-3">
-          <i class="bi bi-gem me-3"></i>
-          Welcome to {{ project.camelcase }}
-        </h1>
-        <p class="lead text-muted">
-          Your new Azu application is ready to go!
-        </p>
-      </div>
-    </div>
+{% block content %}
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero__status">
+    <span class="badge is-good badge--dot">Running</span>
+    <span class="badge">{{ environment }}</span>
   </div>
-
-  <!-- Welcome Cards -->
+  <p class="eyebrow">Welcome to {{ project_title }}</p>
+  <h1 id="hero-title">Typed contracts. <em>Real-time</em> by default.</h1>
+  <p>Your Azu app is up. Every route is a small struct with a typed request and response, checked when you compile, and the same app can push live updates over WebSockets.</p>
   <div class="row">
-    <div class="col-md-4 mb-4">
-      <div class="card border-secondary h-100">
-        <div class="card-body text-center">
-          <i class="bi bi-lightning-charge display-4 text-primary mb-3"></i>
-          <h5 class="card-title">Fast & Efficient</h5>
-          <p class="card-text">Built with Crystal for maximum performance and type safety.</p>
-        </div>
-      </div>
-    </div>
+    <a class="btn" href="#next-steps">Build your first page</a>
+    <a class="btn btn--secondary" href="https://azutoolkit.org" rel="noopener noreferrer">Read the docs</a>
+  </div>
+</section>
 
-    <div class="col-md-4 mb-4">
-      <div class="card border-secondary h-100">
-        <div class="card-body text-center">
-          <i class="bi bi-shield-check display-4 text-success mb-3"></i>
-          <h5 class="card-title">Type Safe</h5>
-          <p class="card-text">Compile-time guarantees ensure your code is robust and reliable.</p>
-        </div>
-      </div>
-    </div>
+<section class="section" aria-labelledby="what-title">
+  <div class="section__head">
+    <p class="eyebrow">What is Azu</p>
+    <h2 id="what-title">A Crystal web framework that catches mistakes before your users do</h2>
+  </div>
+  <div class="grid">
+    <article class="card">
+      <span class="card__icon"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></span>
+      <h3>Typed contracts</h3>
+      <p class="muted">An endpoint is declared as <code>Endpoint(Request, Response)</code>. Params are validated into the request type and the compiler checks the response you return.</p>
+    </article>
+    <article class="card">
+      <span class="card__icon"><svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg></span>
+      <h3>Real-time built in</h3>
+      <p class="muted">Channels and Spark live components keep pages in sync over WebSockets, with no separate service to run.</p>
+    </article>
+    <article class="card">
+      <span class="card__icon"><svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg></span>
+      <h3>Fast as C, slick as Ruby</h3>
+      <p class="muted">Compiled by Crystal, routed with a radix tree and cached where it counts, with a Rails-like CLI on top.</p>
+    </article>
+  </div>
+</section>
 
-    <div class="col-md-4 mb-4">
-      <div class="card border-secondary h-100">
-        <div class="card-body text-center">
-          <i class="bi bi-gear display-4 text-info mb-3"></i>
-          <h5 class="card-title">Easy to Use</h5>
-          <p class="card-text">Simple, intuitive API that makes development a pleasure.</p>
-        </div>
+<section class="section" id="next-steps" aria-labelledby="steps-title">
+  <div class="section__head">
+    <p class="eyebrow">Next steps</p>
+    <h2 id="steps-title">From this page to a working CRUD in three commands</h2>
+    <p>Run these from the <span class="path">{{ project }}</span> directory.</p>
+  </div>
+  <ol class="steps" role="list">
+    <li class="card step">
+      <h3>Generate a resource</h3>
+      <p>Creates the model, migration, endpoints, requests, pages and templates for <code>Post</code>.</p>
+      <div class="cmd">
+        <code>azu generate scaffold Post title:string</code>
+        <button type="button" class="btn btn--ghost btn--sm" data-copy="azu generate scaffold Post title:string" aria-label="Copy command: azu generate scaffold" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span>
+        </button>
       </div>
+    </li>
+    <li class="card step">
+      <h3>Migrate the database</h3>
+      <p>Applies the new migration and refreshes <code>src/db/schema.cr</code>.</p>
+      <div class="cmd">
+        <code>azu db:migrate</code>
+        <button type="button" class="btn btn--ghost btn--sm" data-copy="azu db:migrate" aria-label="Copy command: azu db:migrate" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span>
+        </button>
+      </div>
+    </li>
+    <li class="card step">
+      <h3>Serve with hot reload</h3>
+      <p>Rebuilds when files change. Then open <a href="/posts"><span class="path">/posts</span></a> to see your new resource.</p>
+      <div class="cmd">
+        <code>azu serve</code>
+        <button type="button" class="btn btn--ghost btn--sm" data-copy="azu serve" aria-label="Copy command: azu serve" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span>
+        </button>
+      </div>
+    </li>
+  </ol>
+  <p class="sr-only" role="status" aria-live="polite" data-copy-status></p>
+</section>
+
+<section class="section" aria-labelledby="route-title">
+  <div class="section__head">
+    <p class="eyebrow">This page</p>
+    <h2 id="route-title">How this page is served</h2>
+    <p>The root route is a plain Azu endpoint. Edit it, or delete it once your own home page is ready.</p>
+  </div>
+  <div class="split">
+    <div class="table-wrap">
+      <table class="table table--stack">
+        <caption class="sr-only">Routes in this app</caption>
+        <thead><tr><th scope="col">Method</th><th scope="col">Path</th><th scope="col">Endpoint</th></tr></thead>
+        <tbody>
+          <tr>
+            <td data-label="Method"><span class="badge verb is-good">GET</span></td>
+            <td data-label="Path"><code>/</code></td>
+            <td data-label="Endpoint" class="path">{{ module_name }}::Welcome::IndexEndpoint</td>
+          </tr>
+          <tr>
+            <td data-label="Method"><span class="badge verb is-info">GET</span></td>
+            <td data-label="Path"><code>/assets/*</code></td>
+            <td data-label="Endpoint" class="path">Azu::Handler::Static (public/)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Your environment</h3>
+      <dl class="facts">
+        <div><dt>Azu</dt><dd>{{ azu_version }}</dd></div>
+        <div><dt>Crystal</dt><dd>{{ crystal_version }}</dd></div>
+        <div><dt>{{ project }}</dt><dd>{{ app_version }}</dd></div>
+        <div><dt>Environment</dt><dd>{{ environment }}</dd></div>
+      </dl>
     </div>
   </div>
+  <pre class="code" tabindex="0" aria-label="src/endpoints/welcome/index_endpoint.cr"><code>struct {{ module_name }}::Welcome::IndexEndpoint
+  include Azu::Endpoint(Welcome::IndexRequest, Welcome::IndexPage)
 
-  <!-- Getting Started -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card border-secondary">
-        <div class="card-header border-secondary">
-          <h5 class="mb-0">
-            <i class="bi bi-rocket me-2"></i>
-            Getting Started
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <h6>Next Steps:</h6>
-              <ul class="list-unstyled">
-                <li class="mb-2">
-                  <i class="bi bi-check-circle text-success me-2"></i>
-                  Create your first model
-                </li>
-                <li class="mb-2">
-                  <i class="bi bi-check-circle text-success me-2"></i>
-                  Generate endpoints and views
-                </li>
-                <li class="mb-2">
-                  <i class="bi bi-check-circle text-success me-2"></i>
-                  Set up your database
-                </li>
-                <li class="mb-2">
-                  <i class="bi bi-check-circle text-success me-2"></i>
-                  Start building your features
-                </li>
-              </ul>
-            </div>
-            <div class="col-md-6">
-              <h6>Useful Commands:</h6>
-              <div class="bg-light p-3 rounded">
-                <code class="text-dark">
-                  $ azu generate model User<br>
-                  $ azu generate scaffold Post<br>
-                  $ azu db migrate<br>
-                  $ crystal run src/server.cr
-                </code>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  get "/"
 
-  <!-- Documentation Links -->
-  <div class="row mt-4">
-    <div class="col-12 text-center">
-      <div class="btn-group" role="group">
-        <a href="https://azutoolkit.org" class="btn btn-outline-primary">
-          <i class="bi bi-book me-2"></i>
-          Documentation
-        </a>
-        <a href="https://github.com/azutoolkit/azu" class="btn btn-outline-secondary">
-          <i class="bi bi-github me-2"></i>
-          GitHub
-        </a>
-        <a href="https://crystal-lang.org" class="btn btn-outline-info">
-          <i class="bi bi-gem me-2"></i>
-          Crystal Lang
-        </a>
-      </div>
-    </div>
+  def call : Welcome::IndexPage
+    Welcome::IndexPage.new
+  end
+end</code></pre>
+</section>
+
+<section class="section" aria-labelledby="docs-title">
+  <div class="section__head">
+    <p class="eyebrow">Learn more</p>
+    <h2 id="docs-title">Docs and source</h2>
   </div>
-</div>
+  <div class="links">
+    <a class="card" href="https://azutoolkit.org" rel="noopener noreferrer">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>Documentation</h3>
+      <p class="muted">Guides for endpoints, requests, templates, channels and Spark.</p>
+    </a>
+    <a class="card" href="https://github.com/azutoolkit/azu" rel="noopener noreferrer">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Azu on GitHub</h3>
+      <p class="muted">The framework source, issues and the example app.</p>
+    </a>
+    <a class="card" href="https://github.com/azutoolkit/cql" rel="noopener noreferrer">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-db"/></svg>CQL ORM</h3>
+      <p class="muted">Models, migrations and queries for your database.</p>
+    </a>
+    <a class="card" href="https://github.com/azutoolkit/azu_cli" rel="noopener noreferrer">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg>Azu CLI</h3>
+      <p class="muted">Every generator and command, from <code>azu new</code> to <code>azu jobs:worker</code>.</p>
+    </a>
+  </div>
+</section>
 {% endblock %}
