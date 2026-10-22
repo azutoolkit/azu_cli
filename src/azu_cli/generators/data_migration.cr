@@ -2,7 +2,7 @@ require "teeplate"
 
 module AzuCLI
   module Generate
-    # Data migration generator that creates CQL::DataMigration classes
+    # Data migration generator that creates CQL::Migration classes for data changes
     class DataMigration < Teeplate::FileTree
       directory "#{__DIR__}/../templates/data_migration"
       OUTPUT_DIR = "./src/db/data_migrations"
@@ -35,7 +35,8 @@ module AzuCLI
       # Convert a string to PascalCase
       private def to_pascal_case(str : String) : String
         str.split(/[-_\s]+/)
-          .map(&.capitalize)
+          .reject(&.empty?)
+          .map { |word| word[0].upcase + word[1..] }
           .join
       end
 

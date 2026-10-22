@@ -91,18 +91,33 @@ database:
 ### Connection Setup
 
 ```crystal
-# src/initializers/database.cr
-require "cql"
+# src/initializers/cql_config.cr
+require "pg"
+require "azu/cql"
 
-# Define database context
-AppDB = CQL::Schema.define do
-  adapter :postgresql
-  url ENV["AZU_DATABASE_URL"]? || "postgresql://localhost/myapp"
-  pool_size ENV["AZU_DATABASE_POOL_SIZE"]?.try(&.to_i) || 5
-  config.timeout = ENV["AZU_DATABASE_TIMEOUT"]?.try(&.to_i) || 5
-  config.log_queries = ENV["AZU_LOG_QUERIES"]? == "true"
+Azu::CQL.configure do |c|
+  c.db = ENV["DATABASE_URL"]? || "postgresql://localhost/my_app_#{ENV["CRYSTAL_ENV"]? || "development"}"
+  c.pool.size = 10
+end
+
+# The schema (src/db/schema.cr) loads after the initializers, so it is attached lazily
+Azu::CQL.attach { MyAppDB }
+```
+
+```crystal
+# src/db/schema.cr: URL, adapter and pool come from CQL.config
+MyAppDB = Azu::CQL.schema :my_app_db do
+  table :users do
+    primary :id, Int64
+    column :name, String
+  end
 end
 ```
+
+Azu's dev dashboard (`/dev-dashboard`) then shows a **Database** tab with every query. See the
+[azu database dashboard guide](https://github.com/azutoolkit/azu/blob/master/docs/reference/database-dashboard.md).
+Tables used by models must be declared in `src/db/schema.cr`; migrations are run with
+`auto_sync: false`, so they never rewrite that file.
 
 ## Model Generation
 

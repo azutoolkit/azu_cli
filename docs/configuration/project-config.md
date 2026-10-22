@@ -124,7 +124,7 @@ structure:
       - schema.cr
       - seed.cr
     - initializers/
-      - database.cr
+      - cql_config.cr
       - logger.cr
     - main.cr
     - server.cr

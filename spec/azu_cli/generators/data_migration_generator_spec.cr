@@ -86,7 +86,7 @@ describe AzuCLI::Generate::DataMigration do
 
         content = File.read(generated_file)
         content.should contain("require \"cql\"")
-        content.should contain("class UpdateUserData < CQL::DataMigration")
+        content.should contain("class UpdateUserData < CQL::Migration")
         content.should contain("def up")
         content.should contain("# Add your data migration logic here")
         content.should contain("def down")
@@ -108,7 +108,7 @@ describe AzuCLI::Generate::DataMigration do
         generated_file = File.join("db/migrations", generator.migration_filename)
         content = File.read(generated_file)
 
-        content.should contain("class UpdateUserEmails < CQL::DataMigration")
+        content.should contain("class UpdateUserEmails < CQL::Migration")
         content.should contain("def up")
         content.should contain("def down")
       end
@@ -128,7 +128,7 @@ describe AzuCLI::Generate::DataMigration do
         generated_file = File.join("db/migrations", generator.migration_filename)
         content = File.read(generated_file)
 
-        content.should contain("class MigrateUserData < CQL::DataMigration")
+        content.should contain("class MigrateUserData < CQL::Migration")
         content.should contain("# Process data in batches if needed")
         content.should contain("# Example: User.find_each { |user| ... }")
       end
@@ -168,7 +168,7 @@ describe AzuCLI::Generate::DataMigration do
   end
 
   describe "data migration content" do
-    it "includes proper CQL::DataMigration inheritance" do
+    it "includes proper CQL::Migration inheritance" do
       TestHelpers::TestSetup.with_temp_project do |temp_project|
         temp_project.create_shard_yml
         Dir.mkdir_p("db/migrations")
@@ -179,7 +179,7 @@ describe AzuCLI::Generate::DataMigration do
         generated_file = File.join("db/migrations", generator.migration_filename)
         content = File.read(generated_file)
 
-        content.should contain("class UpdateUserData < CQL::DataMigration")
+        content.should contain("class UpdateUserData < CQL::Migration")
         content.should_not contain("CQL::Migration")
       end
     end
@@ -245,7 +245,7 @@ describe AzuCLI::Generate::DataMigration do
 
         # Should be compatible with CQL migration system
         content.should contain("require \"cql\"")
-        content.should contain("CQL::DataMigration")
+        content.should contain("CQL::Migration")
         content.should contain("def up")
         content.should contain("def down")
       end
@@ -263,7 +263,7 @@ describe AzuCLI::Generate::DataMigration do
         content = File.read(generated_file)
 
         # Should be executable (no syntax errors)
-        content.should contain("class UpdateUserData < CQL::DataMigration")
+        content.should contain("class UpdateUserData < CQL::Migration")
         content.should contain("end")
       end
     end

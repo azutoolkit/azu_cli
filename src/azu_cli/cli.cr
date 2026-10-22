@@ -34,6 +34,10 @@ module AzuCLI
       register_command("db:reset", Commands::DB::Reset)
       register_command("db:status", Commands::DB::Status)
       register_command("db:setup", Commands::DB::Setup)
+      register_command("db:schema:load", Commands::DB::SchemaLoad)
+      register_command("db:data:migrate", Commands::DB::DataMigrate)
+      register_command("db:migrations:verify", Commands::DB::Verify)
+      register_command("db:validate", Commands::DB::Validate)
 
       # Development server command
       register_command("serve", Commands::Serve)

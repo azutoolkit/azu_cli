@@ -104,12 +104,17 @@ module AzuCLI
 
     # Detect schema name from database configuration
     # Returns tuple of {schema_name, schema_symbol}
-    # Matches CQL schema patterns like: BlogDB = CQL::Schema.define(...) or CQL::Schema.build(...)
+    # Matches schema patterns like: BlogDB = Azu::CQL.schema :blog_db do, CQL::Schema.define(...) or CQL::Schema.build(...)
     def detect_schema_info : {String, String}
       schema_file_path = schema_file_path()
       return {"AppDB", "app_db"} unless File.exists?(schema_file_path)
 
       content = File.read(schema_file_path)
+
+      # Azu bridge: BlogDB = Azu::CQL.schema :blog_db do ... end
+      if match = content.match(/([A-Z]\w*)\s*=\s*Azu::CQL\.schema\s+:(\w+)/)
+        return {match[1], match[2]}
+      end
 
       # Look for CQL schema definition: BlogDB = CQL::Schema.define(...) or .build(...)
       if match = content.match(/(\w+DB)\s*=\s*CQL::Schema\.(define|build)/)
@@ -132,7 +137,7 @@ module AzuCLI
 
     # Get schema file path
     def schema_file_path : String
-      Config.build_path(Config::Paths::DB, "schema.cr")
+      Config.build_path(Config::Paths::SRC, "db", "schema.cr")
     end
 
     # Get schema name from project

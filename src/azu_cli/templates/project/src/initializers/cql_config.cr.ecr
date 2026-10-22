@@ -1,0 +1,19 @@
+<%- if database_adapter == "pg" -%>
+require "pg"
+<%- elsif database_adapter == "mysql" -%>
+require "mysql"
+<%- elsif database_adapter == "sqlite3" -%>
+require "sqlite3"
+<%- end -%>
+require "azu/cql"
+
+# CQL's configuration is the single source of truth for the database connection.
+# The environment defaults (pool sizes, SSL, ...) come from CRYSTAL_ENV, which CQL
+# reads when its configuration is first created.
+Azu::CQL.configure do |c|
+  c.db = ENV["DATABASE_URL"]? || "<%= database_env_url %>"
+  c.pool.size = ENV["DATABASE_POOL_SIZE"]?.try(&.to_i) || 10
+end
+
+# Initializers load before src/db/schema.cr, so the dashboard resolves the schema lazily.
+Azu::CQL.attach { <%= schema_name %> }

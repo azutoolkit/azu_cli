@@ -1,5 +1,20 @@
 # Changelog - Azu CLI
 
+## Unreleased - One-initializer Azu + CQL setup
+
+Generated projects use the `azu/cql` bridge, so the Azu dev dashboard's **Database** tab works out of the box and
+CQL's own configuration is the single source of truth for the connection. **Requires an `azu` release that includes
+`Azu::CQL.configure`, `Azu::CQL.schema` and `Azu::CQL.attach` (azutoolkit/azu#60).**
+
+- `src/initializers/database.cr` is now `src/initializers/cql_config.cr` (`Azu::CQL.configure` + `Azu::CQL.attach { <Name>DB }`); the flags CQL never read and `config.env` are gone
+- `src/db/schema.cr` is `<Name>DB = Azu::CQL.schema :<name> do ... end` and carries no URI
+- `db:migrate`, `db:rollback`, `db:migrations:verify` and `db:data:migrate` runner scripts require `azu` and the initializers before the schema and use `MigratorConfig.new(auto_sync: false)`, so `src/db/schema.cr` is never rewritten with the database URI and password
+- Fixed: schema detection looked in `db/schema.cr` instead of `src/db/schema.cr` and only knew `CQL::Schema.define`
+- Fixed: `db:status`, `db:rollback`, `db:migrate --dry-run` and `db:migrations:verify` queried `schema_migrations` instead of CQL's `cql_schema_migrations`
+- Fixed: data migrations are plain `CQL::Migration` classes (there is no `CQL::DataMigration`) and are generated as `<timestamp>_data_<name>.cr`
+- Registered `db:schema:load` (now creates the tables of `src/db/schema.cr`), `db:data:migrate`, `db:migrations:verify` and `db:validate`
+- The generated `spec_helper.cr` sets `CRYSTAL_ENV` before requiring the app, which is when CQL reads it
+
 ## v0.0.2 - JoobQ Integration Modernization (October 11, 2025)
 
 ### 🚀 Major JoobQ Integration Improvements
