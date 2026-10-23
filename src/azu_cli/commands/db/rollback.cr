@@ -48,7 +48,7 @@ module AzuCLI
           end
 
           # Get applied migrations
-          applied_versions = get_applied_migration_versions
+          applied_versions = applied_migration_versions
           if applied_versions.empty?
             Logger.info("No applied migrations to rollback")
             return success("No migrations to rollback")
@@ -207,19 +207,6 @@ module AzuCLI
           unless response && response.downcase.starts_with?("y")
             raise "Rollback cancelled by user"
           end
-        end
-
-        # Get applied migration versions from database
-        private def get_applied_migration_versions : Array(Int64)
-          versions = [] of Int64
-          query_database("SELECT version FROM cql_schema_migrations ORDER BY version") do |rs|
-            rs.each do
-              versions << rs.read(Int64)
-            end
-          end
-          versions
-        rescue
-          [] of Int64
         end
 
         # Public test helper to access private method for testing

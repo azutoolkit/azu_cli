@@ -1,4 +1,5 @@
 require "teeplate"
+require "./migration"
 
 module AzuCLI
   module Generate
@@ -40,9 +41,17 @@ module AzuCLI
           .join
       end
 
-      # Generate timestamp for migration filename
+      # Version for the migration: now, or one second after the newest data or schema migration in
+      # the project. Both kinds are recorded in the same table, so their versions must never repeat.
       private def generate_timestamp : String
-        Time.utc.to_s("%Y%m%d%H%M%S")
+        format = "%Y%m%d%H%M%S"
+        time = Time.utc
+        newest = [OUTPUT_DIR, Migration::OUTPUT_DIR].flat_map { |dir| Dir.glob(File.join(dir, "*.cr")) }
+          .compact_map { |path| File.basename(path)[/\A\d{14}/]? }.max?
+        if newest && (last = Time.parse_utc(newest, format)) && last >= time.at_beginning_of_second
+          time = last + 1.second
+        end
+        time.to_s(format)
       end
 
       # Get migration filename
