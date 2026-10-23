@@ -38,7 +38,25 @@ describe AzuCLI::Generate::Request do
     content.should_not contain("getter id")
   end
 
-  it "reads the id of an update from the path, not from its body" do
-    request.call("update", attributes).should_not contain("getter id")
+  it "makes every field of an update optional so a PATCH only changes what it carries" do
+    content = request.call("update", attributes)
+
+    content.should_not contain("getter id")
+    content.should contain("getter title : String?")
+    content.should contain("getter published : Bool?\n")
+    content.should_not contain("= false")
+    content.should contain("validate title, given: true")
+    content.should_not contain("presence")
+  end
+
+  it "renders the given predicate with the update only" do
+    in_generated_project do
+      AzuCLI::Generate::Request.new("Post", "update", attributes).render(File.expand_path("src/requests"), force: true, interactive: false)
+      File.read("src/requests/predicates.cr").should contain("def given?(value, other)")
+
+      File.delete("src/requests/predicates.cr")
+      AzuCLI::Generate::Request.new("Post", "create", attributes).render(File.expand_path("src/requests"), force: true, interactive: false)
+      File.exists?("src/requests/predicates.cr").should be_false
+    end
   end
 end

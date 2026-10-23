@@ -5,8 +5,8 @@ module <%= app_module %>
     delete "<%= route %>"
 
     def call : <%= response_type %>
-      <%= resource_singular %> = <%= find_record %>
-      <%= namespace %>::DestroyService.new.call(<%= resource_singular %>)
+      record = <%= find_record %>
+      <%= namespace %>::DestroyService.new.call(record)
 <% if api? -%>
       status 204
       Azu::Response::Empty.new

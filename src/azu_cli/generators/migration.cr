@@ -54,24 +54,17 @@ module AzuCLI
         schema = File.read(schema_file)
         return if schema.matches?(/^\s*table :#{table_name} do/m)
 
-        closing = schema.rindex("end") || return
+        closing = schema.rindex(/^end\s*\z/m) || return
         File.write(schema_file, "#{schema[0...closing].rstrip}\n\n#{table_definition("  ")}\n#{schema[closing..]}")
       end
 
-      # Extract clean table name from migration name
-      private def extract_table_name(name : String) : String
-        # Remove common prefixes to get the actual table name
-        clean_name = name
-          .gsub(/^create_/, "")
-          .gsub(/^update_/, "")
-          .gsub(/^delete_/, "")
-          .gsub(/^drop_/, "")
-          .gsub(/^add_.*_to_/, "")
-          .gsub(/^remove_.*_from_/, "")
-          .gsub(/^change_.*_in_/, "")
+      NAME_PREFIXES = [/^create_/, /^update_/, /^delete_/, /^drop_/, /^add_.*_to_/, /^remove_.*_from_/, /^change_.*_in_/]
 
-        # Ensure it's properly pluralized
-        clean_name.singularize.pluralize
+      # The table a migration name is about: its name without the one prefix that says what it does
+      # (`create_update_logs` is about `update_logs`).
+      private def extract_table_name(name : String) : String
+        prefix = NAME_PREFIXES.find { |pattern| name.matches?(pattern) }
+        (prefix ? name.sub(prefix, "") : name).singularize.pluralize
       end
 
       # Detect migration type based on name pattern

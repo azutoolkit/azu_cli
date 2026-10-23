@@ -49,12 +49,12 @@ module AzuCLI
         return unless @generate_migration
 
         migrations_dir = File.join(File.dirname(output_path), "db", "migrations")
-        migration = Migration.new(@name, @attributes, @timestamps, @id_type)
+        migration = Migration.new(create_migration_name, @attributes, @timestamps, @id_type)
         migration.render(migrations_dir, force: force, interactive: interactive, list: list, color: color)
       end
 
       private def association_for(field : Field) : String?
-        case field.type.downcase
+        case field.kind
         when "references", "belongs_to"
           relation = field.name.gsub(/_id$/, "")
           "belongs_to :#{relation}, #{relation.camelcase}, foreign_key: :#{field.name}"

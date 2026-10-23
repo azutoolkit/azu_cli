@@ -1,9 +1,11 @@
 module <%= app_module %>
   class <%= namespace %>::UpdateService
-    def call(<%= resource_singular %> : <%= model_name %>, request : <%= request_type %>) : <%= model_name %>
-      <%= resource_singular %>.attributes(<%= assignments %>)
-      <%= resource_singular %>.save!
-      <%= resource_singular %>
+    def call(record : <%= model_name %>, request : <%= request_type %>) : <%= model_name %>
+<% changes.each do |change| -%>
+      <%= change %>
+<% end -%>
+      record.save!
+      record
     end
   end
 end

@@ -4,6 +4,7 @@
 <% fields.each do |field| -%>
 <% if field.input == "checkbox" -%>
   <label class="field field--check">
+    <input type="hidden" name="<%= field.name %>" value="false">
     <input type="checkbox" name="<%= field.name %>" value="true"{% if <%= resource_singular %>.<%= field.name %> %} checked{% endif %}>
     <%= field.label %>
   </label>

@@ -5,11 +5,11 @@ module <%= app_module %>
     get "<%= route %>"
 
     def call : <%= response_type %>
-      <%= resource_singular %> = <%= find_record %>
+      record = <%= find_record %>
 <% if api? -%>
-      <%= response_type %>.new(<%= resource_singular %>)
+      <%= response_type %>.new(record)
 <% else -%>
-      <%= response_type %>.new(<%= resource_singular %>, csrf_tag)
+      <%= response_type %>.new(record, csrf_tag)
 <% end -%>
     end
   end

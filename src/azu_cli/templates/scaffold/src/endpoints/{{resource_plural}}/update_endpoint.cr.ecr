@@ -5,12 +5,12 @@ module <%= app_module %>
     patch "<%= route %>"
 
     def call : <%= response_type %>
-      <%= resource_singular %> = <%= find_record %>
-      <%= namespace %>::UpdateService.new.call(<%= resource_singular %>, update_request)
+      record = <%= find_record %>
+      <%= namespace %>::UpdateService.new.call(record, update_request)
 <% if api? -%>
-      <%= response_type %>.new(<%= resource_singular %>)
+      <%= response_type %>.new(record)
 <% else -%>
-      redirect to: "/<%= resource_plural %>/#{<%= resource_singular %>.id}", status: 303
+      redirect to: "/<%= resource_plural %>/#{record.id}", status: 303
 <% end -%>
     end
   end

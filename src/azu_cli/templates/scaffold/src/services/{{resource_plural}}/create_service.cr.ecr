@@ -1,9 +1,9 @@
 module <%= app_module %>
   class <%= namespace %>::CreateService
     def call(request : <%= request_type %>) : <%= model_name %>
-      <%= resource_singular %> = <%= model_name %>.new(<%= assignments %>)
-      <%= resource_singular %>.save!
-      <%= resource_singular %>
+      record = <%= model_name %>.new(<%= assignments %>)
+      record.save!
+      record
     end
   end
 end

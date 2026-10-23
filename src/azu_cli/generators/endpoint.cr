@@ -7,6 +7,7 @@ module AzuCLI
     class Endpoint < Resource
       directory "#{__DIR__}/../templates/scaffold/src/endpoints"
       OUTPUT_DIR = "./src/endpoints"
+      ACTIONS    = CRUD_ACTIONS
 
       getter endpoint_type : String
 

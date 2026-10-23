@@ -39,7 +39,7 @@ describe "page generators" do
         content.should contain("struct Posts::ShowResponse")
         content.should contain("include JSON::Serializable")
         content.should contain("getter published : Bool")
-        content.should contain("@title = post.title")
+        content.should contain("@title = record.title")
       end
     end
 
@@ -47,7 +47,7 @@ describe "page generators" do
       in_generated_project do
         content = rendered(AzuCLI::Generate::Response.new("Post", "index", attributes), "src/responses", "posts/index_response.cr")
 
-        content.should contain("Posts::ShowResponse.new(post)")
+        content.should contain("Posts::ShowResponse.new(record)")
       end
     end
   end
@@ -80,7 +80,7 @@ describe "page generators" do
       form.should contain("{{ csrf_tag | safe }}")
       form.should contain(%(name="_method" value="{{ form_method }}"))
       form.should contain(%(<textarea name="body"))
-      form.should contain(%(<input type="checkbox" name="published" value="true"{% if post.published %} checked{% endif %}>))
+      form.should contain(%(<input type="hidden" name="published" value="false">\n    <input type="checkbox" name="published" value="true"{% if post.published %} checked{% endif %}>))
     end
 
     it "edits with PATCH and deletes from the show page" do

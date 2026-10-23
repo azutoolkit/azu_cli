@@ -17,6 +17,11 @@ module AzuCLI
         "#{@namespace}::#{action_class}Request"
       end
 
+      # Each field an update request carries, set on the record.
+      def changes : Array(String)
+        fields.map { |field| "request.#{field.name}.try { |value| record.#{field.name} = value }" }
+      end
+
       def assignments : String
         fields.map { |field| "#{field.name}: request.#{field.name}" }.join(", ")
       end

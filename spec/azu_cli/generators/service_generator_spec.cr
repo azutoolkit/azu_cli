@@ -18,19 +18,21 @@ describe AzuCLI::Generate::Service do
     content.should contain("class Posts::CreateService")
     content.should contain("def call(request : Posts::CreateRequest) : Post")
     content.should contain("Post.new(title: request.title, published: request.published)")
-    content.should contain("post.save!")
+    content.should contain("record.save!")
   end
 
   it "updates the record it is given" do
     content = service.call("update")
 
-    content.should contain("def call(post : Post, request : Posts::UpdateRequest) : Post")
-    content.should contain("post.attributes(title: request.title, published: request.published)")
-    content.should contain("post.save!")
+    content.should contain("def call(record : Post, request : Posts::UpdateRequest) : Post")
+    content.should contain("request.title.try { |value| record.title = value }")
+    content.should contain("request.published.try { |value| record.published = value }")
+    content.should_not contain("attributes(")
+    content.should contain("record.save!")
   end
 
   it "deletes the record it is given" do
-    service.call("destroy").should contain("post.delete!")
+    service.call("destroy").should contain("record.delete!")
   end
 
   it "does not need a Result class" do

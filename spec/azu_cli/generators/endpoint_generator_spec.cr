@@ -22,6 +22,17 @@ describe AzuCLI::Generate::Endpoint do
     end
   end
 
+  it "names a multi-word resource in snake_case routes and CamelCase constants" do
+    in_generated_project do
+      generator = AzuCLI::Generate::Endpoint.new("UserProfile", "show")
+      content = rendered(generator, "src/endpoints", "user_profiles/show_endpoint.cr")
+
+      generator.route.should eq("/user_profiles/:id")
+      content.should contain("struct UserProfiles::ShowEndpoint")
+      content.should contain("UserProfile.find?(show_request.id)")
+    end
+  end
+
   it "renders a page for a read" do
     content = endpoint.call("index", "web")
 
@@ -40,8 +51,8 @@ describe AzuCLI::Generate::Endpoint do
   end
 
   it "redirects with 303 after a web write" do
-    endpoint.call("create", "web").should contain(%(redirect to: "/posts/\#{post.id}", status: 303))
-    endpoint.call("update", "web").should contain(%(redirect to: "/posts/\#{post.id}", status: 303))
+    endpoint.call("create", "web").should contain(%(redirect to: "/posts/\#{record.id}", status: 303))
+    endpoint.call("update", "web").should contain(%(redirect to: "/posts/\#{record.id}", status: 303))
     endpoint.call("destroy", "web").should contain(%(redirect to: "/posts", status: 303))
   end
 
@@ -53,7 +64,7 @@ describe AzuCLI::Generate::Endpoint do
   it "answers with JSON in an API project" do
     endpoint.call("index", "api").should contain("Azu::Endpoint(Posts::IndexRequest, Posts::IndexResponse)")
     endpoint.call("create", "api").should contain("status 201")
-    endpoint.call("create", "api").should contain("Posts::ShowResponse.new(post)")
+    endpoint.call("create", "api").should contain("Posts::ShowResponse.new(record)")
     endpoint.call("destroy", "api").should contain("status 204")
   end
 end

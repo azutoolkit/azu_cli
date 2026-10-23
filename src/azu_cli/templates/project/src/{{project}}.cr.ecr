@@ -66,7 +66,9 @@ module <%= @module_name %>
 <% if @project_type == "web" -%>
   Azu::Handler::CSRF.configure do |csrf|
     csrf.strategy = Azu::Handler::CSRF::Strategy::SignedDoubleSubmit
-    csrf.secret_key = "1234567890"
+    # Set CSRF_SECRET (the generated .env has one). Without it every process signs with its own random
+    # key, which is fine for one process in development but breaks forms behind several processes.
+    csrf.secret_key = ENV["CSRF_SECRET"]? || Random::Secure.urlsafe_base64(64)
   end
 
 <% end -%>

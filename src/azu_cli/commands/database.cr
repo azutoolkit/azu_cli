@@ -16,6 +16,8 @@ module AzuCLI
       property username : String = "postgres"
       property password : String = ""
       property environment : String = "development"
+      @sqlite_file : String?
+      @url_database_name : String?
 
       # Connection pool configuration
       property pool_size : Int32 = 10
@@ -67,6 +69,14 @@ module AzuCLI
         @username = uri.user || "postgres"
         @password = uri.password || ""
         @database_name = uri.path.try(&.lstrip('/')) || ""
+        remember_sqlite_file(url) if {"sqlite", "sqlite3"}.includes?(@adapter)
+      end
+
+      # The file a SQLite URL names (`sqlite3://./db/app.db?journal_mode=wal` is `./db/app.db`), and the
+      # database name it goes by. URI.parse reads the `.` of `./db` as a host, so the scheme is cut by hand.
+      private def remember_sqlite_file(url : String)
+        @sqlite_file = url.sub(/\Asqlite3?:(\/\/)?/, "").split('?', 2).first
+        @database_name = @url_database_name = File.basename(@sqlite_file.to_s, ".db")
       end
 
       # Get default port for database adapter
@@ -83,16 +93,25 @@ module AzuCLI
         end
       end
 
-      # Adapter of the project's database driver shard (sqlite3, mysql), nil for PostgreSQL or no project
+      # Adapter of the project's database driver shard (sqlite3, mysql). PostgreSQL, the default, wins
+      # when its driver is there, and is what a project without any driver gets.
       private def project_adapter : String?
         dependencies = Utils.project_dependencies
+        return if dependencies.includes?("pg")
         {"sqlite3", "mysql"}.find { |driver| dependencies.includes?(driver) }
       end
 
-      # File of a SQLite database: the path of DATABASE_URL, else `db/<name>.db` like the generated
-      # project's initializer. SQLite needs no server and creates the file on first use.
+      # File of a SQLite database. The file of DATABASE_URL belongs to the database that URL names; any
+      # other name (`--database other`) is `db/<name>.db`, like the generated project's initializer, so
+      # db:drop never deletes the URL's file for another name. SQLite needs no server and creates the
+      # file on first use.
       protected def sqlite_path(db_name : String) : String
-        @database_url.try(&.sub(/\Asqlite3?:(\/\/)?/, "")) || "./db/#{db_name}.db"
+        file = @sqlite_file
+        return "./db/#{db_name}.db" unless file && db_name == @url_database_name
+        if file.empty? || file.starts_with?(":memory:")
+          raise "#{@database_url} is an in-memory database: it has no file to create, check or drop"
+        end
+        file
       end
 
       # Infer database name from current directory

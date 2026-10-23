@@ -9,6 +9,7 @@ describe "db commands in a SQLite project" do
     project = File.join(root, "blog")
     Dir.mkdir_p(project)
     File.write(File.join(project, "shard.yml"), "name: blog\nversion: 0.1.0\ndependencies:\n#{shards}")
+    ENV["AZU_ENV"] = "test"
     Dir.cd(project) { block.call }
 ensure
   FileUtils.rm_rf(root) if root
@@ -22,6 +23,12 @@ ensure
       AzuCLI::Commands::DB::Create.new.adapter.should eq("mysql")
     })
     with_sqlite_project.call("  pg:\n    github: will/crystal-pg\n", -> {
+      AzuCLI::Commands::DB::Create.new.adapter.should eq("postgres")
+    })
+  end
+
+  it "stays on PostgreSQL when its driver is there next to others" do
+    with_sqlite_project.call("  pg:\n    github: will/crystal-pg\n  sqlite3:\n    github: crystal-lang/crystal-sqlite3\n", -> {
       AzuCLI::Commands::DB::Create.new.adapter.should eq("postgres")
     })
   end
@@ -40,12 +47,48 @@ ensure
     })
   end
 
-  it "uses the file named by DATABASE_URL" do
-    with_sqlite_project.call("  sqlite3:\n    github: crystal-lang/crystal-sqlite3\n", -> {
-      ENV["DATABASE_URL"] = "sqlite3://./data/app.db"
+  sqlite_shards = "  sqlite3:\n    github: crystal-lang/crystal-sqlite3\n"
+
+  it "uses the file named by DATABASE_URL, without its query string" do
+    with_sqlite_project.call(sqlite_shards, -> {
+      ENV["DATABASE_URL"] = "sqlite3://./data/app.db?journal_mode=wal"
       begin
         AzuCLI::Commands::DB::Create.new.execute.success?.should be_true
         File.exists?("data/app.db").should be_true
+      ensure
+        ENV.delete("DATABASE_URL")
+      end
+    })
+  end
+
+  it "keeps the file of DATABASE_URL out of reach of another database name" do
+    with_sqlite_project.call(sqlite_shards, -> {
+      ENV["DATABASE_URL"] = "sqlite3://./data/app.db"
+      begin
+        AzuCLI::Commands::DB::Create.new.execute.success?.should be_true
+
+        create = AzuCLI::Commands::DB::Create.new
+        create.parse_args(["--database", "other", "--force"])
+        create.execute.success?.should be_true
+        File.exists?("db/other.db").should be_true
+        File.exists?("data/app.db").should be_true
+
+        drop = AzuCLI::Commands::DB::Drop.new
+        drop.parse_args(["--database", "other", "--force"])
+        drop.execute.success?.should be_true
+        File.exists?("db/other.db").should be_false
+        File.exists?("data/app.db").should be_true
+      ensure
+        ENV.delete("DATABASE_URL")
+      end
+    })
+  end
+
+  it "refuses an in-memory database" do
+    with_sqlite_project.call(sqlite_shards, -> {
+      ENV["DATABASE_URL"] = "sqlite3::memory:"
+      begin
+        expect_raises(Exception, /in-memory/) { AzuCLI::Commands::DB::Create.new.execute }
       ensure
         ENV.delete("DATABASE_URL")
       end

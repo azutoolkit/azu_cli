@@ -118,6 +118,8 @@ check_api_scaffold() {
   expect_body '"body":"First post"'
   api_request PATCH /posts/1 200 '{"title":"Updated","body":"Edited"}'
   expect_body '"title":"Updated"'
+  expect_body '"published":true' # a PATCH without published keeps it
+  api_request PATCH /posts/1 422 '{"title":""}'
   api_request GET /posts 200
   expect_body '"title":"Updated"'
   api_request DELETE /posts/1 204
@@ -142,11 +144,12 @@ check_web_scaffold() {
   submit "$jar" /posts 422 --data-urlencode title= --data-urlencode body=
 
   fetch /posts/new "$jar" >/dev/null
-  submit "$jar" /posts 303 --data-urlencode "title=Hello <e2e>" --data-urlencode "body=First post" --data-urlencode published=true
+  submit "$jar" /posts 303 --data-urlencode "title=Hello <e2e>" --data-urlencode "body=First post" --data-urlencode published=false --data-urlencode published=true
   expect_redirect /posts/1
   expect_status /posts/1 200
   expect_body 'Hello &lt;e2e&gt;'
   expect_body 'First post'
+  expect_body '<dd>true</dd>'
   expect_status /posts 200
   expect_body 'href="/posts/1"'
 
@@ -154,9 +157,19 @@ check_web_scaffold() {
   [ "$(fetch /posts/1/edit "$jar")" = 200 ] || fail "GET /posts/1/edit did not return 200"
   expect_body 'name="_method" value="patch"'
   expect_body 'First post</textarea>'
+  submit "$jar" /posts/1 422 --data-urlencode _method=patch --data-urlencode "title="
+  fetch /posts/1/edit "$jar" >/dev/null
   submit "$jar" /posts/1 303 --data-urlencode _method=patch --data-urlencode "title=Updated title" --data-urlencode "body=Edited"
   expect_redirect /posts/1
   expect_status /posts/1 200
+  expect_body 'Updated title'
+  expect_body '<dd>true</dd>' # a PATCH without published keeps it
+
+  rm -f "$jar"
+  fetch /posts/1/edit "$jar" >/dev/null
+  submit "$jar" /posts/1 303 --data-urlencode _method=patch --data-urlencode published=false
+  expect_status /posts/1 200
+  expect_body '<dd>false</dd>'
   expect_body 'Updated title'
 
   rm -f "$jar"

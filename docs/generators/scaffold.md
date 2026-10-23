@@ -176,6 +176,22 @@ The `_form` partial carries the CSRF field (`csrf_tag`, the project enables `Azu
 the edit page adds `_method=patch`, which the router turns into a `PATCH`. Delete is a form on the show page
 with `_method=delete`. Values are escaped with `| e`: `.jinja` templates are not auto-escaped.
 
+## Attributes
+
+`name:type[?][:modifier...]`, for example `title:string`, `age:int32?`, `email:string:unique`,
+`owner_id:int64:ref:users`.
+
+- `?` makes the column and the request field optional; without it a column is NOT NULL and a string must be present.
+- `unique` and `index` become column options, `required` is the default and accepted for clarity,
+  `ref:<table>` (or the `references` type) adds a foreign key.
+- Names are lowercase identifiers and not Crystal keywords (`end`, `class`, `select`, ...) or methods of the model (`errors`, `table`, ...).
+- Resource names must differ in singular and plural (`Series`, `News`, `Fish` are rejected) and must not hide a constant
+  the generated code uses (`Status`, `Request`, `Context`, ...). `Post`, `Posts`, `Person` and `People` all give model `Post` / `Person`.
+- Not supported yet by the scaffold forms: `json` and `uuid` fields (they generate, but their forms are untested).
+
+An update is a `PATCH`: its request fields are all optional and only the ones sent change the record
+(a given string must not be blank). The edit form sends a hidden `false` before each checkbox so an unchecked box is saved.
+
 ## Field Types
 
 | Type         | Crystal Type | Description           |

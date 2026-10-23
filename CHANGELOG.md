@@ -29,6 +29,10 @@ serves working CRUD. `scripts/e2e_generated_app.sh` (the generated-app CI job) p
 - `azu db:create`, `db:migrate`, `db:setup` and `db:drop` work for SQLite projects: the adapter is read from the project's
   `shard.yml`, the database is `db/<name>.db` like the generated initializer
 - Generated web projects use the `CSRF` instance that signs the tokens (`Azu::Handler::CSRF.default`) and ship form styles
+- Generated web projects read the CSRF secret from `CSRF_SECRET` (generated into `.env`) and fall back to a random per-process key; the fixed `"1234567890"` is gone
+- Scaffold attributes accept `?`, `:unique`, `:index`, `:required` and `:ref:<table>`; field and resource names are validated (keywords, identifiers, names equal in singular and plural, names that hide generated constants)
+- An update only changes the fields it carries; unsupported actions (`generate endpoint Users activate`) are an error that names the supported ones
+- `db:drop` and `db:create --force` only touch the file of `DATABASE_URL` for the database it names; `?query` is ignored and in-memory URLs are refused
 - Removed: `SCAFFOLD_SUMMARY.md`, the unused `generate action` generator and the service `Result` class and the scaffold
   templates nothing rendered
 

@@ -2,8 +2,18 @@ require "teeplate"
 
 module AzuCLI
   module Generate
-    # One attribute of a resource (`title:string`) and how each layer spells it.
+    # One attribute of a resource, written `name:type[?][:modifier...]`: `title:string`,
+    # `age:int32?`, `email:string:unique`, `owner_id:int64:ref:users`.
+    # Modifiers: `unique` and `index` (column options), `required` (the default: columns are NOT NULL
+    # unless the type ends in `?`) and `ref:<table>` (a foreign key).
     record Field, name : String, type : String do
+      # Crystal words a name cannot be, and methods of the model and the request that a getter would hide.
+      RESERVED = %w(abstract alias annotation as asm begin break case class def do else elsif end ensure enum
+        extend false for fun if in include instance_sizeof is_a lib macro module next nil of offsetof out
+        pointerof private protected require rescue responds_to return select self sizeof struct super then
+        true type typeof uninitialized union unless until verbatim when while with yield
+        errors attributes schema table destroyed valid)
+      MODIFIERS = %w(unique index required)
       # The model provides these columns itself.
       PROVIDED = %w(id created_at updated_at)
 
@@ -12,13 +22,39 @@ module AzuCLI
         attributes.map { |name, type| new(name, type) }.reject { |field| field.association? || PROVIDED.includes?(field.name) }
       end
 
+      # Why `name` cannot be an attribute, if it cannot.
+      def self.name_error(name : String) : String?
+        if !name.matches?(/\A[a-z_][a-z0-9_]*\z/)
+          "Invalid field name '#{name}': use lowercase letters, digits and underscores, not starting with a digit."
+        elsif RESERVED.includes?(name)
+          "Field name '#{name}' is a Crystal keyword or a method of the model; choose another."
+        end
+      end
+
+      # Why the type of this attribute is not supported, if it is not.
+      def type_error(supported_kinds : Array(String)) : String?
+        return "Unsupported attribute type '#{kind}' for field '#{name}'. Supported types: #{supported_kinds.join(", ")}" unless supported_kinds.includes?(kind)
+
+        unknown = modifiers.reject { |modifier| MODIFIERS.includes?(modifier) }
+        return if unknown.empty? || (unknown.first == "ref" && unknown.size == 2)
+        "Unsupported modifier '#{unknown.join(":")}' for field '#{name}'. Supported: #{MODIFIERS.join(", ")}, ref:<table>"
+      end
+
+      def kind : String
+        segments.first.chomp('?').downcase
+      end
+
+      def modifiers : Array(String)
+        segments[1..]
+      end
+
       def nilable? : Bool
-        type.ends_with?("?")
+        segments.first.ends_with?("?")
       end
 
       # `comments:has_many` declares an association, not a column.
       def association? : Bool
-        {"has_many", "has_one"}.includes?(type.downcase)
+        {"has_many", "has_one"}.includes?(kind)
       end
 
       def crystal_type : String
@@ -36,21 +72,21 @@ module AzuCLI
       # The CQL table DSL line that declares this column.
       def column : String
         case base_type
-        when "String" then "text :#{name}#{null_option}"
-        when "Bool"   then "boolean :#{name}, default: false#{null_option}"
-        else               "column :#{name}, #{base_type}#{null_option}"
+        when "String" then "text :#{name}#{options}"
+        when "Bool"   then "boolean :#{name}, default: false#{options}"
+        else               "column :#{name}, #{base_type}#{options}"
         end
       end
 
-      # The CQL table DSL line that constrains a `user_id:references` column to the target's id.
+      # The CQL table DSL line that constrains a `user_id:references` or `:ref:users` column.
       def foreign_key : String?
-        return unless {"references", "belongs_to"}.includes?(type.downcase)
-        "foreign_key [:#{name}], references: :#{name.gsub(/_id$/, "").pluralize}, references_columns: [:id]"
+        table = referenced_table
+        "foreign_key [:#{name}], references: :#{table}, references_columns: [:id]" if table
       end
 
       # The HTML control that edits this field.
       def input : String
-        if type.chomp('?').downcase == "text"
+        if kind == "text"
           "textarea"
         elsif bool?
           "checkbox"
@@ -65,8 +101,20 @@ module AzuCLI
         name.tr("_", " ").capitalize
       end
 
+      private def segments : Array(String)
+        type.split(':')
+      end
+
+      private def referenced_table : String?
+        if {"references", "belongs_to"}.includes?(kind)
+          name.gsub(/_id$/, "").pluralize
+        elsif (position = modifiers.index("ref"))
+          modifiers[position + 1]?
+        end
+      end
+
       private def base_type : String
-        case type.chomp('?').downcase
+        case kind
         when "int32", "integer"                  then "Int32"
         when "int64", "references", "belongs_to" then "Int64"
         when "float32"                           then "Float32"
@@ -80,8 +128,12 @@ module AzuCLI
         end
       end
 
-      private def null_option : String
-        nilable? ? ", null: true" : ""
+      private def options : String
+        options = [] of String
+        options << "null: true" if nilable?
+        options << "unique: true" if modifiers.includes?("unique")
+        options << "index: true" if modifiers.includes?("index")
+        options.empty? ? "" : ", #{options.join(", ")}"
       end
     end
 
@@ -94,6 +146,8 @@ module AzuCLI
     #
     # Teeplate substitutes `{{name}}` in template paths with the instance variable `@name`.
     abstract class Resource < Teeplate::FileTree
+      CRUD_ACTIONS = %w(index show new create edit update destroy)
+
       getter name : String
       getter action : String
       getter attributes : Hash(String, String)
@@ -104,9 +158,34 @@ module AzuCLI
       getter app_module : String
       getter app_dir : String
 
+      # Constants of Crystal, Azu (the app module includes it) and the generated code that a model of
+      # this name would hide, or that inflect badly ("status" singularizes to "statu").
+      RESERVED_NAMES = %w(Status Request Response Params Context Header Headers Handler Router Error Method
+        Templates Configuration Channel Component Cache Endpoint Spark Helpers Environment Result Log
+        Object Class Module Struct Enum Hash Array String Symbol Int Float Bool Nil Time File Dir IO Set
+        Range Proc Tuple Value Exception Process Signal Path Random Math Mutex Fiber UUID JSON YAML URI
+        HTTP CQL Azu)
+
+      # The plural of a resource name: `Post`, `Posts` and `post` are all "posts".
+      def self.plural(name : String) : String
+        name.underscore.singularize.pluralize
+      end
+
+      # Why `name` cannot be a resource, if it cannot.
+      def self.name_error(name : String, app_module : String = Utils.project_module_name) : String?
+        singular = name.underscore.singularize
+        if !name.matches?(/\A[A-Za-z][A-Za-z0-9_]*\z/)
+          "Invalid resource name '#{name}'. Must be a valid Crystal identifier."
+        elsif singular == singular.pluralize
+          "Resource name '#{name}' is the same in singular and plural, so its model and its routes would collide. Choose another name."
+        elsif [name.camelcase, singular.camelcase].any? { |constant| RESERVED_NAMES.includes?(constant) || constant == app_module }
+          "Resource name '#{name}' would hide a constant the generated code uses. Choose another name."
+        end
+      end
+
       def initialize(@name : String, @action : String = "index", @attributes : Hash(String, String) = {} of String => String)
-        @snake_case_name = @name.underscore
-        @resource_singular = @snake_case_name.singularize
+        @resource_singular = @name.underscore.singularize
+        @snake_case_name = @resource_singular
         @resource_plural = @resource_singular.pluralize
         @namespace = @resource_plural.camelcase
         @app_module = Utils.project_module_name
@@ -114,7 +193,11 @@ module AzuCLI
       end
 
       def model_name : String
-        @name.camelcase
+        @resource_singular.camelcase
+      end
+
+      def create_migration_name : String
+        "create_#{@resource_plural}"
       end
 
       def action_class : String

@@ -159,13 +159,13 @@ describe "Scaffold Generator Integration" do
         Dir.cd(project_path) do
           # Verify model file contains all field types
           model_content = File.read("src/models/product.cr")
-          model_content.should contain("getter name : String")
-          model_content.should contain("getter description : String")
-          model_content.should contain("getter price : Float64")
-          model_content.should contain("getter in_stock : Bool")
-          model_content.should contain("getter category_id : Int32")
-          model_content.should contain("getter tags : JSON::Any")
-          model_content.should contain("getter created_at : Time")
+          model_content.should contain("property name : String")
+          model_content.should contain("property description : String")
+          model_content.should contain("property price : Float64")
+          model_content.should contain("property in_stock : Bool")
+          model_content.should contain("property category_id : Int32")
+          model_content.should contain("property tags : JSON::Any")
+          model_content.should contain("property created_at : Time")
         end
       end
     end

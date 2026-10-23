@@ -36,9 +36,9 @@ describe AzuCLI::Generate::Model do
       content.should contain("class Post\n")
       content.should contain("include CQL::ActiveRecord::Model(Int64)")
       content.should contain("db_context BlogDB, :posts")
-      content.should contain("getter title : String")
-      content.should contain("getter published : Bool")
-      content.should contain("getter created_at : Time?")
+      content.should contain("property title : String")
+      content.should contain("property published : Bool")
+      content.should contain("property created_at : Time?")
       content.should contain("def initialize(@title : String, @views : Int32, @published : Bool)")
       content.should_not contain("validate")
     end
@@ -59,6 +59,16 @@ describe AzuCLI::Generate::Model do
       migration = Dir.glob("src/db/migrations/*_create_posts.cr").first
       File.read(migration).should contain("schema.table :posts do")
       File.read("src/db/schema.cr").should contain("  table :posts do\n    primary :id, Int64, auto_increment: true\n    text :title\n    column :views, Int32\n")
+    end
+  end
+
+  it "creates a create-table migration even for names that look like another kind" do
+    in_generated_project do
+      {"UpdateLog" => "update_logs", "DeleteItem" => "delete_items", "DropZone" => "drop_zones", "Person" => "people"}.each do |name, table|
+        rendered(AzuCLI::Generate::Model.new(name, {"title" => "string"}), "src/models", "#{name.underscore}.cr")
+
+        File.read(Dir.glob("src/db/migrations/*_create_#{table}.cr").first).should contain("schema.table :#{table} do")
+      end
     end
   end
 

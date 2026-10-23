@@ -246,6 +246,19 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf(test_dir)
     end
 
+    it "signs CSRF tokens with a per-project secret, never a fixed one" do
+      test_dir = "./tmp_test_csrf_secret"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
+
+      source = File.read(File.join(test_dir, "src", "myapp.cr"))
+      source.should contain(%(csrf.secret_key = ENV["CSRF_SECRET"]? || Random::Secure.urlsafe_base64(64)))
+      source.should_not contain("1234567890")
+      File.read(File.join(test_dir, ".env")).should match(/^CSRF_SECRET=[0-9a-f]{64}$/m)
+
+      FileUtils.rm_rf(test_dir)
+    end
+
     it "uses the mysql and sqlite3 drivers in the initializer" do
       {"mysql" => "mysql", "sqlite3" => "sqlite3"}.each do |database, driver|
         generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database)

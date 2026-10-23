@@ -23,9 +23,9 @@ describe "Model Generator E2E" do
       model_content.should contain("db_context")
       model_content.should contain(":users")
       # Verify attribute getters
-      model_content.should contain("getter name")
-      model_content.should contain("getter email")
-      model_content.should contain("getter age")
+      model_content.should contain("property name")
+      model_content.should contain("property email")
+      model_content.should contain("property age")
     end
   end
 
@@ -56,8 +56,8 @@ describe "Model Generator E2E" do
 
       # Verify timestamps are present in model
       model_content = read_file(project_path, "src/models/article.cr").not_nil!
-      model_content.should contain("getter created_at : Time?")
-      model_content.should contain("getter updated_at : Time?")
+      model_content.should contain("property created_at : Time?")
+      model_content.should contain("property updated_at : Time?")
     end
   end
 

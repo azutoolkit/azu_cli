@@ -10,10 +10,10 @@ module <%= app_module %>
     getter <%= field.name %> : <%= field.crystal_type %>
 <% end -%>
 
-    def initialize(<%= resource_singular %> : <%= model_name %>)
-      @id = <%= resource_singular %>.id
+    def initialize(record : <%= model_name %>)
+      @id = record.id
 <% fields.each do |field| -%>
-      @<%= field.name %> = <%= resource_singular %>.<%= field.name %>
+      @<%= field.name %> = record.<%= field.name %>
 <% end -%>
     end
 

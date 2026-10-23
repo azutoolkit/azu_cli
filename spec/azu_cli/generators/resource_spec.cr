@@ -35,6 +35,34 @@ describe AzuCLI::Generate::Field do
     AzuCLI::Generate::Field.new("price", "float64").input.should eq("number")
   end
 
+  it "reads modifiers and references" do
+    email = AzuCLI::Generate::Field.new("email", "string:unique:index")
+    email.kind.should eq("string")
+    email.column.should eq("text :email, unique: true, index: true")
+
+    owner = AzuCLI::Generate::Field.new("owner_id", "int64:ref:users")
+    owner.crystal_type.should eq("Int64")
+    owner.foreign_key.should eq("foreign_key [:owner_id], references: :users, references_columns: [:id]")
+    AzuCLI::Generate::Field.new("user_id", "references").foreign_key.to_s.should contain("references: :users")
+
+    AzuCLI::Generate::Field.new("note", "string?:index").column.should eq("text :note, null: true, index: true")
+  end
+
+  it "checks types and modifiers" do
+    kinds = %w(string int64)
+    AzuCLI::Generate::Field.new("a", "string:unique").type_error(kinds).should be_nil
+    AzuCLI::Generate::Field.new("a", "int64:ref:users").type_error(kinds).should be_nil
+    AzuCLI::Generate::Field.new("a", "float128").type_error(kinds).to_s.should contain("Unsupported attribute type")
+    AzuCLI::Generate::Field.new("a", "string:sparkly").type_error(kinds).to_s.should contain("Unsupported modifier")
+  end
+
+  it "rejects names that are not Crystal identifiers or hide a keyword" do
+    AzuCLI::Generate::Field.name_error("first_name").should be_nil
+    ["end", "class", "select", "first-name", "Name", "1st", "na\"me", "errors"].each do |name|
+      AzuCLI::Generate::Field.name_error(name).should_not be_nil
+    end
+  end
+
   it "leaves associations out of the columns" do
     columns = AzuCLI::Generate::Field.columns({"title" => "string", "comments" => "has_many"})
     columns.map(&.name).should eq(["title"])
@@ -42,6 +70,29 @@ describe AzuCLI::Generate::Field do
 end
 
 describe AzuCLI::Generate::Resource do
+  it "names the model and its routes from the singular, whatever form was typed" do
+    in_generated_project do
+      {"Post" => "posts", "Posts" => "posts", "Person" => "people", "People" => "people", "Category" => "categories",
+       "UpdateLog" => "update_logs"}.each do |name, plural|
+        generator = AzuCLI::Generate::Model.new(name, {} of String => String)
+        generator.resource_plural.should eq(plural)
+        generator.model_name.should eq(plural.singularize.camelcase)
+        generator.create_migration_name.should eq("create_#{plural}")
+      end
+    end
+  end
+
+  it "rejects resource names the generated code cannot use" do
+    in_generated_project do
+      ["Series", "News", "Sheep", "Fish", "Status", "Request", "Context", "Params", "Header", "Blog", "123x", "a-b"].each do |name|
+        AzuCLI::Generate::Resource.name_error(name).should_not be_nil
+      end
+      ["Post", "Person", "People", "Category", "UpdateLog"].each do |name|
+        AzuCLI::Generate::Resource.name_error(name).should be_nil
+      end
+    end
+  end
+
   it "names every layer from the resource and the project" do
     in_generated_project do
       generator = AzuCLI::Generate::Request.new("UserProfile", "create")

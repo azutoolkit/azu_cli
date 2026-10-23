@@ -41,6 +41,7 @@ describe "Scaffold Integration" do
         src/requests/posts/new_request.cr
         src/requests/posts/show_request.cr
         src/requests/posts/update_request.cr
+        src/requests/predicates.cr
         src/services/posts/create_service.cr
         src/services/posts/destroy_service.cr
         src/services/posts/update_service.cr
@@ -107,6 +108,58 @@ describe "Scaffold Integration" do
       Dir.glob("public/**/*").should be_empty
       Dir.glob("src/pages/**/*").should be_empty
       File.exists?("src/models/post.cr").should be_true
+    end
+  end
+
+  it "rejects resource names that collide with the generated code" do
+    in_generated_project do
+      ["Status", "Series"].each do |name|
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["scaffold", name, "title:string"])
+
+        command.execute.success?.should be_false
+        Dir.glob("src/**/*.cr").reject { |path| path.starts_with?("src/db") }.should be_empty
+      end
+    end
+  end
+
+  it "rejects field names that are not identifiers or are keywords" do
+    in_generated_project do
+      ["end:time", "first-name:string", "na\"me:string"].each do |attribute|
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["scaffold", "Post", attribute])
+
+        command.execute.success?.should be_false
+      end
+    end
+  end
+
+  it "supports modifiers and optional types" do
+    in_generated_project do
+      command = AzuCLI::Commands::Generate.new
+      command.parse_args(["scaffold", "Person", "email:string:unique", "age:int32?", "team_id:int64:ref:teams"])
+      command.execute.success?.should be_true
+
+      migration = File.read(Dir.glob("src/db/migrations/*_create_people.cr").first)
+      migration.should contain("text :email, unique: true")
+      migration.should contain("column :age, Int32, null: true")
+      migration.should contain("foreign_key [:team_id], references: :teams")
+      File.exists?("src/models/person.cr").should be_true
+      File.read("src/requests/people/update_request.cr").should contain("getter age : Int32?")
+    end
+  end
+
+  it "names the actions it supports when asked for another" do
+    in_generated_project do
+      {["endpoint", "Users", "activate"], ["service", "EmailSender", "send"], ["request", "User", "archive"]}.each do |arguments|
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(arguments)
+        result = command.execute
+
+        result.success?.should be_false
+        result.error.should contain("Supported actions")
+        Dir.glob("src/{endpoints,services,requests}/**/*.cr").should be_empty
+      end
     end
   end
 

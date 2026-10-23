@@ -9,12 +9,12 @@ module <%= app_module %>
 <% end -%>
 <% if fields? -%>
 <% fields.each do |field| -%>
-    getter <%= field.name %> : <%= field.crystal_type %><%= " = false" if field.bool? && !field.nilable? %>
+    getter <%= field.name %> : <%= type_of(field) %><%= default_of(field) %>
 <% end -%>
 <% unless validated_fields.empty? -%>
 
 <% validated_fields.each do |field| -%>
-    validate <%= field.name %>, presence: true
+    validate <%= field.name %>, <%= validation %>
 <% end -%>
 <% end -%>
 <% end -%>

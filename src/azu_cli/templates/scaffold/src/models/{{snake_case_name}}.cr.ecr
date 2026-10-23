@@ -5,11 +5,11 @@ class <%= model_name %>
   <%= db_context_declaration %>
 
 <% fields.each do |field| -%>
-  getter <%= field.name %> : <%= field.crystal_type %>
+  property <%= field.name %> : <%= field.crystal_type %>
 <% end -%>
 <% if @timestamps -%>
-  getter created_at : Time?
-  getter updated_at : Time?
+  property created_at : Time?
+  property updated_at : Time?
 <% end -%>
 <% unless associations.empty? -%>
 
