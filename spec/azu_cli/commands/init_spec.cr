@@ -34,8 +34,7 @@ describe AzuCLI::Commands::Init do
         Dir.exists?("src/services").should be_true
         Dir.exists?("src/requests").should be_true
         Dir.exists?("src/pages").should be_true
-        Dir.exists?("src/initializers").should be_true
-        Dir.exists?("db/migrations").should be_true
+        Dir.exists?(AzuCLI::Config::Paths::MIGRATIONS).should be_true
         Dir.exists?("public/templates").should be_true
       end
     end
@@ -116,8 +115,7 @@ describe AzuCLI::Commands::Init do
           "src/services",
           "src/requests",
           "src/pages",
-          "src/initializers",
-          "db/migrations",
+          AzuCLI::Config::Paths::MIGRATIONS,
           "public/templates",
         ]
 
@@ -206,8 +204,8 @@ describe AzuCLI::Commands::Init do
 
         config_content = File.read("config/azu.yml")
         config_content.should contain("database:")
-        config_content.should contain("adapter: postgresql")
-        config_content.should contain("host: localhost")
+        config_content.should contain(%(adapter: "postgresql"))
+        config_content.should contain(%(host: "localhost"))
         config_content.should contain("port: 5432")
       end
     end
@@ -232,7 +230,6 @@ describe AzuCLI::Commands::Init do
         Dir.exists?("src/services").should be_true
         Dir.exists?("src/requests").should be_true
         Dir.exists?("src/pages").should be_true
-        Dir.exists?("src/initializers").should be_true
       end
     end
 
@@ -248,7 +245,7 @@ describe AzuCLI::Commands::Init do
           result.success?.should be_true
         end
 
-        Dir.exists?("db/migrations").should be_true
+        Dir.exists?(AzuCLI::Config::Paths::MIGRATIONS).should be_true
       end
     end
 
@@ -296,12 +293,13 @@ describe AzuCLI::Commands::Init do
         command.parse_args([] of String)
 
         TestHelpers::TestSetup.with_captured_output do |capture|
-          result = command.execute
-          result.success?.should be_true
-          capture.stderr.should contain("Initializing Azu in current project")
-          capture.stderr.should contain("Creating Azu configuration")
-          capture.stderr.should contain("Creating project structure")
-          capture.stderr.should contain("Azu initialized successfully")
+          TestHelpers::TestSetup.with_info_logging do
+            command.execute.success?.should be_true
+          end
+          capture.stdout.should contain("Initializing Azu in current project")
+          capture.stdout.should contain("Creating Azu configuration")
+          capture.stdout.should contain("Creating project structure")
+          capture.stdout.should contain("Azu initialized successfully")
         end
       end
     end

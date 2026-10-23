@@ -13,9 +13,11 @@ joobq:
   # Queue configurations
   # Define job queues with their specific job classes and worker counts
   queues:
+<% if @create_example_job -%>
     <%= @default_queue || "default" %>:
       job_class: "<%= @example_job_name || "ExampleJob" %>"
       workers: <%= @workers || 3 %>
+<% end -%>
 
     # Example: Email queue
     # email:

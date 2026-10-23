@@ -74,9 +74,9 @@ describe AzuCLI::Generate::JoobQ do
           File.exists?(config_file).should be_true
 
           content = File.read(config_file)
-          content.should contain("redis_url: redis://localhost:6379")
-          content.should contain("default_queue: default")
-          content.should contain("workers: 3")
+          content.should contain(%(default_queue: "default"))
+          content.should contain(%(    default:\n      job_class: "ExampleJob"\n      workers: 3\n))
+          content.should contain("redis:\n    host: \"localhost\"")
         end
       end
 
@@ -91,9 +91,9 @@ describe AzuCLI::Generate::JoobQ do
           config_file = "config/joobq.development.yml"
           content = File.read(config_file)
 
-          content.should contain("redis_url: redis://production:6379")
-          content.should contain("default_queue: high_priority")
-          content.should contain("workers: 5")
+          # the Redis URL goes to the initializer and the worker, not to the YAML (see the Redis URL examples below)
+          content.should contain(%(default_queue: "high_priority"))
+          content.should_not contain("ExampleJob") # create_example_job is false
         end
       end
 
@@ -110,9 +110,9 @@ describe AzuCLI::Generate::JoobQ do
           File.exists?(prod_config_file).should be_true
 
           content = File.read(prod_config_file)
-          content.should contain("redis_url:")
-          content.should contain("default_queue:")
-          content.should contain("workers:")
+          content.should contain(%(default_queue: "default"))
+          content.should contain("      workers: 6  # More workers in production") # twice the default 3
+          content.should contain("redis:\n    host:")
         end
       end
     end
@@ -134,7 +134,8 @@ describe AzuCLI::Generate::JoobQ do
           content = File.read(initializer_file)
           content.should contain("require \"joobq\"")
           content.should contain("JoobQ.configure")
-          content.should contain("redis_url:")
+          content.should contain("config.redis_url = ENV[\"REDIS_URL\"]? || \"redis://localhost:6379\"")
+          content.should contain("JoobQ::QueueFactory.register_job_type(ExampleJob)")
         end
       end
 
@@ -150,7 +151,7 @@ describe AzuCLI::Generate::JoobQ do
           initializer_file = "src/initializers/joobq.cr"
           content = File.read(initializer_file)
 
-          content.should contain("redis_url: \"redis://custom:6379\"")
+          content.should contain("config.redis_url = ENV[\"REDIS_URL\"]? || \"redis://custom:6379\"")
         end
       end
 
@@ -166,8 +167,9 @@ describe AzuCLI::Generate::JoobQ do
           initializer_file = "src/initializers/joobq.cr"
           content = File.read(initializer_file)
 
-          content.should contain("default_queue: \"priority\"")
-          content.should contain("workers: 5")
+          content.should contain("config.default_queue = \"priority\"")
+
+          File.read("src/worker.cr").should contain("puts \"Workers: 5\"")
         end
       end
     end
@@ -186,8 +188,8 @@ describe AzuCLI::Generate::JoobQ do
           File.exists?(worker_file).should be_true
 
           content = File.read(worker_file)
-          content.should contain("require \"joobq\"")
-          content.should contain("require \"./initializers/joobq\"")
+          content.should contain("require \"./initializers/joobq\"") # which requires "joobq"
+          content.should contain("module Myapp")
           content.should contain("JoobQ::Worker.start")
         end
       end
@@ -204,7 +206,7 @@ describe AzuCLI::Generate::JoobQ do
           worker_file = "src/worker.cr"
           content = File.read(worker_file)
 
-          content.should contain("require \"./jobs/example_job\"")
+          content.should contain("require \"./jobs/**\"") # every job, the example included
         end
       end
 
@@ -260,6 +262,20 @@ describe AzuCLI::Generate::JoobQ do
         end
       end
 
+      it "leaves the example job out of the initializer and the queue configuration when disabled" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+
+          AzuCLI::Generate::JoobQ.new("myapp", create_example_job: false).render(".")
+
+          File.read("src/initializers/joobq.cr").should_not contain("ExampleJob)")
+          %w(development production test).each do |environment|
+            File.read("config/joobq.#{environment}.yml").should_not contain("ExampleJob")
+          end
+        end
+      end
+
       it "generates example job with proper configuration" do
         TestHelpers::TestSetup.with_temp_project do |temp_project|
           temp_project.create_shard_yml
@@ -272,9 +288,9 @@ describe AzuCLI::Generate::JoobQ do
           example_job_file = "src/jobs/example_job.cr"
           content = File.read(example_job_file)
 
-          content.should contain("@queue = \"default\"")
+          content.should contain("@queue   = \"default\"")
           content.should contain("@retries = 3")
-          content.should contain("@expires = 1.day.total_seconds.to_i")
+          content.should contain("@expires = 1.hour.total_seconds.to_i")
         end
       end
     end
@@ -340,9 +356,9 @@ describe AzuCLI::Generate::JoobQ do
           dev_config_file = "config/joobq.development.yml"
           content = File.read(dev_config_file)
 
-          content.should contain("redis_url: redis://localhost:6379")
-          content.should contain("default_queue: default")
-          content.should contain("workers: 3")
+          content.should contain(%(default_queue: "default"))
+          content.should contain(%(    default:\n      job_class: "ExampleJob"\n      workers: 3\n))
+          content.should contain("pool_size: 200")
         end
       end
 
@@ -357,9 +373,9 @@ describe AzuCLI::Generate::JoobQ do
           prod_config_file = "config/joobq.production.yml"
           content = File.read(prod_config_file)
 
-          content.should contain("redis_url:")
-          content.should contain("default_queue:")
-          content.should contain("workers:")
+          content.should contain(%(default_queue: "default"))
+          content.should contain("      workers: 6  # More workers in production")
+          content.should contain(%(timeout: "60 seconds"))
         end
       end
 
@@ -374,9 +390,9 @@ describe AzuCLI::Generate::JoobQ do
           test_config_file = "config/joobq.test.yml"
           content = File.read(test_config_file)
 
-          content.should contain("redis_url:")
-          content.should contain("default_queue:")
-          content.should contain("workers:")
+          content.should contain(%(default_queue: "test"))
+          content.should contain(%(    default:\n      job_class: "ExampleJob"\n      workers: 1\n))
+          content.should contain("rest_api: false")
         end
       end
     end
@@ -396,6 +412,7 @@ describe AzuCLI::Generate::JoobQ do
 
           content.should contain("require \"joobq\"")
           content.should contain("JoobQ.configure")
+          content.should contain(%(ENV["AZU_ENV"]?)) # the environment selects config/joobq.<env>.yml
         end
       end
 
@@ -424,10 +441,9 @@ describe AzuCLI::Generate::JoobQ do
           generator = AzuCLI::Generate::JoobQ.new("myapp", "redis://custom-host:6380")
           generator.render(".")
 
-          config_file = "config/joobq.development.yml"
-          content = File.read(config_file)
-
-          content.should contain("redis_url: redis://custom-host:6380")
+          # the URL is the fallback of the initializer and what the worker prints
+          File.read("src/initializers/joobq.cr").should contain("|| \"redis://custom-host:6380\"")
+          File.read("src/worker.cr").should contain("puts \"Redis URL: redis://custom-host:6380\"")
         end
       end
 
@@ -442,7 +458,8 @@ describe AzuCLI::Generate::JoobQ do
           config_file = "config/joobq.development.yml"
           content = File.read(config_file)
 
-          content.should contain("default_queue: custom_queue")
+          content.should contain(%(default_queue: "custom_queue"))
+          content.should contain(%(    custom_queue:\n      job_class: "ExampleJob"))
         end
       end
 
@@ -457,7 +474,7 @@ describe AzuCLI::Generate::JoobQ do
           config_file = "config/joobq.development.yml"
           content = File.read(config_file)
 
-          content.should contain("workers: 10")
+          content.should contain("      workers: 10\n")
         end
       end
     end

@@ -16,7 +16,13 @@ module AzuCLI
       property snake_case_name : String
 
       def initialize(@name : String, @parameters : Hash(String, String) = {} of String => String, @queue : String = "default", @retries : Int32 = 3, @expires : String = "1.days")
-        @snake_case_name = @name.underscore
+        @snake_case_name = file_base_name(@name)
+      end
+
+      # The file name stem: "EmailJob" and "Email" both give "email", the template adds the "_job" suffix
+      private def file_base_name(name : String) : String
+        stem = name.underscore.sub(/_job\z/, "")
+        stem.empty? ? name.underscore : stem
       end
 
       # Convert name to job struct name
@@ -31,8 +37,21 @@ module AzuCLI
         @parameters.map { |name, type| "@#{name} : #{crystal_type(type)}" }.join(", ")
       end
 
-      # Get Crystal type for parameter
+      # `property name : Type` lines (a type such as Hash(String, String) contains a comma, so these are
+      # built from the parameters rather than split out of #constructor_params)
+      def property_declarations : Array(String)
+        @parameters.map { |name, type| "property #{name} : #{crystal_type(type)}" }
+      end
+
+      # `name: value` pairs for the enqueue/schedule examples in the file header
+      def example_arguments : String
+        @parameters.keys.map { |name| "#{name}: value" }.join(", ")
+      end
+
+      # Get Crystal type for parameter; a trailing "?" makes it nilable
       def crystal_type(param_type : String) : String
+        return crystal_type(param_type.rchop('?')) + "?" if param_type.ends_with?('?')
+
         case param_type.downcase
         when "string", "text"
           "String"
@@ -76,6 +95,8 @@ module AzuCLI
           "7.days.total_seconds.to_i"
         when "30.days", "1.month"
           "30.days.total_seconds.to_i"
+        when /\A(\d+)\.(minute|hour|day|week)s?\z/
+          "#{$1}.#{$2}s.total_seconds.to_i"
         else
           "1.days.total_seconds.to_i"
         end

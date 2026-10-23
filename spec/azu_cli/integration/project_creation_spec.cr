@@ -34,9 +34,15 @@ describe "Project Creation Integration" do
       file_exists?(project_path, "config/openapi.yml").should be_true
 
       # Verify API file content
+      # src/api.cr is the entry point: it requires the app and starts it
       api_content = read_file(project_path, "src/api.cr").not_nil!
-      api_content.should contain("Azu")
-      api_content.should contain("start")
+      api_content.should contain(%(require "./testapi"))
+      api_content.should contain("Testapi.start")
+
+      # the app module lives in src/testapi.cr and is the one that includes Azu
+      main_content = read_file(project_path, "src/testapi.cr").not_nil!
+      main_content.should contain("module Testapi")
+      main_content.should contain("include Azu")
 
       openapi_content = read_file(project_path, "config/openapi.yml").not_nil!
       openapi_content.should contain("openapi")

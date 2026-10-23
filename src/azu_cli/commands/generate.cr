@@ -37,7 +37,7 @@ module AzuCLI
         end
 
         # Some generators don't require a name (like auth, validate, joobq)
-        generators_without_name = ["auth", "authentication", "validate", "joobq"]
+        generators_without_name = NAMELESS_GENERATORS
 
         @generator_type = get_arg(0) || ""
 
@@ -694,6 +694,15 @@ module AzuCLI
       private def scaffold_actions : Array(String)
         @api_only ? %w(index show create update destroy) : %w(index show new create edit update destroy)
       end
+
+      # Every generator type `execute` routes (the generator plugin validates against this list)
+      GENERATOR_TYPES = %w(
+        model endpoint service request contract page job joobq middleware migration data:migration data_migration
+        seed component validator response template scaffold mailer channel auth authentication api_resource
+        api-resource validate
+      )
+      # The generators that take no name
+      NAMELESS_GENERATORS = %w(auth authentication validate joobq)
 
       # The generators whose `name:type` arguments become columns, getters and form fields.
       RESOURCE_GENERATORS = %w(model migration scaffold api_resource api-resource request page response template service endpoint)

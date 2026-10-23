@@ -3,14 +3,18 @@ require "../spec_helper"
 describe AzuCLI::Config do
   describe "#load!" do
     it "loads default configuration" do
-      config = AzuCLI::Config.new
-      config.load!
+      # The suite itself runs with AZU_ENV=test and AZU_QUIET=true (spec_helper): the defaults are
+      # what an environment without them gets.
+      TestHelpers::TestSetup.with_env({"AZU_ENV" => nil, "AZU_QUIET" => nil}) do
+        config = AzuCLI::Config.new
+        config.load!
 
-      config.environment.should eq("development")
-      config.debug_mode.should be_true # development mode sets debug to true
-      config.database_adapter.should eq("postgresql")
-      config.dev_server_port.should eq(4000)
-      config.colored_output?.should be_true
+        config.environment.should eq("development")
+        config.debug_mode.should be_true # development mode sets debug to true
+        config.database_adapter.should eq("postgresql")
+        config.dev_server_port.should eq(4000)
+        config.colored_output?.should be_true
+      end
     end
 
     it "loads configuration from environment variables" do

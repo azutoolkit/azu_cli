@@ -37,6 +37,16 @@ describe AzuCLI::Plugins::GeneratorPlugin do
       plugin.before_command(command, ["auth"])
     end
 
+    it "accepts every generator type the generate command routes" do
+      plugin = AzuCLI::Plugins::GeneratorPlugin.new
+      command = GeneratorPluginTestCommand.new("generate")
+
+      AzuCLI::Commands::Generate::GENERATOR_TYPES.each do |type|
+        plugin.before_command(command, [type, "Name"])
+      end
+      %w(seed data:migration api_resource).each { |type| plugin.before_command(command, [type, "Name"]) }
+    end
+
     it "ignores non-generate commands" do
       plugin = AzuCLI::Plugins::GeneratorPlugin.new
       command = GeneratorPluginTestCommand.new("db")

@@ -29,7 +29,7 @@ describe AzuCLI::Commands::New do
     it "creates new project with valid name" do
       TestHelpers::TestSetup.with_temp_project("new_test_project") do |temp_project|
         # Change to parent directory to simulate creating new project
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -38,7 +38,7 @@ describe AzuCLI::Commands::New do
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_true
-          result.message.should contain("Project created successfully")
+          result.message.should contain("Project 'test_project' created successfully")
         end
 
         # Verify project was created
@@ -75,8 +75,8 @@ describe AzuCLI::Commands::New do
     it "handles existing directory" do
       TestHelpers::TestSetup.with_temp_project("existing_project") do |temp_project|
         # Create a directory that already exists
-        existing_path = File.join(File.dirname(temp_project.path), "existing_project")
-        Dir.mkdir_p(existing_path)
+        Dir.cd(temp_project.path)
+        Dir.mkdir_p("existing_project")
 
         command = AzuCLI::Commands::New.new
         command.parse_args(["existing_project"])
@@ -84,14 +84,14 @@ describe AzuCLI::Commands::New do
         TestHelpers::TestSetup.with_captured_output do |_|
           result = command.execute
           result.success?.should be_false
-          result.error.should contain("Directory already exists")
+          result.error.should contain("Directory 'existing_project' already exists")
         end
       end
     end
 
     it "generates module name from project name" do
       TestHelpers::TestSetup.with_temp_project("module_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -109,7 +109,7 @@ describe AzuCLI::Commands::New do
 
     it "handles non-interactive mode" do
       TestHelpers::TestSetup.with_temp_project("non_interactive_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -127,7 +127,7 @@ describe AzuCLI::Commands::New do
 
     it "handles project type selection" do
       TestHelpers::TestSetup.with_temp_project("api_project") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -144,7 +144,7 @@ describe AzuCLI::Commands::New do
 
     it "handles database selection" do
       TestHelpers::TestSetup.with_temp_project("mysql_project") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -161,7 +161,7 @@ describe AzuCLI::Commands::New do
 
     it "handles author and email options" do
       TestHelpers::TestSetup.with_temp_project("author_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -179,7 +179,7 @@ describe AzuCLI::Commands::New do
 
     it "handles license selection" do
       TestHelpers::TestSetup.with_temp_project("license_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -196,7 +196,7 @@ describe AzuCLI::Commands::New do
 
     it "handles docker support flag" do
       TestHelpers::TestSetup.with_temp_project("docker_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -211,14 +211,9 @@ describe AzuCLI::Commands::New do
       end
     end
 
-    # These cases create projects next to the scratch project, in the system temp directory.
-    after_each do
-      %w(delivery_app plain_app tool_app lab_app).each { |name| FileUtils.rm_rf(File.join(Dir.tempdir, name)) }
-    end
-
     it "writes a Dockerfile with --docker and a workflow by default" do
       TestHelpers::TestSetup.with_temp_project("delivery_test") do |temp_project|
-        Dir.cd(File.dirname(temp_project.path)) do
+        Dir.cd(temp_project.path) do
           command = AzuCLI::Commands::New.new
           command.parse_args(["--yes", "--docker", "--no-git", "delivery_app"])
 
@@ -235,7 +230,7 @@ describe AzuCLI::Commands::New do
 
     it "writes neither with --no-ci and without --docker" do
       TestHelpers::TestSetup.with_temp_project("no_delivery_test") do |temp_project|
-        Dir.cd(File.dirname(temp_project.path)) do
+        Dir.cd(temp_project.path) do
           command = AzuCLI::Commands::New.new
           command.parse_args(["--yes", "--no-ci", "--no-git", "plain_app"])
 
@@ -251,7 +246,7 @@ describe AzuCLI::Commands::New do
 
     it "refuses --docker for a cli project and an unknown CI setup" do
       TestHelpers::TestSetup.with_temp_project("bad_delivery_test") do |temp_project|
-        Dir.cd(File.dirname(temp_project.path)) do
+        Dir.cd(temp_project.path) do
           cli = AzuCLI::Commands::New.new
           cli.parse_args(["--yes", "--docker", "--type", "cli", "tool_app"])
           TestHelpers::TestSetup.with_captured_output do |_|
@@ -275,7 +270,7 @@ describe AzuCLI::Commands::New do
 
     it "handles skip git flag" do
       TestHelpers::TestSetup.with_temp_project("no_git_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -292,7 +287,7 @@ describe AzuCLI::Commands::New do
 
     it "handles skip example flag" do
       TestHelpers::TestSetup.with_temp_project("no_example_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -309,7 +304,7 @@ describe AzuCLI::Commands::New do
 
     it "handles skip joobq flag" do
       TestHelpers::TestSetup.with_temp_project("no_joobq_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -328,7 +323,7 @@ describe AzuCLI::Commands::New do
   describe "project structure creation" do
     it "creates complete project structure" do
       TestHelpers::TestSetup.with_temp_project("structure_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -350,14 +345,15 @@ describe AzuCLI::Commands::New do
         Dir.exists?(File.join(project_path, "src")).should be_true
         Dir.exists?(File.join(project_path, "spec")).should be_true
         Dir.exists?(File.join(project_path, "config")).should be_true
-        Dir.exists?(File.join(project_path, "db")).should be_true
+        File.exists?(File.join(project_path, "src/db/schema.cr")).should be_true # migrations are created by `azu generate`
+        File.exists?(File.join(project_path, "src/db/seed.cr")).should be_true
         Dir.exists?(File.join(project_path, "public")).should be_true
       end
     end
 
     it "creates web project structure" do
       TestHelpers::TestSetup.with_temp_project("web_structure_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -379,7 +375,7 @@ describe AzuCLI::Commands::New do
 
     it "creates API project structure" do
       TestHelpers::TestSetup.with_temp_project("api_structure_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -403,7 +399,7 @@ describe AzuCLI::Commands::New do
   describe "template rendering" do
     it "renders shard.yml with project details" do
       TestHelpers::TestSetup.with_temp_project("template_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -425,7 +421,7 @@ describe AzuCLI::Commands::New do
 
     it "renders README with project information" do
       TestHelpers::TestSetup.with_temp_project("readme_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -448,7 +444,7 @@ describe AzuCLI::Commands::New do
   describe "git initialization" do
     it "initializes git repository by default" do
       TestHelpers::TestSetup.with_temp_project("git_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -466,7 +462,7 @@ describe AzuCLI::Commands::New do
 
     it "skips git initialization when --no-git flag is used" do
       TestHelpers::TestSetup.with_temp_project("no_git_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -486,7 +482,7 @@ describe AzuCLI::Commands::New do
   describe "dependency installation" do
     it "installs dependencies after project creation" do
       TestHelpers::TestSetup.with_temp_project("deps_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -495,7 +491,7 @@ describe AzuCLI::Commands::New do
         TestHelpers::TestSetup.with_captured_output do |capture|
           result = command.execute
           result.success?.should be_true
-          capture.stderr.should contain("Installing dependencies")
+          capture.stdout.should contain("Installing dependencies")
         end
       end
     end
@@ -612,7 +608,7 @@ describe AzuCLI::Commands::New do
 
       valid_names.each do |name|
         TestHelpers::TestSetup.with_temp_project("valid_name_test_#{name}") do |temp_project|
-          parent_dir = File.dirname(temp_project.path)
+          parent_dir = temp_project.path
           Dir.cd(parent_dir)
 
           command = AzuCLI::Commands::New.new
@@ -649,7 +645,7 @@ describe AzuCLI::Commands::New do
 
     it "handles existing directories" do
       TestHelpers::TestSetup.with_temp_project("existing_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         # Create existing directory
@@ -671,7 +667,7 @@ describe AzuCLI::Commands::New do
   describe "logging" do
     it "logs project creation steps" do
       TestHelpers::TestSetup.with_temp_project("logging_test") do |temp_project|
-        parent_dir = File.dirname(temp_project.path)
+        parent_dir = temp_project.path
         Dir.cd(parent_dir)
 
         command = AzuCLI::Commands::New.new
@@ -680,8 +676,9 @@ describe AzuCLI::Commands::New do
         TestHelpers::TestSetup.with_captured_output do |capture|
           result = command.execute
           result.success?.should be_true
-          capture.stderr.should contain("Creating project")
-          capture.stderr.should contain("Project created successfully")
+          capture.stdout.should contain("Creating new Azu project: test_project")
+          capture.stdout.should contain("Installing dependencies")
+          capture.stdout.should contain("Project 'test_project' created successfully!")
         end
       end
     end
