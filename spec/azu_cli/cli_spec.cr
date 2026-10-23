@@ -1,5 +1,8 @@
 require "../spec_helper"
 require "../support/test_helpers"
+require "../support/generator_helpers"
+
+include GeneratorHelpers
 
 describe AzuCLI::CLI do
   describe "#initialize" do
@@ -57,12 +60,18 @@ describe AzuCLI::CLI do
     it "handles command aliases" do
       cli = AzuCLI::CLI.new
 
-      # Test 'g' alias for generate
-      TestHelpers::TestSetup.with_captured_output do |capture|
-        cli.run(["g", "model", "User"])
-        # Should not error (even if model generation fails, CLI routing works)
-        capture.stderr.should_not contain("Unknown command")
+      # Test 'g' alias for generate. The model and its migration are written into the working
+      # directory, so run in a scratch project, never in the repository.
+      repository = Dir.current
+      in_generated_project do
+        TestHelpers::TestSetup.with_captured_output do |capture|
+          cli.run(["g", "model", "User"])
+          # Should not error (even if model generation fails, CLI routing works)
+          capture.stderr.should_not contain("Unknown command")
+        end
+        File.exists?("src/models/user.cr").should be_true
       end
+      File.exists?(File.join(repository, "src", "models", "user.cr")).should be_false
     end
 
     it "handles unknown commands gracefully" do
