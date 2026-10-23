@@ -202,7 +202,7 @@ module AzuCLI
         when "api"
           "api.cr"
         when "cli"
-          "cli.cr"
+          "#{@project}.cr"
         else
           "server.cr"
         end

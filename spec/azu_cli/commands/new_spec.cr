@@ -211,6 +211,11 @@ describe AzuCLI::Commands::New do
       end
     end
 
+    # These cases create projects next to the scratch project, in the system temp directory.
+    after_each do
+      %w(delivery_app plain_app tool_app lab_app).each { |name| FileUtils.rm_rf(File.join(Dir.tempdir, name)) }
+    end
+
     it "writes a Dockerfile with --docker and a workflow by default" do
       TestHelpers::TestSetup.with_temp_project("delivery_test") do |temp_project|
         Dir.cd(File.dirname(temp_project.path))

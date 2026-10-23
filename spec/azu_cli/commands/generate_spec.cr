@@ -24,6 +24,7 @@ describe AzuCLI::Commands::Generate do
   describe "#execute" do
     it "handles generators without name requirements" do
       repository = Dir.current
+      before = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") }.sort
       TestHelpers::TestSetup.with_temp_project do |temp_project|
         temp_project.create_shard_yml
         temp_project.create_config_dir
@@ -40,7 +41,8 @@ describe AzuCLI::Commands::Generate do
           end
         end
       end
-      File.exists?(File.join(repository, "src", "models", "user.cr")).should be_false
+      after = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") }.sort
+      after.should eq(before) # nothing was written into the repository
     end
 
     it "handles validate generator" do

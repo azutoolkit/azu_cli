@@ -359,6 +359,7 @@ Generators extend `Teeplate::FileTree`:
 - `azu new --docker` writes a multi-stage `Dockerfile` and `.dockerignore`; `--ci` (default `GitHub Actions`) writes
   `.github/workflows/ci.yml`. Both use `Generate::Project::CRYSTAL_VERSION` (also `.tool-versions`) and the package
   lists in `Generate::Project#build_packages` / `#runtime_packages`; change a Crystal version in one place
+- Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there in azu master; the latest azu release at the time, v0.5.68, does not have it, so `E2E_AZU_BRANCH=master` pins the generated project's azu to master in the e2e scripts and in CI)
 - Development handlers (DevDashboard, PerformanceMonitor) are mounted by `def self.dev_handlers` in the generated app
   file, guarded by `Azu::CONFIG.env.development?` at runtime, never by the environment at generation time
 - The generated app's `handlers` is `Array(HTTP::Handler)` (literal `of HTTP::Handler`): an array of a union of handler classes passed as `Array(HTTP::Handler)` is corrupted in optimized builds (IndexError / SIGSEGV at boot). `scripts/e2e_generated_app.sh` builds unoptimized, so only `scripts/e2e_docker.sh` (a `--release` build) catches this class of bug

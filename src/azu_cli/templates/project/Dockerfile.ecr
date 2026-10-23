@@ -22,6 +22,8 @@ COPY --from=build /app/config ./config
 <% if database_adapter == "sqlite3" -%>
 # The SQLite database lives on a volume so it outlives the container. `azu db:migrate` is not part of
 # the image: run it against /data/<%= @project %>.db before the first start.
+# /app is owned by root and read-only to the app user. /data is owned by it: a named volume
+# (`-v name:/data`) inherits that, a bind mount keeps the host directory's owner, so `chown 10001` it.
 RUN mkdir /data && chown app /data
 VOLUME /data
 ENV DATABASE_URL=sqlite3:///data/<%= @project %>.db

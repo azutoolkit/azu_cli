@@ -140,8 +140,6 @@ azu generate component Counter count:integer --websocket
 # Start development server with hot reloading
 azu serve --port 4000
 
-# Start in development mode (alias)
-azu dev
 ```
 
 ### Database Operations

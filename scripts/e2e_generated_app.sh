@@ -10,6 +10,7 @@
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
 #        E2E_DB   database adapter for `azu new`     (default: sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
+#        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
 set -eu
 
 TYPE="${1:-web}"
@@ -325,6 +326,14 @@ cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
   --type "$TYPE" --db "$DB" --no-git --no-docker --ci "GitHub Actions"
 cd "$NAME"
+
+# Test against a branch of azu instead of its latest release (the generated app requires azu/dev, which the
+# latest release may not contain yet).
+if [ -n "${E2E_AZU_BRANCH:-}" ]; then
+  awk -v ref="$E2E_AZU_BRANCH" '{ print } /^    github: azutoolkit\/azu$/ { print "    branch: " ref }' shard.yml >shard.yml.new && mv shard.yml.new shard.yml
+  grep -q "branch: $E2E_AZU_BRANCH" shard.yml || fail "could not pin azu to $E2E_AZU_BRANCH in shard.yml"
+  echo "azu pinned to branch $E2E_AZU_BRANCH"
+fi
 
 if [ "$SCAFFOLD" = 1 ]; then
   step "generate a Post scaffold"

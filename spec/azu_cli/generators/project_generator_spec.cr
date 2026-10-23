@@ -312,6 +312,18 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf("./tmp_test_db_require")
     end
 
+    it "requires azu/dev in web and api apps, where DevDashboard lives, and not in a cli app" do
+      {"web" => true, "api" => true, "cli" => false}.each do |type, requires|
+        dir = "./tmp_test_azu_dev_#{type}"
+        FileUtils.mkdir_p(dir)
+        AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
+
+        source = File.read("#{dir}/src/myapp.cr")
+        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs an azu release that contains it).\nrequire "azu/dev"\n)).should eq(requires)
+        FileUtils.rm_rf(dir)
+      end
+    end
+
     it "mounts the development handlers by the runtime environment, in one method" do
       test_dir = "./tmp_test_dev_handlers"
       FileUtils.mkdir_p(test_dir)
@@ -356,6 +368,10 @@ describe AzuCLI::Generate::Project do
       dockerfile.should contain("ENV DATABASE_URL=sqlite3:///data/myapp.db")
       dockerfile.should_not match(/CSRF_SECRET=|SESSION_SECRET=/)
       File.read("./tmp_test_docker/.dockerignore").lines.should contain(".env")
+      File.read("./tmp_test_docker/.dockerignore").lines.should contain(".env.*")
+      File.read("./tmp_test_docker/.dockerignore").lines.should contain("*.pem")
+      File.read("./tmp_test_docker/.dockerignore").lines.should contain("*.key")
+      dockerfile.should contain("bind mount")
       FileUtils.rm_rf("./tmp_test_docker")
     end
 
@@ -380,8 +396,25 @@ describe AzuCLI::Generate::Project do
       workflow.should contain("crystal tool format --check src spec")
       workflow.should contain("run: crystal spec")
       workflow.should contain("crystal build src/server.cr -o bin/myapp")
+      workflow.should contain("permissions:\n  contents: read\n")
       File.read("./tmp_test_ci/.tool-versions").should contain("crystal #{AzuCLI::Generate::Project::CRYSTAL_VERSION}")
       FileUtils.rm_rf("./tmp_test_ci")
+    end
+
+    it "builds the cli project's own entry point in the workflow" do
+      FileUtils.mkdir_p("./tmp_test_ci_cli")
+      AzuCLI::Generate::Project.new("mytool", "MyTool", "John Doe", "john@example.com", project_type: "cli").render("./tmp_test_ci_cli")
+
+      File.read("./tmp_test_ci_cli/.github/workflows/ci.yml").should contain("crystal build src/mytool.cr -o bin/mytool")
+      FileUtils.rm_rf("./tmp_test_ci_cli")
+    end
+
+    it "lets the cli project's specs load it without running the program" do
+      FileUtils.mkdir_p("./tmp_test_cli_run")
+      AzuCLI::Generate::Project.new("mytool", "MyTool", "John Doe", "john@example.com", project_type: "cli").render("./tmp_test_cli_run")
+
+      File.read("./tmp_test_cli_run/src/mytool.cr").should contain(%(MyTool.run(ARGV) unless ENV["CRYSTAL_ENV"]? == "test"))
+      FileUtils.rm_rf("./tmp_test_cli_run")
     end
 
     it "skips the workflow with --ci None" do
