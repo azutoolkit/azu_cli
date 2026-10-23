@@ -142,31 +142,31 @@ describe AzuCLI::Generate::Migration do
     it "generates add columns migration filename" do
       generator = AzuCLI::Generate::Migration.new("add_name_to_products", {} of String => String)
       filename = generator.migration_filename
-      filename.should match(/^\d{14}_add_products\.cr$/)
+      filename.should match(/^\d{14}_add_name_to_products\.cr$/)
     end
 
     it "generates remove columns migration filename" do
       generator = AzuCLI::Generate::Migration.new("remove_name_from_products", {} of String => String)
       filename = generator.migration_filename
-      filename.should match(/^\d{14}_remove_products\.cr$/)
+      filename.should match(/^\d{14}_remove_name_from_products\.cr$/)
     end
 
     it "generates change columns migration filename" do
       generator = AzuCLI::Generate::Migration.new("change_name_in_products", {} of String => String)
       filename = generator.migration_filename
-      filename.should match(/^\d{14}_change_products\.cr$/)
+      filename.should match(/^\d{14}_change_name_in_products\.cr$/)
     end
 
     it "generates add index migration filename" do
       generator = AzuCLI::Generate::Migration.new("add_index_to_products", {} of String => String)
       filename = generator.migration_filename
-      filename.should match(/^\d{14}_add_index_products\.cr$/)
+      filename.should match(/^\d{14}_add_index_to_products\.cr$/)
     end
 
     it "generates remove index migration filename" do
       generator = AzuCLI::Generate::Migration.new("remove_index_from_products", {} of String => String)
       filename = generator.migration_filename
-      filename.should match(/^\d{14}_remove_index_products\.cr$/)
+      filename.should match(/^\d{14}_remove_index_from_products\.cr$/)
     end
   end
 
@@ -188,27 +188,65 @@ describe AzuCLI::Generate::Migration do
 
     it "generates add columns migration class name" do
       generator = AzuCLI::Generate::Migration.new("add_name_to_products", {} of String => String)
-      generator.migration_class_name.should eq("AddProducts")
+      generator.migration_class_name.should eq("AddNameToProducts")
     end
 
     it "generates remove columns migration class name" do
       generator = AzuCLI::Generate::Migration.new("remove_name_from_products", {} of String => String)
-      generator.migration_class_name.should eq("RemoveProducts")
+      generator.migration_class_name.should eq("RemoveNameFromProducts")
     end
 
     it "generates change columns migration class name" do
       generator = AzuCLI::Generate::Migration.new("change_name_in_products", {} of String => String)
-      generator.migration_class_name.should eq("ChangeProducts")
+      generator.migration_class_name.should eq("ChangeNameInProducts")
     end
 
     it "generates add index migration class name" do
       generator = AzuCLI::Generate::Migration.new("add_index_to_products", {} of String => String)
-      generator.migration_class_name.should eq("AddIndexProducts")
+      generator.migration_class_name.should eq("AddIndexToProducts")
     end
 
     it "generates remove index migration class name" do
       generator = AzuCLI::Generate::Migration.new("remove_index_from_products", {} of String => String)
-      generator.migration_class_name.should eq("RemoveIndexProducts")
+      generator.migration_class_name.should eq("RemoveIndexFromProducts")
+    end
+  end
+
+  describe "unique versions and names" do
+    it "gives two migrations generated in the same second different versions" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        Dir.mkdir_p(AzuCLI::Generate::Migration::OUTPUT_DIR)
+
+        first = AzuCLI::Generate::Migration.new("create_posts", {"title" => "string"})
+        first.render(AzuCLI::Generate::Migration::OUTPUT_DIR)
+        second = AzuCLI::Generate::Migration.new("create_tags", {"name" => "string"})
+        second.render(AzuCLI::Generate::Migration::OUTPUT_DIR)
+
+        second.timestamp.to_i64.should be > first.timestamp.to_i64
+        Dir.glob("#{AzuCLI::Generate::Migration::OUTPUT_DIR}/*.cr").size.should eq(2)
+      end
+    end
+
+    it "starts after a migration that is newer than now" do
+      TestHelpers::TestSetup.with_temp_project do |temp_project|
+        temp_project.create_shard_yml
+        Dir.mkdir_p(AzuCLI::Generate::Migration::OUTPUT_DIR)
+        File.write(File.join(AzuCLI::Generate::Migration::OUTPUT_DIR, "29991231235959_create_future.cr"), "")
+
+        generator = AzuCLI::Generate::Migration.new("create_posts", {} of String => String)
+        generator.timestamp.should eq("30000101000000")
+      end
+    end
+
+    it "keeps the whole name for column migrations so two on one table do not collide" do
+      slug = AzuCLI::Generate::Migration.new("AddSlugToPosts", {} of String => String)
+      body = AzuCLI::Generate::Migration.new("AddBodyToPosts", {} of String => String)
+
+      slug.migration_filename.should match(/^\d{14}_add_slug_to_posts\.cr$/)
+      slug.migration_class_name.should eq("AddSlugToPosts")
+      body.migration_class_name.should eq("AddBodyToPosts")
+      slug.migration_class_name.should_not eq(body.migration_class_name)
     end
   end
 
@@ -304,7 +342,7 @@ describe AzuCLI::Generate::Migration do
 
         content = File.read(generated_file)
         content.should contain("require \"cql\"")
-        content.should contain("class AddProducts < CQL::Migration")
+        content.should contain("class AddNameToProducts < CQL::Migration")
         # Add columns migrations use schema.alter, not schema.table
         content.should contain("schema.alter :products do")
         content.should contain("add_column :name, String")

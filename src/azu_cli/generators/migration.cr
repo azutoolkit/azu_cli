@@ -16,6 +16,7 @@ module AzuCLI
       property table_name : String
       property action_prefix : String
       property table_name_for_template : String
+      property file_stem : String
       property id_type : String
 
       # `table` names the table when the generator knows it; otherwise it is read from the migration name.
@@ -25,6 +26,7 @@ module AzuCLI
         @table_name = table || extract_table_name(@snake_case_name)
         @action_prefix = get_action_prefix
         @table_name_for_template = get_table_name_for_filename
+        @file_stem = build_file_stem
       end
 
       def fields : Array(Field)
@@ -149,16 +151,34 @@ module AzuCLI
           .downcase
       end
 
-      # Generate timestamp for migration filename
+      # Timestamp for the migration version: now, or one second after the newest migration already
+      # in the project. Two migrations generated within the same second would otherwise share a
+      # version, and `db:migrate` skips a migration whose version is already recorded.
       private def generate_timestamp : String
-        Time.utc.to_s("%Y%m%d%H%M%S")
+        format = "%Y%m%d%H%M%S"
+        time = Time.utc
+        newest = Dir.glob(File.join(OUTPUT_DIR, "*.cr")).compact_map { |path| File.basename(path)[/\A\d{14}/]? }.max?
+        if newest && (last = Time.parse_utc(newest, format)) && last >= time.at_beginning_of_second
+          time = last + 1.second
+        end
+        time.to_s(format)
+      end
+
+      # Name that follows the timestamp in the file name, and that the class is named after.
+      # Create/update/delete migrations are named after their table (`create_posts`); the others keep
+      # the whole name (`add_slug_to_posts`), so two of them on one table do not collide.
+      private def build_file_stem : String
+        case migration_type
+        when "add_columns", "remove_columns", "change_columns", "add_index", "remove_index"
+          to_snake_case(@name)
+        else
+          "#{get_action_prefix}_#{get_table_name_for_filename}"
+        end
       end
 
       # Get migration filename
       def migration_filename : String
-        action_prefix = get_action_prefix
-        table_name = get_table_name_for_filename
-        "#{@timestamp}_#{action_prefix}_#{table_name}.cr"
+        "#{@timestamp}_#{file_stem}.cr"
       end
 
       # Get action prefix for filename based on migration type
@@ -197,9 +217,7 @@ module AzuCLI
 
       # Get migration class name
       def migration_class_name : String
-        action_prefix = get_action_prefix.camelcase
-        table_name = get_table_name_for_filename.camelcase
-        "#{action_prefix}#{table_name}"
+        file_stem.camelcase
       end
     end
   end

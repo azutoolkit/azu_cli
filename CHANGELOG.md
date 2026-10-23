@@ -1,5 +1,10 @@
 # Changelog - Azu CLI
 
+## Unreleased - Migration generator fixes
+
+- Fixed: two migrations generated within the same second shared a version, so `db:migrate` skipped the second; a new migration now gets a version after the newest one in `src/db/migrations`
+- Fixed: add/remove/change-column and index migrations were all named after their table (`add_posts`, class `AddPosts`), so two on one table collided; they now keep the whole name (`add_slug_to_posts`, `AddSlugToPosts`)
+
 ## Unreleased - One-initializer Azu + CQL setup
 
 Generated projects use the `azu/cql` bridge, so the Azu dev dashboard's **Database** tab works out of the box and
