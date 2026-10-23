@@ -1,6 +1,17 @@
 require "../../spec_helper"
 
 describe AzuCLI::Commands::Help do
+  it "lists every registered command, and only those" do
+    # The help text is plain `puts` lines, so check the source of the overview.
+    help = File.read("src/azu_cli/commands/help.cr")
+    names = AzuCLI::CLI.new.command_names
+    aliases = %w(g server s t help)
+
+    (names - aliases).each { |name| help.should contain(name) }
+    names.should_not contain("plugin")
+    help.should_not contain("plugin <operation>")
+  end
+
   describe "#execute" do
     it "displays general help when no command specified" do
       command = AzuCLI::Commands::Help.new
@@ -85,16 +96,6 @@ describe AzuCLI::Commands::Help do
     it "displays help for session command" do
       command = AzuCLI::Commands::Help.new
       command.parse_args(["session"])
-
-      result = command.execute
-
-      result.success?.should be_true
-      result.message.should contain("Help information displayed")
-    end
-
-    it "displays help for plugin command" do
-      command = AzuCLI::Commands::Help.new
-      command.parse_args(["plugin"])
 
       result = command.execute
 

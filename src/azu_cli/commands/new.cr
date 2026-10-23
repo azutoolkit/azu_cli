@@ -67,6 +67,10 @@ module AzuCLI
         # Gather configuration (interactive or from flags)
         gather_configuration
 
+        if message = delivery_error
+          return error(message)
+        end
+
         # Show configuration summary
         show_configuration_summary
 
@@ -95,7 +99,8 @@ module AzuCLI
           parser.on("--api", "Create API project (shorthand for --type api)") { @project_type = "api" }
           parser.on("--db DATABASE", "Database adapter (postgresql, mysql, sqlite)") { |db| @database = db }
           parser.on("--test TEST", "Test framework (spec, minitest)") { |test| @test_framework = test }
-          parser.on("--ci CI", "CI setup (\"GitHub Actions\", \"GitLab CI\", \"None\")") { |ci| @ci_setup = ci }
+          parser.on("--ci CI", "CI setup (\"GitHub Actions\" or \"None\")") { |ci| @ci_setup = ci }
+          parser.on("--no-ci", "Skip the CI workflow") { @ci_setup = "None" }
           parser.on("--docker", "Include Docker support") { @docker_support = true }
           parser.on("--no-docker", "Skip Docker support") { @docker_support = false }
           parser.on("--git", "Initialize Git repository") { @git_init = true }
@@ -177,7 +182,7 @@ module AzuCLI
         @test_framework = prompt_choice("Test framework", ["spec", "minitest"], @test_framework)
 
         # CI setup
-        @ci_setup = prompt_choice("CI setup", ["GitHub Actions", "GitLab CI", "None"], @ci_setup)
+        @ci_setup = prompt_choice("CI setup", AzuCLI::Generate::Project::CI_SETUPS, @ci_setup)
 
         # Boolean options
         @docker_support = prompt_boolean("Include Docker support?", @docker_support)
@@ -317,6 +322,13 @@ module AzuCLI
         puts "  Include example:  #{@include_example ? "Yes" : "No"}"
         puts "  Background jobs:  #{@include_joobq ? "Yes (JoobQ)" : "No"}" unless @project_type == "cli"
         puts
+      end
+
+      private def delivery_error : String?
+        unless AzuCLI::Generate::Project::CI_SETUPS.includes?(@ci_setup)
+          return "Unknown CI setup '#{@ci_setup}'. Choose one of: #{AzuCLI::Generate::Project::CI_SETUPS.join(", ")}."
+        end
+        "--docker is for web and api projects; a cli project has no server to run in a container." if @docker_support && @project_type == "cli"
       end
 
       private def generate_project
@@ -483,8 +495,9 @@ module AzuCLI
         puts "  --api                     Create API project (shorthand for --type api)"
         puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: postgresql]"
         puts "  --test TEST               Test framework (spec, minitest) [default: spec]"
-        puts "  --ci CI                   CI setup (\"GitHub Actions\", \"GitLab CI\", \"None\") [default: GitHub Actions]"
-        puts "  --docker                  Include Docker support"
+        puts "  --ci CI                   CI setup (\"GitHub Actions\" or \"None\") [default: GitHub Actions]"
+        puts "  --no-ci                   Skip the CI workflow"
+        puts "  --docker                  Generate a Dockerfile and .dockerignore (web and api projects)"
         puts "  --no-docker               Skip Docker support"
         puts "  --git                     Initialize Git repository [default]"
         puts "  --no-git                  Skip Git initialization"

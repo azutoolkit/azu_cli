@@ -16,7 +16,6 @@ Azu CLI provides a comprehensive set of commands to help you develop, manage, an
 ### Development Tools
 
 - [`azu serve`](serve.md) - Start development server with hot reloading
-- [`azu dev`](dev.md) - Alias for serve command
 - [`azu test`](test.md) - Run application tests with watch mode
 
 ### Background Jobs
@@ -48,10 +47,6 @@ Azu CLI provides a comprehensive set of commands to help you develop, manage, an
 - [`azu openapi:generate`](openapi.md#azu-openapigenerate) - Generate code from OpenAPI specification
 - [`azu openapi:export`](openapi.md#azu-openapiexport) - Export OpenAPI specification from code
 
-### Plugin Management
-
-- [`azu plugin`](plugin.md) - Manage CLI plugins
-
 ### Information & Help
 
 - [`azu help`](help.md) - Show help information
@@ -69,7 +64,7 @@ azu <command> [subcommand] [arguments] [options]
 
 ```bash
 # Project Creation
-azu new my_app --database postgres
+azu new my_app --db postgres
 
 # Code Generation
 azu generate scaffold Post title:string content:text
@@ -79,33 +74,6 @@ azu db:migrate
 
 # Development Server
 azu serve --port 4000
-```
-
-## Global Options
-
-These options are available for most commands:
-
-| Option          | Short | Description                           |
-| --------------- | ----- | ------------------------------------- |
-| `--help`        | `-h`  | Show help for the command             |
-| `--version`     | `-v`  | Show version information              |
-| `--debug`       | `-d`  | Enable debug mode with verbose output |
-| `--verbose`     |       | Enable verbose output                 |
-| `--quiet`       | `-q`  | Suppress non-error output             |
-| `--config FILE` |       | Use custom configuration file         |
-
-### Examples
-
-```bash
-# Get help for any command
-azu generate --help
-azu db migrate --help
-
-# Enable debug mode
-azu serve --debug
-
-# Quiet operation
-azu db:migrate --quiet
 ```
 
 ## Command Categories
@@ -128,7 +96,7 @@ azu new my_blog
 azu new my_api --type api
 
 # With specific database
-azu new my_app --database mysql
+azu new my_app --db mysql
 ```
 
 #### `azu init`
@@ -141,8 +109,7 @@ Initializes Azu in an existing Crystal project.
 # Initialize in current directory
 azu init
 
-# Initialize with specific database
-azu init --database postgres
+
 ```
 
 ### Code Generation Commands
@@ -201,20 +168,6 @@ azu serve --port 4000
 
 # Start with specific environment
 azu serve --env production
-```
-
-#### `azu dev`
-
-Alias for the `serve` command.
-
-**Quick Examples:**
-
-```bash
-# Same as azu serve
-azu dev
-
-# With options
-azu dev --port 8080
 ```
 
 #### `azu test`
@@ -432,27 +385,6 @@ azu openapi:export --output api.yaml
 azu openapi:export --output api.json --format json
 ```
 
-### Plugin Management Commands
-
-Commands for managing CLI plugins.
-
-#### `azu plugin`
-
-Manages Azu CLI plugins.
-
-**Quick Examples:**
-
-```bash
-# List plugins
-azu plugin list
-
-# Install plugin
-azu plugin install my-plugin
-
-# Show plugin info
-azu plugin info generator
-```
-
 ### Information Commands
 
 Commands for getting help and information.
@@ -489,11 +421,11 @@ azu version
 
 | Option              | Description                             | Default  |
 | ------------------- | --------------------------------------- | -------- |
-| `--database <db>`   | Database type (postgres, mysql, sqlite) | postgres |
+| `--db <db>`         | Database adapter (postgresql, mysql, sqlite) | postgresql |
 | `--type <type>`     | Project type (web, api, cli)            | web      |
-| `--template <name>` | Use specific template                   | default  |
-| `--skip-git`        | Skip Git repository initialization      | false    |
-| `--skip-deps`       | Skip dependency installation            | false    |
+| `--docker`          | Generate a Dockerfile and .dockerignore  | false    |
+| `--ci <setup>`      | `GitHub Actions` or `None`              | GitHub Actions |
+| `--no-git`          | Skip Git repository initialization      | false    |
 
 ### Generation Options
 
@@ -501,7 +433,6 @@ azu version
 | --------------- | ------------------------- | ------- |
 | `--force`       | Overwrite existing files  | false   |
 | `--skip-tests`  | `generate model`: skip the migration | false   |
-| `--skip-routes` | Skip route registration   | false   |
 
 ### Server Options
 
@@ -510,9 +441,6 @@ azu version
 | `--port <port>`       | Server port          | 4000        |
 | `--host <host>`       | Server host          | localhost   |
 | `--env <environment>` | Environment name     | development |
-| `--ssl`               | Enable SSL           | false       |
-| `--ssl-cert <path>`   | SSL certificate path |             |
-| `--ssl-key <path>`    | SSL private key path |             |
 
 ### Database Options
 
@@ -528,11 +456,8 @@ Azu CLI respects these environment variables:
 | Variable           | Description             | Default     |
 | ------------------ | ----------------------- | ----------- |
 | `AZU_ENV`          | Environment the CLI uses (Azu reads only `CRYSTAL_ENV`; `azu serve` sets both) | development |
-| `AZU_DATABASE_URL` | Database connection URL |             |
 | `AZU_PORT`         | Default server port     | 4000        |
 | `AZU_HOST`         | Default server host     | localhost   |
-| `AZU_CONFIG`       | Configuration file path | azu.yml     |
-| `AZU_DEBUG`        | Enable debug mode       | false       |
 
 ## Configuration File
 
@@ -565,16 +490,12 @@ database:
 
 ## Exit Codes
 
-Azu CLI uses standard exit codes:
+A command exits 0 when it succeeds and 1 when it fails (an unknown command exits 1):
 
 | Code | Meaning                   |
 | ---- | ------------------------- |
 | 0    | Success                   |
 | 1    | General error             |
-| 2    | Invalid usage/arguments   |
-| 3    | File/directory not found  |
-| 4    | Permission denied         |
-| 5    | Database connection error |
 
 ## Shell Completion
 
@@ -607,7 +528,7 @@ azu completion fish | source
 
 ```bash
 # 1. Create new project
-azu new my_blog --database postgres
+azu new my_blog --db postgresql
 
 # 2. Navigate to project
 cd my_blog

@@ -263,7 +263,7 @@ jobs:
           AZU_SERVER_HOST: 0.0.0.0
           AZU_SERVER_PORT: 8080
         run: |
-          azu db migrate
+          azu db:migrate
           azu serve
 ```
 
@@ -329,10 +329,10 @@ The CLI validates environment variables:
 
 ```bash
 # Validate environment configuration
-azu config validate --env
+azu config:validate --env
 
 # Check specific variable
-azu config validate --env AZU_DATABASE_URL
+azu config:validate --env AZU_DATABASE_URL
 ```
 
 ## Troubleshooting
@@ -359,7 +359,7 @@ Enable debug mode to see which environment variables are being used:
 export AZU_LOG_LEVEL=debug
 
 # Run command to see configuration
-azu config show --env
+azu config:show --env
 ```
 
 ### Environment Variable Reference
@@ -368,10 +368,10 @@ View all available environment variables:
 
 ```bash
 # List all environment variables
-azu config env --list
+azu config:env --list
 
 # Show current values
-azu config env --show
+azu config:env --show
 ```
 
 ## Best Practices

@@ -23,7 +23,8 @@ require "./azu_cli/middleware/**"
 require "./azu_cli/validators/**"
 
 module AzuCLI
-  VERSION = "0.0.1"
+  # The shard version, read from shard.yml when the CLI is compiled.
+  VERSION = {{ read_file("#{__DIR__}/../shard.yml").lines.find(&.starts_with?("version:")).split(":")[1].strip }}
 
   # Main CLI entry point using Topia
   def self.run

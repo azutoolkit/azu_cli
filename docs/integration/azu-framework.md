@@ -105,9 +105,6 @@ azu serve --framework=azu --reload
 
 # Run tests with framework patterns
 azu test --framework=azu
-
-# Debug application
-azu debug --framework=azu
 ```
 
 ## Framework Configuration
@@ -360,16 +357,16 @@ end
 
 ```bash
 # Create database
-azu db create --framework=azu
+azu db:create --framework=azu
 
 # Run migrations
-azu db migrate --framework=azu
+azu db:migrate --framework=azu
 
 # Seed database
-azu db seed --framework=azu
+azu db:seed --framework=azu
 
 # Reset database
-azu db reset --framework=azu
+azu db:reset --framework=azu
 ```
 
 ## Authentication Integration
@@ -583,28 +580,6 @@ azu framework info
 
 ## Migration from Other Frameworks
 
-### From Rails
-
-```bash
-# Generate migration plan
-azu migration plan --from=rails --to=azu
-
-# Convert models
-azu migration convert --input=rails_models --output=azu_models
-
-# Convert controllers
-azu migration convert --input=rails_controllers --output=azu_endpoints
-```
-
-### From Other Crystal Frameworks
-
-```bash
-# Analyze existing project
-azu analyze --framework=existing --target=azu
-
-# Generate migration guide
-azu migration guide --from=existing --to=azu
-```
 
 ## Support and Resources
 

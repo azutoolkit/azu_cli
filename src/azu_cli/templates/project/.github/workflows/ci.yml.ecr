@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: crystallang/crystal:<%= crystal_version %>
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y <%= build_packages %>
+      - name: Install shards
+        run: shards install --ignore-crystal-version
+      - name: Check formatting
+        run: crystal tool format --check src spec
+      - name: Run specs
+        run: <%= test_command %>
+      - name: Build
+        run: crystal build src/<%= main_file %> -o bin/<%= binary_name %>

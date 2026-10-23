@@ -490,15 +490,6 @@ azu config:validate
 azu config:validate --env production
 ```
 
-### Generate Configuration
-
-```bash
-# Generate configuration files
-azu config:generate
-
-# Generate for specific environment
-azu config:generate --env production
-```
 
 ## Advanced Configuration
 
@@ -590,9 +581,6 @@ yamllint config/application.yml
 ```bash
 # Error: Configuration file not found
 Error: config/application.yml not found
-
-# Solution: Create configuration file
-azu config:generate
 ```
 
 ### Debug Configuration

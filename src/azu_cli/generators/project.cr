@@ -7,6 +7,11 @@ module AzuCLI
       directory "#{__DIR__}/../templates/project"
       OUTPUT_DIR = "./"
 
+      # The Crystal release the generated project is built and tested with (`.tool-versions`, the
+      # Dockerfile and the CI workflow); shard.yml allows newer ones.
+      CRYSTAL_VERSION = "1.19.1"
+      CI_SETUPS       = ["GitHub Actions", "None"]
+
       # Project configuration properties
       property project : String
       property module_name : String
@@ -147,21 +152,31 @@ module AzuCLI
         end
       end
 
-      # Check if project should include CI configuration
-      def has_ci? : Bool
-        @ci_setup != "None"
+      def crystal_version : String
+        CRYSTAL_VERSION
       end
 
-      # Get CI workflow filename
-      def ci_filename : String
-        case @ci_setup
-        when "GitHub Actions"
-          "ci.yml"
-        when "GitLab CI"
-          ".gitlab-ci.yml"
-        else
-          ""
-        end
+      # Check if project should include CI configuration
+      def has_ci? : Bool
+        @ci_setup == "GitHub Actions"
+      end
+
+      # Packages the build needs: what the e2e CI job installs, plus the SQLite headers on SQLite.
+      def build_packages : String
+        packages = %w(libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev)
+        packages << "libsqlite3-dev" if database_adapter == "sqlite3"
+        packages.join(" ")
+      end
+
+      # The shared libraries the release binary links against, and curl for the health check.
+      def runtime_packages : String
+        packages = %w(ca-certificates curl tzdata libssl3t64 libyaml-0-2 libevent-2.1-7t64 libpcre2-8-0 libgc1 libxml2 libgmp10 zlib1g)
+        packages << "libsqlite3-0" if database_adapter == "sqlite3"
+        packages.join(" ")
+      end
+
+      def test_command : String
+        @test_framework == "minitest" ? "crystal run spec/test_helper.cr" : "crystal spec"
       end
 
       # Check if it's a web project type
@@ -227,6 +242,16 @@ module AzuCLI
       # Examples: "blog" → "blog_db", "my_blog" → "my_blog_db"
       def schema_symbol : String
         @project.downcase + "_db"
+      end
+
+      # Teeplate renders these: the delivery files only when asked for. (`filter` below is not called by
+      # Teeplate; it is left as it was, because turning it on would drop files the generated apps use.)
+      def rendered_file_entries
+        file_entries.reject do |entry|
+          path = entry.path.to_s
+          (!@docker_support && (path.ends_with?("Dockerfile") || path.ends_with?(".dockerignore"))) ||
+            (!has_ci? && path.includes?(".github/"))
+        end
       end
 
       # Override filter method to conditionally exclude files based on project type

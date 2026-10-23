@@ -323,7 +323,7 @@ check_auth() {
 step "generate a $TYPE project ($DB) with $AZU_BIN"
 cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
-  --type "$TYPE" --db "$DB" --no-git --no-docker
+  --type "$TYPE" --db "$DB" --no-git --no-docker --ci "GitHub Actions"
 cd "$NAME"
 
 if [ "$SCAFFOLD" = 1 ]; then
@@ -350,6 +350,15 @@ ENTRY=src/server.cr
 step "compile $ENTRY"
 mkdir -p bin
 crystal build "$ENTRY" -o "bin/$NAME"
+
+# The generated CI workflow must pass on a fresh project: run the commands it runs (the Crystal
+# version is the one this script runs with, the workflow pins another).
+step "run the generated workflow's checks (format, specs)"
+for command in "crystal tool format --check src spec" "crystal spec"; do
+  grep -q "run: $command" .github/workflows/ci.yml || fail ".github/workflows/ci.yml does not run '$command'"
+  sh -c "$command" || fail "'$command' failed on the generated project"
+  echo "ok: $command"
+done
 
 step "start the server"
 PORT="$(free_port)" || fail "no free port found"

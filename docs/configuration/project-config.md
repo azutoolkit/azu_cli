@@ -569,16 +569,11 @@ Azu CLI provides commands for managing project configuration:
 azu init --config
 
 # Show current configuration
-azu config show
+azu config:show
 
 # Validate configuration
-azu config validate
+azu config:validate
 
-# Generate configuration template
-azu config generate
-
-# Update configuration
-azu config update
 ```
 
 ### Configuration Management

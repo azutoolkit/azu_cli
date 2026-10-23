@@ -1,5 +1,9 @@
 # AZU Framework Patterns Reference
 
+> The generators emit one response type per endpoint (`Azu::Response::Empty` for redirects, 303) and the
+> `Blog::<Plural>::<Action><Layer>` names; see `CLAUDE.md` for the current emitted code. Examples below that use
+> `EmptyRequest`/`EmptyResponse` are style illustrations.
+
 This document defines the **accurate** patterns that azu_cli must enforce when generating AZU framework code.
 
 ## Endpoint Pattern

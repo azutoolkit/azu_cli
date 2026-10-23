@@ -45,7 +45,7 @@ describe AzuCLI::Generate::Project do
       "api",
       "mysql",
       "minitest",
-      "GitLab CI",
+      "None",
       true,
       false,
       false,
@@ -57,7 +57,7 @@ describe AzuCLI::Generate::Project do
     generator.project_type.should eq("api")
     generator.database.should eq("mysql")
     generator.test_framework.should eq("minitest")
-    generator.ci_setup.should eq("GitLab CI")
+    generator.ci_setup.should eq("None")
     generator.docker_support.should be_true
     generator.git_init.should be_false
     generator.include_example.should be_false
@@ -290,6 +290,105 @@ describe AzuCLI::Generate::Project do
 
         FileUtils.rm_rf(test_dir)
       end
+    end
+
+    it "turns the JoobQ REST API off in production by CRYSTAL_ENV, the variable Azu reads" do
+      FileUtils.mkdir_p("./tmp_test_joobq_env")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_joobq_env")
+
+      source = File.read("./tmp_test_joobq_env/src/initializers/joobq.cr")
+      source.should contain(%(config.rest_api_enabled = ENV["CRYSTAL_ENV"]? != "production"))
+      source.should_not contain(%(ENV["AZU_ENV"]))
+      FileUtils.rm_rf("./tmp_test_joobq_env")
+    end
+
+    it "loads only the schema from src/db, so the seed file does not run on every boot" do
+      FileUtils.mkdir_p("./tmp_test_db_require")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_db_require")
+
+      source = File.read("./tmp_test_db_require/src/myapp.cr")
+      source.should contain(%(require "./db/schema"\n))
+      source.should_not contain(%(require "./db/**"))
+      FileUtils.rm_rf("./tmp_test_db_require")
+    end
+
+    it "mounts the development handlers by the runtime environment, in one method" do
+      test_dir = "./tmp_test_dev_handlers"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", env: "production").render(test_dir)
+
+      source = File.read(File.join(test_dir, "src", "myapp.cr"))
+      source.should contain("def self.dev_handlers : Array(HTTP::Handler)")
+      source.should contain("return [] of HTTP::Handler unless Azu::CONFIG.env.development?")
+      source.scan("DevDashboard").size.should eq(1)
+      source.should contain("      *dev_handlers,\n")
+      source.should contain("def self.handlers : Array(HTTP::Handler)")
+      source.should contain("    ] of HTTP::Handler\n")
+
+      FileUtils.rm_rf(test_dir)
+    end
+  end
+
+  describe "delivery files" do
+    it "generates a Dockerfile and .dockerignore only with docker support" do
+      FileUtils.mkdir_p("./tmp_test_nodocker")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_nodocker")
+      File.exists?("./tmp_test_nodocker/Dockerfile").should be_false
+      File.exists?("./tmp_test_nodocker/.dockerignore").should be_false
+      FileUtils.rm_rf("./tmp_test_nodocker")
+    end
+
+    it "builds the web entry in a crystal stage and runs it as a non-root user in production" do
+      FileUtils.mkdir_p("./tmp_test_docker")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: "sqlite", docker_support: true).render("./tmp_test_docker")
+
+      dockerfile = File.read("./tmp_test_docker/Dockerfile")
+      dockerfile.should contain("FROM crystallang/crystal:#{AzuCLI::Generate::Project::CRYSTAL_VERSION} AS build")
+      dockerfile.should contain("libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev")
+      dockerfile.should contain("shards install --ignore-crystal-version")
+      dockerfile.should contain("mkdir -p bin && crystal build --release --no-debug src/server.cr -o bin/myapp")
+      dockerfile.should contain("USER app")
+      dockerfile.should contain("ENV CRYSTAL_ENV=production HOST=0.0.0.0 PORT=4000 TZ=UTC")
+      dockerfile.should contain("tzdata") # the app resolves time zones (Time::Location)
+      dockerfile.should contain("HEALTHCHECK")
+      dockerfile.should contain("/health")
+      dockerfile.should contain("VOLUME /data")
+      dockerfile.should contain("ENV DATABASE_URL=sqlite3:///data/myapp.db")
+      dockerfile.should_not match(/CSRF_SECRET=|SESSION_SECRET=/)
+      File.read("./tmp_test_docker/.dockerignore").lines.should contain(".env")
+      FileUtils.rm_rf("./tmp_test_docker")
+    end
+
+    it "builds src/api.cr for an api project and has no data volume on postgresql" do
+      FileUtils.mkdir_p("./tmp_test_docker_api")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "api", docker_support: true).render("./tmp_test_docker_api")
+
+      dockerfile = File.read("./tmp_test_docker_api/Dockerfile")
+      dockerfile.should contain("src/api.cr -o bin/myapp")
+      dockerfile.should_not contain("VOLUME")
+      dockerfile.should_not contain("libsqlite3")
+      FileUtils.rm_rf("./tmp_test_docker_api")
+    end
+
+    it "generates a GitHub Actions workflow pinned to the template's Crystal version" do
+      FileUtils.mkdir_p("./tmp_test_ci")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_ci")
+
+      workflow = File.read("./tmp_test_ci/.github/workflows/ci.yml")
+      workflow.should contain("image: crystallang/crystal:#{AzuCLI::Generate::Project::CRYSTAL_VERSION}")
+      workflow.should contain("shards install --ignore-crystal-version")
+      workflow.should contain("crystal tool format --check src spec")
+      workflow.should contain("run: crystal spec")
+      workflow.should contain("crystal build src/server.cr -o bin/myapp")
+      File.read("./tmp_test_ci/.tool-versions").should contain("crystal #{AzuCLI::Generate::Project::CRYSTAL_VERSION}")
+      FileUtils.rm_rf("./tmp_test_ci")
+    end
+
+    it "skips the workflow with --ci None" do
+      FileUtils.mkdir_p("./tmp_test_noci")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", ci_setup: "None").render("./tmp_test_noci")
+      Dir.exists?("./tmp_test_noci/.github").should be_false
+      FileUtils.rm_rf("./tmp_test_noci")
     end
   end
 end

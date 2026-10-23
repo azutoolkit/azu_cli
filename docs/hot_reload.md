@@ -74,8 +74,8 @@ Examples:
 For convenience, you can use the shorter `dev` command:
 
 ```bash
-azu dev
-azu dev --port 4000
+azu serve
+azu serve --port 4000
 ```
 
 ## How It Works
@@ -331,7 +331,6 @@ Disable hot reloading in CI environments:
 
 ```bash
 export AZU_ENV=production
-azu build  # Instead of azu serve
 ```
 
 ## API Reference
@@ -339,7 +338,6 @@ azu build  # Instead of azu serve
 ### Commands
 
 - `azu serve [options]` - Start development server with hot reloading
-- `azu dev [options]` - Alias for the serve command
 
 ### Client API
 

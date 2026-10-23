@@ -29,7 +29,6 @@ azu generate <generator_type> <name> [attributes] [options]
 | --------------- | ------------------------------------------ | ------- |
 | `--force`       | Overwrite existing files without prompting | false   |
 | `--skip-tests`  | `generate model`: don't generate the migration | false   |
-| `--skip-routes` | Don't register routes automatically        | false   |
 | `--help`        | Show help for the generator                |         |
 
 ## Endpoint Generator
@@ -52,7 +51,7 @@ azu generate endpoint users
 azu generate endpoint posts index show create
 
 # Generate API endpoint
-azu generate endpoint api/v1/posts --api
+azu generate endpoint api/v1/posts
 
 # A model without its migration
 azu generate model User name:string --skip-tests
@@ -112,13 +111,6 @@ class Users::IndexEndpoint
 end
 ```
 
-### Options
-
-| Option             | Description                                      |
-| ------------------ | ------------------------------------------------ |
-| `--api`            | Generate API-only endpoints (no pages/templates) |
-| `--actions <list>` | Specify which actions to generate                |
-
 ## Model Generator
 
 Generates CQL ORM models with validations and relationships.
@@ -142,7 +134,7 @@ azu generate model User name:string email:string age:integer
 azu generate model Post title:string content:text published:boolean author_id:integer
 
 # Model with validations
-azu generate model User name:string email:string --validations
+azu generate model User name:string email:string
 ```
 
 ### Field Types
@@ -196,14 +188,6 @@ class User < CQL::Model
 end
 ```
 
-### Options
-
-| Option          | Description                      |
-| --------------- | -------------------------------- |
-| `--validations` | Add common validations           |
-| `--timestamps`  | Add created_at/updated_at fields |
-| `--uuid`        | Use UUID as primary key          |
-
 ## Service Generator
 
 Generates service classes for encapsulating business logic.
@@ -224,7 +208,7 @@ azu generate service UserRegistration
 azu generate service EmailNotification send deliver
 
 # Service with dependencies
-azu generate service PaymentProcessor --dependencies user_repo,payment_gateway
+azu generate service PaymentProcessor
 ```
 
 ### Generated Files
@@ -290,10 +274,10 @@ azu generate component Counter
 azu generate component Counter count:integer step:integer
 
 # Real-time component with WebSocket
-azu generate component ChatMessage --websocket
+azu generate component ChatMessage
 
 # Component with events
-azu generate component TodoItem completed:boolean --events toggle,delete
+azu generate component TodoItem completed:boolean
 ```
 
 ### Generated Files
@@ -360,13 +344,6 @@ class CounterComponent
 end
 ```
 
-### Options
-
-| Option            | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| `--websocket`     | Enable WebSocket support for real-time updates |
-| `--events <list>` | Specify custom event handlers                  |
-
 ## Migration Generator
 
 Generates database migration files.
@@ -390,7 +367,7 @@ azu generate migration add_age_to_users age:integer
 azu generate migration remove_age_from_users age:integer
 
 # Add index migration
-azu generate migration add_index_to_users_email --index email
+azu generate migration add_index_to_users_email
 ```
 
 ### Generated Files
@@ -447,10 +424,10 @@ azu generate scaffold <name> [field:type] [options]
 azu generate scaffold Post title:string content:text published:boolean
 
 # User resource with validations
-azu generate scaffold User name:string email:string --validations
+azu generate scaffold User name:string email:string
 
 # API-only scaffold
-azu generate scaffold Product name:string price:decimal --api
+azu generate scaffold Product name:string price:decimal --api-only
 ```
 
 ### Generated Files

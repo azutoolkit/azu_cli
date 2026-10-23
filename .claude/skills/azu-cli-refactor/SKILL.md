@@ -16,6 +16,22 @@ This skill enables autonomous analysis and refactoring of Crystal's azu_cli tool
 - Create JOOBQ-compatible background job implementations
 - Provide a productive, friendly developer workflow
 
+## What the generators emit today (authoritative)
+
+Read `CLAUDE.md` at the repository root first: it lists the emitted APIs and the quality rules. In short:
+
+- CQL: `include CQL::ActiveRecord::Model(Int64)` + `db_context`, `CQL::Migration(<version>)` with `schema.table`, tables
+  declared in `src/db/schema.cr`
+- Azu: `struct Blog::Posts::CreateEndpoint` with `include Azu::Endpoint(Request, Response)`, ONE response type
+  (`Azu::Response::Empty` + `redirect to:, status: 303`, or a page); naming `Blog::<Plural>::<Action><Layer>`
+- Generators are Teeplate file trees (`Teeplate::FileTree`, ECR templates under `src/azu_cli/templates/`), not `ECR.render` classes
+- Rules from review: validate names, no hard-coded secrets (ENV, random dev fallback, raise in production), escape output
+  (`| e`), refuse to overwrite, 303 after writes, specs that can fail, never document commands that are not registered
+- The gate is end-to-end: `scripts/e2e_generated_app.sh [web|api]` (compile, boot, curl) and `scripts/e2e_docker.sh`
+  (the generated Dockerfile); a generator change is not done until the e2e passes
+
+The code samples further down illustrate style; where they differ from the generators, the generators and CLAUDE.md win.
+
 ## Phase 1: Repository Analysis
 
 ### Step 1.1: Clone and Explore Repositories
@@ -156,23 +172,17 @@ class <%= name %>Endpoint
   end
 end
 
-# AFTER: AZU-compliant template (uses include, not inheritance!)
-struct <%= @class_name %>Endpoint
-  include Azu::Endpoint(<%= @request_type %>, <%= @response_type %>)
+# AFTER: what the endpoint template emits (include, not inheritance; ONE response type)
+module <%= @app_module %>
+  struct <%= @plural %>::<%= @action %>Endpoint
+    include Azu::Endpoint(<%= @plural %>::<%= @action %>Request, Azu::Response::Empty)
 
-  <%= @http_method %> "<%= @path %>"
+    post "/<%= @resource_plural %>"
 
-  def call : <%= @response_type %>
-    # Implement endpoint logic
-    <%= @response_type %>.new(
-      message: "Success"
-    )
-  rescue ex : Azu::Response::NotFoundError
-    raise ex
-  rescue ex : Azu::Response::ValidationError
-    raise ex
-  rescue ex
-    raise Azu::Response::InternalServerError.new(ex.message)
+    def call : Azu::Response::Empty
+      record = <%= @plural %>::<%= @action %>Service.new.call(<%= @snake_action %>_request)
+      redirect to: "/<%= @resource_plural %>/#{record.id}", status: 303
+    end
   end
 end
 ```
@@ -180,36 +190,25 @@ end
 ### Step 3.3: Generator Class Pattern
 
 ```crystal
-module AzuCli
-  module Generators
-    class EndpointGenerator < BaseGenerator
-      TEMPLATE_PATH = "templates/endpoint.ecr"
-      
-      property module_name : String
-      property class_name : String
-      property request_type : String = "Azu::Request"
-      property response_type : String = "Azu::Response"
-      
-      def initialize(@module_name, @class_name)
-        validate_naming!
-      end
-      
-      def generate : String
-        ECR.render(TEMPLATE_PATH)
-      end
-      
-      def output_path : String
-        "src/endpoints/#{@class_name.underscore}.cr"
-      end
-      
-      private def validate_naming!
-        raise InvalidNameError.new("Module name required") if @module_name.blank?
-        raise InvalidNameError.new("Class name must be PascalCase") unless pascal_case?(@class_name)
+module AzuCLI
+  module Generate
+    class Channel < Teeplate::FileTree
+      directory "#{__DIR__}/../templates/channel"
+      OUTPUT_DIR = "./src/channels"
+
+      getter name : String
+
+      def initialize(@name : String)
+        # validate before anything is rendered: the name becomes Crystal code and a file name
       end
     end
   end
 end
 ```
+
+Templates live under `src/azu_cli/templates/<generator>/`; `{{ivar}}` in a file name is replaced by the instance
+variable, a `.ecr` suffix is dropped. Register the generator in `Commands::Generate#execute`, and refuse to overwrite
+what exists (see `Generate::Auth.conflict`).
 
 ## Phase 4: Developer Experience Enhancement
 
@@ -323,48 +322,17 @@ spec/
     └── job_generator_spec.cr
 ```
 
-### Step 5.2: Integration Test Script
+### Step 5.2: End-to-end gate
 
 ```bash
-#!/bin/bash
-# scripts/integration_test.sh
-
-set -e
-
-echo "🧪 Running AZU CLI Integration Tests"
-
-# Create temp project
-TEMP_DIR=$(mktemp -d)
-cd "$TEMP_DIR"
-
-# Initialize new project
-azu new test_app
-cd test_app
-
-# Test each generator
-echo "Testing endpoint generator..."
-azu generate endpoint Api::Users::Index
-grep -q "class Index < Azu::Endpoint" src/endpoints/api/users/index.cr
-
-echo "Testing model generator..."
-azu generate model User email:string name:string
-grep -q "table :users" src/models/user.cr
-grep -q "CreateUsers" db/migrations/*_create_users.cr
-
-echo "Testing job generator..."
-azu generate job SendWelcomeEmail
-grep -q "include Joobq::Job" src/jobs/send_welcome_email.cr
-
-# Compile to verify syntax
-echo "Verifying compilation..."
-shards install
-crystal build src/test_app.cr --no-codegen
-
-echo "✅ All integration tests passed!"
-
-# Cleanup
-rm -rf "$TEMP_DIR"
+# Build the CLI, then generate, compile, boot and drive a project
+shards build --ignore-crystal-version
+scripts/e2e_generated_app.sh web      # or api; E2E_DB=postgresql only boots
+scripts/e2e_docker.sh web             # needs a docker daemon; builds and runs the generated Dockerfile
 ```
+
+Without Crystal on the host, run the first two inside `crystallang/crystal:1.19.1` (see CLAUDE.md). Extend the
+script first with the assertion the change should satisfy, watch it fail, then change the generator.
 
 ## Phase 6: Documentation
 

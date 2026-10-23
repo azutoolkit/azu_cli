@@ -39,7 +39,8 @@ end
 <% else -%>
 require "azu"
 require "./initializers/**"
-require "./db/**"
+# Only the schema: src/db/seed.cr would run on every boot, and `azu db:migrate` requires the migrations itself.
+require "./db/schema"
 
 # Azu Framework Application
 # Docs: https://azutoolkit.org
@@ -76,19 +77,26 @@ module <%= @module_name %>
   end
 
 <% end -%>
-  def self.handlers
+  # A typed array: handing Azu an array of a union of handler classes as Array(HTTP::Handler) corrupts it
+  # in optimized builds (IndexError / SIGSEGV at boot).
+  def self.handlers : Array(HTTP::Handler)
     [
 <% if @project_type == "web" -%>
       Azu::Handler::CSRF.default, # the instance configured above signs the tokens the forms render
 <% end -%>
       Azu::Handler::RequestId.new,
-<% if @env == "development" -%>
-      Azu::Handler::DevDashboard.new,
-      Azu::Handler::PerformanceMonitor.new,
-<% end -%>
+      *dev_handlers,
       Azu::Handler::Rescuer.new,
       Azu::Handler::Logger.new,
-    ]
+    ] of HTTP::Handler
+  end
+
+  # Development tooling (query dashboard, performance monitor); decided when the app boots, so a
+  # production process never serves it. This is the one place that wires it.
+  def self.dev_handlers : Array(HTTP::Handler)
+    return [] of HTTP::Handler unless Azu::CONFIG.env.development?
+
+    [Azu::Handler::DevDashboard.new, Azu::Handler::PerformanceMonitor.new] of HTTP::Handler
   end
 end
 

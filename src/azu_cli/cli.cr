@@ -7,6 +7,11 @@ module AzuCLI
     @plugins : Array(Plugins::Base) = [] of Plugins::Base
     @middleware : Array(Middleware::Base) = [] of Middleware::Base
 
+    # The names the CLI answers to (commands and their aliases).
+    def command_names : Array(String)
+      @commands.keys
+    end
+
     def initialize
       setup_commands
       setup_plugins
@@ -62,9 +67,6 @@ module AzuCLI
       # OpenAPI commands
       register_command("openapi:generate", Commands::OpenAPI::Generate)
       register_command("openapi:export", Commands::OpenAPI::Export)
-
-      # Plugin commands
-      register_command("plugin", Commands::Plugin)
 
       # Config commands
       register_command("config:show", Commands::Config::Show)

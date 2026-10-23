@@ -19,7 +19,6 @@ Integration capabilities include:
 
 - [Azu Web Framework](azu-framework.md) - Core framework integration
 - [CQL ORM](cql-orm.md) - Database and model management
-- [Third-party Libraries](third-party.md) - External library support
 
 ### Development Tools
 
@@ -51,7 +50,7 @@ azu init --framework=azu --orm=cql
 
 ```bash
 # Set up database connection
-azu db setup --adapter=postgresql
+azu db:setup
 
 # Generate models with CQL integration
 azu generate model User email:string name:string
@@ -120,25 +119,6 @@ export AZU_DATABASE_URL=postgresql://user:pass@prod-db/myapp_prod
 
 ## Migration from Other Tools
 
-### From Rails/Other Frameworks
-
-```bash
-# Generate migration guide
-azu migration guide --from=rails
-
-# Convert existing models
-azu migration convert --input=rails_models --output=cql_models
-```
-
-### From Manual Setup
-
-```bash
-# Analyze existing project
-azu analyze --project=./existing-project
-
-# Generate integration plan
-azu integration plan --framework=azu
-```
 
 ## Troubleshooting Integration
 
@@ -152,18 +132,6 @@ azu integration plan --framework=azu
 
 **Authentication Integration**: Validate authentication provider configuration.
 
-### Debugging Integration
-
-```bash
-# Check integration status
-azu integration status
-
-# Validate framework configuration
-azu integration validate --framework=azu
-
-# Test database connectivity
-azu integration test --database
-```
 
 ## Best Practices
 
@@ -255,4 +223,3 @@ For specific integration details, see the individual integration guides:
 
 - [Azu Web Framework Integration](azu-framework.md)
 - [CQL ORM Integration](cql-orm.md)
-- [Third-party Library Integration](third-party.md)

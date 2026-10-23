@@ -143,9 +143,6 @@ azu config:show
 ### 3. Test Individual Components
 
 ```bash
-# Test database connection
-azu db:test
-
 # Test template rendering
 azu generate model Test --dry-run
 
@@ -288,9 +285,6 @@ docker run -it crystallang/crystal:latest
 ### Connection Problems
 
 ```bash
-# Test database connection
-azu db:test
-
 # Check database status
 azu db:status
 
@@ -301,9 +295,6 @@ echo $DATABASE_URL
 ### Migration Issues
 
 ```bash
-# Check migration status
-azu db:migrate:status
-
 # Reset migrations
 azu db:rollback
 azu db:migrate
@@ -377,9 +368,6 @@ shards update <dependency-name>
 # Check template installation
 ls -la src/templates/
 
-# Reinstall templates
-azu templates:install
-
 # Check template cache
 rm -rf .azu/templates/
 ```
@@ -387,14 +375,8 @@ rm -rf .azu/templates/
 ### Template Rendering Errors
 
 ```bash
-# Validate template syntax
-azu templates:validate
-
 # Test template rendering
 azu generate model Test --dry-run --verbose
-
-# Check template variables
-azu templates:variables
 ```
 
 ## Configuration Issues
@@ -407,9 +389,6 @@ azu config:validate
 
 # Show configuration
 azu config:show
-
-# Reset to defaults
-azu config:reset
 ```
 
 ### Environment Variables

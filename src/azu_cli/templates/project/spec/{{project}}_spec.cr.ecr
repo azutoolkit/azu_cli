@@ -1,9 +1,18 @@
 require "./spec_helper"
 
-describe <%= @project.camelcase %> do
-  # TODO: Write tests
-
-  it "works" do
-    false.should eq(true)
+describe <%= @module_name %> do
+  it "has a version" do
+    <%= @module_name %>::VERSION.should_not be_empty
   end
+<% if @project_type != "cli" -%>
+
+  it "mounts no development handlers outside development" do
+    # CRYSTAL_ENV is "test" here (spec_helper); DevDashboard and PerformanceMonitor are for development only
+    <%= @module_name %>.dev_handlers.should be_empty
+  end
+
+  it "keeps the request pipeline in place" do
+    <%= @module_name %>.handlers.map(&.class).should contain(Azu::Handler::Rescuer)
+  end
+<% end -%>
 end

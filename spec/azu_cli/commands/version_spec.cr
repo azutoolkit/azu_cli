@@ -1,6 +1,11 @@
 require "../../spec_helper"
 
 describe AzuCLI::Commands::Version do
+  it "reports the shard version, not a hard-coded one" do
+    shard_version = File.read("shard.yml").lines.find!(&.starts_with?("version:")).split(":")[1].strip
+    AzuCLI::VERSION.should eq(shard_version)
+  end
+
   describe "#execute" do
     it "displays version information successfully" do
       command = AzuCLI::Commands::Version.new

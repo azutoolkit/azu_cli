@@ -211,6 +211,63 @@ describe AzuCLI::Commands::New do
       end
     end
 
+    it "writes a Dockerfile with --docker and a workflow by default" do
+      TestHelpers::TestSetup.with_temp_project("delivery_test") do |temp_project|
+        Dir.cd(File.dirname(temp_project.path))
+
+        command = AzuCLI::Commands::New.new
+        command.parse_args(["--yes", "--docker", "--no-git", "delivery_app"])
+
+        TestHelpers::TestSetup.with_captured_output do |_|
+          command.execute.success?.should be_true
+        end
+
+        File.exists?("delivery_app/Dockerfile").should be_true
+        File.exists?("delivery_app/.dockerignore").should be_true
+        File.exists?("delivery_app/.github/workflows/ci.yml").should be_true
+      end
+    end
+
+    it "writes neither with --no-ci and without --docker" do
+      TestHelpers::TestSetup.with_temp_project("no_delivery_test") do |temp_project|
+        Dir.cd(File.dirname(temp_project.path))
+
+        command = AzuCLI::Commands::New.new
+        command.parse_args(["--yes", "--no-ci", "--no-git", "plain_app"])
+
+        TestHelpers::TestSetup.with_captured_output do |_|
+          command.execute.success?.should be_true
+        end
+
+        File.exists?("plain_app/Dockerfile").should be_false
+        Dir.exists?("plain_app/.github").should be_false
+      end
+    end
+
+    it "refuses --docker for a cli project and an unknown CI setup" do
+      TestHelpers::TestSetup.with_temp_project("bad_delivery_test") do |temp_project|
+        Dir.cd(File.dirname(temp_project.path))
+
+        cli = AzuCLI::Commands::New.new
+        cli.parse_args(["--yes", "--docker", "--type", "cli", "tool_app"])
+        TestHelpers::TestSetup.with_captured_output do |_|
+          result = cli.execute
+          result.success?.should be_false
+          result.error.should contain("--docker is for web and api projects")
+        end
+
+        gitlab = AzuCLI::Commands::New.new
+        gitlab.parse_args(["--yes", "--ci", "GitLab CI", "lab_app"])
+        TestHelpers::TestSetup.with_captured_output do |_|
+          result = gitlab.execute
+          result.success?.should be_false
+          result.error.should contain("Unknown CI setup 'GitLab CI'")
+        end
+        Dir.exists?("tool_app").should be_false
+        Dir.exists?("lab_app").should be_false
+      end
+    end
+
     it "handles skip git flag" do
       TestHelpers::TestSetup.with_temp_project("no_git_test") do |temp_project|
         parent_dir = File.dirname(temp_project.path)

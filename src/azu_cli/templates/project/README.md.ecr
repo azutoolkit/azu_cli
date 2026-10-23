@@ -77,12 +77,22 @@ crystal run spec/test_helper.cr
 <% if @docker_support -%>
 ## Docker
 
-This project includes Docker support:
+The `Dockerfile` builds a release binary and runs it as a non-root user in production mode
+(`CRYSTAL_ENV=production`), listening on `PORT` (4000). The secrets are not in the image: pass them in.
 
 ```bash
 docker build -t <%= @project %> .
-docker run -p 3000:3000 <%= @project %>
+docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) -e SESSION_SECRET=$(openssl rand -hex 32) <%= @project %>
 ```
+
+Without `CSRF_SECRET` the container exits with `CSRF_SECRET is not set`. `SESSION_SECRET` is only needed once you
+generate authentication (`azu generate auth`).
+<% if database_adapter == "sqlite3" -%>
+The SQLite database is `/data/<%= @project %>.db` on the `/data` volume (`-v <%= @project %>_data:/data`); the image does not run
+migrations, so run `azu db:migrate` against that file first.
+<% else -%>
+Point `DATABASE_URL` at your database server (`-e DATABASE_URL=...`).
+<% end -%>
 <% end -%>
 
 ## Contributing

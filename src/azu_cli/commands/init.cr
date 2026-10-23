@@ -135,15 +135,12 @@ module AzuCLI
         puts "This command will:"
         puts "  - Create Azu configuration files"
         puts "  - Set up project directory structure"
-        puts "  - Initialize basic project files"
+        puts "  - Create config/azu.yml (never overwrites an existing one)"
         puts
-        puts "Options:"
-        puts "  --force                 Overwrite existing configuration"
-        puts "  --skip-structure        Skip directory structure creation"
+        puts "It takes no options and does not edit shard.yml."
         puts
-        puts "Examples:"
+        puts "Example:"
         puts "  azu init"
-        puts "  azu init --force"
       end
     end
   end

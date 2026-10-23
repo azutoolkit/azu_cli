@@ -82,9 +82,8 @@ azu db:rollback                     # Rollback migrations
 azu db:seed                         # Seed database
 
 # Development
-azu dev                             # Development tools
+azu serve                             # Development tools
 azu test                            # Run tests
-azu build                           # Build application
 ```
 
 ### Environment Variables Reference
@@ -142,9 +141,6 @@ azu serve --verbose
 
 # Check configuration
 azu config:show
-
-# Validate setup
-azu doctor
 ```
 
 ## Performance Reference

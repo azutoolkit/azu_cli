@@ -7,7 +7,7 @@ Practical examples demonstrating Azu CLI patterns.
 ### Create a Blog
 
 ```bash
-azu new blog --database postgres
+azu new blog --db postgres
 cd blog
 
 # Generate resources
@@ -23,7 +23,7 @@ azu serve
 ### Create an API
 
 ```bash
-azu new api_service --api --database postgres
+azu new api_service --api --db postgres
 cd api_service
 
 # Generate API resources

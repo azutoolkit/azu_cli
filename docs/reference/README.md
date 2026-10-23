@@ -80,13 +80,12 @@ azu generate endpoint <name>        # Generate endpoint
 azu generate scaffold <name>        # Generate complete resource
 
 # Database operations
-azu db create                       # Create database
-azu db migrate                      # Run migrations
-azu db rollback                     # Rollback migrations
-azu db seed                         # Seed database
+azu db:create                       # Create database
+azu db:migrate                      # Run migrations
+azu db:rollback                     # Rollback migrations
+azu db:seed                         # Seed database
 
-# Development
-azu dev                             # Development tools
+# Other
 azu help                            # Show help
 azu version                         # Show version
 ```
@@ -94,30 +93,24 @@ azu version                         # Show version
 ### Available Generators
 
 ```bash
-# Core generators
-azu generate endpoint <name>        # HTTP endpoint with contract and page
-azu generate model <name>           # CQL Active Record model
-azu generate service <name>         # DDD application service
-azu generate middleware <name>      # HTTP middleware component
-azu generate contract <name>        # Request/response contract
-azu generate page <name>            # Page component (view)
-azu generate component <name>       # Live interactive component with real-time features
-azu generate validator <name>       # Custom CQL validator with validation logic
-azu generate migration <name>       # Database migration file
-azu generate scaffold <name>        # Complete resource with CRUD operations
-
-# Generator aliases
-azu generate e <name>               # Alias for endpoint
-azu generate m <name>               # Alias for model
-azu generate s <name>               # Alias for service
-azu generate mw <name>              # Alias for middleware
-azu generate c <name>               # Alias for contract
-azu generate p <name>               # Alias for page
-azu generate comp <name>            # Alias for component
-azu generate val <name>             # Alias for validator
-azu generate v <name>               # Alias for validator
-azu generate mig <name>             # Alias for migration
+azu generate model <name> [attr:type]       # CQL model with its migration
+azu generate scaffold <name> [attr:type]    # CRUD: model, endpoints, requests, pages, templates
+azu generate endpoint <name> [actions]      # Endpoint with request and page
+azu generate service <name>                 # Service
+azu generate request <name>                 # Request contract
+azu generate response <name>                # Response object
+azu generate page <name>                    # Page with its template
+azu generate component <name>               # Component
+azu generate middleware <name>              # HTTP middleware
+azu generate validator <name>               # Custom validator
+azu generate migration <name>               # Database migration
+azu generate mailer <name>                  # Mailer
+azu generate channel <name>                 # WebSocket channel
+azu generate auth                           # Session authentication
+azu generate job <name>                     # JoobQ job
 ```
+
+There are no short aliases for generator types (only `g` for `generate`).
 
 ### Template Variables
 
@@ -340,19 +333,19 @@ azu generate scaffold Product name:string price:float64 --skip migration
 
 ```bash
 # Create migration
-azu db new_migration CreateUsers
+azu generate migration CreateUsers
 
 # Run migrations
-azu db migrate
+azu db:migrate
 
 # Rollback migrations
-azu db rollback --steps 1
+azu db:rollback --steps 1
 
 # Check status
-azu db status
+azu db:status
 
 # Reset database
-azu db reset --force
+azu db:reset --force
 ```
 
 ### Migration Patterns
