@@ -16,9 +16,16 @@ Session.configure do |config|
   # nothing loads .env for you) or set it in your process manager. Development falls back to a random
   # key per process, which signs users out on every restart; production refuses to boot without it.
   config.secret = ENV["SESSION_SECRET"]?.presence || begin
-    raise "SESSION_SECRET is not set" if ENV["CRYSTAL_ENV"]? == "production"
+    raise "SESSION_SECRET is not set" if Azu::CONFIG.env.production?
     Random::Secure.hex(32)
   end
   config.session_key = "<%= app_dir %>_session"
+
+  # The session shard sets the cookie flags itself: Secure, HttpOnly, SameSite=Strict (browsers keep a
+  # Secure cookie over plain http only on localhost). It expires with the session timeout.
+  # The cookie store keeps the session in the browser: signing out clears that cookie, but a copy of
+  # it stays valid until it expires. Shorten the timeout, or switch to Session::RedisStore, if you
+  # need server-side revocation.
+  config.timeout = 8.hours
   config.store = Session::CookieStore(UserSession).new
 end

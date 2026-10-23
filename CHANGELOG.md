@@ -23,7 +23,10 @@ CQL's own configuration is the single source of truth for the connection. **Requ
 - `azu generate channel Chat` generates an `Azu::Channel` served at `/chat` (the old template targeted an ActionCable-style `Azu::Channel::Base` that does not exist); the name must be an identifier
 - `azu generate auth` is rewritten as session-cookie authentication for web projects (`Blog::Registrations`, `Blog::Sessions`, `Blog::Account`, a `User` model with a bcrypt digest); the JWT/Authly/OAuth/RBAC templates and the `--strategy`, `--user-model`, `--backend` options are gone (API projects have no generated authentication yet)
 - `SESSION_SECRET` is read from the environment (random in development, required in production) and listed in the git-ignored `.env`
-- Two migrations generated in the same second no longer share a version
+- Two migrations generated in the same second no longer share a version; a second `create_*` migration for the same table is refused instead of defining its class twice
+- `azu generate auth` refuses to run over an existing `User`, session initializer, account endpoints or `create_users` migration, and when the app file has no handler anchor; it creates `.env` when missing
+- Passwords are validated by bytes (at most 72) on sign up and sign in, so bcrypt never raises on them
+- The e2e also checks CSRF rejection on `/login` and `/register`, the session cookie flags, a foreign WebSocket Origin and long passwords
 - Generated projects pin `cql` to 0.0.541 (0.0.562 does not compile with crystal-db 0.15) and `session` to `~> 1.0.31`, and load `src/channels/**`
 
 ## Unreleased - Scaffolds that compile, boot and serve CRUD

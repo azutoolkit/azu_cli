@@ -11,6 +11,7 @@ module <%= app_module %>
     end
 
     private def authenticate(email : String, password : String) : User?
+      return if password.bytesize > 72 # bcrypt refuses longer passwords; the contracts reject them first
       user = User.find_by(email: email.strip.downcase)
       verified = Crypto::Bcrypt::Password.new(user.try(&.password_digest) || UNKNOWN_USER_DIGEST).verify(password)
       user if verified && user

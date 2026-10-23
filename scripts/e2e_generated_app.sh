@@ -25,6 +25,9 @@ SCAFFOLD=0
 [ "$DB" = sqlite ] && SCAFFOLD=1
 
 command -v curl >/dev/null || { echo "curl is required" >&2; exit 2; }
+if [ "$TYPE" = web ] && [ "$DB" = sqlite ]; then
+  command -v sqlite3 >/dev/null || { echo "sqlite3 is required to check the stored password digest" >&2; exit 2; }
+fi
 [ -x "$AZU_BIN" ] || { echo "azu binary not found at $AZU_BIN (build it first or set AZU_BIN)" >&2; exit 2; }
 
 WORK="$(mktemp -d)"
@@ -197,21 +200,53 @@ first.on_message { |message| inbox[:a].send(message) }
 second.on_message { |message| inbox[:b].send(message) }
 spawn { first.run }
 spawn { second.run }
-sleep 0.3.seconds
+# A message sent before the server has registered both sockets would be missed: retry a probe until
+# both clients see it, then run the real check.
+probe = "probe"
+connected = false
+20.times do
+  first.send(probe)
+  got = [] of Symbol
+  {a: inbox[:a], b: inbox[:b]}.each do |name, channel|
+    select
+    when message = channel.receive
+      got << name if message == probe
+    when timeout(250.milliseconds)
+    end
+  end
+  if got.size == 2
+    connected = true
+    break
+  end
+end
+abort "the clients never saw each other's messages" unless connected
 
 first.send("hello e2e")
 {a: inbox[:a], b: inbox[:b]}.each do |name, channel|
-  select
-  when message = channel.receive
-    abort "client #{name} got #{message.inspect}, expected \"hello e2e\"" unless message == "hello e2e"
-  when timeout(5.seconds)
-    abort "client #{name} received nothing within 5s"
+  waits = 0
+  loop do
+    select
+    when message = channel.receive
+      next if message == probe # a late echo of the connection probe
+      abort "client #{name} got #{message.inspect}, expected \"hello e2e\"" unless message == "hello e2e"
+      break
+    when timeout(1.second)
+      waits += 1
+      abort "client #{name} received nothing within 5s" if waits >= 5
+    end
   end
 end
 puts "both clients received hello e2e"
 CRYSTAL
   out="$(crystal run "$WORK/ws_check.cr" -- "$PORT" /chat 2>&1)" || fail "WebSocket /chat: $out"
   echo "ok: $out"
+
+  # A page on another origin must not be able to open the socket (cross-site WebSocket hijacking).
+  got="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
+    -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
+    -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H 'Origin: http://evil.example' "http://127.0.0.1:$PORT/chat")"
+  [ "$got" != 101 ] || fail "WebSocket /chat accepted an upgrade from Origin http://evil.example"
+  echo "ok: WebSocket /chat refuses a foreign Origin ($got)"
 }
 
 # The generated authentication: sign up, sign in, a protected page, sign out; passwords are hashed.
@@ -223,11 +258,29 @@ check_auth() {
   [ "$got" = 303 ] || fail "GET /account signed out returned $got, expected 303"
   expect_redirect /login
 
+  # A form without the CSRF token is refused before it reaches the endpoint.
+  for path in /register /login; do
+    got="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 --data-urlencode email=x@example.com --data-urlencode password=whatever-pass "$base$path")"
+    [ "$got" = 403 ] || fail "POST $path without a CSRF token returned $got, expected 403"
+    echo "ok: POST $path without a CSRF token -> 403"
+  done
+
   rm -f "$jar"
   [ "$(fetch /register "$jar")" = 200 ] || fail "GET /register did not return 200"
   expect_body 'name="email"'
   expect_body 'name="password"'
   submit "$jar" /register 422 --data-urlencode email=nobody --data-urlencode password=short
+  # bcrypt refuses more than 72 bytes: the contracts must answer 422, not crash.
+  long_ascii="$(printf 'a%.0s' $(seq 1 100))"
+  four_byte="$(printf '\360\237\230\200%.0s' $(seq 1 30))" # 30 characters, 120 bytes
+  fetch /register "$jar" >/dev/null
+  submit "$jar" /register 422 --data-urlencode email=long@example.com --data-urlencode "password=$long_ascii"
+  fetch /register "$jar" >/dev/null
+  submit "$jar" /register 422 --data-urlencode email=long@example.com --data-urlencode "password=$four_byte"
+  fetch /login "$jar" >/dev/null
+  submit "$jar" /login 422 --data-urlencode email=long@example.com --data-urlencode "password=$long_ascii"
+  fetch /login "$jar" >/dev/null
+  submit "$jar" /login 422 --data-urlencode email=long@example.com --data-urlencode "password=$four_byte"
   fetch /register "$jar" >/dev/null
   submit "$jar" /register 303 --data-urlencode "email=Dev@Example.com" --data-urlencode "password=correct horse"
   expect_redirect /login
@@ -250,6 +303,12 @@ check_auth() {
   fetch /login "$jar" >/dev/null
   submit "$jar" /login 303 --data-urlencode email=Dev@Example.com --data-urlencode "password=correct horse"
   expect_redirect /account
+  cookie="$(tr -d '\r' <"$WORK/headers" | grep -i '^set-cookie: e2e_app_session=' | head -n 1)"
+  [ -n "$cookie" ] || fail "sign in did not set the session cookie"
+  for flag in HttpOnly SameSite=Strict Secure; do
+    printf '%s' "$cookie" | grep -qi "$flag" || fail "the session cookie lacks $flag: $cookie"
+  done
+  echo "ok: the session cookie is HttpOnly, Secure and SameSite=Strict"
   [ "$(fetch /account "$jar")" = 200 ] || fail "GET /account signed in did not return 200"
   expect_body 'dev@example.com'
   expect_body 'name="_method" value="delete"'

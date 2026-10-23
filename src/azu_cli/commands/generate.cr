@@ -621,6 +621,10 @@ module AzuCLI
           return error("Unsupported strategy '#{strategy}': the generated authentication uses a session cookie only.") unless strategy == "session"
         end
 
+        if conflict = Generators::Auth.conflict
+          return error(conflict)
+        end
+
         render_generator(Generators::Auth.new, Generators::Auth::OUTPUT_DIR)
 
         Logger.success("✓ Authentication generated: /register, /login, /logout and /account")

@@ -17,7 +17,8 @@ dependencies:
   azu:
     github: azutoolkit/azu
 
-  # 0.0.562 and later bring a native PostgreSQL driver that does not compile against crystal-db 0.15
+  # TODO: unpin once cql supports crystal-db 0.15. cql 0.0.562 and later bring a native PostgreSQL
+  # driver that does not compile against it (CQL::Postgres::Connection lacks #driver_name).
   cql:
     github: azutoolkit/cql
     version: 0.0.541

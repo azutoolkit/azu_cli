@@ -8,14 +8,23 @@ module <%= app_module %>
 
     def call : Azu::Response::Empty
       email = create_request.email.strip.downcase
-      if User.find_by(email: email)
-        Session.session.flash["error"] = "That email is already registered"
-        return redirect to: "/register", status: 303
+      return email_taken if User.find_by(email: email)
+
+      begin
+        User.new(email: email, password_digest: Crypto::Bcrypt::Password.create(create_request.password).to_s).save!
+      rescue ex
+        raise ex unless User.find_by(email: email) # another request registered the same email first
+        return email_taken
       end
 
-      User.new(email: email, password_digest: Crypto::Bcrypt::Password.create(create_request.password).to_s).save!
       Session.session.flash["notice"] = "Account created: sign in"
       redirect to: "/login", status: 303
+    end
+
+    # Saying so reveals which emails are registered; that is accepted here for a usable form.
+    private def email_taken : Azu::Response::Empty
+      Session.session.flash["error"] = "That email is already registered"
+      redirect to: "/register", status: 303
     end
   end
 end

@@ -19,6 +19,31 @@ module AzuCLI
       getter app_module : String
       getter app_dir : String
 
+      # Why authentication cannot be generated into `root`, if it cannot: something it would write
+      # exists already (a second run, or a `User` made by a scaffold), or the app file has no place for the handler.
+      def self.conflict(root : String = ".") : String?
+        existing = ["src/models/user.cr", "src/initializers/session.cr", "src/endpoints/sessions", "src/endpoints/registrations", "src/endpoints/account"]
+          .select { |path| File.exists?(File.join(root, path)) }
+        existing.concat(Dir.glob(File.join(root, "src/db/migrations/*_create_users.cr")).map { |path| path.sub("#{root}/", "") })
+        unless existing.empty?
+          return "Authentication would overwrite or duplicate: #{existing.join(", ")}. Remove them (or the User you generated) first."
+        end
+
+        app_file = app_file_path(root)
+        if File.exists?(app_file) && !handler_anchor.matches?(File.read(app_file))
+          "#{app_file} has no `Azu::Handler::RequestId.new,` line to put the session handler after; add #{SESSION_HANDLER} to its handlers and run again."
+        end
+      end
+
+      def self.app_file_path(root : String = ".") : String
+        File.join(root, "src", "#{Utils.project_name}.cr")
+      end
+
+      # The handler list line the session handler goes after; a commented-out line does not count.
+      def self.handler_anchor : Regex
+        /^( *)Azu::Handler::RequestId\.new,/m
+      end
+
       def initialize
         @app_module = Utils.project_module_name
         @app_dir = @app_module.underscore
@@ -28,7 +53,7 @@ module AzuCLI
       def render(out_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
         super
         Model.new("User", USER_ATTRIBUTES).render(File.join(out_dir, "src", "models"), force: force, interactive: interactive, list: list, color: color)
-        add_session_handler(File.join(out_dir, "src", "#{Utils.project_name}.cr"))
+        add_session_handler(self.class.app_file_path(out_dir))
         add_session_secret(File.join(out_dir, ".env"))
       end
 
@@ -38,20 +63,16 @@ module AzuCLI
         source = File.read(app_file)
         return if source.includes?("Session::SessionHandler")
 
-        marker = "Azu::Handler::RequestId.new,"
-        unless source.includes?(marker)
-          Logger.warn("Add #{SESSION_HANDLER} to the handlers of #{app_file}")
-          return
-        end
-        File.write(app_file, source.sub(/^( *)#{Regex.escape(marker)}/m) { "#{$1}#{marker}\n#{$1}#{SESSION_HANDLER}" })
+        File.write(app_file, source.sub(self.class.handler_anchor) { "#{$1}Azu::Handler::RequestId.new,\n#{$1}#{SESSION_HANDLER}" })
       end
 
-      # The generated .env lists a random secret (and is git-ignored); nothing loads it, so it has to be exported.
+      # The .env (created if missing) lists a random secret and is git-ignored; nothing loads it, so it has to be exported.
       private def add_session_secret(env_file : String)
-        return unless File.exists?(env_file)
-        return if File.read(env_file).includes?("SESSION_SECRET=")
+        content = File.exists?(env_file) ? File.read(env_file) : ""
+        return if content.includes?("SESSION_SECRET=")
 
-        File.open(env_file, "a") { |file| file.puts "SESSION_SECRET=#{Random::Secure.hex(32)}" }
+        separator = content.empty? || content.ends_with?("\n") ? "" : "\n"
+        File.write(env_file, "#{content}#{separator}SESSION_SECRET=#{Random::Secure.hex(32)}\n")
       end
     end
   end

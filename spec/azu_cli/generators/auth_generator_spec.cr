@@ -44,7 +44,9 @@ describe AzuCLI::Generate::Auth do
 
       session = File.read("src/initializers/session.cr")
       session.should contain(%(ENV["SESSION_SECRET"]?.presence))
-      session.should contain(%(raise "SESSION_SECRET is not set" if ENV["CRYSTAL_ENV"]? == "production"))
+      session.should contain(%(raise "SESSION_SECRET is not set" if Azu::CONFIG.env.production?))
+      session.should contain("config.timeout = 8.hours")
+      session.should contain("SameSite=Strict")
       session.should contain("Random::Secure.hex(32)")
       session.should_not match(/secret = "/)
     end
@@ -60,15 +62,71 @@ describe AzuCLI::Generate::Auth do
     end
   end
 
-  it "adds the session handler to the app once and a secret to .env once" do
+  it "adds the session handler to the app and a secret to .env, once" do
     in_generated_project do
       File.write("src/blog.cr", "  def self.handlers\n    [\n      Azu::Handler::RequestId.new,\n    ]\n  end\n")
-      File.write(".env", "PORT=4000\n")
-      2.times { render.call(".") }
+      File.write(".env", "PORT=4000")
+      render.call(".")
 
       File.read("src/blog.cr").scan("Session::SessionHandler(UserSession)").size.should eq(1)
-      File.read(".env").scan("SESSION_SECRET=").size.should eq(1)
-      File.read(".env").should match(/^SESSION_SECRET=[0-9a-f]{64}$/m)
+      File.read("src/blog.cr").should contain("      Azu::Handler::RequestId.new,\n      Session::SessionHandler(UserSession).new(Session.session),")
+      File.read(".env").should match(/^PORT=4000\nSESSION_SECRET=[0-9a-f]{64}\n\z/)
+    end
+  end
+
+  it "creates .env when the project has none" do
+    in_generated_project do
+      File.delete(".env") if File.exists?(".env")
+      render.call(".")
+
+      File.read(".env").should match(/\ASESSION_SECRET=[0-9a-f]{64}\n\z/)
+    end
+  end
+
+  describe ".conflict" do
+    it "is nil in a project without authentication" do
+      in_generated_project do
+        AzuCLI::Generate::Auth.conflict.should be_nil
+      end
+    end
+
+    it "names what a second run would overwrite" do
+      in_generated_project do
+        render.call(".")
+
+        message = AzuCLI::Generate::Auth.conflict.not_nil!
+        message.should contain("src/models/user.cr")
+        message.should contain("src/initializers/session.cr")
+        message.should contain("_create_users.cr")
+      end
+    end
+
+    it "refuses a User that a scaffold made" do
+      in_generated_project do
+        Dir.mkdir_p("src/models")
+        File.write("src/models/user.cr", "struct User; end\n")
+
+        AzuCLI::Generate::Auth.conflict.not_nil!.should contain("src/models/user.cr")
+      end
+    end
+
+    it "refuses an app file with no RequestId handler to anchor on" do
+      in_generated_project do
+        File.write("src/blog.cr", "  # Azu::Handler::RequestId.new,\n")
+
+        AzuCLI::Generate::Auth.conflict.not_nil!.should contain("RequestId.new")
+      end
+    end
+  end
+
+  it "validates passwords by bytes, because bcrypt rejects more than 72" do
+    in_generated_project do
+      render.call(".")
+
+      File.read("src/requests/registrations/create_request.cr").should contain("max_bytes: 72")
+      File.read("src/requests/sessions/create_request.cr").should contain("max_bytes: 72")
+      File.read("src/requests/bytesize_predicate.cr").should contain("value.bytesize <= limit")
+      File.read("src/middleware/authentication.cr").should contain("return if password.bytesize > 72")
     end
   end
 

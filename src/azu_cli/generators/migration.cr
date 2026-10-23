@@ -45,9 +45,19 @@ module AzuCLI
       # Renders the migration; a create-table migration also declares its table in `src/db/schema.cr`,
       # where the models look their columns up.
       def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
+        reject_duplicate(output_dir)
         use_unused_version(output_dir)
         super
         register_table(File.join(File.dirname(output_dir), "schema.cr")) if migration_type == "create_table"
+      end
+
+      # A second `create_posts` would define `CreatePosts` again: a migration of the same name exists already.
+      # (Column migrations are named for their table only, so two of them can share a class name; not checked.)
+      private def reject_duplicate(output_dir : String)
+        return unless {"create_table", "update_table", "delete_table", "drop_table"}.includes?(migration_type)
+
+        existing = Dir.glob(File.join(output_dir, "*.cr")).find { |path| File.read(path).includes?("class #{migration_class_name} <") }
+        raise "A migration named #{migration_class_name} exists already (#{File.basename(existing)}); remove it or choose another name." if existing
       end
 
       # Two migrations generated within the same second (a scaffold, then authentication) must not share a version.

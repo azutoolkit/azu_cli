@@ -5,7 +5,7 @@ module <%= app_module %>
     getter email : String
     getter password : String
 
-    validate email, presence: true
-    validate password, presence: true
+    validate email, presence: true, size: 1..254
+    validate password, presence: true, max_bytes: 72
   end
 end

@@ -5,7 +5,7 @@ module <%= app_module %>
     getter email : String
     getter password : String
 
-    validate email, presence: true, match: /\A[^@\s]+@[^@\s]+\z/
-    validate password, presence: true, size: 8..72 # bcrypt reads the first 72 bytes
+    validate email, presence: true, size: 3..254, match: /\A[^@\s]+@[^@\s]+\z/
+    validate password, presence: true, size: 8..72, max_bytes: 72
   end
 end

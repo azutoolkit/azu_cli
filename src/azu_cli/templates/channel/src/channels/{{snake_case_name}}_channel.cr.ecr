@@ -1,6 +1,11 @@
 module <%= app_module %>
   # Every message a client sends reaches all the clients of the channel, the sender included.
   # Clients connect to ws://<host><%= route %>.
+  #
+  # Azu checks the Origin of every connection against `Azu::CONFIG.websocket.allowed_origins`
+  # (WEBSOCKET_ALLOWED_ORIGINS; the page's own host is always allowed) and closes connections whose
+  # messages exceed `websocket.max_message_size` (WEBSOCKET_MAX_MESSAGE_SIZE, 1 MiB).
+  # Messages are relayed as they come: clients must show them as text, never as innerHTML.
   class <%= camel_case_name %>Channel < Azu::Channel
     TOPIC = "<%= snake_case_name %>"
 

@@ -38,6 +38,24 @@ requests, pages and Jinja templates under `public/templates/<app>/`. The generat
 - `SESSION_SECRET` comes from the environment; development falls back to a random key per process, production
   (`CRYSTAL_ENV=production`) refuses to boot without it.
 
+- Passwords are limited to 72 bytes (bcrypt's limit; a multi-byte character counts for each of its bytes). The contracts answer `422` for longer ones instead of failing.
+- The session cookie is `Secure`, `HttpOnly` and `SameSite=Strict` (the session shard sets these) and expires after
+  `config.timeout` (8 hours). It is a cookie store: signing out clears the browser's cookie, but a copy of it stays
+  valid until it expires. For server-side revocation shorten the timeout or switch to `Session::RedisStore`.
+- Registration looks the email up, then inserts; two simultaneous sign-ups for one email end in one account and one "email taken" answer. The "email taken" answer does reveal which emails are registered.
+
+## Running it again, and other generators
+
+`azu generate auth` refuses to run when a `User` model, `src/initializers/session.cr`, the session/registration/account
+endpoints or a `create_users` migration exist already (a scaffold named `User` counts), and when the app file has no
+`Azu::Handler::RequestId.new,` line to put the session handler after. Remove what it names, or add the handler by hand.
+Do not combine it with `azu session:setup`: both define the session initializer and handler.
+
+## Brute force
+
+Nothing throttles sign-in attempts, and each attempt costs a bcrypt check. Put a limit in front of `/login` and `/register`
+(a reverse proxy, or `Azu::Handler::Throttle` once it fits your traffic: it counts every request per client, not only failures).
+
 ## Not generated
 
 JWT or OAuth (Authly), roles and permissions, password reset, email confirmation.
