@@ -31,6 +31,11 @@ jobs:
         run: shards install --ignore-crystal-version
       - name: Check formatting
         run: crystal tool format --check ./src
+      # The integration specs run `bin/azu`.
+      - name: Build the CLI
+        run: |
+          mkdir -p bin
+          crystal build src/azu_cli.cr -o bin/azu --no-debug
       - name: Run Specs
         run: crystal spec
   generated-app:
