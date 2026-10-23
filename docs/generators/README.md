@@ -328,7 +328,7 @@ spec/
 ├── models/post_spec.cr         # Model tests
 └── endpoints/posts_spec.cr     # Endpoint tests
 
-db/migrations/
+src/db/migrations/
 └── 20231214_120000_create_posts_table.cr  # Migration
 ```
 

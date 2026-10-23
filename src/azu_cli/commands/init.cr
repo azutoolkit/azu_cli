@@ -58,7 +58,7 @@ module AzuCLI
           "src/requests",
           "src/responses",
           "src/components",
-          "src/db/migrations",
+          AzuCLI::Config::Paths::MIGRATIONS,
           "spec/models",
           "spec/endpoints",
           "spec/services",

@@ -396,13 +396,13 @@ azu generate migration add_index_to_users_email --index email
 ### Generated Files
 
 ```
-db/migrations/20231214_120000_create_users_table.cr
+src/db/migrations/20231214_120000_create_users_table.cr
 ```
 
 ### Example Generated Migration
 
 ```crystal
-# db/migrations/20231214_120000_create_users_table.cr
+# src/db/migrations/20231214_120000_create_users_table.cr
 class CreateUsersTable < CQL::Migration
   def up
     create_table "users" do |t|
@@ -473,7 +473,7 @@ src/pages/posts/*.cr (4 files)
 public/templates/posts/*.jinja (4 files)
 spec/models/post_spec.cr
 spec/endpoints/posts_spec.cr
-db/migrations/*_create_posts_table.cr
+src/db/migrations/*_create_posts_table.cr
 ```
 
 ## Advanced Usage

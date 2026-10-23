@@ -100,9 +100,9 @@ module AzuCLI
 
         private def create_sessions_migration
           timestamp = Time.utc.to_s("%Y%m%d%H%M%S")
-          migration_file = "./src/db/migrations/#{timestamp}_create_sessions.cr"
+          migration_file = "./#{AzuCLI::Config::Paths::MIGRATIONS}/#{timestamp}_create_sessions.cr"
 
-          Dir.mkdir_p("./src/db/migrations")
+          Dir.mkdir_p("./#{AzuCLI::Config::Paths::MIGRATIONS}")
 
           File.write(migration_file, <<-MIGRATION)
             # Create sessions table for database-backed session storage

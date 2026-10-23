@@ -10,7 +10,7 @@ module AzuCLI
       property migration_files : Array(String)
       property migration_versions : Array(Int64)
 
-      def initialize(@migrations_dir : String = "./src/db/migrations")
+      def initialize(@migrations_dir : String = "./#{AzuCLI::Config::Paths::MIGRATIONS}")
         @errors = [] of String
         @warnings = [] of String
         @migration_files = [] of String

@@ -222,7 +222,7 @@ module AzuCLI
         # Show helpful next steps
         Logger.success("✓ Model #{@generator_name} created: src/models/#{Generators::Resource.singular(@generator_name)}.cr")
         unless @skip_tests
-          Logger.success("✓ Migration created: src/db/migrations/*_create_#{Generators::Resource.plural(@generator_name)}.cr")
+          Logger.success("✓ Migration created: #{AzuCLI::Config::Paths::MIGRATIONS}/*_create_#{Generators::Resource.plural(@generator_name)}.cr")
         end
 
         Logger.info("")
@@ -463,7 +463,7 @@ module AzuCLI
         render_generator(generator, Generators::Migration::OUTPUT_DIR)
 
         # Show helpful next steps
-        Logger.success("✓ Migration created: src/db/migrations/#{generator.migration_filename}")
+        Logger.success("✓ Migration created: #{AzuCLI::Config::Paths::MIGRATIONS}/#{generator.migration_filename}")
 
         Logger.info("")
         Logger.info("Next steps:")
