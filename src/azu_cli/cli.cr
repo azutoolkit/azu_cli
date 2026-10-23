@@ -86,9 +86,6 @@ module AzuCLI
     private def setup_plugins
       # Load built-in plugins
       load_builtin_plugins
-
-      # Load external plugins
-      load_external_plugins
     end
 
     # Load built-in plugins
@@ -99,13 +96,6 @@ module AzuCLI
 
       # Call on_load for each plugin
       @plugins.each(&.on_load)
-    end
-
-    # Load external plugins
-    private def load_external_plugins
-      # This would load plugins from configuration
-      # For now, just log that we're loading external plugins
-      Logger.debug("Loading external plugins...")
     end
 
     # Set up middleware

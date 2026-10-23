@@ -66,8 +66,7 @@ jobs:
       # On SQLite the script also generates a Post scaffold (and, for web, a Chat channel and authentication), migrates it
       # with `azu db:setup` and exercises them.
       - name: Generate, build, boot and request a new project and its scaffold
-        # azu/dev (required by the generated app) is not in azu's latest release yet: test against master
-        run: E2E_AZU_BRANCH=master E2E_DB=${{ matrix.db }} scripts/e2e_generated_app.sh ${{ matrix.type }}
+        run: E2E_DB=${{ matrix.db }} scripts/e2e_generated_app.sh ${{ matrix.type }}
   release:
     runs-on: ubuntu-latest
     needs:

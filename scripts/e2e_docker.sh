@@ -74,10 +74,10 @@ cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
   --type "$TYPE" --db sqlite --no-git --docker --ci "GitHub Actions"
 cd "$NAME"
-# Test against a branch of azu instead of its latest release (the generated app requires azu/dev, which the
-# latest release may not contain yet).
+# Opt-in: test against a branch of azu instead of the release the generated shard.yml requires (its version
+# constraint is dropped for the branch).
 if [ -n "${E2E_AZU_BRANCH:-}" ]; then
-  awk -v ref="$E2E_AZU_BRANCH" '{ print } /^    github: azutoolkit\/azu$/ { print "    branch: " ref }' shard.yml >shard.yml.new && mv shard.yml.new shard.yml
+  awk -v ref="$E2E_AZU_BRANCH" '/^    github: azutoolkit\/azu$/ { print; print "    branch: " ref; skip = 1; next } skip && /^    version:/ { skip = 0; next } { skip = 0; print }' shard.yml >shard.yml.new && mv shard.yml.new shard.yml
   grep -q "branch: $E2E_AZU_BRANCH" shard.yml || fail "could not pin azu to $E2E_AZU_BRANCH in shard.yml"
   echo "azu pinned to branch $E2E_AZU_BRANCH"
 fi

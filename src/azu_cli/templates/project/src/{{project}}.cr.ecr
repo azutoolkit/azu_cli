@@ -40,7 +40,7 @@ end
 <%= @module_name %>.run(ARGV) unless ENV["CRYSTAL_ENV"]? == "test"
 <% else -%>
 require "azu"
-# The development dashboard and performance monitor live behind azu/dev (needs an azu release that contains it).
+# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.69).
 require "azu/dev"
 require "./initializers/**"
 # Only the schema: src/db/seed.cr would run on every boot, and `azu db:migrate` requires the migrations itself.

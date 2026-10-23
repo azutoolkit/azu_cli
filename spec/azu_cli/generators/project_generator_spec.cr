@@ -2,6 +2,10 @@ require "../../spec_helper"
 require "teeplate"
 
 describe AzuCLI::Generate::Project do
+  # The examples render projects into ./tmp_test_*; clear them before and after each, even when one fails.
+  before_each { Dir.glob("./tmp_test_*").each { |dir| FileUtils.rm_rf(dir) } }
+  after_each { Dir.glob("./tmp_test_*").each { |dir| FileUtils.rm_rf(dir) } }
+
   it "creates a project generator with required parameters" do
     generator = AzuCLI::Generate::Project.new(
       "myapp",
@@ -319,7 +323,7 @@ describe AzuCLI::Generate::Project do
         AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
 
         source = File.read("#{dir}/src/myapp.cr")
-        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs an azu release that contains it).\nrequire "azu/dev"\n)).should eq(requires)
+        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.69).\nrequire "azu/dev"\n)).should eq(requires)
         FileUtils.rm_rf(dir)
       end
     end

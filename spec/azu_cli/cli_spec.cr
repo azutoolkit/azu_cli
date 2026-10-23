@@ -65,7 +65,7 @@ describe AzuCLI::CLI do
       # Test 'g' alias for generate. The model and its migration are written into the working
       # directory, so run in a scratch project, never in the repository.
       repository = Dir.current
-      before = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") }.sort
+      before = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") || path.includes?("/.git/") || path.ends_with?("/.git") || path.includes?("/tmp_test_") }.sort
       ScratchProject.new.in_generated_project do
         TestHelpers::TestSetup.with_captured_output do |capture|
           cli.run(["g", "model", "User"])
@@ -74,7 +74,7 @@ describe AzuCLI::CLI do
         end
         File.exists?("src/models/user.cr").should be_true
       end
-      after = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") }.sort
+      after = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") || path.includes?("/.git/") || path.ends_with?("/.git") || path.includes?("/tmp_test_") }.sort
       after.should eq(before) # nothing was written into the repository
     end
 
