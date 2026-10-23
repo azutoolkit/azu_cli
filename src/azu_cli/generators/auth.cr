@@ -129,7 +129,7 @@ module AzuCLI
       end
 
       private def rename_migration_files(out_dir : String)
-        migrations_dir = File.join(out_dir, "src/db/migrations")
+        migrations_dir = File.join(out_dir, AzuCLI::Config::Paths::MIGRATIONS)
         return unless Dir.exists?(migrations_dir)
 
         # Sort files to ensure consistent ordering

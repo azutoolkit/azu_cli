@@ -50,6 +50,29 @@ describe "Scaffold Integration" do
     end
   end
 
+  it "writes a scaffold and a second migration generated in the same second to src/db/migrations with distinct versions" do
+    in_generated_project do
+      scaffold.call([] of String).success?.should be_true
+
+      command = AzuCLI::Commands::Generate.new
+      command.parse_args(["migration", "add_views_to_posts", "views:int32"])
+      command.execute.success?.should be_true
+
+      files = Dir.glob("src/db/migrations/*.cr")
+      files.size.should eq(2)
+      Dir.exists?("db/migrations").should be_false
+
+      versions = files.map { |path| File.basename(path)[/^\d+/] }
+      versions.uniq.size.should eq(2)
+
+      files.each do |path|
+        content = File.read(path)
+        version = File.basename(path)[/^\d+/]
+        content.should contain("CQL::Migration(#{version}_i64)")
+      end
+    end
+  end
+
   it "defines every constant the endpoints use" do
     in_generated_project do
       scaffold.call([] of String).success?.should be_true

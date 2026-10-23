@@ -228,7 +228,7 @@ module AzuCLI
         # Show helpful next steps
         Logger.success("✓ Model #{@generator_name} created: src/models/#{Generators::Resource.singular(@generator_name)}.cr")
         unless @skip_tests
-          Logger.success("✓ Migration created: src/db/migrations/*_create_#{Generators::Resource.plural(@generator_name)}.cr")
+          Logger.success("✓ Migration created: #{AzuCLI::Config::Paths::MIGRATIONS}/*_create_#{Generators::Resource.plural(@generator_name)}.cr")
         end
 
         Logger.info("")
@@ -469,7 +469,7 @@ module AzuCLI
         render_generator(generator, Generators::Migration::OUTPUT_DIR)
 
         # Show helpful next steps
-        Logger.success("✓ Migration created: src/db/migrations/#{generator.migration_filename}")
+        Logger.success("✓ Migration created: #{AzuCLI::Config::Paths::MIGRATIONS}/#{generator.migration_filename}")
 
         Logger.info("")
         Logger.info("Next steps:")
@@ -726,15 +726,11 @@ module AzuCLI
 
       # Fix auth migration timestamps to be unique (increment by 1 second each)
       private def fix_auth_migration_timestamps
-        # Check both possible locations
-        migrations_dir = if Dir.exists?("./src/db/migrations")
-                           "./src/db/migrations"
-                         elsif Dir.exists?("./db/migrations")
-                           "./db/migrations"
-                         else
-                           Logger.debug("No migrations directory found for timestamp fix")
-                           return
-                         end
+        migrations_dir = "./#{AzuCLI::Config::Paths::MIGRATIONS}"
+        unless Dir.exists?(migrations_dir)
+          Logger.debug("No migrations directory found for timestamp fix")
+          return
+        end
 
         Logger.info("Fixing migration timestamps in: #{migrations_dir}")
 
@@ -824,7 +820,7 @@ module AzuCLI
             # Update the migration class timestamp inside the content
             # Use Regex.escape for safety even though timestamps should be numeric
             escaped_timestamp = Regex.escape(timestamp.to_s)
-            updated_content = content.sub(/CQL::Migration\(#{escaped_timestamp}\)/, "CQL::Migration(#{new_timestamp})")
+            updated_content = content.sub(/CQL::Migration\(#{escaped_timestamp}(?:_i64)?\)/, "CQL::Migration(#{new_timestamp}_i64)")
 
             # Write the updated content to the new file
             File.write(new_path, updated_content)
