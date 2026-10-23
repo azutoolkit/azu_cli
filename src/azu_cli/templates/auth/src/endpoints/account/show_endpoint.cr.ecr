@@ -1,0 +1,19 @@
+module <%= app_module %>
+  # The page that needs a signed-in user; without one the visitor is sent to /login.
+  struct Account::ShowEndpoint
+    include Azu::Endpoint(Account::ShowRequest, Account::ShowPage)
+    include Authentication
+
+    get "/account"
+
+    def call : Account::ShowPage
+      unless user = current_user
+        status 303
+        header "Location", "/login"
+        return Account::ShowPage.new(nil, csrf_tag)
+      end
+
+      Account::ShowPage.new(user, csrf_tag)
+    end
+  end
+end

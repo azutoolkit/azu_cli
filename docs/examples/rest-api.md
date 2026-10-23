@@ -382,7 +382,7 @@ end
 ## Add Authentication
 
 ```bash
-azu generate auth --strategy jwt
+azu generate auth
 ```
 
 Add authentication to endpoints:

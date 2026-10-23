@@ -154,14 +154,8 @@ module AzuCLI
           parser.on("--skip COMPONENTS", "Skip specific components (comma-separated): model,endpoint,request,response,template,migration,page,service") do |components|
             @skip_components = components.split(",").map(&.strip.downcase)
           end
-          parser.on("--strategy STRATEGY", "Authentication strategy (jwt, session, oauth)") do |strategy|
+          parser.on("--strategy STRATEGY", "Authentication strategy (session)") do |strategy|
             @options["strategy"] = strategy
-          end
-          parser.on("--user-model MODEL", "User model name for authentication") do |model|
-            @options["user_model"] = model
-          end
-          parser.on("--backend BACKEND", "Backend type (redis, memory, database)") do |backend|
-            @options["backend"] = backend
           end
           parser.on("--type TYPE", "Generator-specific type") do |type|
             @options["type"] = type
@@ -601,238 +595,42 @@ module AzuCLI
       private def generate_channel : Result
         Logger.info("Generating WebSocket channel")
 
-        actions = @actions.empty? ? ["subscribed", "unsubscribed", "receive"] : @actions
+        if message = Generators::Channel.name_error(@generator_name)
+          return error(message)
+        end
+        unless @actions.empty?
+          return error("A channel has no actions (got #{@actions.join(", ")}): it relays every message to all its clients.")
+        end
 
-        generator = Generators::Channel.new(
-          name: @generator_name,
-          actions: actions
-        )
-
+        generator = Generators::Channel.new(@generator_name)
         render_generator(generator, Generators::Channel::OUTPUT_DIR)
 
-        # Show helpful next steps
-        channel_name = "#{@generator_name.camelcase}Channel"
-        Logger.success("✓ Channel #{channel_name} created: src/channels/#{@generator_name.underscore}_channel.cr")
-
-        Logger.info("")
-        Logger.info("Next steps:")
-        Logger.info("  1. Add WebSocket route in your app configuration:")
-        Logger.info("     c.router.ws \"/#{@generator_name.underscore}\", #{channel_name}")
-        Logger.info("  2. Implement channel logic (subscribed, receive, etc.)")
-        Logger.info("  3. Connect from client:")
-        Logger.info("     const ws = new WebSocket('ws://localhost:4000/#{@generator_name.underscore}')")
-        Logger.info("")
-        Logger.info("Documentation: https://azutoolkit.github.io/azu/")
+        Logger.success("✓ Channel #{generator.camel_case_name}Channel created: src/channels/#{generator.snake_case_name}_channel.cr")
+        Logger.info("Clients connect to ws://localhost:4000#{generator.route}; change what it does in on_connect and on_message.")
 
         success("Generated channel #{@generator_name} successfully")
       end
 
       private def generate_auth : Result
-        Logger.info("Generating authentication system")
+        Logger.info("Generating authentication")
 
-        strategy = @options["strategy"]? || "authly"
-        user_model = @options["user_model"]? || "User"
-        proj_name = Utils.project_name
-
-        # Parse boolean options
-        enable_rbac = @options["rbac"]?.try { |v| v.downcase == "true" } || true
-        enable_csrf = @options["csrf"]?.try { |v| v.downcase == "true" } || true
-
-        # Parse OAuth providers
-        oauth_providers = @options["oauth-providers"]?.try(&.split(",").map(&.strip)) || ["google", "github"]
-
-        generator = Generators::Auth.new(
-          project: proj_name,
-          strategy: strategy,
-          user_model: user_model,
-          enable_rbac: enable_rbac,
-          enable_csrf: enable_csrf,
-          enable_oauth_providers: oauth_providers
-        )
-
-        Logger.info("Strategy: #{strategy}")
-        Logger.info("User model: #{user_model}")
-        Logger.info("RBAC enabled: #{enable_rbac}")
-        Logger.info("CSRF protection: #{enable_csrf}")
-        Logger.info("OAuth providers: #{oauth_providers.join(", ")}")
-
-        render_generator(generator, Generators::Auth::OUTPUT_DIR)
-
-        # Fix migration timestamps to be unique
-        fix_auth_migration_timestamps
-
-        # Add session dependency to shard.yml if using session strategy
-        if strategy == "session"
-          add_session_dependency
+        if ProjectDetector.new.api_project?
+          return error("Authentication is generated for web projects (session cookie). API projects have no generated authentication yet.")
+        end
+        if strategy = @options["strategy"]?
+          return error("Unsupported strategy '#{strategy}': the generated authentication uses a session cookie only.") unless strategy == "session"
         end
 
-        Logger.info("✓ Authentication system generated")
-        Logger.info("")
-        Logger.info("Next steps:")
-        Logger.info("1. Run 'shards install' to install dependencies")
-        Logger.info("2. Run 'azu db:migrate' to create authentication tables")
-
-        if strategy == "session"
-          Logger.info("3. Set SESSION_SECRET environment variable")
-          Logger.info("4. Add Session::SessionHandler to your HTTP middleware stack")
-          Logger.info("5. Load session config: require \"./config/session\"")
-        elsif strategy == "jwt" || strategy == "authly"
-          Logger.info("3. Set JWT_SECRET and JWT_REFRESH_SECRET environment variables")
-          Logger.info("4. Set JWT_ISSUER and JWT_AUDIENCE environment variables")
+        if conflict = Generators::Auth.conflict
+          return error(conflict)
         end
 
-        if strategy == "authly"
-          Logger.info("5. Configure OAuth providers in your application")
-          Logger.info("6. Set up Authly configuration")
-        end
+        render_generator(Generators::Auth.new, Generators::Auth::OUTPUT_DIR)
 
-        if enable_csrf
-          Logger.info("7. Configure CSRF protection middleware")
-        end
+        Logger.success("✓ Authentication generated: /register, /login, /logout and /account")
+        Logger.info("Next steps: azu db:migrate; export SESSION_SECRET (the generated .env lists one); azu serve")
 
-        Logger.info("8. Configure your application to use the auth endpoints")
-
-        success("Generated authentication system successfully")
-      end
-
-      # Add session dependency to shard.yml
-      private def add_session_dependency
-        shard_yml_path = "./shard.yml"
-        return unless File.exists?(shard_yml_path)
-
-        content = File.read(shard_yml_path)
-
-        # Check if session dependency already exists
-        return if content.includes?("github: azutoolkit/session")
-
-        # Find the dependencies section and add session
-        if content.includes?("dependencies:")
-          # Add session dependency
-          session_dep = "  session:\n    github: azutoolkit/session\n    version: ~> 1.0.15"
-
-          # Insert after dependencies: line (with or without trailing whitespace/newline)
-          updated_content = content.sub(/dependencies:(\s*)$/) do |match|
-            "dependencies:#{$1}\n#{session_dep}"
-          end
-
-          File.write(shard_yml_path, updated_content)
-          Logger.info("✓ Added session dependency to shard.yml")
-        else
-          Logger.warn("Could not find dependencies section in shard.yml")
-        end
-      rescue ex
-        Logger.warn("Failed to add session dependency: #{ex.message}")
-      end
-
-      # Fix auth migration timestamps to be unique (increment by 1 second each)
-      private def fix_auth_migration_timestamps
-        # Check both possible locations
-        migrations_dir = if Dir.exists?("./src/db/migrations")
-                           "./src/db/migrations"
-                         elsif Dir.exists?("./db/migrations")
-                           "./db/migrations"
-                         else
-                           Logger.debug("No migrations directory found for timestamp fix")
-                           return
-                         end
-
-        Logger.info("Fixing migration timestamps in: #{migrations_dir}")
-
-        # Find all migration files with the same timestamp
-        migration_files = Dir.glob("#{migrations_dir}/*.cr").sort
-        if migration_files.empty?
-          Logger.info("No migration files found to fix")
-          return
-        end
-
-        Logger.info("Found #{migration_files.size} migration files to check")
-
-        # Remove empty migration files (from conditional templates)
-        migration_files.reject! do |file|
-          content = File.read(file)
-          if content.strip.empty? || content.size < 50 # suspiciously small
-            Logger.info("Removing empty/invalid migration: #{File.basename(file)}")
-            File.delete(file)
-            true
-          else
-            false
-          end
-        end
-
-        return if migration_files.empty?
-
-        # Group by timestamp to find duplicates
-        grouped = migration_files.group_by do |file|
-          if match = File.basename(file).match(/^(\d+)_/)
-            match[1]
-          end
-        end
-
-        # Fix duplicates by incrementing timestamps
-        grouped.each do |timestamp, files|
-          next if files.size <= 1 || timestamp.nil?
-
-          Logger.info("Found #{files.size} migrations with duplicate timestamp #{timestamp}, fixing...")
-
-          # Define the order for auth migrations
-          migration_order = [
-            "create_users",
-            "create_roles",
-            "create_permissions",
-            "create_user_roles",
-            "create_role_permissions",
-            "create_oauth_applications",
-          ]
-
-          # Sort files according to the desired order
-          sorted_files = files.sort_by do |file|
-            basename = File.basename(file, ".cr")
-            name_part = basename.sub(/^\d+_/, "")
-            migration_order.index(name_part) || 999
-          end
-
-          # Rename files with incrementing timestamps
-          sorted_files.each_with_index do |file, index|
-            old_basename = File.basename(file)
-            new_timestamp = timestamp.to_i64 + index
-
-            # Read the content to extract the actual class name
-            content = File.read(file)
-
-            # Extract class name from the file
-            class_name = if match = content.match(/class\s+(\w+)\s+<\s+CQL::Migration/)
-                           match[1]
-                         else
-                           nil
-                         end
-
-            # If we have a class name, use it to construct the filename
-            new_basename = if class_name
-                             # Convert class name to snake_case for filename
-                             snake_name = class_name
-                               .gsub(/([A-Z]+)([A-Z][a-z])/, "\\1_\\2")
-                               .gsub(/([a-z\d])([A-Z])/, "\\1_\\2")
-                               .downcase
-                             "#{new_timestamp}_#{snake_name}.cr"
-                           else
-                             # Fallback to just updating the timestamp
-                             old_basename.sub(/^\d+/, new_timestamp.to_s)
-                           end
-
-            new_path = File.join(migrations_dir, new_basename)
-
-            # Update the migration class timestamp inside the content
-            # Use Regex.escape for safety even though timestamps should be numeric
-            escaped_timestamp = Regex.escape(timestamp.to_s)
-            updated_content = content.sub(/CQL::Migration\(#{escaped_timestamp}\)/, "CQL::Migration(#{new_timestamp})")
-
-            # Write the updated content to the new file
-            File.write(new_path, updated_content)
-
-            # Delete old file if it's different
-            File.delete(file) if file != new_path
-          end
-        end
+        success("Generated authentication successfully")
       end
 
       private def generate_api_resource : Result
@@ -1077,13 +875,13 @@ module AzuCLI
         puts "    Generate a mailer class for sending emails"
         puts "    Example: azu generate mailer UserMailer welcome password_reset"
         puts
-        puts "  channel <name> [actions]"
-        puts "    Generate a WebSocket channel for real-time communication"
-        puts "    Example: azu generate channel ChatChannel subscribed receive"
+        puts "  channel <name>"
+        puts "    Generate a WebSocket channel served at /<name>; every message reaches all its clients"
+        puts "    Example: azu generate channel Chat"
         puts
-        puts "  auth [--strategy jwt|session|oauth]"
-        puts "    Generate complete authentication system"
-        puts "    Example: azu generate auth --strategy jwt"
+        puts "  auth"
+        puts "    Generate sign up, sign in, sign out and a protected page (web projects, session cookie)"
+        puts "    Example: azu generate auth"
         puts
         puts "  api_resource <name> [attr:type]"
         puts "    Generate complete REST API resource (API-only)"

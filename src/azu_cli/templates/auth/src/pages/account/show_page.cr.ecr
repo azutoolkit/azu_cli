@@ -1,0 +1,15 @@
+module <%= app_module %>
+  struct Account::ShowPage
+    include Azu::Response
+    include Azu::Templates::Renderable
+
+    def initialize(@user : User?, @csrf_tag : String)
+    end
+
+    # Empty for a visitor who is not signed in: the endpoint redirects them.
+    def render
+      return "" unless user = @user
+      view data: {"email" => user.email, "csrf_tag" => @csrf_tag}
+    end
+  end
+end

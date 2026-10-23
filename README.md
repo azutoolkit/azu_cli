@@ -61,7 +61,7 @@ Visit `http://localhost:4000/posts` to see your application.
 azu generate model User name:string email:string
 azu generate endpoint api/v1/users --api
 azu generate scaffold Product name:string price:float64
-azu generate auth --strategy jwt
+azu generate auth
 azu generate job SendEmail user_id:int64
 ```
 

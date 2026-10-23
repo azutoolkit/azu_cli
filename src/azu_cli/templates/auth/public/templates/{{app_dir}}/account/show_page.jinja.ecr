@@ -1,0 +1,13 @@
+{% extends "app_layout.jinja" %}
+
+{% block title %}Account{% endblock %}
+
+{% block content %}
+<div class="page-head"><h1>Account</h1></div>
+<p>Signed in as <strong>{{ email | e }}</strong></p>
+<form action="/logout" method="post">
+  {{ csrf_tag | safe }}
+  <input type="hidden" name="_method" value="delete">
+  <button class="btn btn--secondary" type="submit">Sign out</button>
+</form>
+{% endblock %}

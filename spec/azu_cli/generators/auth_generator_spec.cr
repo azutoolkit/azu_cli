@@ -1,265 +1,142 @@
 require "../../spec_helper"
-require "teeplate"
+require "../../support/generator_helpers"
+
+include GeneratorHelpers
 
 describe AzuCLI::Generate::Auth do
-  it "creates an auth generator with default strategy" do
-    generator = AzuCLI::Generate::Auth.new("myapp")
-
-    generator.project.should eq("myapp")
-    generator.strategy.should eq("authly")
-    generator.user_model.should eq("User")
-    generator.enable_rbac.should be_true
-    generator.enable_csrf.should be_true
-    generator.enable_oauth_providers.should eq(["google", "github"])
+  render = ->(dir : String) do
+    AzuCLI::Generate::Auth.new.render(File.expand_path(dir), force: true, interactive: false)
   end
 
-  it "creates an auth generator with custom strategy" do
-    generator = AzuCLI::Generate::Auth.new("myapp", "session")
+  it "generates the account endpoints, pages, requests and templates in the project module" do
+    in_generated_project do
+      render.call(".")
 
-    generator.strategy.should eq("session")
-  end
+      %w(
+        src/endpoints/registrations/new_endpoint.cr src/endpoints/registrations/create_endpoint.cr
+        src/endpoints/sessions/new_endpoint.cr src/endpoints/sessions/create_endpoint.cr src/endpoints/sessions/destroy_endpoint.cr
+        src/endpoints/account/show_endpoint.cr src/pages/registrations/new_page.cr src/pages/sessions/new_page.cr
+        src/pages/account/show_page.cr src/requests/registrations/create_request.cr src/requests/sessions/create_request.cr
+        src/initializers/session.cr src/middleware/authentication.cr
+        public/templates/blog/registrations/new_page.jinja public/templates/blog/sessions/new_page.jinja
+        public/templates/blog/account/show_page.jinja
+      ).each { |path| File.exists?(path).should be_true }
 
-  it "creates an auth generator with custom user model" do
-    generator = AzuCLI::Generate::Auth.new("myapp", "jwt", "Account")
-
-    generator.user_model.should eq("Account")
-  end
-
-  it "creates an auth generator with custom options" do
-    generator = AzuCLI::Generate::Auth.new(
-      "myapp",
-      "authly",
-      "User",
-      false,
-      false,
-      ["google"]
-    )
-
-    generator.enable_rbac.should be_false
-    generator.enable_csrf.should be_false
-    generator.enable_oauth_providers.should eq(["google"])
-  end
-
-  describe "strategy detection" do
-    it "detects JWT strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "jwt")
-
-      generator.using_jwt?.should be_true
-      generator.using_session?.should be_false
-      generator.using_oauth?.should be_false
-      generator.using_authly?.should be_false
-    end
-
-    it "detects session strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "session")
-
-      generator.using_jwt?.should be_false
-      generator.using_session?.should be_true
-      generator.using_oauth?.should be_false
-      generator.using_authly?.should be_false
-    end
-
-    it "detects OAuth strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "oauth")
-
-      generator.using_jwt?.should be_false
-      generator.using_session?.should be_false
-      generator.using_oauth?.should be_true
-      generator.using_authly?.should be_false
-    end
-
-    it "detects Authly strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly")
-
-      generator.using_jwt?.should be_false
-      generator.using_session?.should be_false
-      generator.using_oauth?.should be_false
-      generator.using_authly?.should be_true
+      File.read("src/endpoints/sessions/create_endpoint.cr").should contain("struct Sessions::CreateEndpoint")
+      File.read("src/endpoints/sessions/create_endpoint.cr").should contain("module Blog")
     end
   end
 
-  describe "feature detection" do
-    it "detects RBAC enabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true)
+  it "stores a bcrypt digest of the password for a unique email" do
+    in_generated_project do
+      render.call(".")
 
-      generator.rbac_enabled?.should be_true
-    end
-
-    it "detects RBAC disabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", false)
-
-      generator.rbac_enabled?.should be_false
-    end
-
-    it "detects CSRF enabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true, true)
-
-      generator.csrf_enabled?.should be_true
-    end
-
-    it "detects CSRF disabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true, false)
-
-      generator.csrf_enabled?.should be_false
+      File.read("src/endpoints/registrations/create_endpoint.cr").should contain("Crypto::Bcrypt::Password.create(create_request.password)")
+      File.read("src/models/user.cr").should contain("property password_digest : String")
+      File.read(Dir.glob("src/db/migrations/*_create_users.cr").first).should contain("text :email, unique: true")
+      File.read("src/db/schema.cr").should contain("table :users do")
     end
   end
 
-  describe "OAuth provider detection" do
-    it "detects Google OAuth enabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true, true, ["google"])
+  it "reads the session secret from the environment, with a random fallback outside production" do
+    in_generated_project do
+      render.call(".")
 
-      generator.google_oauth_enabled?.should be_true
-      generator.github_oauth_enabled?.should be_false
-    end
-
-    it "detects GitHub OAuth enabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true, true, ["github"])
-
-      generator.google_oauth_enabled?.should be_false
-      generator.github_oauth_enabled?.should be_true
-    end
-
-    it "detects multiple OAuth providers" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true, true, ["google", "github"])
-
-      generator.google_oauth_enabled?.should be_true
-      generator.github_oauth_enabled?.should be_true
+      session = File.read("src/initializers/session.cr")
+      session.should contain(%(ENV["SESSION_SECRET"]?.presence))
+      session.should contain(%(raise "SESSION_SECRET is not set" if Azu::CONFIG.env.production?))
+      session.should contain("config.timeout = 8.hours")
+      session.should contain("SameSite=Strict")
+      session.should contain("Random::Secure.hex(32)")
+      session.should_not match(/secret = "/)
     end
   end
 
-  describe "#password_hash_method" do
-    it "generates password hashing methods with enhanced security" do
-      generator = AzuCLI::Generate::Auth.new("myapp")
+  it "escapes what users typed and posts forms with a CSRF field" do
+    in_generated_project do
+      render.call(".")
 
-      methods = generator.password_hash_method
-      methods.should contain("hash_password")
-      methods.should contain("verify_password")
-      methods.should contain("generate_secure_password")
-      methods.should contain("Crypto::Bcrypt::Password")
-      methods.should contain("cost: 14")
+      File.read("public/templates/blog/account/show_page.jinja").should contain("{{ email | e }}")
+      File.read("public/templates/blog/sessions/new_page.jinja").should contain("{{ messages.error | e }}")
+      File.read("public/templates/blog/sessions/new_page.jinja").should contain("{{ csrf_tag | safe }}")
     end
   end
 
-  describe "#jwt_methods" do
-    it "generates enhanced JWT methods for JWT strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "jwt")
+  it "adds the session handler to the app and a secret to .env, once" do
+    in_generated_project do
+      File.write("src/blog.cr", "  def self.handlers\n    [\n      Azu::Handler::RequestId.new,\n    ]\n  end\n")
+      File.write(".env", "PORT=4000")
+      render.call(".")
 
-      methods = generator.jwt_methods
-      methods.should contain("generate_token")
-      methods.should contain("verify_token")
-      methods.should contain("generate_refresh_token")
-      methods.should contain("verify_refresh_token")
-      methods.should contain("validate_token_claims")
-      methods.should contain("generate_jti")
-      methods.should contain("JWT::Algorithm::HS256")
-    end
-
-    it "generates enhanced JWT methods for Authly strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly")
-
-      methods = generator.jwt_methods
-      methods.should contain("generate_token")
-      methods.should contain("verify_token")
-      methods.should contain("generate_refresh_token")
-      methods.should contain("verify_refresh_token")
-    end
-
-    it "returns empty string for session strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "session")
-
-      generator.jwt_methods.should eq("")
+      File.read("src/blog.cr").scan("Session::SessionHandler(UserSession)").size.should eq(1)
+      File.read("src/blog.cr").should contain("      Azu::Handler::RequestId.new,\n      Session::SessionHandler(UserSession).new(Session.session),")
+      File.read(".env").should match(/^PORT=4000\nSESSION_SECRET=[0-9a-f]{64}\n\z/)
     end
   end
 
-  describe "#dependencies" do
-    it "includes basic dependencies" do
-      generator = AzuCLI::Generate::Auth.new("myapp")
+  it "creates .env when the project has none" do
+    in_generated_project do
+      File.delete(".env") if File.exists?(".env")
+      render.call(".")
 
-      deps = generator.dependencies
-      deps.should contain("crypto/bcrypt")
-      deps.should contain("uuid")
-    end
-
-    it "includes JWT dependency for JWT strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "jwt")
-
-      deps = generator.dependencies
-      deps.should contain("jwt")
-    end
-
-    it "includes Authly dependency for Authly strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly")
-
-      deps = generator.dependencies
-      deps.should contain("authly")
-      deps.should contain("jwt")
-    end
-
-    it "includes session dependency for session strategy" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "session")
-
-      deps = generator.dependencies
-      deps.should contain("session")
-      deps.should_not contain("jwt")
-      deps.should_not contain("authly")
-    end
-
-    it "includes CSRF dependency when CSRF is enabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true, true)
-
-      deps = generator.dependencies
-      deps.should contain("openssl")
+      File.read(".env").should match(/\ASESSION_SECRET=[0-9a-f]{64}\n\z/)
     end
   end
 
-  describe "#user_migration" do
-    it "generates enhanced user migration" do
-      generator = AzuCLI::Generate::Auth.new("myapp")
-
-      migration = generator.user_migration
-      migration.should contain("schema.create :users")
-      migration.should contain("column :email")
-      migration.should contain("column :password_hash")
-      migration.should contain("column :failed_login_attempts")
-      migration.should contain("column :two_factor_enabled")
-      migration.should contain("column :recovery_codes")
+  describe ".conflict" do
+    it "is nil in a project without authentication" do
+      in_generated_project do
+        AzuCLI::Generate::Auth.conflict.should be_nil
+      end
     end
 
-    it "generates RBAC tables when RBAC is enabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true)
+    it "names what a second run would overwrite" do
+      in_generated_project do
+        render.call(".")
 
-      migration = generator.user_migration
-      migration.should contain("schema.create :roles")
-      migration.should contain("schema.create :permissions")
-      migration.should contain("schema.create :user_roles")
-      migration.should contain("schema.create :role_permissions")
+        message = AzuCLI::Generate::Auth.conflict.not_nil!
+        message.should contain("src/models/user.cr")
+        message.should contain("src/initializers/session.cr")
+        message.should contain("_create_users.cr")
+      end
     end
 
-    it "generates OAuth tables when using Authly" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly")
+    it "refuses a User that a scaffold made" do
+      in_generated_project do
+        Dir.mkdir_p("src/models")
+        File.write("src/models/user.cr", "struct User; end\n")
 
-      migration = generator.user_migration
-      migration.should contain("schema.create :oauth_applications")
-      migration.should contain("schema.create :oauth_access_tokens")
+        AzuCLI::Generate::Auth.conflict.not_nil!.should contain("src/models/user.cr")
+      end
     end
 
-    it "includes RBAC template when RBAC is enabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", true)
+    it "refuses an app file with no RequestId handler to anchor on" do
+      in_generated_project do
+        File.write("src/blog.cr", "  # Azu::Handler::RequestId.new,\n")
 
-      migration = generator.user_migration
-      migration.should contain("<%- if rbac_enabled? %>")
-      migration.should contain("schema.create :roles")
-      migration.should contain("schema.create :permissions")
+        AzuCLI::Generate::Auth.conflict.not_nil!.should contain("RequestId.new")
+      end
     end
+  end
 
-    it "includes RBAC template even when RBAC is disabled" do
-      generator = AzuCLI::Generate::Auth.new("myapp", "authly", "User", false)
+  it "validates passwords by bytes, because bcrypt rejects more than 72" do
+    in_generated_project do
+      render.call(".")
 
-      migration = generator.user_migration
-      # The template includes the conditional, but it will be processed during generation
-      migration.should contain("<%- if rbac_enabled? %>")
-      migration.should contain("schema.create :roles")
-      migration.should contain("schema.create :permissions")
+      File.read("src/requests/registrations/create_request.cr").should contain("max_bytes: 72")
+      File.read("src/requests/sessions/create_request.cr").should contain("max_bytes: 72")
+      File.read("src/requests/bytesize_predicate.cr").should contain("value.bytesize <= limit")
+      File.read("src/middleware/authentication.cr").should contain("return if password.bytesize > 72")
+    end
+  end
+
+  it "only knows the session strategy" do
+    in_generated_project do
+      command = AzuCLI::Commands::Generate.new
+      command.parse_args(["auth", "--strategy", "jwt"])
+
+      command.execute.success?.should be_false
+      Dir.glob("src/**/*.cr").reject { |path| path.starts_with?("src/db") }.should be_empty
     end
   end
 end

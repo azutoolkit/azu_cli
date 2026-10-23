@@ -1,0 +1,19 @@
+module <%= app_module %>
+  struct Sessions::CreateEndpoint
+    include Azu::Endpoint(Sessions::CreateRequest, Azu::Response::Empty)
+    include Authentication
+
+    post "/login"
+
+    def call : Azu::Response::Empty
+      unless user = authenticate(create_request.email, create_request.password)
+        Session.session.flash["error"] = "Invalid email or password"
+        return redirect to: "/login", status: 303
+      end
+
+      Session.session.current_session.user_id = user.id
+      Session.session.regenerate_id # a new session id, so a planted one is worthless (session fixation)
+      redirect to: "/account", status: 303
+    end
+  end
+end

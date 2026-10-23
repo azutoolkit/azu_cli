@@ -1,0 +1,11 @@
+module <%= app_module %>
+  struct Sessions::CreateRequest
+    include Azu::Request
+
+    getter email : String
+    getter password : String
+
+    validate email, presence: true, size: 1..254
+    validate password, presence: true, max_bytes: 72
+  end
+end

@@ -51,7 +51,7 @@ azu generate <type> <name> [fields...] [options]
 | `service`    | Business logic service     | `azu generate service CreateUser`          |
 | `job`        | Background job             | `azu generate job SendEmail`               |
 | `channel`    | WebSocket channel          | `azu generate channel Chat`                |
-| `auth`       | Authentication system      | `azu generate auth --strategy jwt`         |
+| `auth`       | Authentication system      | `azu generate auth`         |
 | `middleware` | HTTP middleware            | `azu generate middleware Auth`             |
 | `request`    | Request validation         | `azu generate request CreateUser`          |
 | `page`       | Response page              | `azu generate page UserIndex`              |
