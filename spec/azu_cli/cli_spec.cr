@@ -46,7 +46,7 @@ describe AzuCLI::CLI do
 
       TestHelpers::TestSetup.with_captured_output do |capture|
         cli.run([] of String)
-        capture.stdout.should contain("Help information displayed")
+        capture.stdout.should contain("Usage: azu <command> [options] [arguments]")
       end
     end
 
@@ -55,7 +55,7 @@ describe AzuCLI::CLI do
 
       TestHelpers::TestSetup.with_captured_output do |capture|
         cli.run(["help"])
-        capture.stdout.should contain("Help information displayed")
+        capture.stdout.should contain("Usage: azu <command> [options] [arguments]")
       end
     end
 
@@ -82,9 +82,11 @@ describe AzuCLI::CLI do
       cli = AzuCLI::CLI.new
 
       TestHelpers::TestSetup.with_captured_output do |capture|
-        cli.run(["unknown_command"])
+        TestHelpers::TestSetup.with_info_logging do
+          cli.run(["unknown_command"])
+        end
         capture.stderr.should contain("Unknown command: unknown_command")
-        capture.stderr.should contain("Run 'azu help' to see available commands")
+        capture.stdout.should contain("Run 'azu help' to see available commands")
       end
     end
 
@@ -102,8 +104,8 @@ describe AzuCLI::CLI do
       cli = AzuCLI::CLI.new
 
       TestHelpers::TestSetup.with_captured_output do |capture|
-        cli.run(["help", "generate"])
-        capture.stdout.should contain("Help information displayed")
+        cli.run(["help", "generate"]).should eq(0)
+        capture.stdout.should contain("Usage: azu generate <type> <name>")
       end
     end
   end
@@ -216,8 +218,18 @@ describe AzuCLI::CLI do
 
       TestHelpers::TestSetup.with_captured_output do |capture|
         # This should trigger an error in the generate command
-        cli.run(["generate", "invalid_generator_type"])
-        capture.stderr.should contain("Command failed")
+        cli.run(["generate", "invalid_generator_type"]).should eq(1)
+        capture.stderr.should contain("Command failed: Invalid generator type: invalid_generator_type")
+      end
+    end
+
+    # Documented limitation: the generator type must come first; options follow the name.
+    it "refuses options placed before the generator type" do
+      cli = AzuCLI::CLI.new
+
+      TestHelpers::TestSetup.with_captured_output do |capture|
+        cli.run(["generate", "--force", "model", "User"]).should eq(1)
+        capture.stderr.should contain("Invalid generator type: --force")
       end
     end
 
@@ -227,8 +239,9 @@ describe AzuCLI::CLI do
       # The error handling is tested by the middleware being called
       # This is verified by the error being caught and logged
       TestHelpers::TestSetup.with_captured_output do |capture|
-        cli.run(["generate", "invalid_generator_type"])
-        capture.stderr.should contain("Command failed")
+        cli.run(["generate", "invalid_generator_type"]).should eq(1)
+        capture.stderr.should contain("Invalid argument: Invalid generator type: invalid_generator_type") # ErrorHandler middleware
+        capture.stderr.should contain("Generator plugin error: Invalid generator type")                   # plugin on_error hook
       end
     end
   end
@@ -237,33 +250,30 @@ describe AzuCLI::CLI do
     it "runs middleware before command" do
       cli = AzuCLI::CLI.new
 
-      # This is tested by the command executing successfully
       # The middleware before hooks are called during execution
       TestHelpers::TestSetup.with_captured_output do |capture|
-        cli.run(["help"])
-        capture.stdout.should contain("Help information displayed")
+        cli.run(["help"]).should eq(0)
+        capture.stdout.should contain("Usage: azu <command> [options] [arguments]")
       end
     end
 
     it "runs middleware after command" do
       cli = AzuCLI::CLI.new
 
-      # This is tested by the command executing successfully
       # The middleware after hooks are called during execution
       TestHelpers::TestSetup.with_captured_output do |capture|
-        cli.run(["help"])
-        capture.stdout.should contain("Help information displayed")
+        cli.run(["help"]).should eq(0)
+        capture.stdout.should contain("Usage: azu <command> [options] [arguments]")
       end
     end
 
     it "runs plugins before and after command" do
       cli = AzuCLI::CLI.new
 
-      # This is tested by the command executing successfully
       # The plugin hooks are called during execution
       TestHelpers::TestSetup.with_captured_output do |capture|
-        cli.run(["help"])
-        capture.stdout.should contain("Help information displayed")
+        cli.run(["help"]).should eq(0)
+        capture.stdout.should contain("Usage: azu <command> [options] [arguments]")
       end
     end
   end

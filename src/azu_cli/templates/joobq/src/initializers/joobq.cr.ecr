@@ -6,7 +6,9 @@ require "joobq"
 require "../jobs/**"
 
 # Register job types with QueueFactory before loading configuration
-JoobQ::QueueFactory.register_job_type(ExampleJob)
+<% if @create_example_job -%>
+JoobQ::QueueFactory.register_job_type(<%= @example_job_name %>)
+<% end -%>
 # Add your job classes here as you create them
 # Example:
 # JoobQ::QueueFactory.register_job_type(EmailJob)

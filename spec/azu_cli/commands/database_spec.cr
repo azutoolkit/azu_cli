@@ -4,13 +4,17 @@ describe AzuCLI::Commands::Database do
   # Database is an abstract class, so we test with a concrete subclass
   describe "database configuration" do
     it "loads default configuration" do
-      command = AzuCLI::Commands::DB::Create.new
+      # The suite itself runs with AZU_ENV=test (spec_helper): the default is what an environment
+      # without it gets.
+      TestHelpers::TestSetup.with_env({"AZU_ENV" => nil}) do
+        command = AzuCLI::Commands::DB::Create.new
 
-      command.adapter.should eq("postgres")
-      command.host.should eq("localhost")
-      command.port.should eq(5432)
-      command.username.should eq("postgres")
-      command.environment.should eq("development")
+        command.adapter.should eq("postgres")
+        command.host.should eq("localhost")
+        command.port.should eq(5432)
+        command.username.should eq("postgres")
+        command.environment.should eq("development")
+      end
     end
 
     it "infers database name from directory" do

@@ -128,13 +128,14 @@ module AzuCLI
     # Execute a command with middleware
     private def execute_command(command_class : Commands::Base.class, command_name : String, args : Array(String)) : Int32
       command = command_class.new
-      command.parse_args(args)
-
-      # Run middleware before command
-      @middleware.each(&.before(command, args))
-      @plugins.each(&.before_command(command, args))
 
       begin
+        command.parse_args(args)
+
+        # Run middleware before command (a plugin may reject the arguments by raising)
+        @middleware.each(&.before(command, args))
+        @plugins.each(&.before_command(command, args))
+
         # Execute the command
         result = command.execute
 

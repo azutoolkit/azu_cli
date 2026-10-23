@@ -1,5 +1,10 @@
 require "../../spec_helper"
 require "../../support/test_helpers"
+require "../../support/generator_helpers"
+
+private struct ScratchProject
+  include GeneratorHelpers
+end
 
 describe AzuCLI::Commands::Generate do
   describe "#initialize" do
@@ -392,64 +397,86 @@ describe AzuCLI::Commands::Generate do
   end
 
   describe "argument parsing" do
-    it "parses attributes in name:type format" do
-      command = AzuCLI::Commands::Generate.new
-      command.parse_args(["model", "User", "name:string", "email:string", "age:int32"])
+    # Flags are parsed by #execute and follow the type and name (`azu generate <type> <name> [options]`),
+    # so each example runs the command in a scratch project.
+    it "reads the type, name and attributes" do
+      ScratchProject.new.in_generated_project do
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["model", "User", "name:string", "email:string", "age:int32"])
+        TestHelpers::TestSetup.with_captured_output { command.execute.success?.should be_true }
 
-      command.generator_type.should eq("model")
-      command.generator_name.should eq("User")
-      # Attributes parsing is tested in the generator classes
+        command.generator_type.should eq("model")
+        command.generator_name.should eq("User")
+        command.attributes.should eq({"name" => "string", "email" => "string", "age" => "int32"})
+      end
     end
 
     it "handles force flag" do
-      command = AzuCLI::Commands::Generate.new
-      command.parse_args(["--force", "model", "User"])
+      ScratchProject.new.in_generated_project do
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["model", "User", "--force"])
+        TestHelpers::TestSetup.with_captured_output { command.execute.success?.should be_true }
 
-      command.force.should be_true
+        command.force.should be_true
+      end
     end
 
     it "handles api-only flag" do
-      command = AzuCLI::Commands::Generate.new
-      command.parse_args(["--api-only", "model", "User"])
+      ScratchProject.new.in_generated_project do
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["model", "User", "--api-only"])
+        TestHelpers::TestSetup.with_captured_output { command.execute.success?.should be_true }
 
-      command.api_only.should be_true
+        command.api_only.should be_true
+      end
     end
 
     it "handles web-only flag" do
-      command = AzuCLI::Commands::Generate.new
-      command.parse_args(["--web-only", "model", "User"])
+      ScratchProject.new.in_generated_project do
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["model", "User", "--web-only"])
+        TestHelpers::TestSetup.with_captured_output { command.execute.success?.should be_true }
 
-      command.web_only.should be_true
+        command.web_only.should be_true
+      end
     end
 
     it "handles skip-tests flag" do
-      command = AzuCLI::Commands::Generate.new
-      command.parse_args(["--skip-tests", "model", "User"])
+      ScratchProject.new.in_generated_project do
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["model", "User", "--skip-tests"])
+        TestHelpers::TestSetup.with_captured_output { command.execute.success?.should be_true }
 
-      command.skip_tests.should be_true
+        command.skip_tests.should be_true
+        Dir.glob("db/migrations/*").should be_empty
+      end
     end
   end
 
   describe "project type detection" do
     it "detects API projects and sets api_only mode" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
-        # Create a project that looks like an API project
-        temp_project.create_shard_yml
-        temp_project.create_config_dir
-        temp_project.create_src_dir
-
-        # Create an API-like structure
-        Dir.mkdir_p("src/endpoints")
-        File.write("src/endpoints/api.cr", "# API endpoint")
+      ScratchProject.new.in_generated_project do
+        Dir.mkdir_p("config")
+        File.write("config/azu.yml", "project:\n  type: api\n")
 
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["model", "User"])
 
-        TestHelpers::TestSetup.with_captured_output do |capture|
-          result = command.execute
-          result.success?.should be_true
-          capture.stderr.should contain("API project detected")
-        end
+        TestHelpers::TestSetup.with_captured_output { command.execute.success?.should be_true }
+        command.api_only.should be_true
+      end
+    end
+
+    it "keeps web mode for a web-only request in an API project" do
+      ScratchProject.new.in_generated_project do
+        Dir.mkdir_p("config")
+        File.write("config/azu.yml", "project:\n  type: api\n")
+
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["model", "User", "--web-only"])
+
+        TestHelpers::TestSetup.with_captured_output { command.execute.success?.should be_true }
+        command.api_only.should be_false
       end
     end
   end
@@ -479,26 +506,23 @@ describe AzuCLI::Commands::Generate do
   end
 
   describe "generator routing" do
-    it "routes to all supported generator types" do
-      supported_generators = [
-        "model", "endpoint", "service", "request", "contract", "page",
-        "job", "joobq", "middleware", "migration", "data:migration", "data_migration",
-        "seed", "component", "validator", "response", "template", "scaffold",
-        "mailer", "channel", "auth", "authentication", "api_resource", "api-resource",
-      ]
+    it "routes every supported generator type" do
+      AzuCLI::Commands::Generate::GENERATOR_TYPES.each do |generator_type|
+        ScratchProject.new.in_generated_project do
+          command = AzuCLI::Commands::Generate.new
+          if AzuCLI::Commands::Generate::NAMELESS_GENERATORS.includes?(generator_type)
+            command.parse_args([generator_type])
+          else
+            command.parse_args([generator_type, "TestName"])
+          end
 
-      supported_generators.each do |generator_type|
-        command = AzuCLI::Commands::Generate.new
-
-        if ["auth", "authentication", "validate"].includes?(generator_type)
-          command.parse_args([generator_type])
-        else
-          command.parse_args([generator_type, "TestName"])
+          # The generation itself may fail for lack of project structure, but the type must be routed.
+          TestHelpers::TestSetup.with_captured_output do
+            result = command.execute
+            result.error.to_s.should_not contain("Unknown generator type")
+          end
+          command.generator_type.should eq(generator_type)
         end
-
-        # Should not throw an error for unknown generator type
-        # (The actual generation might fail due to missing project structure, but routing should work)
-        command.generator_type.should eq(generator_type)
       end
     end
   end

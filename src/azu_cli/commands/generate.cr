@@ -37,7 +37,7 @@ module AzuCLI
         end
 
         # Some generators don't require a name (like auth, validate, joobq)
-        generators_without_name = ["auth", "authentication", "validate", "joobq"]
+        generators_without_name = NAMELESS_GENERATORS
 
         @generator_type = get_arg(0) || ""
 
@@ -349,6 +349,10 @@ module AzuCLI
       private def generate_job : Result
         Logger.info("Generating job")
 
+        if message = Generators::Job.error_for(@generator_name, @attributes)
+          return error(message)
+        end
+
         generator = Generators::Job.new(
           name: @generator_name,
           parameters: @attributes
@@ -357,8 +361,8 @@ module AzuCLI
         render_generator(generator, Generators::Job::OUTPUT_DIR)
 
         # Show helpful next steps
-        job_name = "#{@generator_name.gsub(/Job$/i, "").camelcase}Job"
-        Logger.success("✓ Job #{job_name} created: src/jobs/#{@generator_name.underscore}_job.cr")
+        job_name = generator.job_struct_name
+        Logger.success("✓ Job #{job_name} created: #{generator.file_path}")
 
         Logger.info("")
         Logger.info("Usage examples:")
@@ -694,6 +698,15 @@ module AzuCLI
       private def scaffold_actions : Array(String)
         @api_only ? %w(index show create update destroy) : %w(index show new create edit update destroy)
       end
+
+      # Every generator type `execute` routes (the generator plugin validates against this list)
+      GENERATOR_TYPES = %w(
+        model endpoint service request contract page job joobq middleware migration data:migration data_migration
+        seed component validator response template scaffold mailer channel auth authentication api_resource
+        api-resource validate
+      )
+      # The generators that take no name
+      NAMELESS_GENERATORS = %w(auth authentication validate joobq)
 
       # The generators whose `name:type` arguments become columns, getters and form fields.
       RESOURCE_GENERATORS = %w(model migration scaffold api_resource api-resource request page response template service endpoint)

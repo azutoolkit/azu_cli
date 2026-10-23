@@ -1,5 +1,10 @@
 require "../../spec_helper"
 require "../../support/test_helpers"
+require "../../support/generator_helpers"
+
+private struct ScratchProject
+  include GeneratorHelpers
+end
 
 describe AzuCLI::Generate::Job do
   describe "#initialize" do
@@ -48,7 +53,7 @@ describe AzuCLI::Generate::Job do
       generator.crystal_type("boolean").should eq("Bool")
       generator.crystal_type("time").should eq("Time")
       generator.crystal_type("datetime").should eq("Time")
-      generator.crystal_type("date").should eq("Date")
+      generator.crystal_type("date").should eq("Time") # Crystal has no Date
       generator.crystal_type("array").should eq("Array(String)")
       generator.crystal_type("hash").should eq("Hash(String, String)")
       generator.crystal_type("json").should eq("JSON::Any")
@@ -153,7 +158,73 @@ describe AzuCLI::Generate::Job do
       generator = AzuCLI::Generate::Job.new("Notification", parameters)
       body = generator.perform_method_body
 
-      body.should contain("@data.each { |key, value| Log.info { \" {key}: \"+value.to_s } }")
+      body.should contain("@data.each { |key, value| Log.info { \"\#{key}: \"+value.to_s } }")
+    end
+  end
+
+  describe "validation" do
+    it "refuses names that are not identifiers" do
+      ["Foo\"} ; system(\"x\") #", "a/b", "../evil", "My Job", "1Job", "", "Foo;"].each do |name|
+        expect_raises(ArgumentError, /Invalid job name/) { AzuCLI::Generate::Job.new(name) }
+        AzuCLI::Generate::Job.error_for(name, {} of String => String).to_s.should contain("Invalid job name")
+      end
+    end
+
+    it "refuses parameter names and types that are not identifiers" do
+      expect_raises(ArgumentError, /Invalid parameter name/) { AzuCLI::Generate::Job.new("Email", {"x : String; y" => "String"}) }
+      expect_raises(ArgumentError, /Invalid parameter name/) { AzuCLI::Generate::Job.new("Email", {"../x" => "String"}) }
+      expect_raises(ArgumentError, /Invalid type/) { AzuCLI::Generate::Job.new("Email", {"x" => "String; system(\"x\")"}) }
+      expect_raises(ArgumentError, /Invalid type/) { AzuCLI::Generate::Job.new("Email", {"x" => "Int32 y"}) }
+    end
+
+    it "refuses a queue that is not a plain name" do
+      expect_raises(ArgumentError, /Invalid queue name/) { AzuCLI::Generate::Job.new("Email", {} of String => String, "q\"; x") }
+    end
+
+    it "refuses an expiry it does not understand instead of using one day" do
+      expect_raises(ArgumentError, /Unsupported expiry/) { AzuCLI::Generate::Job.new("Email", {} of String => String, "default", 3, "soon") }
+      expect_raises(ArgumentError, /Unsupported expiry/) { AzuCLI::Generate::Job.new("Email", {} of String => String, "default", 3, "1.day; x") }
+    end
+
+    it "accepts the documented forms" do
+      AzuCLI::Generate::Job.new("Email", {"to" => "String", "note" => "String?"}, "mailers:high", 3, "1.month").file_path.should eq("src/jobs/email_job.cr")
+    end
+
+    it "is refused by azu generate job with a message, writing nothing" do
+      ScratchProject.new.in_generated_project do
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["job", "Foo\"} ; system(\"x\") #"])
+        TestHelpers::TestSetup.with_captured_output do
+          result = command.execute
+          result.success?.should be_false
+          result.error.should contain("Invalid job name")
+        end
+        Dir.exists?("src/jobs").should be_false
+
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["job", "Email", "x;y:string"])
+        TestHelpers::TestSetup.with_captured_output do
+          result = command.execute
+          result.success?.should be_false
+          result.error.should contain("Invalid")
+        end
+        Dir.exists?("src/jobs").should be_false
+      end
+    end
+
+    it "names the created file in azu generate job output, with or without the Job suffix" do
+      %w(EmailJob Email).each do |name|
+        ScratchProject.new.in_generated_project do
+          command = AzuCLI::Commands::Generate.new
+          command.parse_args(["job", name])
+          TestHelpers::TestSetup.with_captured_output do |capture|
+            command.execute.success?.should be_true
+            capture.stdout.should contain("src/jobs/email_job.cr")
+            capture.stdout.should_not contain("email_job_job.cr")
+          end
+          File.exists?("src/jobs/email_job.cr").should be_true
+        end
+      end
     end
   end
 
@@ -178,9 +249,6 @@ describe AzuCLI::Generate::Job do
       Dir.mkdir_p(temp_dir)
       begin
         generator.render(temp_dir)
-
-        puts "Files in temp_dir:"
-        Dir.glob(File.join(temp_dir, "**", "*")) { |f| puts f }
 
         job_file = File.join(temp_dir, "simple_job.cr")
         File.exists?(job_file).should be_true
@@ -212,9 +280,6 @@ describe AzuCLI::Generate::Job do
       begin
         generator.render(temp_dir)
 
-        puts "Files in temp_dir:"
-        Dir.glob(File.join(temp_dir, "**", "*")) { |f| puts f }
-
         job_file = File.join(temp_dir, "email_job.cr")
         File.exists?(job_file).should be_true
 
@@ -245,9 +310,6 @@ describe AzuCLI::Generate::Job do
       begin
         generator.render(temp_dir)
 
-        puts "Files in temp_dir:"
-        Dir.glob(File.join(temp_dir, "**", "*")) { |f| puts f }
-
         job_file = File.join(temp_dir, "image_processing_job.cr")
         File.exists?(job_file).should be_true
 
@@ -273,7 +335,7 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           # Check that job file was created in correct location
           job_file = "src/jobs/email_job.cr"
@@ -287,7 +349,7 @@ describe AzuCLI::Generate::Job do
           temp_project.create_src_dir
 
           generator = AzuCLI::Generate::Job.new("EmailJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           # Check that directory was created
           Dir.exists?("src/jobs").should be_true
@@ -304,13 +366,39 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("UserNotificationJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           # Check that snake_case is used for filenames
           File.exists?("src/jobs/user_notification_job.cr").should be_true
 
           content = File.read("src/jobs/user_notification_job.cr")
           content.should contain("struct UserNotificationJob")
+          File.exists?("src/jobs/user_notification_job_job.cr").should be_false
+        end
+      end
+
+      it "names the file the same with or without the Job suffix" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+
+          AzuCLI::Generate::Job.new("Email").render(AzuCLI::Generate::Job::OUTPUT_DIR)
+
+          Dir.children("src/jobs").should eq(["email_job.cr"])
+          File.read("src/jobs/email_job.cr").should contain("struct EmailJob")
+        end
+      end
+
+      it "does not leave an empty argument list in the header examples of a job without parameters" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+
+          AzuCLI::Generate::Job.new("Simple").render(AzuCLI::Generate::Job::OUTPUT_DIR)
+
+          content = File.read("src/jobs/simple_job.cr")
+          content.should contain("#   SimpleJob.enqueue\n")
+          content.should contain("#   SimpleJob.schedule(in: 5.minutes)\n")
         end
       end
     end
@@ -323,12 +411,12 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob", {} of String => String, "high_priority")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
 
-          content.should contain("@queue = \"high_priority\"")
+          content.should contain("@queue   = \"high_priority\"")
         end
       end
 
@@ -339,7 +427,7 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob", {} of String => String, "default", 5)
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
@@ -355,7 +443,7 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob", {} of String => String, "default", 3, "2.hours")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
@@ -375,13 +463,13 @@ describe AzuCLI::Generate::Job do
           parameters = {
             "user_id"    => "Int64",
             "email"      => "String",
-            "data"       => "Hash(String, String)",
-            "tags"       => "Array(String)",
+            "data"       => "Hash",
+            "tags"       => "Array",
             "created_at" => "Time",
           }
 
           generator = AzuCLI::Generate::Job.new("DataProcessingJob", parameters)
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/data_processing_job.cr"
           content = File.read(job_file)
@@ -391,6 +479,9 @@ describe AzuCLI::Generate::Job do
           content.should contain("@data : Hash(String, String)")
           content.should contain("@tags : Array(String)")
           content.should contain("@created_at : Time")
+          # a type with a comma is one declaration, and the header examples name each parameter once
+          content.should contain("  property data : Hash(String, String)\n")
+          content.should contain("#   DataProcessingJob.enqueue(user_id: value, email: value, data: value, tags: value, created_at: value)")
         end
       end
 
@@ -402,7 +493,7 @@ describe AzuCLI::Generate::Job do
 
           parameters = {"user_id" => "Int64", "description" => "String?"}
           generator = AzuCLI::Generate::Job.new("OptionalJob", parameters)
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/optional_job.cr"
           content = File.read(job_file)
@@ -431,7 +522,7 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
@@ -448,7 +539,7 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
@@ -465,7 +556,7 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
@@ -484,7 +575,7 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
@@ -501,13 +592,14 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("EmailJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
 
-          content.should contain("require \"log\"")
-          content.should contain("Log")
+          # the generated file relies on the application having loaded Log (azu and JoobQ do)
+          content.should contain("Log.info")
+          content.should contain("Log.error(exception: ex)")
         end
       end
     end
@@ -516,13 +608,19 @@ describe AzuCLI::Generate::Job do
       it "handles different expiration formats" do
         generator = AzuCLI::Generate::Job.new("TestJob")
 
-        generator.expiration_seconds.should eq("1.hour.total_seconds.to_i")
+        generator.expiration_seconds.should eq("1.days.total_seconds.to_i")
         # Test different expiration times by creating new generators
         generator_30min = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "30.minutes")
         generator_30min.expiration_seconds.should eq("30.minutes.total_seconds.to_i")
 
         generator_1day = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "1.day")
         generator_1day.expiration_seconds.should eq("1.days.total_seconds.to_i")
+
+        generator_2hours = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "2.hours")
+        generator_2hours.expiration_seconds.should eq("2.hours.total_seconds.to_i")
+
+        generator_2weeks = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "2.weeks")
+        generator_2weeks.expiration_seconds.should eq("2.weeks.total_seconds.to_i")
       end
 
       it "generates job with scheduling information" do
@@ -532,12 +630,12 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("ScheduledJob", {} of String => String, "default", 3, "1.hour")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/scheduled_job.cr"
           content = File.read(job_file)
 
-          content.should contain("@queue = \"default\"")
+          content.should contain("@queue   = \"default\"")
           content.should contain("@retries = 3")
           content.should contain("@expires = 1.hour.total_seconds.to_i")
         end
@@ -552,7 +650,7 @@ describe AzuCLI::Generate::Job do
           Dir.mkdir_p("src/jobs")
 
           generator = AzuCLI::Generate::Job.new("TestableJob")
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/testable_job.cr"
           content = File.read(job_file)
@@ -571,7 +669,7 @@ describe AzuCLI::Generate::Job do
 
           parameters = {"user_id" => "Int64", "email" => "String"}
           generator = AzuCLI::Generate::Job.new("TestableJob", parameters)
-          generator.render(".")
+          generator.render(AzuCLI::Generate::Job::OUTPUT_DIR)
 
           job_file = "src/jobs/testable_job.cr"
           content = File.read(job_file)

@@ -24,6 +24,11 @@ module AzuCLI
       )
       end
 
+      # Teeplate renders these: the example job only when asked for
+      def rendered_file_entries
+        file_entries.reject { |entry| !@create_example_job && entry.path.to_s.ends_with?("example_job.cr") }
+      end
+
       # Generate configuration file path
       def config_file_path : String
         "config/joobq.development.yml"

@@ -7,10 +7,10 @@
 # - Expire after <%= expires %>
 #
 # To enqueue this job:
-#   <%= job_struct_name %>.enqueue(<%= constructor_params.split(", ").map { |p| p.split(" : ")[0].sub("@", "") + ": value" }.join(", ") %>)
+#   <%= job_struct_name %>.enqueue<%= has_parameters? ? "(#{example_arguments})" : "" %>
 #
 # To schedule this job:
-#   <%= job_struct_name %>.schedule(in: 5.minutes, <%= constructor_params.split(", ").map { |p| p.split(" : ")[0].sub("@", "") + ": value" }.join(", ") %>)
+#   <%= job_struct_name %>.schedule(in: 5.minutes<%= has_parameters? ? ", #{example_arguments}" : "" %>)
 
 struct <%= job_struct_name %>
   include JoobQ::Job
@@ -24,7 +24,7 @@ struct <%= job_struct_name %>
 
 <% if has_parameters? %>
   # Job parameters
-<%= constructor_params.split(", ").map { |p| "  property #{p.sub("@", "")}" }.join("\n") %>
+<%= property_declarations.map { |declaration| "  #{declaration}" }.join("\n") %>
 
   def initialize(<%= constructor_params %>)
   end

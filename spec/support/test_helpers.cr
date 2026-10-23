@@ -1,6 +1,13 @@
 require "file_utils"
 
 module TestHelpers
+  # The logging setup of the suite (spec_helper's before_suite): only errors, into a buffer
+  def self.quiet_logging
+    Log.setup do |config|
+      config.bind "*", Log::Severity::Error, Log::IOBackend.new(io: IO::Memory.new)
+    end
+  end
+
   # Temporary directory management for file generation tests
   class TempProject
     getter path : String
@@ -8,7 +15,7 @@ module TestHelpers
 
     def initialize(project_name : String = "test_project")
       @original_dir = Dir.current
-      @path = File.join(Dir.tempdir, "azu_cli_test_#{project_name}_#{Time.utc.to_unix}")
+      @path = File.join(Dir.tempdir, "azu_cli_test_#{project_name}_#{Random::Secure.hex(6)}")
       Dir.mkdir_p(@path)
       Dir.cd(@path)
     end
@@ -74,22 +81,67 @@ module TestHelpers
     end
   end
 
-  # Captured output helpers for CLI output testing
-  class OutputCapture
-    getter stdout : String
-    getter stderr : String
+  # dup/dup2 for redirecting the process's stdout and stderr; IO::FileDescriptor#reopen does not
+  # reliably restore the original descriptor.
+  lib FileDescriptors
+    fun dup(fd : Int32) : Int32
+    fun dup2(old_fd : Int32, new_fd : Int32) : Int32
+    fun close(fd : Int32) : Int32
+  end
 
-    def initialize
-      @stdout = ""
-      @stderr = ""
+  # Captured output of a block: what was written to the process's stdout and stderr, which is where
+  # Logger, Log and puts all end up. The file descriptors are redirected to temp files for the block
+  # (an IO::Memory cannot be swapped in for STDOUT), then restored. `stdout`/`stderr` can be read
+  # inside the block (what was written so far) and after it (everything).
+  class OutputCapture
+    @out_file : File?
+    @err_file : File?
+    @final_stdout = ""
+    @final_stderr = ""
+
+    def stdout : String
+      read(@out_file, @final_stdout)
     end
 
-    def capture_stdout(&)
-      # For now, just execute the block without capturing output
-      # This can be enhanced later with proper output capture
-      yield
-      @stdout = ""
-      @stderr = ""
+    def stderr : String
+      read(@err_file, @final_stderr)
+    end
+
+    def capture(&)
+      out_file = @out_file = File.tempfile("azu_cli_stdout")
+      err_file = @err_file = File.tempfile("azu_cli_stderr")
+      flush_all
+      saved_out = FileDescriptors.dup(1)
+      saved_err = FileDescriptors.dup(2)
+      begin
+        FileDescriptors.dup2(out_file.fd, 1)
+        FileDescriptors.dup2(err_file.fd, 2)
+        yield
+      ensure
+        flush_all
+        FileDescriptors.dup2(saved_out, 1)
+        FileDescriptors.dup2(saved_err, 2)
+        FileDescriptors.close(saved_out)
+        FileDescriptors.close(saved_err)
+        @final_stdout = File.read(out_file.path)
+        @final_stderr = File.read(err_file.path)
+        @out_file = @err_file = nil
+        out_file.close
+        err_file.close
+        out_file.delete
+        err_file.delete
+      end
+    end
+
+    private def flush_all
+      STDOUT.flush
+      STDERR.flush
+    end
+
+    private def read(file : File?, final : String) : String
+      return final unless file
+      flush_all
+      File.read(file.path)
     end
   end
 
@@ -248,11 +300,27 @@ module TestHelpers
       end
     end
 
+    # Runs the block with the given environment variables set (nil unsets one), then restores them.
+    def self.with_env(vars : Hash(String, String?), &)
+      saved = vars.keys.to_h { |key| {key, ENV[key]?} }
+      vars.each { |key, value| value ? (ENV[key] = value) : ENV.delete(key) }
+      yield
+    ensure
+      saved.try &.each { |key, value| value ? (ENV[key] = value) : ENV.delete(key) }
+    end
+
+    # Logger.info/debug are filtered out in specs (see spec_helper); this lets a block see them on stdout.
+    def self.with_info_logging(&)
+      AzuCLI::Logger.setup # first, or its own setup would replace the bindings below
+      Log.setup { |config| config.bind "*", Log::Severity::Info, Log::IOBackend.new(io: STDOUT, dispatcher: Log::DispatchMode::Sync) }
+      yield
+    ensure
+      TestHelpers.quiet_logging
+    end
+
     def self.with_captured_output(&)
       capture = OutputCapture.new
-      capture.capture_stdout do
-        yield capture
-      end
+      capture.capture { yield capture }
       capture
     end
   end
