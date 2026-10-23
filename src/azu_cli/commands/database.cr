@@ -33,6 +33,8 @@ module AzuCLI
 
       # Load database configuration from environment or config files
       private def load_database_config
+        @environment = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || @environment
+
         # Try DATABASE_URL first
         if url = ENV["DATABASE_URL"]?
           @database_url = url
@@ -47,10 +49,8 @@ module AzuCLI
           @database_name = ENV["AZU_DB_NAME"]? || ENV["DATABASE_NAME"]? || infer_database_name
           @username = ENV["AZU_DB_USER"]? || ENV["DATABASE_USER"]? || @username
           @password = ENV["AZU_DB_PASSWORD"]? || ENV["DATABASE_PASSWORD"]? || @password
-          @adapter = ENV["AZU_DB_ADAPTER"]? || @adapter
+          @adapter = ENV["AZU_DB_ADAPTER"]? || project_adapter || @adapter
         end
-
-        @environment = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || @environment
 
         # Load connection pool configuration
         @pool_size = ENV["AZU_DB_POOL_SIZE"]?.try(&.to_i) || @pool_size
@@ -83,6 +83,18 @@ module AzuCLI
         end
       end
 
+      # Adapter of the project's database driver shard (sqlite3, mysql), nil for PostgreSQL or no project
+      private def project_adapter : String?
+        dependencies = Utils.project_dependencies
+        {"sqlite3", "mysql"}.find { |driver| dependencies.includes?(driver) }
+      end
+
+      # File of a SQLite database: the path of DATABASE_URL, else `db/<name>.db` like the generated
+      # project's initializer. SQLite needs no server and creates the file on first use.
+      protected def sqlite_path(db_name : String) : String
+        @database_url.try(&.sub(/\Asqlite3?:(\/\/)?/, "")) || "./db/#{db_name}.db"
+      end
+
       # Infer database name from current directory
       private def infer_database_name : String
         project_name = Dir.current.split("/").last
@@ -106,7 +118,7 @@ module AzuCLI
         when "mysql"
           "mysql://#{@username}:#{@password}@#{@host}:#{@port}/mysql"
         when "sqlite", "sqlite3"
-          "sqlite3:./#{@database_name}.db"
+          "sqlite3:#{sqlite_path(@database_name || infer_database_name)}"
         else
           raise "Unsupported database adapter: #{@adapter}"
         end
@@ -122,7 +134,7 @@ module AzuCLI
         when "mysql"
           "mysql://#{@username}:#{@password}@#{@host}:#{@port}/#{db}"
         when "sqlite", "sqlite3"
-          "sqlite3:./#{db}.db"
+          "sqlite3:#{sqlite_path(db)}"
         else
           raise "Unsupported database adapter: #{@adapter}"
         end
@@ -233,7 +245,7 @@ module AzuCLI
             ) == 1
           end
         when "sqlite", "sqlite3"
-          File.exists?("./#{db}.db")
+          File.exists?(sqlite_path(db))
         else
           false
         end

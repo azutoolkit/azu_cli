@@ -63,8 +63,10 @@ module AzuCLI
           when "mysql"
             execute_on_server("CREATE DATABASE #{db_name}")
           when "sqlite", "sqlite3"
-            # SQLite creates database automatically on first connection
-            ::DB.open(database_connection_url(db_name)) { }
+            # An empty file is an empty SQLite database
+            path = sqlite_path(db_name)
+            Dir.mkdir_p(File.dirname(path))
+            File.touch(path)
           else
             raise "Unsupported adapter: #{@adapter}"
           end
@@ -86,7 +88,7 @@ module AzuCLI
           when "mysql"
             execute_on_server("DROP DATABASE IF EXISTS #{db_name}")
           when "sqlite", "sqlite3"
-            File.delete("./#{db_name}.db") if File.exists?("./#{db_name}.db")
+            File.delete(sqlite_path(db_name)) if File.exists?(sqlite_path(db_name))
           end
         rescue ex
           raise "Failed to drop database: #{ex.message}"
