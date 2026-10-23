@@ -52,13 +52,14 @@ jobs:
       - name: Install system dependencies
         run: |
           apt-get update
-          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev curl
+          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev sqlite3 curl
       - name: Build the CLI
         run: |
           shards install --ignore-crystal-version
           mkdir -p bin
           crystal build src/azu_cli.cr -o bin/azu --no-debug
-      # On SQLite the script also generates a Post scaffold, migrates it with `azu db:setup` and exercises its CRUD.
+      # On SQLite the script also generates a Post scaffold (and, for web, a Chat channel and authentication), migrates it
+      # with `azu db:setup` and exercises them.
       - name: Generate, build, boot and request a new project and its scaffold
         run: E2E_DB=${{ matrix.db }} scripts/e2e_generated_app.sh ${{ matrix.type }}
   release:

@@ -449,15 +449,45 @@ describe AzuCLI::Generate::Migration do
     end
   end
 
+  describe "versions" do
+    it "gives migrations generated in the same second different versions" do
+      in_generated_project do
+        dir = File.expand_path("src/db/migrations")
+        first = AzuCLI::Generate::Migration.new("create_posts", {} of String => String)
+        second = AzuCLI::Generate::Migration.new("create_users", {} of String => String)
+        first.timestamp = second.timestamp # the same second
+        first.render(dir, force: true, interactive: false)
+        second.render(dir, force: true, interactive: false)
+
+        versions = Dir.glob("src/db/migrations/*.cr").map { |path| File.basename(path).split('_').first }
+        versions.uniq.size.should eq(2)
+        File.read(Dir.glob("src/db/migrations/*_create_users.cr").first).should contain("CQL::Migration(#{versions.max}_i64)")
+      end
+    end
+  end
+
   describe "schema registration" do
     it "declares the created table in src/db/schema.cr, once" do
       in_generated_project do
         migration = AzuCLI::Generate::Migration.new("create_posts", {"title" => "string", "published" => "bool"})
-        2.times { migration.render(File.expand_path("src/db/migrations"), force: true, interactive: false) }
+        migration.render(File.expand_path("src/db/migrations"), force: true, interactive: false)
 
         schema = File.read("src/db/schema.cr")
         schema.scan("table :posts do").size.should eq(1)
         schema.should contain("  table :posts do\n    primary :id, Int64, auto_increment: true\n    text :title\n    boolean :published, default: false\n    timestamps\n  end\nend")
+      end
+    end
+
+    it "refuses a second migration with the same class name" do
+      in_generated_project do
+        dir = File.expand_path("src/db/migrations")
+        AzuCLI::Generate::Migration.new("create_posts", {"title" => "string"}).render(dir, force: true, interactive: false)
+
+        expect_raises(Exception, /CreatePosts exists already/) do
+          AzuCLI::Generate::Migration.new("create_posts", {"title" => "string"}).render(dir, force: true, interactive: false)
+        end
+        Dir.glob("src/db/migrations/*_create_posts.cr").size.should eq(1)
+        File.read("src/db/schema.cr").scan("table :posts do").size.should eq(1)
       end
     end
 

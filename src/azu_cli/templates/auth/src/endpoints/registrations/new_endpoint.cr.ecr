@@ -1,0 +1,12 @@
+module <%= app_module %>
+  struct Registrations::NewEndpoint
+    include Azu::Endpoint(Registrations::NewRequest, Registrations::NewPage)
+    include Authentication
+
+    get "/register"
+
+    def call : Registrations::NewPage
+      Registrations::NewPage.new(csrf_tag, flash_messages)
+    end
+  end
+end

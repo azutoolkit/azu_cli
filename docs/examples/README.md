@@ -13,7 +13,7 @@ cd blog
 # Generate resources
 azu generate scaffold Post title:string content:text published:bool
 azu generate scaffold Comment content:text post_id:references user_id:references
-azu generate auth --strategy session
+azu generate auth
 
 # Setup and run
 azu db:create && azu db:migrate
@@ -29,7 +29,7 @@ cd api_service
 # Generate API resources
 azu generate scaffold Product name:string price:float64 --api-only
 azu generate scaffold Order product_id:references quantity:int32 --api-only
-azu generate auth --strategy jwt
+azu generate auth
 
 # Setup and run
 azu db:create && azu db:migrate

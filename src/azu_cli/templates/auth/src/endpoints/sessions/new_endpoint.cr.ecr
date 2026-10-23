@@ -1,0 +1,12 @@
+module <%= app_module %>
+  struct Sessions::NewEndpoint
+    include Azu::Endpoint(Sessions::NewRequest, Sessions::NewPage)
+    include Authentication
+
+    get "/login"
+
+    def call : Sessions::NewPage
+      Sessions::NewPage.new(csrf_tag, flash_messages)
+    end
+  end
+end

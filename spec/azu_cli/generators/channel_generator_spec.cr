@@ -1,112 +1,38 @@
 require "../../spec_helper"
-require "teeplate"
+require "../../support/generator_helpers"
+
+include GeneratorHelpers
 
 describe AzuCLI::Generate::Channel do
-  it "creates a channel generator with name" do
-    generator = AzuCLI::Generate::Channel.new("Chat")
+  it "names the class, the topic and the route after the channel" do
+    in_generated_project do
+      generator = AzuCLI::Generate::Channel.new("LiveUpdate")
+      content = rendered(generator, ".", "src/channels/live_update_channel.cr")
 
-    generator.name.should eq("Chat")
-    generator.snake_case_name.should eq("chat")
-    generator.camel_case_name.should eq("Chat")
-  end
-
-  it "creates a channel generator with custom actions" do
-    actions = ["connect", "disconnect", "message"]
-    generator = AzuCLI::Generate::Channel.new("Notification", actions)
-
-    generator.name.should eq("Notification")
-    generator.actions.should eq(actions)
-  end
-
-  it "uses default actions when none provided" do
-    generator = AzuCLI::Generate::Channel.new("Chat")
-
-    generator.actions.should contain("subscribed")
-    generator.actions.should contain("unsubscribed")
-    generator.actions.should contain("receive")
-  end
-
-  it "converts name to snake_case" do
-    generator = AzuCLI::Generate::Channel.new("UserNotification")
-
-    generator.snake_case_name.should eq("user_notification")
-  end
-
-  it "converts name to camelCase" do
-    generator = AzuCLI::Generate::Channel.new("user_chat")
-
-    generator.camel_case_name.should eq("UserChat")
-  end
-
-  describe "#action_methods" do
-    it "generates subscribed method" do
-      generator = AzuCLI::Generate::Channel.new("Chat", ["subscribed"])
-
-      methods = generator.action_methods
-      methods.should contain("def subscribed")
-      methods.should contain("Client subscribed")
-    end
-
-    it "generates unsubscribed method" do
-      generator = AzuCLI::Generate::Channel.new("Chat", ["unsubscribed"])
-
-      methods = generator.action_methods
-      methods.should contain("def unsubscribed")
-      methods.should contain("Client unsubscribed")
-    end
-
-    it "generates receive method" do
-      generator = AzuCLI::Generate::Channel.new("Chat", ["receive"])
-
-      methods = generator.action_methods
-      methods.should contain("def receive(data : JSON::Any)")
-      methods.should contain("Received data")
-    end
-
-    it "generates custom action methods" do
-      generator = AzuCLI::Generate::Channel.new("Chat", ["send_message"])
-
-      methods = generator.action_methods
-      methods.should contain("def send_message(data : JSON::Any)")
-    end
-
-    it "generates multiple action methods" do
-      generator = AzuCLI::Generate::Channel.new("Chat", ["subscribed", "receive", "custom"])
-
-      methods = generator.action_methods
-      methods.should contain("def subscribed")
-      methods.should contain("def receive")
-      methods.should contain("def custom")
+      generator.route.should eq("/live_update")
+      content.should contain("module Blog\n")
+      content.should contain("class LiveUpdateChannel < Azu::Channel")
+      content.should contain(%(TOPIC = "live_update"))
+      content.should contain(%(ws "/live_update"))
     end
   end
 
-  describe "#client_javascript" do
-    it "generates client-side JavaScript" do
-      generator = AzuCLI::Generate::Channel.new("Chat")
+  it "implements what Azu::Channel requires" do
+    in_generated_project do
+      content = rendered(AzuCLI::Generate::Channel.new("Chat"), ".", "src/channels/chat_channel.cr")
 
-      js = generator.client_javascript
-      js.should contain("class ChatChannel")
-      js.should contain("constructor")
-      js.should contain("connect()")
-      js.should contain("subscribe()")
-      js.should contain("send(data)")
-      js.should contain("disconnect()")
-      js.should contain("WebSocket")
+      ["on_connect", "on_message(message : String)", "on_binary(binary : Bytes)", "on_ping(message : String)",
+       "on_pong(message : String)", "on_close(code : HTTP::WebSocket::CloseCode?, message : String?)"].each do |method|
+        content.should contain("def #{method}")
+      end
+      content.should_not contain("ActionCable")
     end
+  end
 
-    it "includes channel name in JavaScript class" do
-      generator = AzuCLI::Generate::Channel.new("Notification")
-
-      js = generator.client_javascript
-      js.should contain("class NotificationChannel")
-      js.should contain("Connected to NotificationChannel")
-    end
-
-    it "includes snake_case identifier" do
-      generator = AzuCLI::Generate::Channel.new("UserChat")
-
-      js = generator.client_javascript
-      js.should contain("identifier: 'user_chat'")
+  it "accepts identifiers only, so a name cannot inject code" do
+    ["Chat", "live_update", "Room42"].each { |name| AzuCLI::Generate::Channel.name_error(name).should be_nil }
+    ["Chat; puts 1", "1Chat", "a-b", "", "Chat\"", "Chat Room"].each do |name|
+      AzuCLI::Generate::Channel.name_error(name).should_not be_nil
     end
   end
 end

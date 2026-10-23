@@ -1,0 +1,10 @@
+# bcrypt reads at most 72 bytes of a password and refuses longer ones, so the contracts count bytes, not characters.
+module BytesizePredicate
+  def max_bytes?(value, limit)
+    value.bytesize <= limit
+  end
+end
+
+module Schema::Predicates
+  include BytesizePredicate
+end

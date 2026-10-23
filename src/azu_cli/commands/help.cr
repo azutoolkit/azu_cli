@@ -66,7 +66,7 @@ module AzuCLI
         puts "Examples:"
         puts "  azu new my-app"
         puts "  azu generate model User name:string email:string"
-        puts "  azu generate auth --strategy jwt"
+        puts "  azu generate auth"
         puts "  azu db:create"
         puts "  azu db:migrate"
         puts "  azu serve"

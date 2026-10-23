@@ -262,6 +262,20 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf(test_dir)
     end
 
+    it "pins the shards whose newer releases do not build with the generated app and loads channels" do
+      test_dir = "./tmp_test_pins"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
+
+      shard = File.read(File.join(test_dir, "shard.yml"))
+      shard.should match(/cql:\n    github: azutoolkit\/cql\n    version: 0\.0\.541\n/)
+      shard.should match(/session:\n    github: azutoolkit\/session\n    version: ~> 1\.0\.31\n/)
+      File.read(File.join(test_dir, "src", "myapp.cr")).should contain(%(require "./channels/**"))
+      File.exists?(File.join(test_dir, "src", "channels", ".gitkeep")).should be_true
+
+      FileUtils.rm_rf(test_dir)
+    end
+
     it "uses the mysql and sqlite3 drivers in the initializer" do
       {"mysql" => "mysql", "sqlite3" => "sqlite3"}.each do |database, driver|
         generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database)
