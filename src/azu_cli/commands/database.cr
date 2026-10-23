@@ -1,6 +1,7 @@
 require "./base"
 require "db"
 require "pg"
+require "mysql"
 require "uri"
 require "cql"
 
@@ -265,11 +266,8 @@ module AzuCLI
           end
         when "mysql"
           ::DB.open(server_connection_url) do |db_conn|
-            db_conn.query_one?(
-              "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?",
-              db,
-              as: Int32
-            ) == 1
+            # MySQL returns COUNT(*) as a BIGINT, which crystal-db reads as Int64 (not the Int32 of PostgreSQL)
+            db_conn.scalar("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = ?", db).as(Int64) > 0
           end
         when "sqlite", "sqlite3"
           File.exists?(sqlite_path(db))
@@ -372,6 +370,54 @@ module AzuCLI
       # Whether the project has initializers to load (they configure CQL)
       protected def initializers? : Bool
         !Dir.glob("./src/initializers/*.cr").empty?
+      end
+
+      # Versions recorded in `cql_schema_migrations`, oldest first.
+      #
+      # The CLI links only the PostgreSQL driver, so for SQLite and MySQL the project reads them itself
+      # (a runner script, like the migrations). A missing table is "nothing applied yet"; any other
+      # failure is reported rather than shown as an empty list.
+      protected def applied_migration_versions : Array(Int64)
+        return applied_versions_from_project if {"sqlite", "sqlite3", "mysql"}.includes?(@adapter)
+
+        versions = [] of Int64
+        query_database("SELECT version FROM cql_schema_migrations ORDER BY version") do |rs|
+          rs.each { versions << rs.read(Int64) }
+        end
+        versions
+      rescue ex
+        warn_unreadable_migrations(ex.message)
+        [] of Int64
+      end
+
+      private def applied_versions_from_project : Array(Int64)
+        script = applied_versions_script
+        output = IO::Memory.new
+        error = IO::Memory.new
+        status = Process.run("crystal", ["run", script], output: output, error: error)
+        unless status.success?
+          warn_unreadable_migrations(error.to_s.lines.last?)
+          return [] of Int64
+        end
+        output.to_s.lines.compact_map { |line| line.starts_with?("APPLIED ") ? line[8..].to_i64? : nil }.sort!
+      ensure
+        File.delete(script) if script && File.exists?(script)
+      end
+
+      private def applied_versions_script : String
+        script_path = File.join(Dir.current, "tmp_applied_#{Time.utc.to_unix}.cr")
+        File.write(script_path, migrator_script_header + "migrator.applied_migrations.each { |migration| puts \"APPLIED \#{migration.version}\" }\n")
+        script_path
+      end
+
+      private def warn_unreadable_migrations(message : String?)
+        return if message.nil? || message.matches?(/does not exist|doesn't exist|no such table/i)
+        Logger.warn("Could not read the applied migrations: #{message}")
+      end
+
+      # Public test helper to access private method for testing
+      def test_applied_versions_script : String
+        applied_versions_script
       end
 
       # Dump current database schema to file

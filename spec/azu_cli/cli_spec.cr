@@ -75,6 +75,16 @@ describe AzuCLI::CLI do
       end
     end
 
+    it "returns the exit code instead of ending the process" do
+      cli = AzuCLI::CLI.new
+
+      TestHelpers::TestSetup.with_captured_output do |_capture|
+        cli.run([] of String).should eq(0)
+        cli.run(["help"]).should eq(0)
+        cli.run(["unknown_command"]).should eq(1)
+      end
+    end
+
     it "passes arguments to commands" do
       cli = AzuCLI::CLI.new
 

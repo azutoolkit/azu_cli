@@ -19,10 +19,13 @@ dependencies:
     branch: master
   pg:
     github: will/crystal-pg
-    version: ~> 0.28.0
+    version: ~> 0.31.0
   cql:
     github: azutoolkit/cql
     branch: master
+  mysql:
+    github: crystal-lang/crystal-mysql
+    version: ~> 0.18.0
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.9.0
