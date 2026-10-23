@@ -1,0 +1,25 @@
+require "crypto/bcrypt/password"
+
+module <%= app_module %>
+  # What the account endpoints share: who is signed in, and how credentials are checked.
+  module Authentication
+    # Checked when the email is unknown too, so the response time does not tell which emails exist.
+    UNKNOWN_USER_DIGEST = Crypto::Bcrypt::Password.create(Random::Secure.hex(16)).to_s
+
+    private def current_user : User?
+      Session.session.current_session.user_id.try { |id| User.find?(id) }
+    end
+
+    private def authenticate(email : String, password : String) : User?
+      user = User.find_by(email: email.strip.downcase)
+      verified = Crypto::Bcrypt::Password.new(user.try(&.password_digest) || UNKNOWN_USER_DIGEST).verify(password)
+      user if verified && user
+    end
+
+    private def flash_messages : Hash(String, String)
+      messages = {} of String => String
+      {"notice", "error"}.each { |kind| Session.session.flash[kind]?.try { |message| messages[kind] = message } }
+      messages
+    end
+  end
+end

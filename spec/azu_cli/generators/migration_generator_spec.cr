@@ -411,6 +411,23 @@ describe AzuCLI::Generate::Migration do
     end
   end
 
+  describe "versions" do
+    it "gives migrations generated in the same second different versions" do
+      in_generated_project do
+        dir = File.expand_path("src/db/migrations")
+        first = AzuCLI::Generate::Migration.new("create_posts", {} of String => String)
+        second = AzuCLI::Generate::Migration.new("create_users", {} of String => String)
+        first.timestamp = second.timestamp # the same second
+        first.render(dir, force: true, interactive: false)
+        second.render(dir, force: true, interactive: false)
+
+        versions = Dir.glob("src/db/migrations/*.cr").map { |path| File.basename(path).split('_').first }
+        versions.uniq.size.should eq(2)
+        File.read(Dir.glob("src/db/migrations/*_create_users.cr").first).should contain("CQL::Migration(#{versions.max})")
+      end
+    end
+  end
+
   describe "schema registration" do
     it "declares the created table in src/db/schema.cr, once" do
       in_generated_project do

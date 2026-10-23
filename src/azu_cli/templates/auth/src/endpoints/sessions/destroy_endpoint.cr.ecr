@@ -1,0 +1,12 @@
+module <%= app_module %>
+  struct Sessions::DestroyEndpoint
+    include Azu::Endpoint(Sessions::DestroyRequest, Azu::Response::Empty)
+
+    delete "/logout"
+
+    def call : Azu::Response::Empty
+      Session.session.delete
+      redirect to: "/login", status: 303
+    end
+  end
+end

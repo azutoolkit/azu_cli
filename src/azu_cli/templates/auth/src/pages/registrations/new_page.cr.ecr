@@ -1,0 +1,13 @@
+module <%= app_module %>
+  struct Registrations::NewPage
+    include Azu::Response
+    include Azu::Templates::Renderable
+
+    def initialize(@csrf_tag : String, @messages : Hash(String, String))
+    end
+
+    def render
+      view data: {"csrf_tag" => @csrf_tag, "messages" => @messages}
+    end
+  end
+end

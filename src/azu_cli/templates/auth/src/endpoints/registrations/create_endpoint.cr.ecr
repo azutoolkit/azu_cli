@@ -1,0 +1,21 @@
+require "crypto/bcrypt/password"
+
+module <%= app_module %>
+  struct Registrations::CreateEndpoint
+    include Azu::Endpoint(Registrations::CreateRequest, Azu::Response::Empty)
+
+    post "/register"
+
+    def call : Azu::Response::Empty
+      email = create_request.email.strip.downcase
+      if User.find_by(email: email)
+        Session.session.flash["error"] = "That email is already registered"
+        return redirect to: "/register", status: 303
+      end
+
+      User.new(email: email, password_digest: Crypto::Bcrypt::Password.create(create_request.password).to_s).save!
+      Session.session.flash["notice"] = "Account created: sign in"
+      redirect to: "/login", status: 303
+    end
+  end
+end

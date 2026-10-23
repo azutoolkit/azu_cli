@@ -17,11 +17,14 @@ dependencies:
   azu:
     github: azutoolkit/azu
 
+  # 0.0.562 and later bring a native PostgreSQL driver that does not compile against crystal-db 0.15
   cql:
     github: azutoolkit/cql
+    version: 0.0.541
 
   session:
     github: azutoolkit/session
+    version: ~> 1.0.31
 
   # Optional: Uncomment if you need email functionality
   # carbon:

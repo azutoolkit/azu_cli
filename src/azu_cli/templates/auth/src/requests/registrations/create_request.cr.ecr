@@ -1,0 +1,11 @@
+module <%= app_module %>
+  struct Registrations::CreateRequest
+    include Azu::Request
+
+    getter email : String
+    getter password : String
+
+    validate email, presence: true, match: /\A[^@\s]+@[^@\s]+\z/
+    validate password, presence: true, size: 8..72 # bcrypt reads the first 72 bytes
+  end
+end

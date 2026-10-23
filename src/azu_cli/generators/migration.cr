@@ -45,8 +45,18 @@ module AzuCLI
       # Renders the migration; a create-table migration also declares its table in `src/db/schema.cr`,
       # where the models look their columns up.
       def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
+        use_unused_version(output_dir)
         super
         register_table(File.join(File.dirname(output_dir), "schema.cr")) if migration_type == "create_table"
+      end
+
+      # Two migrations generated within the same second (a scaffold, then authentication) must not share a version.
+      private def use_unused_version(output_dir : String)
+        version = @timestamp.to_i64
+        until Dir.glob(File.join(output_dir, "#{version}_*")).empty?
+          version += 1
+        end
+        @timestamp = version.to_s
       end
 
       private def register_table(schema_file : String)

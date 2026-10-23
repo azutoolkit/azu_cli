@@ -3,6 +3,8 @@
 # install its shards, compile it, boot it on a free port and check that it serves. A project on
 # SQLite also gets a `Post` scaffold: `azu db:setup` creates its table and curl exercises the CRUD
 # (web: forms with a CSRF token and a `_method` override, writes redirect with 303; api: JSON).
+# A web project also gets a Chat channel (two WebSocket clients) and authentication (sign up, sign in,
+# a protected page, sign out; the password is stored as a bcrypt digest).
 #
 # Usage: scripts/e2e_generated_app.sh [web|api]      (default: web)
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
@@ -84,10 +86,10 @@ csrf_token() {
 }
 
 # submit JAR PATH STATUS [form fields...]: POSTs a urlencoded form with the token of the last
-# fetched page; the response headers go to $WORK/headers.
+# fetched page; the response headers go to $WORK/headers and its cookies into JAR.
 submit() {
   jar="$1"; path="$2"; want="$3"; shift 3
-  got="$(curl -s -o "$WORK/body" -D "$WORK/headers" -w '%{http_code}' --max-time 10 -b "$jar" \
+  got="$(curl -s -o "$WORK/body" -D "$WORK/headers" -w '%{http_code}' --max-time 10 -b "$jar" -c "$jar" \
     --data-urlencode "_csrf=$(csrf_token)" "$@" "http://127.0.0.1:$PORT$path")"
   [ "$got" = "$want" ] || fail "POST $path returned $got, expected $want"
   echo "ok: POST $path -> $got"
@@ -180,6 +182,85 @@ check_web_scaffold() {
   expect_status /posts 200
 }
 
+# The Chat channel: two WebSocket clients, a message of one reaches both (the generated channel
+# broadcasts every message to the topic its clients subscribe to).
+check_channel() {
+  cat >"$WORK/ws_check.cr" <<'CRYSTAL'
+require "http/web_socket"
+
+port, path = ARGV
+uri = URI.parse("ws://127.0.0.1:#{port}#{path}")
+inbox = {a: Channel(String).new(4), b: Channel(String).new(4)}
+first = HTTP::WebSocket.new(uri)
+second = HTTP::WebSocket.new(uri)
+first.on_message { |message| inbox[:a].send(message) }
+second.on_message { |message| inbox[:b].send(message) }
+spawn { first.run }
+spawn { second.run }
+sleep 0.3.seconds
+
+first.send("hello e2e")
+{a: inbox[:a], b: inbox[:b]}.each do |name, channel|
+  select
+  when message = channel.receive
+    abort "client #{name} got #{message.inspect}, expected \"hello e2e\"" unless message == "hello e2e"
+  when timeout(5.seconds)
+    abort "client #{name} received nothing within 5s"
+  end
+end
+puts "both clients received hello e2e"
+CRYSTAL
+  out="$(crystal run "$WORK/ws_check.cr" -- "$PORT" /chat 2>&1)" || fail "WebSocket /chat: $out"
+  echo "ok: $out"
+}
+
+# The generated authentication: sign up, sign in, a protected page, sign out; passwords are hashed.
+check_auth() {
+  jar="$WORK/auth.jar"
+  base="http://127.0.0.1:$PORT"
+
+  got="$(curl -s -o /dev/null -D "$WORK/headers" -w '%{http_code}' --max-time 10 "$base/account")"
+  [ "$got" = 303 ] || fail "GET /account signed out returned $got, expected 303"
+  expect_redirect /login
+
+  rm -f "$jar"
+  [ "$(fetch /register "$jar")" = 200 ] || fail "GET /register did not return 200"
+  expect_body 'name="email"'
+  expect_body 'name="password"'
+  submit "$jar" /register 422 --data-urlencode email=nobody --data-urlencode password=short
+  fetch /register "$jar" >/dev/null
+  submit "$jar" /register 303 --data-urlencode "email=Dev@Example.com" --data-urlencode "password=correct horse"
+  expect_redirect /login
+  digest="$(sqlite3 "db/${NAME}_development.db" 'select password_digest from users')"
+  case "$digest" in '$2'*) echo "ok: the password is stored as a bcrypt digest" ;; *) fail "password_digest is not a bcrypt digest: $digest" ;; esac
+  case "$digest" in *"correct horse"*) fail "the password is stored in plain text" ;; esac
+  fetch /register "$jar" >/dev/null
+  submit "$jar" /register 303 --data-urlencode "email=dev@example.com" --data-urlencode "password=another pass"
+  expect_redirect /register
+  [ "$(sqlite3 "db/${NAME}_development.db" 'select count(*) from users')" = 1 ] || fail "a second user was created for the same email"
+
+  rm -f "$jar"
+  fetch /login "$jar" >/dev/null
+  submit "$jar" /login 303 --data-urlencode email=dev@example.com --data-urlencode "password=wrong password"
+  expect_redirect /login
+  [ "$(fetch /login "$jar")" = 200 ] || fail "GET /login did not return 200"
+  expect_body 'Invalid email or password'
+  expect_status /account 303
+
+  fetch /login "$jar" >/dev/null
+  submit "$jar" /login 303 --data-urlencode email=Dev@Example.com --data-urlencode "password=correct horse"
+  expect_redirect /account
+  [ "$(fetch /account "$jar")" = 200 ] || fail "GET /account signed in did not return 200"
+  expect_body 'dev@example.com'
+  expect_body 'name="_method" value="delete"'
+
+  submit "$jar" /logout 303 --data-urlencode _method=delete
+  expect_redirect /login
+  got="$(curl -s -o /dev/null -b "$jar" -D "$WORK/headers" -w '%{http_code}' --max-time 10 "$base/account")"
+  [ "$got" = 303 ] || fail "GET /account after sign out returned $got, expected 303"
+  expect_redirect /login
+}
+
 step "generate a $TYPE project ($DB) with $AZU_BIN"
 cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
@@ -189,6 +270,12 @@ cd "$NAME"
 if [ "$SCAFFOLD" = 1 ]; then
   step "generate a Post scaffold"
   "$AZU_BIN" generate scaffold Post title:string body:text published:bool
+fi
+
+if [ "$SCAFFOLD" = 1 ] && [ "$TYPE" = web ]; then
+  step "generate a Chat channel and authentication"
+  "$AZU_BIN" generate channel Chat
+  "$AZU_BIN" generate auth
 fi
 
 step "shards install"
@@ -233,6 +320,13 @@ fi
 if [ "$SCAFFOLD" = 1 ]; then
   step "check the Post scaffold"
   if [ "$TYPE" = web ]; then check_web_scaffold; else check_api_scaffold; fi
+fi
+
+if [ "$SCAFFOLD" = 1 ] && [ "$TYPE" = web ]; then
+  step "check the Chat channel"
+  check_channel
+  step "check authentication"
+  check_auth
 fi
 
 kill -0 "$SERVER_PID" 2>/dev/null || fail "server died while serving requests"

@@ -1,30 +1,29 @@
-# <%=camel_case_name%> Channel
-# WebSocket channel for real-time <%=name%> communication
-#
-# Usage:
-#   # Client connects via WebSocket
-#   # ws://localhost:3000/cable?channel=<%=snake_case_name%>
+module <%= app_module %>
+  # Every message a client sends reaches all the clients of the channel, the sender included.
+  # Clients connect to ws://<host><%= route %>.
+  class <%= camel_case_name %>Channel < Azu::Channel
+    TOPIC = "<%= snake_case_name %>"
 
-require "azu/channel"
+    ws "<%= route %>"
 
-class <%=camel_case_name%>Channel < Azu::Channel::Base
-<%=action_methods%>
+    def on_connect
+      subscribe(TOPIC)
+    end
 
-  # Broadcast to all connected clients
-  private def broadcast(message : String | Hash)
-    # Broadcast message to all subscribers
-    ActionCable.server.broadcast("<%=snake_case_name%>", message)
-  end
+    def on_message(message : String)
+      broadcast(TOPIC, message)
+    end
 
-  # Broadcast to specific user
-  private def broadcast_to_user(user_id : Int64, message : String | Hash)
-    ActionCable.server.broadcast("<%=snake_case_name%>_#{user_id}", message)
-  end
+    def on_binary(binary : Bytes)
+    end
 
-  # Stream from a specific broadcast
-  private def stream_from(broadcasting : String)
-    # Subscribe this channel to a specific broadcast stream
-    ActionCable.server.subscribe(self, broadcasting)
+    def on_ping(message : String)
+    end
+
+    def on_pong(message : String)
+    end
+
+    def on_close(code : HTTP::WebSocket::CloseCode?, message : String?)
+    end
   end
 end
-

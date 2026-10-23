@@ -1,42 +1,24 @@
 require "session"
 
-# Strongly typed session payload for <%= project.camelcase %>
-struct <%= project.camelcase %>::Sessions::<%= user_model_class %>Session
-  include Session::SessionData
-  property <%= user_model_singular %>_id : Int64?
-  property login_attempts : Int32 = 0
-  property last_activity : Time = Time.utc
-  
+# The session lives in an encrypted cookie, so it works behind any number of processes.
+class UserSession < Session::Base
+  property user_id : Int64? = nil
+
   def authenticated? : Bool
-    !<%= user_model_singular %>_id.nil?
-  end
-  
-  def increment_login_attempts
-    @login_attempts += 1
-  end
-  
-  def reset_login_attempts
-    @login_attempts = 0
+    !user_id.nil?
   end
 end
+
+Session.use_store(Session::CookieStore(UserSession))
 
 Session.configure do |config|
-  config.session_key = "_<%= project.underscore %>_session"
-  config.secret      = ENV["SESSION_SECRET"]? || raise "SESSION_SECRET environment variable not set"
-  config.timeout     = <%= csrf_enabled? ? "1.hour" : "24.hours" %>
-  config.provider    = Session::MemoryStore(<%= project.camelcase %>::Sessions::<%= user_model_class %>Session).provider
-  
-  config.on_started = ->(sid : String, data : Session::SessionData) do
-    Log.info { "Session started: #{sid}" }
+  # SESSION_SECRET must be in the process environment: export it (the generated .env lists one, but
+  # nothing loads .env for you) or set it in your process manager. Development falls back to a random
+  # key per process, which signs users out on every restart; production refuses to boot without it.
+  config.secret = ENV["SESSION_SECRET"]?.presence || begin
+    raise "SESSION_SECRET is not set" if ENV["CRYSTAL_ENV"]? == "production"
+    Random::Secure.hex(32)
   end
-  
-  config.on_deleted = ->(sid : String, data : Session::SessionData) do
-    Log.info { "Session deleted: #{sid}" }
-  end
-end
-
-module <%= project.camelcase %>
-  def self.session : Session::Provider
-    Session.session.not_nil!
-  end
+  config.session_key = "<%= app_dir %>_session"
+  config.store = Session::CookieStore(UserSession).new
 end

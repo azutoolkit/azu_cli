@@ -304,7 +304,7 @@ Add authentication to API resources:
 
 ```bash
 # Generate auth system
-azu generate auth --strategy jwt
+azu generate auth
 
 # Generate API resource with auth
 azu generate api_resource Post title:string content:text

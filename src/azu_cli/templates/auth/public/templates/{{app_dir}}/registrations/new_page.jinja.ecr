@@ -1,0 +1,21 @@
+{% extends "app_layout.jinja" %}
+
+{% block title %}Sign up{% endblock %}
+
+{% block content %}
+<div class="page-head"><h1>Sign up</h1></div>
+{% if messages.error %}<p class="alert" role="alert">{{ messages.error | e }}</p>{% endif %}
+<form action="/register" method="post" class="stack">
+  {{ csrf_tag | safe }}
+  <label class="field">Email
+    <input type="email" name="email" autocomplete="email" required>
+  </label>
+  <label class="field">Password
+    <input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+  </label>
+  <div class="row">
+    <button class="btn" type="submit">Create account</button>
+    <a class="btn btn--secondary" href="/login">Sign in</a>
+  </div>
+</form>
+{% endblock %}
