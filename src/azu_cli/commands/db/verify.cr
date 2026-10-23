@@ -101,7 +101,7 @@ module AzuCLI
         # Test migration rollback capability
         private def test_migration_rollback : Bool
           # Get applied migrations
-          applied_versions = get_applied_migration_versions
+          applied_versions = applied_migration_versions
 
           if applied_versions.empty?
             Logger.info("No applied migrations to test")
@@ -163,19 +163,6 @@ module AzuCLI
           true
         rescue
           false
-        end
-
-        # Get applied migration versions from database
-        private def get_applied_migration_versions : Array(Int64)
-          versions = [] of Int64
-          query_database("SELECT version FROM cql_schema_migrations ORDER BY version") do |rs|
-            rs.each do
-              versions << rs.read(Int64)
-            end
-          end
-          versions
-        rescue
-          [] of Int64
         end
       end
     end
