@@ -461,7 +461,7 @@ describe AzuCLI::Generate::Migration do
 
         versions = Dir.glob("src/db/migrations/*.cr").map { |path| File.basename(path).split('_').first }
         versions.uniq.size.should eq(2)
-        File.read(Dir.glob("src/db/migrations/*_create_users.cr").first).should contain("CQL::Migration(#{versions.max})")
+        File.read(Dir.glob("src/db/migrations/*_create_users.cr").first).should contain("CQL::Migration(#{versions.max}_i64)")
       end
     end
   end

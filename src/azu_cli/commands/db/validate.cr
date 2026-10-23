@@ -116,7 +116,7 @@ module AzuCLI
 
         # Check migration files
         private def check_migration_files : Bool
-          migrations_dir = "./src/db/migrations"
+          migrations_dir = "./#{AzuCLI::Config::Paths::MIGRATIONS}"
 
           unless Dir.exists?(migrations_dir)
             Logger.warn("Migrations directory does not exist: #{migrations_dir}")

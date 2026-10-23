@@ -285,7 +285,7 @@ module AzuCLI
 
       # Get migrations directory
       protected def migrations_dir : String
-        "./src/db/migrations"
+        "./#{AzuCLI::Config::Paths::MIGRATIONS}"
       end
 
       # Get seed file path
@@ -340,7 +340,7 @@ module AzuCLI
       # `src/db/schema.cr` is evaluated: the schema takes its URL, adapter and pool from CQL's
       # configuration. The migrator never rewrites `src/db/schema.cr` (`auto_sync: false`), which
       # would otherwise replace it with a plain dump that embeds the database URI and password.
-      protected def migrator_script_header(migrations_glob : String = "./src/db/migrations/*") : String
+      protected def migrator_script_header(migrations_glob : String = "./#{AzuCLI::Config::Paths::MIGRATIONS}/*") : String
         schema_name, _ = detect_schema_info
 
         String.build do |io|
