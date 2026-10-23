@@ -39,7 +39,5 @@ Spec.before_suite do
   AzuCLI::Config.instance.log_level = Log::Severity::Error
 
   # Configure Crystal's logging to suppress output during tests
-  Log.setup do |c|
-    c.bind "*", Log::Severity::Error, Log::IOBackend.new(io: IO::Memory.new)
-  end
+  TestHelpers.quiet_logging
 end

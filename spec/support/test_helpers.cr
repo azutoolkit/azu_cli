@@ -1,6 +1,13 @@
 require "file_utils"
 
 module TestHelpers
+  # The logging setup of the suite (spec_helper's before_suite): only errors, into a buffer
+  def self.quiet_logging
+    Log.setup do |config|
+      config.bind "*", Log::Severity::Error, Log::IOBackend.new(io: IO::Memory.new)
+    end
+  end
+
   # Temporary directory management for file generation tests
   class TempProject
     getter path : String
@@ -119,6 +126,8 @@ module TestHelpers
         @final_stdout = File.read(out_file.path)
         @final_stderr = File.read(err_file.path)
         @out_file = @err_file = nil
+        out_file.close
+        err_file.close
         out_file.delete
         err_file.delete
       end
@@ -306,7 +315,7 @@ module TestHelpers
       Log.setup { |config| config.bind "*", Log::Severity::Info, Log::IOBackend.new(io: STDOUT, dispatcher: Log::DispatchMode::Sync) }
       yield
     ensure
-      Log.setup { |config| config.bind "*", Log::Severity::Error, Log::IOBackend.new(io: IO::Memory.new) }
+      TestHelpers.quiet_logging
     end
 
     def self.with_captured_output(&)

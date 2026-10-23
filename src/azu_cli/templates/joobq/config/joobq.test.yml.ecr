@@ -15,11 +15,9 @@ joobq:
       job_class: "TestJob"
       workers: 1
 
-<% if @create_example_job -%>
     <%= @default_queue || "default" %>:
-      job_class: "<%= @example_job_name || "ExampleJob" %>"
+      job_class: "<%= @create_example_job ? (@example_job_name || "ExampleJob") : "YourJob" %>"<%= @create_example_job ? "" : "  # replace with the job class that runs in this queue" %>
       workers: 1
-<% end -%>
 
   # Minimal middleware for tests
   middlewares:

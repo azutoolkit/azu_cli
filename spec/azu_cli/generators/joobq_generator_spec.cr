@@ -1,6 +1,7 @@
 require "../../spec_helper"
 require "../../support/test_helpers"
 require "teeplate"
+require "yaml"
 
 describe AzuCLI::Generate::JoobQ do
   it "creates a JoobQ generator with default settings" do
@@ -271,7 +272,13 @@ describe AzuCLI::Generate::JoobQ do
 
           File.read("src/initializers/joobq.cr").should_not contain("ExampleJob)")
           %w(development production test).each do |environment|
-            File.read("config/joobq.#{environment}.yml").should_not contain("ExampleJob")
+            config = File.read("config/joobq.#{environment}.yml")
+            config.should_not contain("ExampleJob")
+
+            # the YAML parses and the default queue it names is one of its queues
+            settings = YAML.parse(config)["joobq"]
+            default_queue = settings["settings"]["default_queue"].as_s
+            settings["queues"].as_h.has_key?(default_queue).should be_true
           end
         end
       end
@@ -345,6 +352,20 @@ describe AzuCLI::Generate::JoobQ do
     end
 
     describe "environment-specific configuration" do
+      it "generates YAML whose default queue is one of its queues" do
+        TestHelpers::TestSetup.with_temp_project do |temp_project|
+          temp_project.create_shard_yml
+          temp_project.create_src_dir
+
+          AzuCLI::Generate::JoobQ.new("myapp", "redis://localhost:6379", "priority").render(".")
+
+          %w(development production test).each do |environment|
+            settings = YAML.parse(File.read("config/joobq.#{environment}.yml"))["joobq"]
+            settings["queues"].as_h.has_key?(settings["settings"]["default_queue"].as_s).should be_true
+          end
+        end
+      end
+
       it "generates development configuration" do
         TestHelpers::TestSetup.with_temp_project do |temp_project|
           temp_project.create_shard_yml

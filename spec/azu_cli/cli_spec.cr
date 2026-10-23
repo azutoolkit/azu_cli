@@ -223,6 +223,16 @@ describe AzuCLI::CLI do
       end
     end
 
+    # Documented limitation: the generator type must come first; options follow the name.
+    it "refuses options placed before the generator type" do
+      cli = AzuCLI::CLI.new
+
+      TestHelpers::TestSetup.with_captured_output do |capture|
+        cli.run(["generate", "--force", "model", "User"]).should eq(1)
+        capture.stderr.should contain("Invalid generator type: --force")
+      end
+    end
+
     it "runs middleware on error" do
       cli = AzuCLI::CLI.new
 

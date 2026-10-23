@@ -1,5 +1,10 @@
 require "../../spec_helper"
 require "../../support/test_helpers"
+require "../../support/generator_helpers"
+
+private struct ScratchProject
+  include GeneratorHelpers
+end
 
 describe AzuCLI::Generate::Job do
   describe "#initialize" do
@@ -48,7 +53,7 @@ describe AzuCLI::Generate::Job do
       generator.crystal_type("boolean").should eq("Bool")
       generator.crystal_type("time").should eq("Time")
       generator.crystal_type("datetime").should eq("Time")
-      generator.crystal_type("date").should eq("Date")
+      generator.crystal_type("date").should eq("Time") # Crystal has no Date
       generator.crystal_type("array").should eq("Array(String)")
       generator.crystal_type("hash").should eq("Hash(String, String)")
       generator.crystal_type("json").should eq("JSON::Any")
@@ -153,7 +158,73 @@ describe AzuCLI::Generate::Job do
       generator = AzuCLI::Generate::Job.new("Notification", parameters)
       body = generator.perform_method_body
 
-      body.should contain("@data.each { |key, value| Log.info { \" {key}: \"+value.to_s } }")
+      body.should contain("@data.each { |key, value| Log.info { \"\#{key}: \"+value.to_s } }")
+    end
+  end
+
+  describe "validation" do
+    it "refuses names that are not identifiers" do
+      ["Foo\"} ; system(\"x\") #", "a/b", "../evil", "My Job", "1Job", "", "Foo;"].each do |name|
+        expect_raises(ArgumentError, /Invalid job name/) { AzuCLI::Generate::Job.new(name) }
+        AzuCLI::Generate::Job.error_for(name, {} of String => String).to_s.should contain("Invalid job name")
+      end
+    end
+
+    it "refuses parameter names and types that are not identifiers" do
+      expect_raises(ArgumentError, /Invalid parameter name/) { AzuCLI::Generate::Job.new("Email", {"x : String; y" => "String"}) }
+      expect_raises(ArgumentError, /Invalid parameter name/) { AzuCLI::Generate::Job.new("Email", {"../x" => "String"}) }
+      expect_raises(ArgumentError, /Invalid type/) { AzuCLI::Generate::Job.new("Email", {"x" => "String; system(\"x\")"}) }
+      expect_raises(ArgumentError, /Invalid type/) { AzuCLI::Generate::Job.new("Email", {"x" => "Int32 y"}) }
+    end
+
+    it "refuses a queue that is not a plain name" do
+      expect_raises(ArgumentError, /Invalid queue name/) { AzuCLI::Generate::Job.new("Email", {} of String => String, "q\"; x") }
+    end
+
+    it "refuses an expiry it does not understand instead of using one day" do
+      expect_raises(ArgumentError, /Unsupported expiry/) { AzuCLI::Generate::Job.new("Email", {} of String => String, "default", 3, "soon") }
+      expect_raises(ArgumentError, /Unsupported expiry/) { AzuCLI::Generate::Job.new("Email", {} of String => String, "default", 3, "1.day; x") }
+    end
+
+    it "accepts the documented forms" do
+      AzuCLI::Generate::Job.new("Email", {"to" => "String", "note" => "String?"}, "mailers:high", 3, "1.month").file_path.should eq("src/jobs/email_job.cr")
+    end
+
+    it "is refused by azu generate job with a message, writing nothing" do
+      ScratchProject.new.in_generated_project do
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["job", "Foo\"} ; system(\"x\") #"])
+        TestHelpers::TestSetup.with_captured_output do
+          result = command.execute
+          result.success?.should be_false
+          result.error.should contain("Invalid job name")
+        end
+        Dir.exists?("src/jobs").should be_false
+
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(["job", "Email", "x;y:string"])
+        TestHelpers::TestSetup.with_captured_output do
+          result = command.execute
+          result.success?.should be_false
+          result.error.should contain("Invalid")
+        end
+        Dir.exists?("src/jobs").should be_false
+      end
+    end
+
+    it "names the created file in azu generate job output, with or without the Job suffix" do
+      %w(EmailJob Email).each do |name|
+        ScratchProject.new.in_generated_project do
+          command = AzuCLI::Commands::Generate.new
+          command.parse_args(["job", name])
+          TestHelpers::TestSetup.with_captured_output do |capture|
+            command.execute.success?.should be_true
+            capture.stdout.should contain("src/jobs/email_job.cr")
+            capture.stdout.should_not contain("email_job_job.cr")
+          end
+          File.exists?("src/jobs/email_job.cr").should be_true
+        end
+      end
     end
   end
 

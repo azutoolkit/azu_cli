@@ -349,6 +349,10 @@ module AzuCLI
       private def generate_job : Result
         Logger.info("Generating job")
 
+        if message = Generators::Job.error_for(@generator_name, @attributes)
+          return error(message)
+        end
+
         generator = Generators::Job.new(
           name: @generator_name,
           parameters: @attributes
@@ -357,8 +361,8 @@ module AzuCLI
         render_generator(generator, Generators::Job::OUTPUT_DIR)
 
         # Show helpful next steps
-        job_name = "#{@generator_name.gsub(/Job$/i, "").camelcase}Job"
-        Logger.success("✓ Job #{job_name} created: src/jobs/#{@generator_name.underscore}_job.cr")
+        job_name = generator.job_struct_name
+        Logger.success("✓ Job #{job_name} created: #{generator.file_path}")
 
         Logger.info("")
         Logger.info("Usage examples:")
