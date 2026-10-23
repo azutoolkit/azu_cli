@@ -54,13 +54,18 @@ describe AzuCLI::Generate::Field do
     AzuCLI::Generate::Field.new("a", "int64:ref:users").type_error(kinds).should be_nil
     AzuCLI::Generate::Field.new("a", "float128").type_error(kinds).to_s.should contain("Unsupported attribute type")
     AzuCLI::Generate::Field.new("a", "string:sparkly").type_error(kinds).to_s.should contain("Unsupported modifier")
+    AzuCLI::Generate::Field.new("a", "int64:ref:Users").type_error(kinds).to_s.should contain("Unsupported modifier")
   end
 
   it "rejects names that are not Crystal identifiers or hide a keyword" do
     AzuCLI::Generate::Field.name_error("first_name").should be_nil
-    ["end", "class", "select", "first-name", "Name", "1st", "na\"me", "errors"].each do |name|
+    ["end", "class", "select", "first-name", "Name", "1st", "na\"me", "errors", "hash", "object_id", "save", "inspect", "destroyed", "error_messages"].each do |name|
       AzuCLI::Generate::Field.name_error(name).should_not be_nil
     end
+  end
+
+  it "names the attributes the model provides" do
+    AzuCLI::Generate::Field.provided({"id" => "int64", "title" => "string", "created_at" => "time"}).should eq(["id", "created_at"])
   end
 
   it "leaves associations out of the columns" do
@@ -82,12 +87,27 @@ describe AzuCLI::Generate::Resource do
     end
   end
 
+  it "keeps a singular that merely ends in s" do
+    in_generated_project do
+      {"Campus" => {"campus", "campuses"}, "Analysis" => {"analysis", "analyses"}, "Address" => {"address", "addresses"},
+       "Business" => {"business", "businesses"}, "Virus" => {"virus", "viri"}, "Bus" => {"bus", "buses"},
+       "Atlas" => {"atlas", "atlases"}, "Alias" => {"alias", "aliases"}, "Census" => {"census", "censuses"},
+       "Campuses" => {"campus", "campuses"}, "Addresses" => {"address", "addresses"}}.each do |name, (singular, plural)|
+        generator = AzuCLI::Generate::Model.new(name, {} of String => String)
+        generator.resource_singular.should eq(singular)
+        generator.resource_plural.should eq(plural)
+        generator.model_name.should eq(singular.camelcase)
+        generator.snake_case_name.should eq(singular)
+      end
+    end
+  end
+
   it "rejects resource names the generated code cannot use" do
     in_generated_project do
-      ["Series", "News", "Sheep", "Fish", "Status", "Request", "Context", "Params", "Header", "Blog", "123x", "a-b"].each do |name|
+      ["Series", "News", "Sheep", "Fish", "Status", "Request", "Context", "Params", "Header", "Headers", "Template", "Templates", "Param", "App", "Validator", "Markup", "PubSub", "Routable", "Components", "Schema", "Blog", "123x", "a-b"].each do |name|
         AzuCLI::Generate::Resource.name_error(name).should_not be_nil
       end
-      ["Post", "Person", "People", "Category", "UpdateLog"].each do |name|
+      ["Post", "Person", "People", "Category", "UpdateLog", "Campus", "Analysis", "Address", "Business"].each do |name|
         AzuCLI::Generate::Resource.name_error(name).should be_nil
       end
     end

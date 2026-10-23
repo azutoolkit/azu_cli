@@ -186,7 +186,7 @@ with `_method=delete`. Values are escaped with `| e`: `.jinja` templates are not
   `ref:<table>` (or the `references` type) adds a foreign key.
 - Names are lowercase identifiers and not Crystal keywords (`end`, `class`, `select`, ...) or methods of the model (`errors`, `table`, ...).
 - Resource names must differ in singular and plural (`Series`, `News`, `Fish` are rejected) and must not hide a constant
-  the generated code uses (`Status`, `Request`, `Context`, ...). `Post`, `Posts`, `Person` and `People` all give model `Post` / `Person`.
+  the generated code uses (`Status`, `Request`, `Context`, ...). A typed name is taken for a plural only when it is the plural of its own singular: `Posts` and `People` give `Post` and `Person`, while `Campus`, `Analysis`, `Address` and `Business` stay as typed (tables `campuses`, `analyses`, ...). The checks run for every generator that takes a resource name, not only the scaffold.
 - Not supported yet by the scaffold forms: `json` and `uuid` fields (they generate, but their forms are untested).
 
 An update is a `PATCH`: its request fields are all optional and only the ones sent change the record

@@ -33,6 +33,7 @@ serves working CRUD. `scripts/e2e_generated_app.sh` (the generated-app CI job) p
 - Scaffold attributes accept `?`, `:unique`, `:index`, `:required` and `:ref:<table>`; field and resource names are validated (keywords, identifiers, names equal in singular and plural, names that hide generated constants)
 - An update only changes the fields it carries; unsupported actions (`generate endpoint Users activate`) are an error that names the supported ones
 - `db:drop` and `db:create --force` only touch the file of `DATABASE_URL` for the database it names; `?query` is ignored and in-memory URLs are refused
+- Production refuses to boot without `CSRF_SECRET` (and `.env` is git-ignored); a singular name ending in s (`Campus`, `Analysis`) is kept; `--skip-tests` is documented as what it does (no migration for `generate model`)
 - Removed: `SCAFFOLD_SUMMARY.md`, the unused `generate action` generator and the service `Result` class and the scaffold
   templates nothing rendered
 

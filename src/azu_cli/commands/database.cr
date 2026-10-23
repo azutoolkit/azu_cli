@@ -8,6 +8,10 @@ module AzuCLI
   module Commands
     # Base class for database commands
     abstract class Database < Base
+      # A SQLite URL that names no file (`sqlite3::memory:`, `sqlite3:`): there is nothing to create or drop.
+      class InMemoryDatabase < Exception
+      end
+
       property database_url : String?
       property adapter : String = "postgres"
       property database_name : String?
@@ -62,6 +66,11 @@ module AzuCLI
 
       # Parse DATABASE_URL into components
       private def parse_database_url(url : String)
+        if url.matches?(/\Asqlite3?:/)
+          @adapter = "sqlite3"
+          return remember_sqlite_file(url) # URI.parse rejects `sqlite3://:memory:` and reads the `.` of `./db` as a host
+        end
+
         uri = URI.parse(url)
         @adapter = uri.scheme || "postgres"
         @host = uri.host || "localhost"
@@ -69,11 +78,10 @@ module AzuCLI
         @username = uri.user || "postgres"
         @password = uri.password || ""
         @database_name = uri.path.try(&.lstrip('/')) || ""
-        remember_sqlite_file(url) if {"sqlite", "sqlite3"}.includes?(@adapter)
       end
 
       # The file a SQLite URL names (`sqlite3://./db/app.db?journal_mode=wal` is `./db/app.db`), and the
-      # database name it goes by. URI.parse reads the `.` of `./db` as a host, so the scheme is cut by hand.
+      # database name it goes by. The scheme is cut by hand because a SQLite URL is not an authority URL.
       private def remember_sqlite_file(url : String)
         @sqlite_file = url.sub(/\Asqlite3?:(\/\/)?/, "").split('?', 2).first
         @database_name = @url_database_name = File.basename(@sqlite_file.to_s, ".db")
@@ -108,8 +116,8 @@ module AzuCLI
       protected def sqlite_path(db_name : String) : String
         file = @sqlite_file
         return "./db/#{db_name}.db" unless file && db_name == @url_database_name
-        if file.empty? || file.starts_with?(":memory:")
-          raise "#{@database_url} is an in-memory database: it has no file to create, check or drop"
+        if file.empty? || file.lstrip('/').starts_with?(":memory:")
+          raise InMemoryDatabase.new("#{@database_url} is an in-memory database: it has no file to create, check or drop")
         end
         file
       end
@@ -268,6 +276,8 @@ module AzuCLI
         else
           false
         end
+      rescue ex : InMemoryDatabase
+        raise ex
       rescue ex : Exception
         Logger.debug("Failed to check database existence: #{ex.message}")
         false

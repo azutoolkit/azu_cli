@@ -500,7 +500,7 @@ azu version
 | Option          | Description               | Default |
 | --------------- | ------------------------- | ------- |
 | `--force`       | Overwrite existing files  | false   |
-| `--skip-tests`  | Skip test file generation | false   |
+| `--skip-tests`  | `generate model`: skip the migration | false   |
 | `--skip-routes` | Skip route registration   | false   |
 
 ### Server Options

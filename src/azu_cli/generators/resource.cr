@@ -7,12 +7,13 @@ module AzuCLI
     # Modifiers: `unique` and `index` (column options), `required` (the default: columns are NOT NULL
     # unless the type ends in `?`) and `ref:<table>` (a foreign key).
     record Field, name : String, type : String do
-      # Crystal words a name cannot be, and methods of the model and the request that a getter would hide.
+      # Crystal words a name cannot be, and methods of Object, the CQL model and Azu::Request that a
+      # getter would hide.
       RESERVED = %w(abstract alias annotation as asm begin break case class def do else elsif end ensure enum
         extend false for fun if in include instance_sizeof is_a lib macro module next nil of offsetof out
         pointerof private protected require rescue responds_to return select self sizeof struct super then
-        true type typeof uninitialized union unless until verbatim when while with yield
-        errors attributes schema table destroyed valid)
+        true typeof uninitialized union unless until verbatim when while with yield
+        errors error_messages attributes destroyed save touch hash object_id inspect to_s)
       MODIFIERS = %w(unique index required)
       # The model provides these columns itself.
       PROVIDED = %w(id created_at updated_at)
@@ -20,6 +21,11 @@ module AzuCLI
       # The columns declared by `name:type` attributes.
       def self.columns(attributes : Hash(String, String)) : Array(Field)
         attributes.map { |name, type| new(name, type) }.reject { |field| field.association? || PROVIDED.includes?(field.name) }
+      end
+
+      # The attributes the model provides itself and the generators therefore leave out.
+      def self.provided(attributes : Hash(String, String)) : Array(String)
+        attributes.keys.select { |name| PROVIDED.includes?(name) }
       end
 
       # Why `name` cannot be an attribute, if it cannot.
@@ -36,7 +42,7 @@ module AzuCLI
         return "Unsupported attribute type '#{kind}' for field '#{name}'. Supported types: #{supported_kinds.join(", ")}" unless supported_kinds.includes?(kind)
 
         unknown = modifiers.reject { |modifier| MODIFIERS.includes?(modifier) }
-        return if unknown.empty? || (unknown.first == "ref" && unknown.size == 2)
+        return if unknown.empty? || (unknown.first == "ref" && unknown.size == 2 && unknown.last.matches?(/\A[a-z_][a-z0-9_]*\z/))
         "Unsupported modifier '#{unknown.join(":")}' for field '#{name}'. Supported: #{MODIFIERS.join(", ")}, ref:<table>"
       end
 
@@ -164,27 +170,39 @@ module AzuCLI
         Templates Configuration Channel Component Cache Endpoint Spark Helpers Environment Result Log
         Object Class Module Struct Enum Hash Array String Symbol Int Float Bool Nil Time File Dir IO Set
         Range Proc Tuple Value Exception Process Signal Path Random Math Mutex Fiber UUID JSON YAML URI
-        HTTP CQL Azu)
+        HTTP CQL Azu App Validator Markup PubSub Routable Components Schema Template Param)
+
+      # The singular of a resource name, whether `Post` or `Posts` was typed. The inflector's last rule turns
+      # every trailing s into nothing (`Campus` into `campu`), so a name is taken for a plural only when it is
+      # the plural of its own singular (`posts`, `people`, `categories`) and does not end like a singular
+      # that ends in s (`us`, `is`, `ss`, `as`: campus, analysis, address, atlas). `Areas` is therefore typed `Area`.
+      def self.singular(name : String) : String
+        underscored = name.underscore
+        candidate = underscored.singularize
+        plural = candidate != underscored && candidate.pluralize == underscored && !underscored.matches?(/(us|is|ss|as)\z/)
+        plural ? candidate : underscored
+      end
 
       # The plural of a resource name: `Post`, `Posts` and `post` are all "posts".
       def self.plural(name : String) : String
-        name.underscore.singularize.pluralize
+        singular(name).pluralize
       end
 
       # Why `name` cannot be a resource, if it cannot.
       def self.name_error(name : String, app_module : String = Utils.project_module_name) : String?
-        singular = name.underscore.singularize
+        singular = singular(name)
+        constants = [name.camelcase, singular.camelcase, singular.pluralize.camelcase]
         if !name.matches?(/\A[A-Za-z][A-Za-z0-9_]*\z/)
           "Invalid resource name '#{name}'. Must be a valid Crystal identifier."
         elsif singular == singular.pluralize
           "Resource name '#{name}' is the same in singular and plural, so its model and its routes would collide. Choose another name."
-        elsif [name.camelcase, singular.camelcase].any? { |constant| RESERVED_NAMES.includes?(constant) || constant == app_module }
+        elsif constants.any? { |constant| RESERVED_NAMES.includes?(constant) || constant == app_module }
           "Resource name '#{name}' would hide a constant the generated code uses. Choose another name."
         end
       end
 
       def initialize(@name : String, @action : String = "index", @attributes : Hash(String, String) = {} of String => String)
-        @resource_singular = @name.underscore.singularize
+        @resource_singular = Resource.singular(@name)
         @snake_case_name = @resource_singular
         @resource_plural = @resource_singular.pluralize
         @namespace = @resource_plural.camelcase

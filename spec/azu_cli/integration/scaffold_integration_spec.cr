@@ -123,6 +123,32 @@ describe "Scaffold Integration" do
     end
   end
 
+  it "checks the resource name for every generator that takes one" do
+    in_generated_project do
+      [["model", "Series", "title:string"], ["endpoint", "Status"], ["service", "Request"], ["request", "Fish", "create"],
+       ["page", "Templates", "index"], ["template", "Status", "index"], ["response", "News", "show"]].each do |arguments|
+        command = AzuCLI::Commands::Generate.new
+        command.parse_args(arguments)
+
+        command.execute.success?.should be_false
+      end
+      Dir.glob("src/**/*.cr").reject { |path| path.starts_with?("src/db") }.should be_empty
+    end
+  end
+
+  it "keeps a singular name that ends in s" do
+    in_generated_project do
+      command = AzuCLI::Commands::Generate.new
+      command.parse_args(["scaffold", "Campus", "name:string"])
+      command.execute.success?.should be_true
+
+      File.read("src/models/campus.cr").should contain("class Campus\n")
+      File.read("src/models/campus.cr").should contain("db_context BlogDB, :campuses")
+      Dir.glob("src/db/migrations/*_create_campuses.cr").size.should eq(1)
+      File.exists?("src/endpoints/campuses/index_endpoint.cr").should be_true
+    end
+  end
+
   it "rejects field names that are not identifiers or are keywords" do
     in_generated_project do
       ["end:time", "first-name:string", "na\"me:string"].each do |attribute|

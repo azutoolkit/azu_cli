@@ -9,7 +9,6 @@ describe "db commands in a SQLite project" do
     project = File.join(root, "blog")
     Dir.mkdir_p(project)
     File.write(File.join(project, "shard.yml"), "name: blog\nversion: 0.1.0\ndependencies:\n#{shards}")
-    ENV["AZU_ENV"] = "test"
     Dir.cd(project) { block.call }
 ensure
   FileUtils.rm_rf(root) if root
@@ -84,14 +83,20 @@ ensure
     })
   end
 
-  it "refuses an in-memory database" do
-    with_sqlite_project.call(sqlite_shards, -> {
-      ENV["DATABASE_URL"] = "sqlite3::memory:"
-      begin
-        expect_raises(Exception, /in-memory/) { AzuCLI::Commands::DB::Create.new.execute }
-      ensure
-        ENV.delete("DATABASE_URL")
-      end
-    })
+  it "refuses an in-memory database, whichever way the URL spells it, in every command that looks for the file" do
+    ["sqlite3::memory:", "sqlite3:///:memory:", "sqlite3://:memory:", "sqlite3:"].each do |url|
+      with_sqlite_project.call(sqlite_shards, -> {
+        ENV["DATABASE_URL"] = url
+        begin
+          expect_raises(Exception, /in-memory/) { AzuCLI::Commands::DB::Create.new.execute }
+          drop = AzuCLI::Commands::DB::Drop.new
+          drop.parse_args(["--force"])
+          expect_raises(Exception, /in-memory/) { drop.execute }
+          Dir.glob("**/*.db").should be_empty
+        ensure
+          ENV.delete("DATABASE_URL")
+        end
+      })
+    end
   end
 end

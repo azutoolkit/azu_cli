@@ -18,10 +18,11 @@ module AzuCLI
       property table_name_for_template : String
       property id_type : String
 
-      def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true, @id_type : String = "Int64")
+      # `table` names the table when the generator knows it; otherwise it is read from the migration name.
+      def initialize(@name : String, @attributes : Hash(String, String), @timestamps : Bool = true, @id_type : String = "Int64", table : String? = nil)
         @snake_case_name = to_snake_case(@name)
         @timestamp = generate_timestamp
-        @table_name = extract_table_name(@snake_case_name)
+        @table_name = table || extract_table_name(@snake_case_name)
         @action_prefix = get_action_prefix
         @table_name_for_template = get_table_name_for_filename
       end

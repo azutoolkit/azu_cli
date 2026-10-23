@@ -49,7 +49,7 @@ module AzuCLI
         return unless @generate_migration
 
         migrations_dir = File.join(File.dirname(output_path), "db", "migrations")
-        migration = Migration.new(create_migration_name, @attributes, @timestamps, @id_type)
+        migration = Migration.new(create_migration_name, @attributes, @timestamps, @id_type, table_name)
         migration.render(migrations_dir, force: force, interactive: interactive, list: list, color: color)
       end
 

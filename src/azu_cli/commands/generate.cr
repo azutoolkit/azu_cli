@@ -76,6 +76,13 @@ module AzuCLI
           return error(parse_err)
         end
 
+        if RESOURCE_NAMED_GENERATORS.includes?(@generator_type) && (message = Generators::Resource.name_error(@generator_name))
+          return error(message)
+        end
+        if RESOURCE_GENERATORS.includes?(@generator_type) && (provided = Generators::Field.provided(@attributes)).any?
+          Logger.warn("#{provided.join(", ")} #{provided.size == 1 ? "is" : "are"} provided by the model and left out of the attributes")
+        end
+
         # Show what we're generating
         Logger.info("Generating #{@generator_type}: #{@generator_name}")
 
@@ -219,7 +226,7 @@ module AzuCLI
         render_generator(generator, Generators::Model::OUTPUT_DIR)
 
         # Show helpful next steps
-        Logger.success("✓ Model #{@generator_name} created: src/models/#{@generator_name.underscore}.cr")
+        Logger.success("✓ Model #{@generator_name} created: src/models/#{Generators::Resource.singular(@generator_name)}.cr")
         unless @skip_tests
           Logger.success("✓ Migration created: src/db/migrations/*_create_#{Generators::Resource.plural(@generator_name)}.cr")
         end
@@ -866,7 +873,7 @@ module AzuCLI
 
         steps["model"] = {[Generators::Model.new(@generator_name, @attributes, generate_migration: !should_skip_component?("migration")).as(Teeplate::FileTree)], Generators::Model::OUTPUT_DIR}
         if should_skip_component?("model")
-          steps["migration"] = {[Generators::Migration.new("create_#{Generators::Resource.plural(@generator_name)}", @attributes).as(Teeplate::FileTree)], Generators::Migration::OUTPUT_DIR}
+          steps["migration"] = {[Generators::Migration.new("create_#{Generators::Resource.plural(@generator_name)}", @attributes, table: Generators::Resource.plural(@generator_name)).as(Teeplate::FileTree)], Generators::Migration::OUTPUT_DIR}
         end
         steps["endpoint"] = {generators_for(scaffold_actions) { |action| Generators::Endpoint.new(@generator_name, action, type) }, Generators::Endpoint::OUTPUT_DIR}
         steps["service"] = {generators_for(Generators::Service::ACTIONS) { |action| Generators::Service.new(@generator_name, action, @attributes) }, Generators::Service::OUTPUT_DIR}
@@ -892,14 +899,12 @@ module AzuCLI
 
       # The generators whose `name:type` arguments become columns, getters and form fields.
       RESOURCE_GENERATORS = %w(model migration scaffold api_resource api-resource request page response template service endpoint)
-      SCAFFOLD_TYPES      = %w(string text int32 integer int64 float32 float64 float bool boolean time datetime date json uuid email url references belongs_to)
+      # Those among them whose name is the resource (a migration is named for what it does).
+      RESOURCE_NAMED_GENERATORS = RESOURCE_GENERATORS - %w(migration)
+      SCAFFOLD_TYPES            = %w(string text int32 integer int64 float32 float64 float bool boolean time datetime date json uuid email url references belongs_to)
 
       # Validate scaffold generation parameters
       private def validate_scaffold_parameters : Result
-        if message = Generators::Resource.name_error(@generator_name)
-          return error(message)
-        end
-
         @attributes.each do |name, type|
           if message = Generators::Field.new(name, type).type_error(SCAFFOLD_TYPES)
             return error(message)

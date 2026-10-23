@@ -64,7 +64,7 @@ describe AzuCLI::Generate::Model do
 
   it "creates a create-table migration even for names that look like another kind" do
     in_generated_project do
-      {"UpdateLog" => "update_logs", "DeleteItem" => "delete_items", "DropZone" => "drop_zones", "Person" => "people"}.each do |name, table|
+      {"UpdateLog" => "update_logs", "DeleteItem" => "delete_items", "DropZone" => "drop_zones", "Person" => "people", "Analysis" => "analyses", "Campus" => "campuses"}.each do |name, table|
         rendered(AzuCLI::Generate::Model.new(name, {"title" => "string"}), "src/models", "#{name.underscore}.cr")
 
         File.read(Dir.glob("src/db/migrations/*_create_#{table}.cr").first).should contain("schema.table :#{table} do")

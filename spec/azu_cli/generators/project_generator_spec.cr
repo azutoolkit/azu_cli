@@ -252,9 +252,12 @@ describe AzuCLI::Generate::Project do
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
 
       source = File.read(File.join(test_dir, "src", "myapp.cr"))
-      source.should contain(%(csrf.secret_key = ENV["CSRF_SECRET"]? || Random::Secure.urlsafe_base64(64)))
+      source.should contain(%(csrf.secret_key = ENV["CSRF_SECRET"]?.presence || begin))
+      source.should contain(%(raise "CSRF_SECRET is not set" if Azu::CONFIG.env.production?))
+      source.should contain("nothing\n    # loads .env for you")
       source.should_not contain("1234567890")
       File.read(File.join(test_dir, ".env")).should match(/^CSRF_SECRET=[0-9a-f]{64}$/m)
+      File.read(File.join(test_dir, ".gitignore")).lines.should contain("/.env")
 
       FileUtils.rm_rf(test_dir)
     end
