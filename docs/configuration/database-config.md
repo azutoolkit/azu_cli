@@ -523,50 +523,29 @@ end
 
 ```bash
 # Create database
-azu db create
+azu db:create
 
 # Drop database
-azu db drop
+azu db:drop
 
 # Run migrations
-azu db migrate
+azu db:migrate
 
 # Rollback migrations
-azu db rollback --steps 1
+azu db:rollback --steps 1
 
 # Reset database (drop, create, migrate, seed)
-azu db reset
+azu db:reset
 
 # Seed database
-azu db seed
+azu db:seed
 
 # Check migration status
-azu db status
+azu db:status
 
 # Create new migration
-azu db new_migration CreateUsers
+azu generate migration CreateUsers
 
-# Backup database
-azu db backup
-
-# Restore database
-azu db restore backup.sql
-```
-
-### Configuration Commands
-
-```bash
-# Show database configuration
-azu db config
-
-# Test database connection
-azu db test_connection
-
-# Validate database configuration
-azu db validate_config
-
-# Generate database configuration
-azu db generate_config
 ```
 
 ## Environment Variables

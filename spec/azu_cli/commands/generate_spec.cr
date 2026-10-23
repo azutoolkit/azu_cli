@@ -23,6 +23,8 @@ describe AzuCLI::Commands::Generate do
 
   describe "#execute" do
     it "handles generators without name requirements" do
+      repository = Dir.current
+      before = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") || path.includes?("/.git/") || path.ends_with?("/.git") || path.includes?("/tmp_test_") }.sort
       TestHelpers::TestSetup.with_temp_project do |temp_project|
         temp_project.create_shard_yml
         temp_project.create_config_dir
@@ -31,11 +33,16 @@ describe AzuCLI::Commands::Generate do
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["auth"])
 
-        TestHelpers::TestSetup.with_captured_output do |_|
-          result = command.execute
-          result.success?.should be_true
+        # The generator writes into the working directory: keep it inside the scratch project.
+        Dir.cd(temp_project.path) do
+          TestHelpers::TestSetup.with_captured_output do |_|
+            result = command.execute
+            result.success?.should be_true
+          end
         end
       end
+      after = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") || path.includes?("/.git/") || path.ends_with?("/.git") || path.includes?("/tmp_test_") }.sort
+      after.should eq(before) # nothing was written into the repository
     end
 
     it "handles validate generator" do

@@ -14,8 +14,10 @@ targets:
 <% end -%>
 
 dependencies:
+  # The generated app requires "azu/dev", which first shipped in azu 0.5.69.
   azu:
     github: azutoolkit/azu
+    version: ~> 0.5.69
 
   # TODO: unpin once cql supports crystal-db 0.15. cql 0.0.562 and later bring a native PostgreSQL
   # driver that does not compile against it (CQL::Postgres::Connection lacks #driver_name).

@@ -10,11 +10,12 @@ module AzuCLI
       COMMANDS = %w[
         new init generate g serve server s test t help version
         db:create db:drop db:migrate db:rollback db:seed db:reset db:status db:setup
+        db:schema:load db:data:migrate db:migrations:verify db:validate
         jobs:worker jobs:status jobs:clear jobs:retry jobs:ui
         session:setup session:clear
         openapi:generate openapi:export
         config:show config:validate config:env
-        plugin completion
+        completion
       ]
 
       # Generator types
@@ -256,7 +257,6 @@ module AzuCLI
         when "config:show"          then "Show configuration"
         when "config:validate"      then "Validate configuration"
         when "config:env"           then "Manage environment"
-        when "plugin"               then "Plugin management"
         when "completion"           then "Generate completions"
         else                             cmd
         end

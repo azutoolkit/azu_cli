@@ -10,7 +10,7 @@ Create your first Azu application in minutes.
 ## Step 1: Create a New Project
 
 ```bash
-azu new my_blog --database postgres
+azu new my_blog --db postgres
 ```
 
 This creates a new project with:

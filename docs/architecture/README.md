@@ -145,7 +145,7 @@ Each component is designed to be independent and replaceable:
 
 The system is designed to be easily extended:
 
-- **Plugin System**: Third-party plugins can extend functionality
+- **Hook plugins**: built-in plugins observe every command (no external plugins)
 - **Custom Generators**: Users can create custom generators
 - **Template Customization**: Templates can be customized or replaced
 - **Command Extensions**: New commands can be added dynamically
@@ -338,21 +338,14 @@ Database integration through CQL ORM:
 
 ## Future Architecture Considerations
 
-### 1. Plugin System
-
-- **Dynamic Loading**: Dynamic plugin loading
-- **Plugin Registry**: Centralized plugin registry
-- **Version Compatibility**: Plugin version compatibility
-- **Security**: Plugin security and sandboxing
-
-### 2. Cloud Integration
+### 1. Cloud Integration
 
 - **Cloud Providers**: Integration with cloud providers
 - **Deployment**: Automated deployment capabilities
 - **Monitoring**: Application monitoring integration
 - **Scaling**: Auto-scaling capabilities
 
-### 3. AI/ML Integration
+### 2. AI/ML Integration
 
 - **Code Suggestions**: AI-powered code suggestions
 - **Pattern Recognition**: Automatic pattern recognition
@@ -366,4 +359,4 @@ Database integration through CQL ORM:
 - [Template Engine (ECR)](template-engine.md) - Template system architecture
 - [Configuration System](configuration.md) - Configuration management
 - [Logging System](logging.md) - Logging architecture
-- [Plugin System](plugins.md) - Plugin architecture and development
+- [Plugin System](plugins.md) - The internal command hooks

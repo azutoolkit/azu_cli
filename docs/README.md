@@ -115,10 +115,10 @@ Solutions to common issues and problems you might encounter.
 
 ```bash
 # Create a new web application
-azu new my_blog --type web --database postgres
+azu new my_blog --type web --db postgres
 
 # Create an API-only application
-azu new my_api --type api --database mysql
+azu new my_api --type api --db mysql
 ```
 
 ### Generate Components
@@ -140,8 +140,6 @@ azu generate component Counter count:integer --websocket
 # Start development server with hot reloading
 azu serve --port 4000
 
-# Start in development mode (alias)
-azu dev
 ```
 
 ### Database Operations

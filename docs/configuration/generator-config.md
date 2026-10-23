@@ -412,10 +412,10 @@ The CLI validates your generator configuration:
 
 ```bash
 # Validate configuration
-azu config validate
+azu config:validate
 
 # Check specific generator config
-azu config validate --generator endpoint
+azu config:validate --generator endpoint
 ```
 
 ## Examples
@@ -503,7 +503,7 @@ generators:
 
 **Template not found**: Check that custom template paths are correct and files exist.
 
-**Validation errors**: Use `azu config validate` to check for configuration issues.
+**Validation errors**: Use `azu config:validate` to check for configuration issues.
 
 **Inheritance problems**: Verify the configuration hierarchy and override order.
 

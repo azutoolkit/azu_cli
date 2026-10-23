@@ -22,8 +22,8 @@ JoobQ.configure do |config|
   config.timeout = 30.seconds
   config.expires = 1.day
 
-  # Enable REST API for development (disable in production)
-  config.rest_api_enabled = ENV["AZU_ENV"]? != "production"
+  # Enable the REST API for development only (Azu reads CRYSTAL_ENV, not AZU_ENV)
+  config.rest_api_enabled = ENV["CRYSTAL_ENV"]? != "production"
 
   # Enable statistics tracking
   config.stats_enabled = true
@@ -39,4 +39,3 @@ if ARGV.includes?("--worker")
   JoobQ.config.rest_api_enabled = false
   Log.info { "JoobQ REST API disabled for worker process" }
 end
-

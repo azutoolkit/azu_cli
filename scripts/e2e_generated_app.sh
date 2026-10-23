@@ -10,6 +10,7 @@
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
 #        E2E_DB   database adapter for `azu new`     (default: sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
+#        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
 set -eu
 
 TYPE="${1:-web}"
@@ -323,8 +324,16 @@ check_auth() {
 step "generate a $TYPE project ($DB) with $AZU_BIN"
 cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
-  --type "$TYPE" --db "$DB" --no-git --no-docker
+  --type "$TYPE" --db "$DB" --no-git --no-docker --ci "GitHub Actions"
 cd "$NAME"
+
+# Opt-in: test against a branch of azu instead of the release the generated shard.yml requires (its version
+# constraint is dropped for the branch).
+if [ -n "${E2E_AZU_BRANCH:-}" ]; then
+  awk -v ref="$E2E_AZU_BRANCH" '/^    github: azutoolkit\/azu$/ { print; print "    branch: " ref; skip = 1; next } skip && /^    version:/ { skip = 0; next } { skip = 0; print }' shard.yml >shard.yml.new && mv shard.yml.new shard.yml
+  grep -q "branch: $E2E_AZU_BRANCH" shard.yml || fail "could not pin azu to $E2E_AZU_BRANCH in shard.yml"
+  echo "azu pinned to branch $E2E_AZU_BRANCH"
+fi
 
 if [ "$SCAFFOLD" = 1 ]; then
   step "generate a Post scaffold"
@@ -350,6 +359,15 @@ ENTRY=src/server.cr
 step "compile $ENTRY"
 mkdir -p bin
 crystal build "$ENTRY" -o "bin/$NAME"
+
+# The generated CI workflow must pass on a fresh project: run the commands it runs (the Crystal
+# version is the one this script runs with, the workflow pins another).
+step "run the generated workflow's checks (format, specs)"
+for command in "crystal tool format --check src spec" "crystal spec"; do
+  grep -q "run: $command" .github/workflows/ci.yml || fail ".github/workflows/ci.yml does not run '$command'"
+  sh -c "$command" || fail "'$command' failed on the generated project"
+  echo "ok: $command"
+done
 
 step "start the server"
 PORT="$(free_port)" || fail "no free port found"

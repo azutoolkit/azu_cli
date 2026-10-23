@@ -683,34 +683,6 @@ azu serve --debug
 
 # Start with profiling
 azu serve --profile
-
-# Show server status
-azu serve --status
-
-# Stop development server
-azu serve --stop
-```
-
-### Development Tools Commands
-
-```bash
-# Open code inspector
-azu dev inspector
-
-# Open performance profiler
-azu dev profiler
-
-# Open memory tracker
-azu dev memory
-
-# Open performance monitor
-azu dev monitor
-
-# Generate API documentation
-azu dev api-docs
-
-# Show development tools
-azu dev tools
 ```
 
 ## Environment Variables

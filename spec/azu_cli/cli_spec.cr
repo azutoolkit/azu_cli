@@ -1,5 +1,10 @@
 require "../spec_helper"
 require "../support/test_helpers"
+require "../support/generator_helpers"
+
+private struct ScratchProject
+  include GeneratorHelpers
+end
 
 describe AzuCLI::CLI do
   describe "#initialize" do
@@ -57,12 +62,20 @@ describe AzuCLI::CLI do
     it "handles command aliases" do
       cli = AzuCLI::CLI.new
 
-      # Test 'g' alias for generate
-      TestHelpers::TestSetup.with_captured_output do |capture|
-        cli.run(["g", "model", "User"])
-        # Should not error (even if model generation fails, CLI routing works)
-        capture.stderr.should_not contain("Unknown command")
+      # Test 'g' alias for generate. The model and its migration are written into the working
+      # directory, so run in a scratch project, never in the repository.
+      repository = Dir.current
+      before = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") || path.includes?("/.git/") || path.ends_with?("/.git") || path.includes?("/tmp_test_") }.sort
+      ScratchProject.new.in_generated_project do
+        TestHelpers::TestSetup.with_captured_output do |capture|
+          cli.run(["g", "model", "User"])
+          # Should not error (even if model generation fails, CLI routing works)
+          capture.stderr.should_not contain("Unknown command")
+        end
+        File.exists?("src/models/user.cr").should be_true
       end
+      after = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") || path.includes?("/.git/") || path.ends_with?("/.git") || path.includes?("/tmp_test_") }.sort
+      after.should eq(before) # nothing was written into the repository
     end
 
     it "handles unknown commands gracefully" do
@@ -164,10 +177,10 @@ describe AzuCLI::CLI do
       cli.@commands.has_key?("openapi:export").should be_true
     end
 
-    it "registers plugin commands" do
+    it "has no plugin command: it only ever printed success" do
       cli = AzuCLI::CLI.new
 
-      cli.@commands.has_key?("plugin").should be_true
+      cli.@commands.has_key?("plugin").should be_false
     end
   end
 

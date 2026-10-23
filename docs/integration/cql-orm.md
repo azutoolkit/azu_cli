@@ -187,7 +187,7 @@ azu generate model Product \
 
 ```bash
 # Generate migration for new table
-azu db new_migration create_users
+azu generate migration create_users
 
 # Generate migration for existing model
 azu generate migration add_fields_to_users email:string name:string
@@ -222,22 +222,22 @@ end
 
 ```bash
 # Run all pending migrations
-azu db migrate
+azu db:migrate
 
 # Run specific migration
-azu db migrate --version=20231201000000
+azu db:migrate --version=20231201000000
 
 # Rollback last migration
-azu db rollback
+azu db:rollback
 
 # Rollback to specific version
-azu db rollback --version=20231101000000
+azu db:rollback --version=20231101000000
 
 # Show migration status
-azu db status
+azu db:status
 
 # Reset database (drop and recreate)
-azu db reset
+azu db:reset
 ```
 
 ## Database Commands
@@ -246,39 +246,33 @@ azu db reset
 
 ```bash
 # Create database
-azu db create
+azu db:create
 
 # Drop database
-azu db drop
+azu db:drop
 
 # Create and setup database
-azu db setup
+azu db:setup
 ```
 
 ### Schema Management
 
 ```bash
-# Generate schema file
-azu db schema
-
-# Load schema from file
-azu db schema:load
-
-# Dump current schema
-azu db schema:dump
+# Load a schema file into the database
+azu db:schema:load
 ```
 
 ### Seed Data
 
 ```bash
 # Run seed data
-azu db seed
+azu db:seed
 
 # Generate seed file
 azu generate seed
 
 # Run specific seed file
-azu db seed --file=users
+azu db:seed --file=users
 ```
 
 ## Query Building
@@ -569,20 +563,11 @@ end
 ### Debug Commands
 
 ```bash
-# Check database connection
-azu db ping
+# Show migration status
+azu db:status
 
-# Show database status
-azu db status
-
-# Validate schema
-azu db validate
-
-# Show slow queries
-azu db slow_queries
-
-# Analyze query performance
-azu db analyze --query="SELECT * FROM users"
+# Validate the database configuration and connection
+azu db:validate
 ```
 
 ### Debugging Queries
@@ -631,34 +616,6 @@ end
 2. **Clean database** between tests
 3. **Test validations** and associations thoroughly
 4. **Mock external dependencies** for faster tests
-
-## Migration from Other ORMs
-
-### From Jennifer
-
-```bash
-# Generate migration plan
-azu migration plan --from=jennifer --to=cql
-
-# Convert models
-azu migration convert --input=jennifer_models --output=cql_models
-
-# Convert migrations
-azu migration convert --input=jennifer_migrations --output=cql_migrations
-```
-
-### From Manual SQL
-
-```bash
-# Analyze existing schema
-azu db analyze --schema=existing_schema.sql
-
-# Generate models from schema
-azu generate models --from=schema.sql
-
-# Generate migrations
-azu generate migrations --from=schema.sql
-```
 
 ## Support and Resources
 

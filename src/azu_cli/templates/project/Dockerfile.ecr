@@ -1,0 +1,40 @@
+# Build stage: the same packages the CI job installs, then a release build.
+FROM crystallang/crystal:<%= crystal_version %> AS build
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends <%= build_packages %> \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY shard.yml shard.lock* ./
+RUN shards install --ignore-crystal-version
+COPY . .
+RUN mkdir -p bin && crystal build --release --no-debug src/<%= main_file %> -o bin/<%= binary_name %>
+
+# Runtime stage: only the shared libraries the binary links against.
+FROM ubuntu:24.04
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends <%= runtime_packages %> \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --system --uid 10001 --home-dir /app app
+WORKDIR /app
+COPY --from=build /app/bin/<%= binary_name %> ./<%= binary_name %>
+COPY --from=build /app/public ./public
+COPY --from=build /app/config ./config
+<% if database_adapter == "sqlite3" -%>
+# The SQLite database lives on a volume so it outlives the container. `azu db:migrate` is not part of
+# the image: run it against /data/<%= @project %>.db before the first start.
+# /app is owned by root and read-only to the app user. /data is owned by it: a named volume
+# (`-v name:/data`) inherits that, a bind mount keeps the host directory's owner, so `chown 10001` it.
+RUN mkdir /data && chown app /data
+VOLUME /data
+ENV DATABASE_URL=sqlite3:///data/<%= @project %>.db
+<% end -%>
+USER app
+
+# CSRF_SECRET (and SESSION_SECRET, once you generate authentication) are required in production:
+# pass them with `docker run -e`; they are deliberately not part of the image.
+# TZ: Crystal cannot read the zone from /etc/localtime on this base image; override with `-e TZ=...`.
+ENV CRYSTAL_ENV=production HOST=0.0.0.0 PORT=4000 TZ=UTC
+EXPOSE 4000
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1
+CMD ["./<%= binary_name %>"]

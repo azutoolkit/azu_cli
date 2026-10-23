@@ -28,6 +28,22 @@ CQL's own configuration is the single source of truth for the connection. **Requ
 - Registered `db:schema:load` (now creates the tables of `src/db/schema.cr`), `db:data:migrate`, `db:migrations:verify` and `db:validate`
 - The generated `spec_helper.cr` sets `CRYSTAL_ENV` before requiring the app, which is when CQL reads it
 
+## Unreleased - Delivery: Docker, CI, production-safe defaults, honest docs
+
+- `azu new --docker` now generates a multi-stage `Dockerfile` (crystallang/crystal build stage with the CI packages, `crystal build --release` of `src/server.cr` or `src/api.cr`, a slim `ubuntu:24.04` runtime with only the linked libraries, non-root user, `CRYSTAL_ENV=production`, `TZ=UTC`, `HOST`/`PORT`, `HEALTHCHECK` on `/health`, a `/data` volume and `DATABASE_URL` on SQLite) and a `.dockerignore`; it was a no-op before. `--docker` is refused for cli projects
+- `azu new --ci` now generates `.github/workflows/ci.yml` (shards install, format check, specs, build, in `crystallang/crystal:1.19.1`, the version of `.tool-versions`); it was a no-op before. `--no-ci` skips it; `GitLab CI` was never implemented and is no longer offered
+- `scripts/e2e_docker.sh` builds the generated image and checks it: non-root, `/health` and `/`, no `/dev-dashboard`, healthy, writable `/data`, and a web container without `CSRF_SECRET` / `SESSION_SECRET` exits with the error. It needs a docker daemon, so CI does not run it
+- The generated app's `handlers` is a typed `Array(HTTP::Handler)`: the untyped union array it returned corrupted when Azu took it as `Array(HTTP::Handler)`, so an optimized build died at boot (IndexError, or SIGSEGV after five seconds); the e2e only built unoptimized
+- The generated app requires `src/db/schema` instead of `src/db/**`: `seed.cr` ran on every boot
+- The generated JoobQ initializer turns its REST API off by `CRYSTAL_ENV` (it read `AZU_ENV`, which Azu does not)
+- The generated app mounts DevDashboard and PerformanceMonitor through `dev_handlers`, guarded by `Azu::CONFIG.env.development?` at runtime; before, they depended on the environment at generation time
+- Generated projects pass their own CI: the placeholder `false.should eq(true)` spec is replaced by real specs, and the templates no longer end in a blank line (`crystal tool format --check` failed on seven files); the generated-app e2e now runs the workflow's format check and specs
+- Generated web and api apps `require "azu/dev"` (azu moved DevDashboard and PerformanceMonitor there); the generated shard.yml requires azu `~> 0.5.69`, the first release that contains it; the e2e scripts take an opt-in `E2E_AZU_BRANCH`
+- The generated CI workflow has `permissions: contents: read` and builds a cli project's `src/<project>.cr`; `.dockerignore` also excludes `.env.*`, `*.pem`, `*.key`
+- Removed the `azu plugin` command (it printed success without doing anything); `azu help` lists every registered command; `azu init` documents that it takes no options; `azu version` reports the shard version instead of `0.0.1`
+- Docs: README, CLI_REFERENCE, `azu help` and docs/ no longer document commands and flags that do not exist (`azu dev`, `azu deploy`, `azu lint`, `azu format`, `azu analyze`, `azu integration`, `azu migration`, `azu plugin`, `azu db <sub>` and `azu config <sub>` spellings, `--database`, `--template`, `--skip-git`, `--skip-deps`, global options, `serve --workers/--ssl/...`, generator flags such as `--validations`); `docs/integration/third-party.md` is removed
+- CLAUDE.md and the azu-cli-refactor skill describe the code the generators emit
+
 ## Unreleased - Channels and authentication that compile, boot and work
 
 `scripts/e2e_generated_app.sh` now also generates a channel and authentication in a web project and checks them

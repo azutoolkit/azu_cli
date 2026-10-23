@@ -86,7 +86,7 @@ make clean
    - Database commands in `commands/db/`
    - Job queue commands in `commands/jobs/`
 
-3. **Generators (src/azu_cli/generators/)**
+3. **Generators (src/azu_cli/generators/)** (a `Project` generator overrides `rendered_file_entries`; its `filter` method is not called by Teeplate)
 
    - Use Teeplate for file tree generation
    - Each generator inherits from `Teeplate::FileTree`
@@ -96,7 +96,7 @@ make clean
      - Endpoints (HTTP handlers)
      - Services (business logic)
      - Scaffolds (complete CRUD)
-     - Authentication (JWT/Session)
+     - Authentication (session cookie, web projects)
      - Jobs (JoobQ background jobs)
      - Channels (WebSocket)
      - Migrations
@@ -118,9 +118,9 @@ make clean
    - Executed before/after each command via `CLI#execute_command`
 
 6. **Plugins (src/azu_cli/plugins/)**
-   - Base plugin system using `Plugins::Base`
-   - Built-in plugins: GeneratorPlugin, DatabasePlugin, DevelopmentPlugin
-   - Hooks: `on_load`, `before_command`, `after_command`, `on_error`
+   - Internal hook system (`Plugins::Base`: `on_load`, `before_command`, `after_command`, `on_error`)
+   - Built-in plugins: GeneratorPlugin, DatabasePlugin, DevelopmentPlugin; there is no `azu plugin` command and
+     no external plugin installation
 
 ### Key Design Patterns
 
@@ -136,11 +136,12 @@ make clean
 
 ### Database Integration (CQL ORM)
 
-- Migration system uses CQL's `Migrator` class
-- Automatic schema synchronization to `src/db/schema.cr`
-- Migration files in `db/migrations/` with timestamp prefixes
-- Supports PostgreSQL, MySQL, SQLite
-- Models use `CQL::Record` with macro-powered DSL
+- Migrations are `CQL::Migration(<version>)` classes in `src/db/migrations/<version>_<name>.cr`; the version is a
+  timestamp, and the migration generator picks an unused one when two are generated in the same second
+- `src/db/schema.cr` declares every table (`Azu::CQL.schema`); the model generator registers a created table there once
+- Supports PostgreSQL, MySQL, SQLite (only SQLite runs without a server: the e2e gate uses it)
+- Models include `CQL::ActiveRecord::Model(Int64)` and bind to the schema with `db_context`
+- Generated projects pin `cql` to 0.0.541 (see the TODO in `templates/project/shard.yml.ecr`)
 
 ### Code Generation Workflow
 
@@ -185,7 +186,7 @@ project_name/
 │   ├── initializers/    # App initialization
 │   └── db/
 │       ├── migrations/  # Database migrations
-│       ├── schema.cr    # Auto-generated schema
+│       ├── schema.cr    # Table declarations (the generators add to it)
 │       └── seed.cr      # Seed data
 ├── public/
 │   └── templates/       # Jinja templates
@@ -214,36 +215,59 @@ When parsing attribute arguments like `name:string email:string:unique age:int32
 - Modifiers: `unique`, `index`, `required`
 - References: `user_id:int64:ref:users` creates foreign key
 
-### CQL ORM Patterns
+### CQL ORM Patterns (as the generators emit them)
 
-Models use `CQL::Record` with schema DSL:
+Model (`src/models/post.cr`):
 
 ```crystal
-module AppSchema
-  @[CQL::Model(table_name: users)]
-  struct User < CQL::Record(Int64)
-    property name : String
-    property email : String
-    db_context AppDatabase
+require "cql"
+
+class Post
+  include CQL::ActiveRecord::Model(Int64)
+  db_context BlogDB, :posts
+
+  property title : String
+  property body : String
+  property created_at : Time?
+  property updated_at : Time?
+
+  def initialize(@title : String, @body : String)
   end
 end
 ```
 
-Migrations use CQL Schema DSL:
+Migration (`src/db/migrations/<version>_create_posts.cr`) and the same table in `src/db/schema.cr`:
 
 ```crystal
-class CreateUsers < CQL::Migration(timestamp)
+class CreatePosts < CQL::Migration(20261023111721)
   def up
-    schema.table :users do
-      primary :id, Int64
-      column :name, String
-      column :email, String, unique: true
+    schema.table :posts do
+      primary :id, Int64, auto_increment: true
+      text :title
+      text :body
       timestamps
     end
-    schema.users.create!
+    schema.posts.create!
+  end
+
+  def down
+    schema.posts.drop!
   end
 end
 ```
+
+### Azu Contract Style (as the generators emit it)
+
+- One `Azu::Endpoint(Request, Response)` has ONE response type: a redirecting action returns `Azu::Response::Empty`
+  (`redirect to: "/posts/#{record.id}", status: 303`), a rendering one returns its page; never a union
+- Requests are `Azu::Request` structs with `getter` fields and `validate`; pages include `Azu::Response` and
+  `Azu::Templates::Renderable` and render a Jinja template with `view data: {...}`
+- Naming (the scaffold scheme): `Blog::<Plural>::<Action><Layer>`, e.g. `Blog::Posts::CreateEndpoint`,
+  `Blog::Posts::CreateRequest`, `Blog::Posts::ShowPage`, `Blog::Posts::CreateService`; files at
+  `src/<layer>s/<plural>/<action>_<layer>.cr`, templates at `public/templates/<app>/<plural>/<action>_page.jinja`.
+  Channels and authentication follow it: `Blog::Registrations::CreateEndpoint`, `Blog::Sessions::*`, `Blog::Account::ShowEndpoint`
+- Web forms carry the CSRF field (`Azu::Handler::CSRF.default` is the instance configured with `CSRF_SECRET`); writes
+  answer 303
 
 ### JoobQ Integration
 
@@ -276,9 +300,8 @@ Generators extend `Teeplate::FileTree`:
 
 ### Migration System
 
-- Timestamps use Unix epoch format (e.g., `20240115103045_i64`)
-- Migration files: `{timestamp}_{action}_{table_name}.cr`
-- Auto-updates `src/db/schema.cr` after running migrations
+- Versions are timestamps (e.g. `20261023111721`); files are `src/db/migrations/{version}_{name}.cr`
+- A second `create_*` migration whose class name exists is refused
 - Rollback uses `--steps N` to roll back N migrations
 - Status shows pending vs. executed migrations
 
@@ -330,3 +353,46 @@ Generators extend `Teeplate::FileTree`:
 - Use `Logger.debug` for debug messages (only shown in debug mode)
 - Use `pp` macro for inspecting values during development
 - Stack traces shown in debug mode on errors
+
+## Delivery files of generated projects
+
+- `azu new --docker` writes a multi-stage `Dockerfile` and `.dockerignore`; `--ci` (default `GitHub Actions`) writes
+  `.github/workflows/ci.yml`. Both use `Generate::Project::CRYSTAL_VERSION` (also `.tool-versions`) and the package
+  lists in `Generate::Project#build_packages` / `#runtime_packages`; change a Crystal version in one place
+- Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there; first release with it is azu 0.5.69, which the generated shard.yml requires as `~> 0.5.69`; `E2E_AZU_BRANCH=<ref>` pins the generated project's azu to a branch in the e2e scripts, opt-in)
+- Development handlers (DevDashboard, PerformanceMonitor) are mounted by `def self.dev_handlers` in the generated app
+  file, guarded by `Azu::CONFIG.env.development?` at runtime, never by the environment at generation time
+- The generated app's `handlers` is `Array(HTTP::Handler)` (literal `of HTTP::Handler`): an array of a union of handler classes passed as `Array(HTTP::Handler)` is corrupted in optimized builds (IndexError / SIGSEGV at boot). `scripts/e2e_generated_app.sh` builds unoptimized, so only `scripts/e2e_docker.sh` (a `--release` build) catches this class of bug
+- The app requires `./db/schema` only: `src/db/seed.cr` would run on every boot (`azu db:migrate` requires the migrations itself)
+- The `Dockerfile` template starts with `FROM`, without a `# syntax=` line: that line makes BuildKit pull its frontend from the network
+
+## Quality rules (from the PR reviews)
+
+- Validate every name a generator turns into code (identifiers, paths); never interpolate raw input into generated Crystal
+- No hard-coded secrets in generated code: read them from the environment (`ENV[...]?.presence`), fall back to a
+  random value outside production, raise in production (`Azu::CONFIG.env.production?`), and list a random value in
+  the git-ignored `.env`. Azu reads `CRYSTAL_ENV` only
+- Escape template output (`| e`; Jinja `.jinja` files are not autoescaped); redirects after writes are 303
+- Check what a generator would overwrite and refuse (`Auth.conflict`, duplicate migration class names)
+- Specs must be able to fail: write the failing assertion first; do not claim a review that did not happen
+- Do not document commands or flags that are not registered; `azu help` and `CLI_REFERENCE.md` list what exists
+
+## End-to-end gates
+
+`scripts/e2e_generated_app.sh [web|api]` generates a project with the built `azu` binary, installs its shards,
+compiles it, boots it and drives it with curl (scaffold CRUD, a Chat channel with two WebSocket clients, session
+authentication, CSRF and cookie checks). `E2E_DB=postgresql` only boots (no database server). CI runs it in a
+`crystallang/crystal` container (see `.github/workflows/crystal.yaml`).
+
+`scripts/e2e_docker.sh [web|api]` builds the generated `Dockerfile` with the host docker, runs the container, checks
+`/health` and `/`, the production guards (no `CSRF_SECRET` / `SESSION_SECRET` means exit with an error), the non-root
+user, the HEALTHCHECK and the `/data` volume. It needs a docker daemon, so CI does not run it.
+
+Running them locally with Docker (no Crystal on the host):
+
+```bash
+docker run --rm -v "$PWD":/work -w /work crystallang/crystal:1.19.1 \
+  sh -c 'apt-get update && apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev sqlite3 curl \
+         && shards install --ignore-crystal-version && shards build --ignore-crystal-version && scripts/e2e_generated_app.sh web'
+scripts/e2e_docker.sh web      # on the host
+```

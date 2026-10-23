@@ -42,25 +42,32 @@ azu new my_cli_tool --type cli
 
 ```bash
 # PostgreSQL (default)
-azu new my_app --database postgres
+azu new my_app --db postgres
 
 # MySQL
-azu new my_app --database mysql
+azu new my_app --db mysql
 
 # SQLite
-azu new my_app --database sqlite
+azu new my_app --db sqlite
 ```
 
 ## Command Options
 
-| Option              | Description                             | Default  |
-| ------------------- | --------------------------------------- | -------- |
-| `--type <type>`     | Project type (web, api, cli)            | web      |
-| `--database <db>`   | Database type (postgres, mysql, sqlite) | postgres |
-| `--template <name>` | Use specific template                   | default  |
-| `--skip-git`        | Skip Git repository initialization      | false    |
-| `--skip-deps`       | Skip dependency installation            | false    |
-| `--force`           | Overwrite existing directory            | false    |
+| Option                     | Description                                              | Default        |
+| -------------------------- | -------------------------------------------------------- | -------------- |
+| `--type <type>`            | Project type (web, api, cli)                             | web            |
+| `--api`                    | Shorthand for `--type api`                               |                |
+| `--db <db>`                | Database adapter (postgresql, mysql, sqlite)             | postgresql     |
+| `--test <framework>`       | Test framework (spec, minitest)                          | spec           |
+| `--docker`                 | Generate a `Dockerfile` and `.dockerignore` (web, api)   | off            |
+| `--ci <setup>`, `--no-ci`  | `GitHub Actions` or `None`                               | GitHub Actions |
+| `--git`, `--no-git`        | Initialize a git repository                              | on             |
+| `--example`, `--no-example`| Include the example code                                 | on             |
+| `--joobq`, `--no-joobq`    | Include JoobQ                                            | on             |
+| `--name`, `--module`, `--author`, `--email`, `--license` | Project metadata           |                |
+| `--yes`                    | Non-interactive: take the defaults                       |                |
+
+An existing directory is never overwritten: choose another name.
 
 ## Project Types
 
@@ -146,12 +153,12 @@ my_cli_tool/
 
 ## Database Options
 
-### PostgreSQL (`--database postgres`)
+### PostgreSQL (`--db postgresql`)
 
 **Recommended for production applications.**
 
 ```bash
-azu new my_app --database postgres
+azu new my_app --db postgres
 ```
 
 **Features:**
@@ -166,12 +173,12 @@ azu new my_app --database postgres
 - PostgreSQL server installed
 - Database user with create privileges
 
-### MySQL (`--database mysql`)
+### MySQL (`--db mysql`)
 
 **Good for web applications and smaller projects.**
 
 ```bash
-azu new my_app --database mysql
+azu new my_app --db mysql
 ```
 
 **Features:**
@@ -185,12 +192,12 @@ azu new my_app --database mysql
 - MySQL server installed
 - Database user with create privileges
 
-### SQLite (`--database sqlite`)
+### SQLite (`--db sqlite`)
 
 **Perfect for development, prototypes, and simple applications.**
 
 ```bash
-azu new my_app --database sqlite
+azu new my_app --db sqlite
 ```
 
 **Features:**
@@ -207,41 +214,35 @@ azu new my_app --database sqlite
 - Prototypes and demos
 - Embedded applications
 
-## Advanced Options
+## Docker and CI
 
-### Custom Templates
+### Docker (`--docker`)
 
-Use a custom project template:
+Generates a multi-stage `Dockerfile` and a `.dockerignore`:
 
-```bash
-# Create custom template
-mkdir -p ~/.azu/templates/projects/custom/
-# Add template files...
+- build stage `crystallang/crystal:<version of the template>` with the system packages the CI job installs,
+  `shards install`, and a `crystal build --release` of `src/server.cr` (web) or `src/api.cr` (api);
+- runtime stage on `ubuntu:24.04` with only the shared libraries the binary links against, a non-root user,
+  `CRYSTAL_ENV=production`, `HOST=0.0.0.0`, `PORT=4000` and a `HEALTHCHECK` on `/health`;
+- on SQLite, a `/data` volume and `DATABASE_URL=sqlite3:///data/<project>.db`.
 
-# Use custom template
-azu new my_app --template custom
-```
-
-### Skip Git Initialization
+The secrets are not in the image. A web container refuses to start without `CSRF_SECRET` (and, once you generate
+authentication, `SESSION_SECRET`):
 
 ```bash
-# Don't initialize Git repository
-azu new my_app --skip-git
+docker build -t my_app .
+docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) my_app
 ```
 
-### Skip Dependencies
+The image does not run migrations. A CLI project has no server, so `--docker` is refused for `--type cli`.
+`scripts/e2e_docker.sh` in this repository builds and runs a generated image (it needs a docker daemon).
 
-```bash
-# Don't install shards automatically
-azu new my_app --skip-deps
-```
+### CI (`--ci`)
 
-### Force Overwrite
-
-```bash
-# Overwrite existing directory
-azu new my_app --force
-```
+`--ci "GitHub Actions"` (the default) generates `.github/workflows/ci.yml`: in a `crystallang/crystal` container pinned
+to the Crystal version of the template (also in `.tool-versions`), it installs the system packages and shards, checks
+formatting (`crystal tool format --check src spec`), runs the specs and builds the entry point. `--no-ci` skips it.
+GitLab CI is not supported.
 
 ## Generated Files
 
@@ -382,7 +383,7 @@ Tables used by models must be declared in `src/db/schema.cr`; migrations are run
 
 ```bash
 # Create blog with PostgreSQL
-azu new my_blog --database postgres --type web
+azu new my_blog --db postgres --type web
 
 cd my_blog
 
@@ -402,7 +403,7 @@ azu serve
 
 ```bash
 # Create API service
-azu new user_api --type api --database postgres
+azu new user_api --type api --db postgres
 
 cd user_api
 
@@ -426,13 +427,9 @@ azu new file_processor --type cli
 
 cd file_processor
 
-# Generate commands
-azu generate command process
-azu generate command convert
-
 # Build and run
 crystal build src/file_processor.cr -o bin/file_processor
-./bin/file_processor process --help
+./bin/file_processor --help
 ```
 
 ## Post-Creation Steps
@@ -473,34 +470,11 @@ After creating a new project:
 
 ### Permission Denied
 
-```bash
-# Check directory permissions
-ls -la
-
-# Create in different location
-azu new my_app --path ~/projects/
-```
+Check the permissions of the directory you run `azu new` in, or run it from another directory.
 
 ### Database Connection Error
 
-```bash
-# Ensure database server is running
-sudo systemctl status postgresql  # Linux
-brew services list | grep postgres  # macOS
-
-# Check database user
-createuser -s $USER  # PostgreSQL
-```
-
-### Template Not Found
-
-```bash
-# Use default template
-azu new my_app --template default
-
-# Or create custom template
-mkdir -p ~/.azu/templates/projects/my_template/
-```
+Ensure the database server is running and the user can create databases, or use `--db sqlite`.
 
 ## Best Practices
 
