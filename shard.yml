@@ -1,5 +1,5 @@
 name: azu_cli
-version: 0.1.17
+version: 0.1.18
 authors:
   - Elias J. Perez <eliasjpr@gmail.com>
 crystal: '>= 1.19.1'
@@ -19,10 +19,13 @@ dependencies:
     branch: master
   pg:
     github: will/crystal-pg
-    version: ~> 0.28.0
+    version: ~> 0.31.0
   cql:
     github: azutoolkit/cql
     branch: master
+  mysql:
+    github: crystal-lang/crystal-mysql
+    version: ~> 0.18.0
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.9.0

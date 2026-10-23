@@ -180,6 +180,17 @@ describe AzuCLI::Commands::DB::Migrate do
       end
     end
 
+    it "generates a script that prints the applied versions for drivers the CLI does not link" do
+      command = AzuCLI::Commands::DB::Migrate.new
+      script_path = command.test_applied_versions_script
+      script_content = File.read(script_path)
+      File.delete(script_path)
+
+      script_content.should contain("migrator = ")
+      script_content.should contain("migrator.applied_migrations.each")
+      script_content.should contain("APPLIED")
+    end
+
     it "generates script with version migration command" do
       command = AzuCLI::Commands::DB::Migrate.new
 

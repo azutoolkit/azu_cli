@@ -32,7 +32,7 @@ module AzuCLI
           validator.validate_all
 
           all_migrations = validator.migration_files.map { |file| File.basename(file, ".cr") }
-          applied_versions = get_applied_migration_versions
+          applied_versions = applied_migration_versions
 
           if all_migrations.empty?
             Logger.info("No migrations found in #{migrations_dir}")
@@ -113,29 +113,16 @@ module AzuCLI
           [] of String
         end
 
-        # Get applied migration versions as Int64 array
-        private def get_applied_migration_versions : Array(Int64)
-          versions = [] of Int64
-          query_database("SELECT version FROM cql_schema_migrations ORDER BY version") do |rs|
-            rs.each do
-              versions << rs.read(Int64)
-            end
-          end
-          versions
-        rescue
-          [] of Int64
-        end
-
-        # Get when a migration was applied
+        # Get when a migration was applied ("-" when CQL did not record a time)
         private def get_migration_applied_at(version : Int64) : String
           query_database("SELECT created_at FROM cql_schema_migrations WHERE version = #{version}") do |rs|
             rs.each do
-              return rs.read(Time).to_s("%Y-%m-%d %H:%M:%S")
+              return rs.read(String?).try { |time| time.empty? ? nil : time[0, 19] } || "-"
             end
           end
-          "Unknown"
+          "-"
         rescue
-          "Unknown"
+          "-"
         end
       end
     end

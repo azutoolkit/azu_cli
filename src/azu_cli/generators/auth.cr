@@ -24,7 +24,7 @@ module AzuCLI
       def self.conflict(root : String = ".") : String?
         existing = ["src/models/user.cr", "src/initializers/session.cr", "src/endpoints/sessions", "src/endpoints/registrations", "src/endpoints/account"]
           .select { |path| File.exists?(File.join(root, path)) }
-        existing.concat(Dir.glob(File.join(root, "src/db/migrations/*_create_users.cr")).map { |path| path.sub("#{root}/", "") })
+        existing.concat(Dir.glob(File.join(root, AzuCLI::Config::Paths::MIGRATIONS, "*_create_users.cr")).map { |path| path.sub("#{root}/", "") })
         unless existing.empty?
           return "Authentication would overwrite or duplicate: #{existing.join(", ")}. Remove them (or the User you generated) first."
         end

@@ -1,5 +1,13 @@
 # Changelog - Azu CLI
 
+## Unreleased - Database command fixes
+
+- Fixed: `db:status`, `db:rollback`, `db:migrate --dry-run` and `db:migrations:verify` showed every migration as pending on SQLite and MySQL projects, because the CLI only linked the PostgreSQL driver and swallowed the error. The applied versions now come from one helper: read directly on PostgreSQL and MySQL, through a runner script on SQLite; an unreadable table is reported instead of hidden
+- Fixed: `db:create`, `db:drop` and the existence check failed for MySQL (`no driver was registered for the schema "mysql"`, and `COUNT(*)` read as Int32); the CLI now links `mysql` (shards: `pg ~> 0.31.0`, `mysql ~> 0.18.0`, which need `db` 0.15)
+- Fixed: `db:status` printed "Unknown" for Applied At when CQL records no time; it prints "-"
+- Fixed: data migrations take a version after the newest schema or data migration, since both share `cql_schema_migrations`; rewrote the stale data migration generator spec
+- Fixed: `CLI#run` now returns the exit code and only the entry point exits, so the spec suite no longer ends silently at the first `help` command
+
 ## Unreleased - Migration generator fixes
 
 - Fixed: two migrations generated within the same second shared a version, so `db:migrate` skipped the second; a new migration now gets a version after the newest one in `src/db/migrations`

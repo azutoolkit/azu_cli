@@ -21,7 +21,7 @@ Data migrations are specialized scripts for transforming existing data, seeding 
 | **Reversibility** | Usually reversible         | Often irreversible          |
 | **When to Run**   | On deploy                  | On-demand or scheduled      |
 | **Dependencies**  | Database schema            | Application models          |
-| **Location**      | `db/migrations/`           | `db/data_migrations/`       |
+| **Location**      | `src/db/migrations/`       | `src/db/data_migrations/`   |
 
 ## Usage
 

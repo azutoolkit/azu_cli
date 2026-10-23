@@ -171,7 +171,7 @@ module AzuCLI
           validator.validate_all
 
           # Get applied migrations
-          applied_versions = get_applied_migration_versions
+          applied_versions = applied_migration_versions
           pending_versions = validator.pending_migrations(applied_versions)
 
           if pending_versions.empty?
@@ -200,7 +200,7 @@ module AzuCLI
           validator.validate_all
 
           # Get applied migrations
-          applied_versions = get_applied_migration_versions
+          applied_versions = applied_migration_versions
 
           if applied_versions.empty?
             Logger.info("No applied migrations to test rollback")
@@ -255,19 +255,6 @@ module AzuCLI
 
           File.write(script_path, script_content)
           script_path
-        end
-
-        # Get applied migration versions from database
-        private def get_applied_migration_versions : Array(Int64)
-          versions = [] of Int64
-          query_database("SELECT version FROM cql_schema_migrations ORDER BY version") do |rs|
-            rs.each do
-              versions << rs.read(Int64)
-            end
-          end
-          versions
-        rescue
-          [] of Int64
         end
 
         # Public test helper to access private method for testing

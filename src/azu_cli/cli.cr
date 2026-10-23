@@ -115,11 +115,12 @@ module AzuCLI
       @middleware << Middleware::Configuration.new
     end
 
-    # Run the CLI with given arguments
-    def run(args : Array(String))
+    # Run the CLI with given arguments and return the process exit code (the entry point exits with it,
+    # so the CLI can be driven from specs without ending the process)
+    def run(args : Array(String)) : Int32
       if args.empty?
         show_help
-        return
+        return 0
       end
 
       command_name = args[0]
@@ -130,12 +131,12 @@ module AzuCLI
       else
         Logger.error("Unknown command: #{command_name}")
         Logger.info("Run 'azu help' to see available commands")
-        exit(1)
+        1
       end
     end
 
     # Execute a command with middleware
-    private def execute_command(command_class : Commands::Base.class, command_name : String, args : Array(String))
+    private def execute_command(command_class : Commands::Base.class, command_name : String, args : Array(String)) : Int32
       command = command_class.new
       command.parse_args(args)
 
@@ -159,18 +160,18 @@ module AzuCLI
         @plugins.each(&.on_error(command, ex))
 
         Logger.error("Command failed: #{ex.message}")
-        exit(1)
+        1
       end
     end
 
     # Handle command result
-    private def handle_result(result : Commands::Result)
+    private def handle_result(result : Commands::Result) : Int32
       if result.success?
         Logger.info(result.message) if result.message
-        exit(0)
+        0
       else
         Logger.error(result.error) if result.error
-        exit(1)
+        1
       end
     end
 

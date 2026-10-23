@@ -6,7 +6,7 @@ module AzuCLI
     # Migration generator that creates CQL::Migration classes
     class Migration < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/migrations"
-      OUTPUT_DIR = "./src/db/migrations"
+      OUTPUT_DIR = "./#{AzuCLI::Config::Paths::MIGRATIONS}"
       # Migration configuration properties
       property name : String
       property attributes : Hash(String, String)
@@ -177,7 +177,8 @@ module AzuCLI
       private def generate_timestamp : String
         format = "%Y%m%d%H%M%S"
         time = Time.utc
-        newest = Dir.glob(File.join(OUTPUT_DIR, "*.cr")).compact_map { |path| File.basename(path)[/\A\d{14}/]? }.max?
+        newest = [OUTPUT_DIR, "./src/db/data_migrations"].flat_map { |dir| Dir.glob(File.join(dir, "*.cr")) }
+          .compact_map { |path| File.basename(path)[/\A\d{14}/]? }.max?
         if newest && (last = Time.parse_utc(newest, format)) && last >= time.at_beginning_of_second
           time = last + 1.second
         end

@@ -50,7 +50,7 @@ database:
 
   # Migration settings
   migrations:
-    directory: db/migrations/
+    directory: src/db/migrations/
     table: schema_migrations
     lock_timeout: 10000
 
@@ -286,7 +286,7 @@ cql:
 # Migration configuration
 migrations:
   # Migration directory
-  directory: db/migrations/
+  directory: src/db/migrations/
 
   # Migration table
   table: schema_migrations

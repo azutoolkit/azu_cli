@@ -34,7 +34,8 @@ module AzuCLI
 
     # Create and run the CLI
     cli = CLI.new
-    cli.run(ARGV)
+    code = cli.run(ARGV)
+    exit(code) unless code.zero?
   rescue ex : Topia::Error
     Logger.error("Topia error: #{ex.message}")
     Logger.info("Run 'azu --help' to see available options")
