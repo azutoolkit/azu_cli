@@ -1,0 +1,17 @@
+require "json"
+
+module <%= app_module %>
+  struct <%= namespace %>::IndexResponse
+    include Azu::Response
+
+    @<%= resource_plural %> : Array(<%= namespace %>::ShowResponse)
+
+    def initialize(<%= resource_plural %> : Array(<%= model_name %>))
+      @<%= resource_plural %> = <%= resource_plural %>.map { |<%= resource_singular %>| <%= namespace %>::ShowResponse.new(<%= resource_singular %>) }
+    end
+
+    def render : String
+      @<%= resource_plural %>.to_json
+    end
+  end
+end

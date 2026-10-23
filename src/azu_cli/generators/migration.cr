@@ -1,11 +1,12 @@
 require "teeplate"
+require "./resource"
 
 module AzuCLI
   module Generate
     # Migration generator that creates CQL::Migration classes
     class Migration < Teeplate::FileTree
       directory "#{__DIR__}/../templates/scaffold/src/migrations"
-      OUTPUT_DIR = "./db/migrations"
+      OUTPUT_DIR = "./src/db/migrations"
       # Migration configuration properties
       property name : String
       property attributes : Hash(String, String)
@@ -23,6 +24,38 @@ module AzuCLI
         @table_name = extract_table_name(@snake_case_name)
         @action_prefix = get_action_prefix
         @table_name_for_template = get_table_name_for_filename
+      end
+
+      def fields : Array(Field)
+        Field.columns(@attributes)
+      end
+
+      # The `table :name do ... end` block, as the migration creates it (`schema.table`) and
+      # `src/db/schema.cr` mirrors it (`table`).
+      def table_definition(indent : String = "", receiver : String = "") : String
+        lines = ["#{receiver}table :#{table_name} do", "  primary :id, #{@id_type}, auto_increment: true"]
+        fields.each { |field| lines << "  #{field.column}" }
+        lines << "  timestamps" if @timestamps
+        fields.each { |field| field.foreign_key.try { |foreign_key| lines << "  #{foreign_key}" } }
+        lines << "end"
+        lines.map { |line| "#{indent}#{line}" }.join("\n")
+      end
+
+      # Renders the migration; a create-table migration also declares its table in `src/db/schema.cr`,
+      # where the models look their columns up.
+      def render(output_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
+        super
+        register_table(File.join(File.dirname(output_dir), "schema.cr")) if migration_type == "create_table"
+      end
+
+      private def register_table(schema_file : String)
+        return unless File.exists?(schema_file)
+
+        schema = File.read(schema_file)
+        return if schema.matches?(/^\s*table :#{table_name} do/m)
+
+        closing = schema.rindex("end") || return
+        File.write(schema_file, "#{schema[0...closing].rstrip}\n\n#{table_definition("  ")}\n#{schema[closing..]}")
       end
 
       # Extract clean table name from migration name
@@ -125,125 +158,6 @@ module AzuCLI
       # Generate timestamp for migration filename
       private def generate_timestamp : String
         Time.utc.to_s("%Y%m%d%H%M%S")
-      end
-
-      # Get Crystal type for attribute
-      def crystal_type(attr_type : String) : String
-        case attr_type.downcase
-        when "string", "text"
-          "String"
-        when "int32", "integer"
-          "Int32"
-        when "int64"
-          "Int64"
-        when "float32"
-          "Float32"
-        when "float64", "float"
-          "Float64"
-        when "bool", "boolean"
-          "Bool"
-        when "time", "datetime"
-          "Time"
-        when "date"
-          "Date"
-        when "email"
-          "String"
-        when "url"
-          "String"
-        when "json"
-          "JSON::Any"
-        when "uuid"
-          "UUID"
-        when "references", "belongs_to"
-          "Int64"
-        else
-          "String"
-        end
-      end
-
-      # Get migration field type for CQL migrations
-      def migration_field_type(attr_type : String) : String
-        case attr_type.downcase
-        when "string", "text"
-          "string"
-        when "int32", "integer"
-          "integer"
-        when "int64"
-          "bigint"
-        when "float32"
-          "float"
-        when "float64", "float"
-          "decimal"
-        when "bool", "boolean"
-          "boolean"
-        when "time", "datetime"
-          "timestamp"
-        when "date"
-          "date"
-        when "email"
-          "string"
-        when "url"
-          "string"
-        when "json"
-          "json"
-        when "uuid"
-          "uuid"
-        else
-          "string"
-        end
-      end
-
-      # Get migration field options
-      def migration_field_options(attr_type : String, field : String) : String
-        options = [] of String
-
-        case attr_type.downcase
-        when "string", "text"
-          options << "null: false" unless field.includes?("description") || field.includes?("notes")
-        when "int32", "int64", "integer"
-          options << "null: false" unless field.includes?("count") || field.includes?("age")
-        when "email"
-          options << "null: false"
-          options << "unique: true"
-        when "bool", "boolean"
-          options << "default: false"
-        when "time", "datetime"
-          options << "default: -> { \"CURRENT_TIMESTAMP\" }"
-        end
-
-        options.empty? ? "" : ", #{options.join(", ")}"
-      end
-
-      # Check if field should have an index
-      def should_add_index?(attr_type : String, field : String) : Bool
-        case attr_type.downcase
-        when "email"
-          true
-        when "string", "text"
-          field.includes?("name") || field.includes?("title") || field.includes?("slug")
-        when "int32", "int64", "integer"
-          field.includes?("user_id") || field.includes?("category_id")
-        when "bool", "boolean"
-          field.includes?("published") || field.includes?("active")
-        else
-          false
-        end
-      end
-
-      # Get index options
-      def index_options(attr_type : String, field : String) : String
-        case attr_type.downcase
-        when "email"
-          ", unique: true"
-        when "string", "text"
-          if field.includes?("slug")
-            ", unique: true"
-          else
-            ""
-          end
-        else
-          ""
-        end
       end
 
       # Get migration filename

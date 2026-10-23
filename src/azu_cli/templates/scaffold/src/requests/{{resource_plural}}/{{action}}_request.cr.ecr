@@ -1,0 +1,22 @@
+module <%= app_module %>
+  struct <%= namespace %>::<%= request_struct_name %>
+    include Azu::Request
+<% if id? || fields? -%>
+
+<% end -%>
+<% if id? -%>
+    getter id : Int64
+<% end -%>
+<% if fields? -%>
+<% fields.each do |field| -%>
+    getter <%= field.name %> : <%= field.crystal_type %><%= " = false" if field.bool? && !field.nilable? %>
+<% end -%>
+<% unless validated_fields.empty? -%>
+
+<% validated_fields.each do |field| -%>
+    validate <%= field.name %>, presence: true
+<% end -%>
+<% end -%>
+<% end -%>
+  end
+end

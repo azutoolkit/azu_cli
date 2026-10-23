@@ -1,0 +1,17 @@
+module <%= app_module %>
+  struct <%= namespace %>::CreateEndpoint
+    include Azu::Endpoint(<%= request_type %>, <%= response_type %>)
+
+    post "<%= route %>"
+
+    def call : <%= response_type %>
+      <%= resource_singular %> = <%= namespace %>::CreateService.new.call(create_request)
+<% if api? -%>
+      status 201
+      <%= response_type %>.new(<%= resource_singular %>)
+<% else -%>
+      redirect to: "<%= route %>/#{<%= resource_singular %>.id}", status: 303
+<% end -%>
+    end
+  end
+end

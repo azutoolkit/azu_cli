@@ -12,11 +12,11 @@ describe "Model Generator E2E" do
 
       # Verify files created
       file_exists?(project_path, "src/models/user.cr").should be_true
-      file_exists?(project_path, "db/migrations").should be_true
+      file_exists?(project_path, "src/db/migrations").should be_true
 
       # Verify model content
       model_content = read_file(project_path, "src/models/user.cr").not_nil!
-      model_content.should contain("struct User")
+      model_content.should contain("class User")
       # Verify generic type parameter is present (Int64 by default)
       model_content.should contain("include CQL::ActiveRecord::Model(Int64)")
       # Verify db_context line with correct table name
@@ -36,7 +36,7 @@ describe "Model Generator E2E" do
       result.success?.should be_true
 
       # Verify migration file exists
-      migration_files = Dir.glob(File.join(project_path, "db/migrations/*.cr"))
+      migration_files = Dir.glob(File.join(project_path, "src/db/migrations/*_create_posts.cr"))
       migration_files.size.should be > 0
 
       # Check migration content
@@ -69,7 +69,7 @@ describe "Model Generator E2E" do
 
       # Verify ID getter with correct type
       model_content = read_file(project_path, "src/models/comment.cr").not_nil!
-      model_content.should contain("getter id : Int64?")
+      model_content.should contain("include CQL::ActiveRecord::Model(Int64)")
     end
   end
 end

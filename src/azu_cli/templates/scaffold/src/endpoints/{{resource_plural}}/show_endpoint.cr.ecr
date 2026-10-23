@@ -1,0 +1,16 @@
+module <%= app_module %>
+  struct <%= namespace %>::ShowEndpoint
+    include Azu::Endpoint(<%= request_type %>, <%= response_type %>)
+
+    get "<%= route %>"
+
+    def call : <%= response_type %>
+      <%= resource_singular %> = <%= find_record %>
+<% if api? -%>
+      <%= response_type %>.new(<%= resource_singular %>)
+<% else -%>
+      <%= response_type %>.new(<%= resource_singular %>, csrf_tag)
+<% end -%>
+    end
+  end
+end

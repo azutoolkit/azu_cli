@@ -1,0 +1,10 @@
+{% extends "app_layout.jinja" %}
+
+{% block title %}Edit <%= resource_singular.tr("_", " ") %>{% endblock %}
+
+{% block content %}
+<div class="page-head"><h1>Edit <%= resource_singular.tr("_", " ") %> #{{ <%= resource_singular %>.id }}</h1></div>
+{% set form_action = "/<%= resource_plural %>/" ~ <%= resource_singular %>.id %}
+{% set form_method = "patch" %}
+{% include "<%= app_dir %>/<%= resource_plural %>/_form.jinja" %}
+{% endblock %}

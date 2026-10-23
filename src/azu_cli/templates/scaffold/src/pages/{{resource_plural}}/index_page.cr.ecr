@@ -1,0 +1,13 @@
+module <%= app_module %>
+  struct <%= namespace %>::IndexPage
+    include Azu::Response
+    include Azu::Templates::Renderable
+
+    def initialize(@<%= resource_plural %> : Array(<%= model_name %>))
+    end
+
+    def render
+      view data: {"<%= resource_plural %>" => @<%= resource_plural %>.map(&.attributes.transform_keys(&.to_s))}
+    end
+  end
+end

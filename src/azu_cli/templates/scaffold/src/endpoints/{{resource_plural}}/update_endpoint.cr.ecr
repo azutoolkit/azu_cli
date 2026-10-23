@@ -1,0 +1,17 @@
+module <%= app_module %>
+  struct <%= namespace %>::UpdateEndpoint
+    include Azu::Endpoint(<%= request_type %>, <%= response_type %>)
+
+    patch "<%= route %>"
+
+    def call : <%= response_type %>
+      <%= resource_singular %> = <%= find_record %>
+      <%= namespace %>::UpdateService.new.call(<%= resource_singular %>, update_request)
+<% if api? -%>
+      <%= response_type %>.new(<%= resource_singular %>)
+<% else -%>
+      redirect to: "/<%= resource_plural %>/#{<%= resource_singular %>.id}", status: 303
+<% end -%>
+    end
+  end
+end

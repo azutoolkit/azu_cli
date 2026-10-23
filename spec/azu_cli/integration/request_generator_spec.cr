@@ -11,12 +11,12 @@ describe "Request Generator E2E" do
       result.success?.should be_true
 
       # Verify request file created
-      file_exists?(project_path, "src/requests/user/create_request.cr").should be_true
+      file_exists?(project_path, "src/requests/users/create_request.cr").should be_true
 
       # Verify content of generated file
-      request_content = read_file(project_path, "src/requests/user/create_request.cr").not_nil!
+      request_content = read_file(project_path, "src/requests/users/create_request.cr").not_nil!
       request_content.should contain("module Testapp") # Project module name
-      request_content.should contain("struct User::CreateRequest")
+      request_content.should contain("struct Users::CreateRequest")
       request_content.should contain("include Azu::Request")
       request_content.should contain("name")
       request_content.should contain("email")

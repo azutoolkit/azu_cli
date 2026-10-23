@@ -73,7 +73,7 @@ module <%= @module_name %>
   def self.handlers
     [
 <% if @project_type == "web" -%>
-      Azu::Handler::CSRF.new,
+      Azu::Handler::CSRF.default, # the instance configured above signs the tokens the forms render
 <% end -%>
       Azu::Handler::RequestId.new,
 <% if @env == "development" -%>

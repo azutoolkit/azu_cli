@@ -1,0 +1,36 @@
+{% extends "app_layout.jinja" %}
+
+{% block title %}<%= namespace %>{% endblock %}
+
+{% block content %}
+<div class="page-head row row--between">
+  <h1><%= namespace %></h1>
+  <a class="btn" href="/<%= resource_plural %>/new">New <%= resource_singular.tr("_", " ") %></a>
+</div>
+
+{% if <%= resource_plural %> %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr><% fields.each do |field| %><th><%= field.label %></th><% end %><th></th></tr>
+    </thead>
+    <tbody>
+      {% for <%= resource_singular %> in <%= resource_plural %> %}
+      <tr>
+<% fields.each_with_index do |field, index| -%>
+<% if index == 0 -%>
+        <td><a href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}">{{ <%= resource_singular %>.<%= field.name %> | e }}</a></td>
+<% else -%>
+        <td>{{ <%= resource_singular %>.<%= field.name %> | e }}</td>
+<% end -%>
+<% end -%>
+        <td><a href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}/edit">Edit</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p>No <%= resource_plural.tr("_", " ") %> yet.</p>
+{% endif %}
+{% endblock %}

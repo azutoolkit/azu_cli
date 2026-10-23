@@ -1,0 +1,9 @@
+module <%= app_module %>
+  class <%= namespace %>::UpdateService
+    def call(<%= resource_singular %> : <%= model_name %>, request : <%= request_type %>) : <%= model_name %>
+      <%= resource_singular %>.attributes(<%= assignments %>)
+      <%= resource_singular %>.save!
+      <%= resource_singular %>
+    end
+  end
+end

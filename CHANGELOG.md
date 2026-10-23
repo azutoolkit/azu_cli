@@ -15,6 +15,23 @@ CQL's own configuration is the single source of truth for the connection. **Requ
 - Registered `db:schema:load` (now creates the tables of `src/db/schema.cr`), `db:data:migrate`, `db:migrations:verify` and `db:validate`
 - The generated `spec_helper.cr` sets `CRYSTAL_ENV` before requiring the app, which is when CQL reads it
 
+## Unreleased - Scaffolds that compile, boot and serve CRUD
+
+`azu generate scaffold Post title:string body:text published:bool` in a new project now produces an app that builds and
+serves working CRUD. `scripts/e2e_generated_app.sh` (the generated-app CI job) proves it for web and API projects.
+
+- One naming scheme: the model is the top-level `Post`; requests, endpoints, services, pages and responses are
+  `Blog::Posts::<Action><Layer>` in `src/<layer>s/posts/<action>_<layer>.cr`; templates are in
+  `public/templates/blog/posts/`, where `Renderable#page_path` looks
+- Endpoints, requests and services use the real Azu and CQL APIs; writes redirect with `303`, forms carry the CSRF field
+  and `_method`, template output is escaped; validation lives in the request contracts
+- The migration goes to `src/db/migrations` (where `azu db:migrate` reads it) and its table is added to `src/db/schema.cr`
+- `azu db:create`, `db:migrate`, `db:setup` and `db:drop` work for SQLite projects: the adapter is read from the project's
+  `shard.yml`, the database is `db/<name>.db` like the generated initializer
+- Generated web projects use the `CSRF` instance that signs the tokens (`Azu::Handler::CSRF.default`) and ship form styles
+- Removed: `SCAFFOLD_SUMMARY.md`, the unused `generate action` generator and the service `Result` class and the scaffold
+  templates nothing rendered
+
 ## v0.0.2 - JoobQ Integration Modernization (October 11, 2025)
 
 ### 🚀 Major JoobQ Integration Improvements

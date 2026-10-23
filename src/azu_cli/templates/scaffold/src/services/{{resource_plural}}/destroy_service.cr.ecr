@@ -1,0 +1,7 @@
+module <%= app_module %>
+  class <%= namespace %>::DestroyService
+    def call(<%= resource_singular %> : <%= model_name %>) : Bool
+      <%= resource_singular %>.delete!
+    end
+  end
+end
