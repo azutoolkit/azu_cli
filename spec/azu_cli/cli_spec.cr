@@ -164,10 +164,10 @@ describe AzuCLI::CLI do
       cli.@commands.has_key?("openapi:export").should be_true
     end
 
-    it "registers plugin commands" do
+    it "has no plugin command: it only ever printed success" do
       cli = AzuCLI::CLI.new
 
-      cli.@commands.has_key?("plugin").should be_true
+      cli.@commands.has_key?("plugin").should be_false
     end
   end
 
