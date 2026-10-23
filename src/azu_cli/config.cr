@@ -23,15 +23,16 @@ module AzuCLI
 
     # Standard project directory structure
     module Paths
-      SRC        = "src"
-      SPEC       = "spec"
-      CONFIG     = "config"
-      PUBLIC     = "public"
-      TEMPLATES  = "public/templates"
-      LIB        = "lib"
-      BIN        = "bin"
-      DB         = "db"
-      MIGRATIONS = "db/migrations"
+      SRC       = "src"
+      SPEC      = "spec"
+      CONFIG    = "config"
+      PUBLIC    = "public"
+      TEMPLATES = "public/templates"
+      LIB       = "lib"
+      BIN       = "bin"
+      DB        = "src/db"
+      # The one migrations directory: generators write here, db:* commands read from here.
+      MIGRATIONS = "src/db/migrations"
       MODELS     = "src/models"
       ENDPOINTS  = "src/endpoints"
       SERVICES   = "src/services"

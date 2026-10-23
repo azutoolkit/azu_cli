@@ -18,7 +18,7 @@ require "cql"
 # Migration for <%= table_name %> table
 <% end -%>
 # Generated at <%= Time.utc %>
-class <%= migration_class_name %> < CQL::Migration(<%= timestamp.to_i64 %>)
+class <%= migration_class_name %> < CQL::Migration(<%= timestamp.to_i64 %>_i64)
   def up
 <% if migration_type == "create_table" -%>
 <%= table_definition("    ", "schema.") %>

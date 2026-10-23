@@ -726,15 +726,11 @@ module AzuCLI
 
       # Fix auth migration timestamps to be unique (increment by 1 second each)
       private def fix_auth_migration_timestamps
-        # Check both possible locations
-        migrations_dir = if Dir.exists?("./src/db/migrations")
-                           "./src/db/migrations"
-                         elsif Dir.exists?("./db/migrations")
-                           "./db/migrations"
-                         else
-                           Logger.debug("No migrations directory found for timestamp fix")
-                           return
-                         end
+        migrations_dir = "./#{AzuCLI::Config::Paths::MIGRATIONS}"
+        unless Dir.exists?(migrations_dir)
+          Logger.debug("No migrations directory found for timestamp fix")
+          return
+        end
 
         Logger.info("Fixing migration timestamps in: #{migrations_dir}")
 
