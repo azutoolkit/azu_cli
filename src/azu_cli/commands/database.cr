@@ -66,7 +66,7 @@ module AzuCLI
 
       # Parse DATABASE_URL into components
       private def parse_database_url(url : String)
-        if url.matches?(/\Asqlite3?:/)
+        if url.matches?(/\Asqlite3?:/i)
           @adapter = "sqlite3"
           return remember_sqlite_file(url) # URI.parse rejects `sqlite3://:memory:` and reads the `.` of `./db` as a host
         end
@@ -83,7 +83,7 @@ module AzuCLI
       # The file a SQLite URL names (`sqlite3://./db/app.db?journal_mode=wal` is `./db/app.db`), and the
       # database name it goes by. The scheme is cut by hand because a SQLite URL is not an authority URL.
       private def remember_sqlite_file(url : String)
-        @sqlite_file = url.sub(/\Asqlite3?:(\/\/)?/, "").split('?', 2).first
+        @sqlite_file = url.sub(/\Asqlite3?:(\/\/)?/i, "").split('?', 2).first
         @database_name = @url_database_name = File.basename(@sqlite_file.to_s, ".db")
       end
 

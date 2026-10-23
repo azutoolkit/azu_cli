@@ -192,6 +192,12 @@ with `_method=delete`. Values are escaped with `| e`: `.jinja` templates are not
 An update is a `PATCH`: its request fields are all optional and only the ones sent change the record
 (a given string must not be blank). The edit form sends a hidden `false` before each checkbox so an unchecked box is saved.
 
+## Production
+
+Generated web projects refuse to boot in production (`CRYSTAL_ENV=production`; Azu does not read `AZU_ENV`) without
+`CSRF_SECRET` in the process environment. That includes a job worker, because `src/worker.cr` loads the app file.
+`azu serve --env production` prints the last lines the server wrote to stderr when it exits early.
+
 ## Field Types
 
 | Type         | Crystal Type | Description           |

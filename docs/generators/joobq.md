@@ -215,7 +215,7 @@ azu jobs:worker --workers=5 --queues=default,mailers --verbose
 crystal run src/worker.cr -- --worker
 
 # In production with environment
-AZU_ENV=production crystal run src/worker.cr -- --worker
+CRYSTAL_ENV=production crystal run src/worker.cr -- --worker  # also needs CSRF_SECRET: the worker loads the app file
 ```
 
 ### Job Queue Commands
@@ -247,7 +247,7 @@ Create separate configuration files for each environment:
 - `config/joobq.test.yml` - Test settings
 - `config/joobq.production.yml` - Production settings
 
-The initializer automatically loads the correct config based on `AZU_ENV` or `CRYSTAL_ENV`.
+The initializer automatically loads the correct config based on `AZU_ENV` or `CRYSTAL_ENV` (Azu itself reads only `CRYSTAL_ENV`).
 
 ### Queue Configuration
 

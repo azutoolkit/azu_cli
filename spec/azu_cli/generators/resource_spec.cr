@@ -92,7 +92,9 @@ describe AzuCLI::Generate::Resource do
       {"Campus" => {"campus", "campuses"}, "Analysis" => {"analysis", "analyses"}, "Address" => {"address", "addresses"},
        "Business" => {"business", "businesses"}, "Virus" => {"virus", "viri"}, "Bus" => {"bus", "buses"},
        "Atlas" => {"atlas", "atlases"}, "Alias" => {"alias", "aliases"}, "Census" => {"census", "censuses"},
-       "Campuses" => {"campus", "campuses"}, "Addresses" => {"address", "addresses"}}.each do |name, (singular, plural)|
+       "Campuses" => {"campus", "campuses"}, "Addresses" => {"address", "addresses"},
+       "Areas" => {"area", "areas"}, "Ideas" => {"idea", "ideas"}, "Cameras" => {"camera", "cameras"}, "Taxis" => {"taxi", "taxis"},
+       "Emojis" => {"emoji", "emojis"}, "Lens" => {"lens", "lenses"}}.each do |name, (singular, plural)|
         generator = AzuCLI::Generate::Model.new(name, {} of String => String)
         generator.resource_singular.should eq(singular)
         generator.resource_plural.should eq(plural)
@@ -104,10 +106,10 @@ describe AzuCLI::Generate::Resource do
 
   it "rejects resource names the generated code cannot use" do
     in_generated_project do
-      ["Series", "News", "Sheep", "Fish", "Status", "Request", "Context", "Params", "Header", "Headers", "Template", "Templates", "Param", "App", "Validator", "Markup", "PubSub", "Routable", "Components", "Schema", "Blog", "123x", "a-b"].each do |name|
+      ["Series", "News", "Sheep", "Fish", "Status", "Request", "Context", "Params", "Template", "Templates", "Param", "App", "Validator", "Markup", "PubSub", "Routable", "Components", "Schema", "Blog", "123x", "a-b"].each do |name|
         AzuCLI::Generate::Resource.name_error(name).should_not be_nil
       end
-      ["Post", "Person", "People", "Category", "UpdateLog", "Campus", "Analysis", "Address", "Business"].each do |name|
+      ["Post", "Person", "People", "Category", "UpdateLog", "Campus", "Analysis", "Address", "Business", "Header", "Headers"].each do |name|
         AzuCLI::Generate::Resource.name_error(name).should be_nil
       end
     end

@@ -145,10 +145,19 @@ module AzuCLI
             Logger.info("🌐 Server started (PID: #{process.pid})")
           else
             Logger.error("Server process failed to start")
+            report_early_exit(process)
           end
         end
       rescue ex
         Logger.error("Failed to start server: #{ex.message}")
+      end
+
+      # The last lines the server wrote to stderr before it died (a missing CSRF_SECRET in production, a port in use, ...).
+      private def report_early_exit(process : Process)
+        return if @verbose # the output is already on the terminal
+
+        message = process.error.gets_to_end.strip
+        Logger.error(message.lines.last(10).join("\n")) unless message.empty?
       end
 
       private def stop_server

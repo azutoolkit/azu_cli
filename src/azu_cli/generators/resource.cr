@@ -166,20 +166,23 @@ module AzuCLI
 
       # Constants of Crystal, Azu (the app module includes it) and the generated code that a model of
       # this name would hide, or that inflect badly ("status" singularizes to "statu").
-      RESERVED_NAMES = %w(Status Request Response Params Context Header Headers Handler Router Error Method
+      RESERVED_NAMES = %w(Status Request Response Params Context Handler Router Error Method
         Templates Configuration Channel Component Cache Endpoint Spark Helpers Environment Result Log
         Object Class Module Struct Enum Hash Array String Symbol Int Float Bool Nil Time File Dir IO Set
         Range Proc Tuple Value Exception Process Signal Path Random Math Mutex Fiber UUID JSON YAML URI
-        HTTP CQL Azu App Validator Markup PubSub Routable Components Schema Template Param)
+        HTTP CQL Azu App Validator Markup PubSub Routable Components Schema)
 
-      # The singular of a resource name, whether `Post` or `Posts` was typed. The inflector's last rule turns
-      # every trailing s into nothing (`Campus` into `campu`), so a name is taken for a plural only when it is
-      # the plural of its own singular (`posts`, `people`, `categories`) and does not end like a singular
-      # that ends in s (`us`, `is`, `ss`, `as`: campus, analysis, address, atlas). `Areas` is therefore typed `Area`.
+      # Singulars ending in s that the inflector takes for plurals (it turns `campus` into `campu`).
+      SINGULARS_IN_S = %w(alias analysis apparatus atlas axis basis bias bonus bus campus canvas census chorus
+        crisis focus gas genus iris lens radius status thesis virus)
+
+      # The singular of a resource name, whether `Post` or `Posts` was typed: a name is a plural when it is
+      # the plural of its own singular (`posts`, `people`, `areas`, `categories`), unless it is one of the
+      # singulars above. Other singulars the inflector mangles can be added to that list.
       def self.singular(name : String) : String
         underscored = name.underscore
         candidate = underscored.singularize
-        plural = candidate != underscored && candidate.pluralize == underscored && !underscored.matches?(/(us|is|ss|as)\z/)
+        plural = candidate != underscored && candidate.pluralize == underscored && !SINGULARS_IN_S.includes?(underscored)
         plural ? candidate : underscored
       end
 
