@@ -17,39 +17,37 @@ describe "Scaffold Generator Integration" do
           # Model
           "src/models/post.cr",
           # Migration
-          "db/migrations/*_create_posts.cr",
+          "src/db/migrations/*_create_posts.cr",
           # Endpoints (plural directory, singular_action filename)
-          "src/endpoints/posts/post_index_endpoint.cr",
-          "src/endpoints/posts/post_show_endpoint.cr",
-          "src/endpoints/posts/post_new_endpoint.cr",
-          "src/endpoints/posts/post_create_endpoint.cr",
-          "src/endpoints/posts/post_edit_endpoint.cr",
-          "src/endpoints/posts/post_update_endpoint.cr",
-          "src/endpoints/posts/post_destroy_endpoint.cr",
-          # Services (singular directory, action filename)
-          "src/services/post/index_service.cr",
-          "src/services/post/show_service.cr",
-          "src/services/post/create_service.cr",
-          "src/services/post/update_service.cr",
-          "src/services/post/destroy_service.cr",
+          "src/endpoints/posts/index_endpoint.cr",
+          "src/endpoints/posts/show_endpoint.cr",
+          "src/endpoints/posts/new_endpoint.cr",
+          "src/endpoints/posts/create_endpoint.cr",
+          "src/endpoints/posts/edit_endpoint.cr",
+          "src/endpoints/posts/update_endpoint.cr",
+          "src/endpoints/posts/destroy_endpoint.cr",
+          # Services (plural directory, action filename)
+          "src/services/posts/create_service.cr",
+          "src/services/posts/update_service.cr",
+          "src/services/posts/destroy_service.cr",
           # Requests (singular directory, action filename)
-          "src/requests/post/index_request.cr",
-          "src/requests/post/show_request.cr",
-          "src/requests/post/new_request.cr",
-          "src/requests/post/create_request.cr",
-          "src/requests/post/edit_request.cr",
-          "src/requests/post/update_request.cr",
-          "src/requests/post/destroy_request.cr",
-          # Pages (singular directory, action_page filename)
-          "src/pages/post/index_page.cr",
-          "src/pages/post/show_page.cr",
-          "src/pages/post/new_page.cr",
-          "src/pages/post/edit_page.cr",
+          "src/requests/posts/index_request.cr",
+          "src/requests/posts/show_request.cr",
+          "src/requests/posts/new_request.cr",
+          "src/requests/posts/create_request.cr",
+          "src/requests/posts/edit_request.cr",
+          "src/requests/posts/update_request.cr",
+          "src/requests/posts/destroy_request.cr",
+          # Pages (plural directory, action_page filename)
+          "src/pages/posts/index_page.cr",
+          "src/pages/posts/show_page.cr",
+          "src/pages/posts/new_page.cr",
+          "src/pages/posts/edit_page.cr",
           # Templates (in public/templates)
-          "public/templates/post/index_page.jinja",
-          "public/templates/post/show_page.jinja",
-          "public/templates/post/new_page.jinja",
-          "public/templates/post/edit_page.jinja",
+          "public/templates/scaffold_test/posts/index_page.jinja",
+          "public/templates/scaffold_test/posts/show_page.jinja",
+          "public/templates/scaffold_test/posts/new_page.jinja",
+          "public/templates/scaffold_test/posts/edit_page.jinja",
         ]
 
         Dir.cd(project_path) do
@@ -78,10 +76,8 @@ describe "Scaffold Generator Integration" do
 
         # Verify API-specific files are generated (JSON response files in responses directory)
         api_files = [
-          "src/responses/user/user_index_json.cr",
-          "src/responses/user/user_show_json.cr",
-          "src/responses/user/user_create_json.cr",
-          "src/responses/user/user_update_json.cr",
+          "src/responses/users/index_response.cr",
+          "src/responses/users/show_response.cr",
         ]
 
         Dir.cd(project_path) do
@@ -101,14 +97,14 @@ describe "Scaffold Generator Integration" do
         Dir.cd(project_path) do
           # Verify skipped files don't exist
           skipped_files = [
-            "public/templates/article/index_page.jinja",
-            "public/templates/article/show_page.jinja",
-            "public/templates/article/new_page.jinja",
-            "public/templates/article/edit_page.jinja",
-            "src/pages/article/index_page.cr",
-            "src/pages/article/show_page.cr",
-            "src/pages/article/new_page.cr",
-            "src/pages/article/edit_page.cr",
+            "public/templates/partial_scaffold_test/articles/index_page.jinja",
+            "public/templates/partial_scaffold_test/articles/show_page.jinja",
+            "public/templates/partial_scaffold_test/articles/new_page.jinja",
+            "public/templates/partial_scaffold_test/articles/edit_page.jinja",
+            "src/pages/articles/index_page.cr",
+            "src/pages/articles/show_page.cr",
+            "src/pages/articles/new_page.cr",
+            "src/pages/articles/edit_page.cr",
           ]
 
           skipped_files.each do |file|
@@ -118,9 +114,9 @@ describe "Scaffold Generator Integration" do
           # Verify non-skipped files exist
           required_files = [
             "src/models/article.cr",
-            "src/endpoints/articles/article_index_endpoint.cr",
-            "src/services/article/index_service.cr",
-            "src/requests/article/index_request.cr",
+            "src/endpoints/articles/index_endpoint.cr",
+            "src/services/articles/create_service.cr",
+            "src/requests/articles/index_request.cr",
           ]
 
           required_files.each do |file|
@@ -163,13 +159,13 @@ describe "Scaffold Generator Integration" do
         Dir.cd(project_path) do
           # Verify model file contains all field types
           model_content = File.read("src/models/product.cr")
-          model_content.should contain("getter name : String")
-          model_content.should contain("getter description : String")
-          model_content.should contain("getter price : Float64")
-          model_content.should contain("getter in_stock : Bool")
-          model_content.should contain("getter category_id : Int32")
-          model_content.should contain("getter tags : JSON::Any")
-          model_content.should contain("getter created_at : Time")
+          model_content.should contain("property name : String")
+          model_content.should contain("property description : String")
+          model_content.should contain("property price : Float64")
+          model_content.should contain("property in_stock : Bool")
+          model_content.should contain("property category_id : Int32")
+          model_content.should contain("property tags : JSON::Any")
+          model_content.should contain("property created_at : Time")
         end
       end
     end

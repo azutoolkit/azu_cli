@@ -8,6 +8,8 @@ module AzuCLI
   module Commands
     # Generate command for creating code from templates
     class Generate < Base
+      alias Generators = AzuCLI::Generate
+
       property generator_type : String = ""
       property generator_name : String = ""
       property attributes : Hash(String, String) = {} of String => String
@@ -72,6 +74,13 @@ module AzuCLI
         # Check for parse errors
         if parse_err = @parse_error
           return error(parse_err)
+        end
+
+        if RESOURCE_NAMED_GENERATORS.includes?(@generator_type) && (message = Generators::Resource.name_error(@generator_name))
+          return error(message)
+        end
+        if RESOURCE_GENERATORS.includes?(@generator_type) && (provided = Generators::Field.provided(@attributes)).any?
+          Logger.warn("#{provided.join(", ")} #{provided.size == 1 ? "is" : "are"} provided by the model and left out of the attributes")
         end
 
         # Show what we're generating
@@ -141,7 +150,7 @@ module AzuCLI
           parser.on("--force", "Overwrite existing files") { @force = true }
           parser.on("--api-only", "Generate API-only components") { @api_only = true }
           parser.on("--web-only", "Generate web-only components") { @web_only = true }
-          parser.on("--skip-tests", "Skip test file generation") { @skip_tests = true }
+          parser.on("--skip-tests", "Do not generate the migration (generate model)") { @skip_tests = true }
           parser.on("--skip COMPONENTS", "Skip specific components (comma-separated): model,endpoint,request,response,template,migration,page,service") do |components|
             @skip_components = components.split(",").map(&.strip.downcase)
           end
@@ -180,6 +189,12 @@ module AzuCLI
             parts = arg.split(":", 2)
             field_name = parts[0]
 
+            if RESOURCE_GENERATORS.includes?(@generator_type) && (message = Generators::Field.name_error(field_name))
+              Logger.error(message)
+              @parse_error = message
+              next
+            end
+
             # Check for duplicate field names
             if @attributes.has_key?(field_name)
               Logger.error("Duplicate field name '#{field_name}' found in attributes.")
@@ -202,24 +217,24 @@ module AzuCLI
       private def generate_model : Result
         Logger.info("Generating model with attributes: #{@attributes}")
 
-        generator = AzuCLI::Generate::Model.new(
+        generator = Generators::Model.new(
           name: @generator_name,
           attributes: @attributes,
           generate_migration: !@skip_tests
         )
 
-        render_generator(generator, AzuCLI::Generate::Model::OUTPUT_DIR)
+        render_generator(generator, Generators::Model::OUTPUT_DIR)
 
         # Show helpful next steps
-        Logger.success("✓ Model #{@generator_name} created: src/models/#{@generator_name.underscore}.cr")
+        Logger.success("✓ Model #{@generator_name} created: src/models/#{Generators::Resource.singular(@generator_name)}.cr")
         unless @skip_tests
-          Logger.success("✓ Migration created: db/migrations/*_create_#{@generator_name.underscore.pluralize}.cr")
+          Logger.success("✓ Migration created: src/db/migrations/*_create_#{Generators::Resource.plural(@generator_name)}.cr")
         end
 
         Logger.info("")
         Logger.info("Next steps:")
         Logger.info("  1. Run migrations: azu db:migrate")
-        Logger.info("  2. Add validations to src/models/#{@generator_name.underscore}.cr")
+        Logger.info("  2. Add validations to the request contracts in src/requests/")
         Logger.info("  3. Generate endpoints: azu generate endpoint #{@generator_name}")
         Logger.info("")
         Logger.info("Documentation: https://azutoolkit.github.io/cql/")
@@ -227,22 +242,25 @@ module AzuCLI
         success("Generated model #{@generator_name} successfully")
       end
 
+      # An error naming the supported actions, if any of `actions` is not one of them.
+      private def unsupported_actions(actions : Array(String), supported : Array(String)) : Result?
+        unsupported = actions - supported
+        return if unsupported.empty?
+        error("Unsupported action#{"s" if unsupported.size > 1} #{unsupported.join(", ")}. Supported actions: #{supported.join(", ")}")
+      end
+
       private def generate_endpoint : Result
         Logger.info("Generating endpoint with actions: #{@actions}")
+        if failure = unsupported_actions(@actions, Generators::Endpoint::ACTIONS)
+          return failure
+        end
 
-        endpoint_type = @api_only ? "api" : (@web_only ? "web" : "api")
+        endpoint_type = @api_only ? "api" : "web"
+        @actions.each do |action|
+          render_generator(Generators::Endpoint.new(@generator_name, action, endpoint_type), Generators::Endpoint::OUTPUT_DIR)
+        end
 
-        generator = AzuCLI::Generate::Endpoint.new(
-          name: @generator_name,
-          actions: @actions,
-          endpoint_type: endpoint_type
-        )
-
-        # Endpoint generator has custom render method
-        generator.render(AzuCLI::Generate::Endpoint::OUTPUT_DIR, force: @force, interactive: false)
-
-        # Show helpful next steps
-        resource_path = "/#{@generator_name.underscore.pluralize}"
+        resource_path = "/#{Generators::Resource.plural(@generator_name)}"
         Logger.success("✓ Endpoint #{@generator_name} created")
 
         Logger.info("")
@@ -268,9 +286,8 @@ module AzuCLI
 
         Logger.info("")
         Logger.info("Next steps:")
-        Logger.info("  1. Implement endpoint logic in src/endpoints/")
-        Logger.info("  2. Create corresponding requests: azu generate request #{@generator_name}")
-        Logger.info("  3. Create service layer: azu generate service #{@generator_name}")
+        Logger.info("  1. Create the requests: azu generate request #{@generator_name} <action>")
+        Logger.info("  2. Create the service layer: azu generate service #{@generator_name}")
         Logger.info("")
         Logger.info("Documentation: https://azutoolkit.github.io/azu/")
 
@@ -280,20 +297,17 @@ module AzuCLI
       private def generate_service : Result
         Logger.info("Generating service")
 
-        # If no actions specified, generate all CRUD actions
-        actions_to_generate = @actions.empty? ? ["create", "index", "show", "update", "destroy"] : @actions
-
-        actions_to_generate.each do |action|
-          generator = AzuCLI::Generate::Service.new(
-            name: @generator_name,
-            action: action,
-            attributes: @attributes
-          )
-          render_generator(generator, AzuCLI::Generate::Service::OUTPUT_DIR)
+        actions_to_generate = @actions.empty? ? Generators::Service::ACTIONS : @actions
+        if failure = unsupported_actions(actions_to_generate, Generators::Service::ACTIONS)
+          return failure
         end
 
-        # Show helpful next steps
-        Logger.success("✓ Services created in src/services/#{@generator_name.underscore}/")
+        actions_to_generate.each do |action|
+          generator = Generators::Service.new(@generator_name, action, @attributes)
+          render_generator(generator, Generators::Service::OUTPUT_DIR)
+        end
+
+        Logger.success("✓ Services created in src/services/#{Generators::Resource.plural(@generator_name)}/")
         actions_to_generate.each do |action|
           Logger.info("  - #{action}_service.cr")
         end
@@ -302,8 +316,7 @@ module AzuCLI
         Logger.info("Next steps:")
         Logger.info("  1. Implement business logic in each service")
         Logger.info("  2. Call services from endpoints:")
-        Logger.info("     result = #{@generator_name.camelcase}::CreateService.new.call(request)")
-        Logger.info("  3. Handle service results in endpoints")
+        Logger.info("     #{Generators::Resource.plural(@generator_name).camelcase}::CreateService.new.call(create_request)")
         Logger.info("")
         Logger.info("Documentation: https://azutoolkit.github.io/azu/")
 
@@ -313,56 +326,41 @@ module AzuCLI
       private def generate_request : Result
         Logger.info("Generating request")
 
-        # Use the proper request generator (aligns with Azu::Request)
         action = @actions.first? || "index"
+        if failure = unsupported_actions([action], Generators::Request::ACTIONS)
+          return failure
+        end
+        generator = Generators::Request.new(@generator_name, action, @attributes)
 
-        generator = AzuCLI::Generate::Request.new(
-          project: project_name,
-          resource: @generator_name,
-          action: action,
-          attributes: @attributes
-        )
-
-        render_generator(generator, AzuCLI::Generate::Request::OUTPUT_DIR)
+        render_generator(generator, Generators::Request::OUTPUT_DIR)
         success("Generated request #{@generator_name} successfully")
-      end
-
-      def project_name
-        # get name from shard.yml
-        return "app" unless File.exists?("./shard.yml")
-        shard_yml = YAML.parse(File.read("./shard.yml"))
-        shard_yml["name"].as_s
-      rescue ex : Exception
-        Logger.debug("Failed to read project name from shard.yml: #{ex.message}")
-        "app"
       end
 
       private def generate_page : Result
         Logger.info("Generating page with template")
 
         action = @actions.first? || "index"
-        project_type = @api_only ? "api" : "web"
-        generator = AzuCLI::Generate::Page.new(
-          name: @generator_name,
-          fields: @attributes,
-          action: action,
-          project_type: project_type
-        )
-
-        output_dir = AzuCLI::Generate::Page.output_dir_for_type(project_type)
-        render_generator(generator, output_dir)
+        if failure = unsupported_actions([action], @api_only ? Generators::Response::ACTIONS : Generators::Page::ACTIONS)
+          return failure
+        end
+        if @api_only
+          render_generator(Generators::Response.new(@generator_name, action, @attributes), Generators::Response::OUTPUT_DIR)
+        else
+          render_generator(Generators::Page.new(@generator_name, action, @attributes), Generators::Page::OUTPUT_DIR)
+          render_generator(Generators::Template.new(@generator_name, action, @attributes), Generators::Template::OUTPUT_DIR)
+        end
         success("Generated page #{@generator_name} successfully")
       end
 
       private def generate_job : Result
         Logger.info("Generating job")
 
-        generator = AzuCLI::Generate::Job.new(
+        generator = Generators::Job.new(
           name: @generator_name,
           parameters: @attributes
         )
 
-        render_generator(generator, AzuCLI::Generate::Job::OUTPUT_DIR)
+        render_generator(generator, Generators::Job::OUTPUT_DIR)
 
         # Show helpful next steps
         job_name = "#{@generator_name.gsub(/Job$/i, "").camelcase}Job"
@@ -405,7 +403,7 @@ module AzuCLI
         redis_url = @options["redis"]? || "redis://localhost:6379"
         create_example = !@options.has_key?("no-example")
 
-        generator = AzuCLI::Generate::JoobQ.new(
+        generator = Generators::JoobQ.new(
           project_name: project_name,
           redis_url: redis_url,
           create_example_job: create_example
@@ -451,27 +449,27 @@ module AzuCLI
 
         middleware_type = @options["type"]? || "authentication"
 
-        generator = AzuCLI::Generate::Middleware.new(
+        generator = Generators::Middleware.new(
           name: @generator_name,
           middleware_type: middleware_type
         )
 
-        render_generator(generator, AzuCLI::Generate::Middleware::OUTPUT_DIR)
+        render_generator(generator, Generators::Middleware::OUTPUT_DIR)
         success("Generated middleware #{@generator_name} successfully")
       end
 
       private def generate_migration : Result
         Logger.info("Generating migration")
 
-        generator = AzuCLI::Generate::Migration.new(
+        generator = Generators::Migration.new(
           name: @generator_name,
           attributes: @attributes
         )
 
-        render_generator(generator, AzuCLI::Generate::Migration::OUTPUT_DIR)
+        render_generator(generator, Generators::Migration::OUTPUT_DIR)
 
         # Show helpful next steps
-        Logger.success("✓ Migration created: db/migrations/#{generator.migration_filename}")
+        Logger.success("✓ Migration created: src/db/migrations/#{generator.migration_filename}")
 
         Logger.info("")
         Logger.info("Next steps:")
@@ -491,11 +489,11 @@ module AzuCLI
       private def generate_data_migration : Result
         Logger.info("Generating data migration")
 
-        generator = AzuCLI::Generate::DataMigration.new(
+        generator = Generators::DataMigration.new(
           name: @generator_name
         )
 
-        render_generator(generator, AzuCLI::Generate::DataMigration::OUTPUT_DIR)
+        render_generator(generator, Generators::DataMigration::OUTPUT_DIR)
         success("Generated data migration #{@generator_name} successfully")
       end
 
@@ -536,12 +534,12 @@ module AzuCLI
       private def generate_component : Result
         Logger.info("Generating component")
 
-        generator = AzuCLI::Generate::Component.new(
+        generator = Generators::Component.new(
           name: @generator_name,
           properties: @attributes
         )
 
-        render_generator(generator, AzuCLI::Generate::Component::OUTPUT_DIR)
+        render_generator(generator, Generators::Component::OUTPUT_DIR)
         success("Generated component #{@generator_name} successfully")
       end
 
@@ -550,31 +548,25 @@ module AzuCLI
 
         record_type = @options["record"]? || "User"
 
-        generator = AzuCLI::Generate::Validator.new(
+        generator = Generators::Validator.new(
           name: @generator_name,
           record_type: record_type
         )
 
-        render_generator(generator, AzuCLI::Generate::Validator::OUTPUT_DIR)
+        render_generator(generator, Generators::Validator::OUTPUT_DIR)
         success("Generated validator #{@generator_name} successfully")
       end
 
       private def generate_response : Result
         Logger.info("Generating response")
 
-        from_type = @options["from"]?
-        project_type = "api" # Always generate API-style responses for the response command
+        action = @actions.first? || "show"
+        if failure = unsupported_actions([action], Generators::Response::ACTIONS)
+          return failure
+        end
+        generator = Generators::Response.new(@generator_name, action, @attributes)
 
-        generator = AzuCLI::Generate::Page.new(
-          name: @generator_name,
-          fields: @attributes,
-          action: "index",
-          project_type: project_type,
-          from_type: from_type
-        )
-
-        output_dir = AzuCLI::Generate::Page.output_dir_for_type(project_type)
-        render_generator(generator, output_dir)
+        render_generator(generator, Generators::Response::OUTPUT_DIR)
         success("Generated response #{@generator_name} successfully")
       end
 
@@ -582,14 +574,12 @@ module AzuCLI
         Logger.info("Generating template")
 
         action = @actions.first? || "index"
+        if failure = unsupported_actions([action], Generators::Page::ACTIONS)
+          return failure
+        end
+        generator = Generators::Template.new(@generator_name, action, @attributes)
 
-        generator = AzuCLI::Generate::Template.new(
-          name: @generator_name,
-          fields: @attributes,
-          action: action
-        )
-
-        render_generator(generator, AzuCLI::Generate::Template::OUTPUT_DIR)
+        render_generator(generator, Generators::Template::OUTPUT_DIR)
         success("Generated template #{@generator_name} successfully")
       end
 
@@ -598,13 +588,13 @@ module AzuCLI
 
         methods = @actions.empty? ? ["welcome"] : @actions
 
-        generator = AzuCLI::Generate::Mailer.new(
+        generator = Generators::Mailer.new(
           name: @generator_name,
           methods: methods,
           async: !@skip_components.includes?("job")
         )
 
-        render_generator(generator, AzuCLI::Generate::Mailer::OUTPUT_DIR)
+        render_generator(generator, Generators::Mailer::OUTPUT_DIR)
         success("Generated mailer #{@generator_name} successfully")
       end
 
@@ -613,12 +603,12 @@ module AzuCLI
 
         actions = @actions.empty? ? ["subscribed", "unsubscribed", "receive"] : @actions
 
-        generator = AzuCLI::Generate::Channel.new(
+        generator = Generators::Channel.new(
           name: @generator_name,
           actions: actions
         )
 
-        render_generator(generator, AzuCLI::Generate::Channel::OUTPUT_DIR)
+        render_generator(generator, Generators::Channel::OUTPUT_DIR)
 
         # Show helpful next steps
         channel_name = "#{@generator_name.camelcase}Channel"
@@ -642,7 +632,7 @@ module AzuCLI
 
         strategy = @options["strategy"]? || "authly"
         user_model = @options["user_model"]? || "User"
-        proj_name = project_name
+        proj_name = Utils.project_name
 
         # Parse boolean options
         enable_rbac = @options["rbac"]?.try { |v| v.downcase == "true" } || true
@@ -651,7 +641,7 @@ module AzuCLI
         # Parse OAuth providers
         oauth_providers = @options["oauth-providers"]?.try(&.split(",").map(&.strip)) || ["google", "github"]
 
-        generator = AzuCLI::Generate::Auth.new(
+        generator = Generators::Auth.new(
           project: proj_name,
           strategy: strategy,
           user_model: user_model,
@@ -666,7 +656,7 @@ module AzuCLI
         Logger.info("CSRF protection: #{enable_csrf}")
         Logger.info("OAuth providers: #{oauth_providers.join(", ")}")
 
-        render_generator(generator, AzuCLI::Generate::Auth::OUTPUT_DIR)
+        render_generator(generator, Generators::Auth::OUTPUT_DIR)
 
         # Fix migration timestamps to be unique
         fix_auth_migration_timestamps
@@ -848,318 +838,84 @@ module AzuCLI
       private def generate_api_resource : Result
         Logger.info("Generating API resource (complete REST API)")
 
-        # Force API-only mode
         @api_only = true
-        @skip_components << "template" unless @skip_components.includes?("template")
-        @skip_components << "page" unless @skip_components.includes?("page")
-
-        # Use scaffold generation with API mode
         generate_scaffold
       end
 
       private def generate_scaffold : Result
         Logger.info("Generating scaffold (complete CRUD)")
 
-        # Validate scaffold generation parameters
         validation_result = validate_scaffold_parameters
         return validation_result unless validation_result.success?
 
-        components_generated = [] of String
-        crud_actions = ["index", "show", "new", "create", "edit", "update", "destroy"]
+        generated = scaffold_steps.compact_map do |component, (generators, output_dir)|
+          next if should_skip_component?(component)
 
-        # Generate Model
-        unless should_skip_component?("model")
-          Logger.info("🔨 Generating model...")
-          begin
-            model_generator = AzuCLI::Generate::Model.new(
-              name: @generator_name,
-              attributes: @attributes,
-              generate_migration: !should_skip_component?("migration") # Only generate migration with model if migration is not being skipped
-            )
-            render_generator(model_generator, AzuCLI::Generate::Model::OUTPUT_DIR)
-            components_generated << "model"
-            Logger.success("✓ Model generated successfully")
-          rescue ex
-            Logger.error("Failed to generate model: #{ex.message}")
-            return error("Model generation failed: #{ex.message}")
-          end
-        end
-
-        # Generate separate Migration only if model was skipped (otherwise model generator already created it)
-        unless should_skip_component?("migration")
-          if should_skip_component?("model") # Only generate separate migration if model was skipped
-            Logger.info("🔨 Generating migration...")
-            begin
-              migration_generator = AzuCLI::Generate::Migration.new(
-                name: "create_#{@generator_name.downcase}s",
-                attributes: @attributes
-              )
-              render_generator(migration_generator, AzuCLI::Generate::Migration::OUTPUT_DIR)
-              components_generated << "migration"
-              Logger.success("✓ Migration generated successfully")
-            rescue ex
-              Logger.error("Failed to generate migration: #{ex.message}")
-              return error("Migration generation failed: #{ex.message}")
-            end
-          end
-        end
-
-        # Generate Endpoints
-        unless should_skip_component?("endpoint")
-          Logger.info("🔨 Generating endpoints...")
-          begin
-            endpoint_type = @api_only ? "api" : (@web_only ? "web" : "web")
-            endpoint_generator = AzuCLI::Generate::Endpoint.new(
-              name: @generator_name,
-              actions: crud_actions,
-              endpoint_type: endpoint_type,
-              scaffold: true
-            )
-            endpoint_generator.fields = @attributes
-            endpoint_generator.render(AzuCLI::Generate::Endpoint::OUTPUT_DIR, force: @force, interactive: false)
-            components_generated << "endpoint"
-            Logger.success("✓ Endpoints generated successfully")
-          rescue ex
-            Logger.error("Failed to generate endpoints: #{ex.message}")
-            return error("Endpoint generation failed: #{ex.message}")
-          end
-        end
-
-        # Generate Services (if CQL enabled)
-        unless should_skip_component?("service")
-          Logger.info("🔨 Generating services...")
-
-          # Service actions (skip view-only actions)
-          service_actions = ["create", "index", "show", "update", "destroy"]
-
-          service_actions.each do |action|
-            service_generator = AzuCLI::Generate::Service.new(
-              name: @generator_name,
-              action: action,
-              attributes: @attributes
-            )
-            render_generator(service_generator, AzuCLI::Generate::Service::OUTPUT_DIR)
-          end
-
-          components_generated << "service"
-        end
-
-        # Generate Requests (both API and Web) - aligns with Azu::Request
-        unless should_skip_component?("request")
-          Logger.info("🔨 Generating requests...")
-          # Get project name from config or use default
-          proj_name = project_name
-
-          # Generate requests for each CRUD action
-          crud_actions.each do |action|
-            request_generator = AzuCLI::Generate::Request.new(
-              project: proj_name,
-              resource: @generator_name,
-              action: action,
-              attributes: @attributes
-            )
-            render_generator(request_generator, AzuCLI::Generate::Request::OUTPUT_DIR)
-          end
-          components_generated << "request"
-        end
-
-        # Generate Responses (API mode only)
-        unless should_skip_component?("response") || @web_only
-          if @api_only
-            Logger.info("🔨 Generating responses...")
-            output_dir = AzuCLI::Generate::Page.output_dir_for_type("api")
-
-            # Generate responses for each CRUD action
-            crud_actions.each do |action|
-              response_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, "api")
-              render_generator(response_generator, output_dir)
-            end
-            components_generated << "response"
-          end
-        end
-
-        # Generate Pages (Web mode)
-        unless should_skip_component?("page") || @api_only
-          Logger.info("🔨 Generating pages...")
-          output_dir = AzuCLI::Generate::Page.output_dir_for_type("web")
-          crud_actions.each do |action|
-            page_generator = AzuCLI::Generate::Page.new(@generator_name, @attributes, action, "web")
-            render_generator(page_generator, output_dir)
-          end
-          components_generated << "page"
-        end
-
-        # Generate Templates (Web mode)
-        unless should_skip_component?("template") || @api_only
-          Logger.info("🔨 Generating templates...")
-          ["index", "show", "new", "edit"].each do |action|
-            template_generator = AzuCLI::Generate::Template.new(@generator_name, @attributes, action)
-            render_generator(template_generator, AzuCLI::Generate::Template::OUTPUT_DIR)
-          end
-          components_generated << "template"
+          generators.each { |generator| render_generator(generator, output_dir) }
+          component
         end
 
         Logger.info("✅ Scaffold generation completed")
-        Logger.info("📦 Generated components: #{components_generated.join(", ")}")
-
-        if @skip_components.any?
-          Logger.info("⏭️  Skipped components: #{@skip_components.join(", ")}")
-        end
-
-        # Generate summary file
-        generate_scaffold_summary(components_generated)
+        Logger.info("📦 Generated components: #{generated.join(", ")}")
+        Logger.info("⏭️  Skipped components: #{@skip_components.join(", ")}") if @skip_components.any?
+        Logger.info("Next: azu db:setup, then azu serve")
 
         success("Generated scaffold #{@generator_name} successfully")
+      rescue ex : Exception
+        error("Scaffold generation failed: #{ex.message}")
       end
+
+      # The generators of each scaffold component with the directory they render into. The model
+      # generator also renders the migration, unless the model itself is skipped.
+      private def scaffold_steps : Hash(String, Tuple(Array(Teeplate::FileTree), String))
+        type = @api_only ? "api" : "web"
+        steps = {} of String => Tuple(Array(Teeplate::FileTree), String)
+
+        steps["model"] = {[Generators::Model.new(@generator_name, @attributes, generate_migration: !should_skip_component?("migration")).as(Teeplate::FileTree)], Generators::Model::OUTPUT_DIR}
+        if should_skip_component?("model")
+          steps["migration"] = {[Generators::Migration.new("create_#{Generators::Resource.plural(@generator_name)}", @attributes, table: Generators::Resource.plural(@generator_name)).as(Teeplate::FileTree)], Generators::Migration::OUTPUT_DIR}
+        end
+        steps["endpoint"] = {generators_for(scaffold_actions) { |action| Generators::Endpoint.new(@generator_name, action, type) }, Generators::Endpoint::OUTPUT_DIR}
+        steps["service"] = {generators_for(Generators::Service::ACTIONS) { |action| Generators::Service.new(@generator_name, action, @attributes) }, Generators::Service::OUTPUT_DIR}
+        steps["request"] = {generators_for(scaffold_actions) { |action| Generators::Request.new(@generator_name, action, @attributes) }, Generators::Request::OUTPUT_DIR}
+
+        if @api_only
+          steps["response"] = {generators_for(Generators::Response::ACTIONS) { |action| Generators::Response.new(@generator_name, action, @attributes) }, Generators::Response::OUTPUT_DIR}
+        else
+          steps["page"] = {generators_for(Generators::Page::ACTIONS) { |action| Generators::Page.new(@generator_name, action, @attributes) }, Generators::Page::OUTPUT_DIR}
+          steps["template"] = {generators_for(Generators::Page::ACTIONS) { |action| Generators::Template.new(@generator_name, action, @attributes) }, Generators::Template::OUTPUT_DIR}
+        end
+        steps
+      end
+
+      private def generators_for(actions : Array(String), & : String -> Teeplate::FileTree) : Array(Teeplate::FileTree)
+        actions.map { |action| yield(action).as(Teeplate::FileTree) }
+      end
+
+      # An API has no forms, so no `new` and `edit`.
+      private def scaffold_actions : Array(String)
+        @api_only ? %w(index show create update destroy) : %w(index show new create edit update destroy)
+      end
+
+      # The generators whose `name:type` arguments become columns, getters and form fields.
+      RESOURCE_GENERATORS = %w(model migration scaffold api_resource api-resource request page response template service endpoint)
+      # Those among them whose name is the resource (a migration is named for what it does).
+      RESOURCE_NAMED_GENERATORS = RESOURCE_GENERATORS - %w(migration)
+      SCAFFOLD_TYPES            = %w(string text int32 integer int64 float32 float64 float bool boolean time datetime date json uuid email url references belongs_to)
 
       # Validate scaffold generation parameters
       private def validate_scaffold_parameters : Result
-        # Validate resource name format
-        unless valid_crystal_identifier?(@generator_name)
-          return error("Invalid resource name '#{@generator_name}'. Must be a valid Crystal identifier.")
-        end
-
-        # Check for reserved words
-        reserved_words = ["id", "created_at", "updated_at", "class", "module", "def", "end", "if", "else", "elsif", "unless", "while", "until", "for", "in", "case", "when", "then", "do", "begin", "rescue", "ensure", "return", "break", "next", "yield", "super", "self", "true", "false", "nil"]
-        if reserved_words.includes?(@generator_name.downcase)
-          return error("Resource name '#{@generator_name}' is a reserved word. Please choose a different name.")
-        end
-
-        # Validate attribute types
-        supported_types = ["string", "text", "int32", "int64", "float32", "float64", "bool", "boolean", "time", "datetime", "date", "json", "uuid", "email", "url", "references", "belongs_to"]
-        @attributes.each do |field, type|
-          unless supported_types.includes?(type.downcase)
-            return error("Unsupported attribute type '#{type}' for field '#{field}'. Supported types: #{supported_types.join(", ")}")
-          end
-
-          # Warn about reserved field names
-          if reserved_words.includes?(field.downcase)
-            Logger.warn("Field name '#{field}' is a reserved word. Consider using a different name.")
+        @attributes.each do |name, type|
+          if message = Generators::Field.new(name, type).type_error(SCAFFOLD_TYPES)
+            return error(message)
           end
         end
 
-        # Validate that at least one component will be generated
         if @skip_components.size >= 7 # All components skipped
           return error("Cannot generate scaffold with all components skipped. At least one component must be generated.")
         end
 
         success("Scaffold validation passed")
-      end
-
-      # Check if string is a valid Crystal identifier
-      private def valid_crystal_identifier?(name : String) : Bool
-        return false if name.empty?
-        return false unless name.match(/^[A-Za-z_][A-Za-z0-9_]*$/)
-        true
-      end
-
-      # Generate scaffold summary file
-      private def generate_scaffold_summary(components_generated : Array(String))
-        summary_content = <<-SUMMARY
-# Scaffold Generation Summary
-
-**Resource:** #{@generator_name}
-**Generated at:** #{Time.utc}
-**Project type:** #{@api_only ? "API" : (@web_only ? "Web" : "Web + API")}
-
-## Generated Components
-
-#{components_generated.map { |comp| "- ✅ #{comp.capitalize}" }.join("\n")}
-
-## Generated Files
-
-#{generate_file_list(components_generated)}
-
-## Next Steps
-
-1. **Database Setup:**
-   - Run `azu db:migrate` to create the database tables
-   - Run `azu db:seed` to populate with sample data (if applicable)
-
-2. **Development:**
-   - Start the development server with `azu serve`
-   - Visit the generated endpoints in your browser or API client
-
-3. **Customization:**
-   - Modify the generated models, services, and endpoints as needed
-   - Add business logic to the service classes
-   - Customize the templates for web pages
-
-## Generated Endpoints
-
-#{generate_endpoint_list}
-
-## Configuration
-
-- **API Mode:** #{@api_only}
-- **Web Mode:** #{@web_only}
-- **Skipped Components:** #{@skip_components.any? ? @skip_components.join(", ") : "None"}
-
----
-Generated by Azu CLI v#{AzuCLI::VERSION}
-SUMMARY
-
-        File.write("SCAFFOLD_SUMMARY.md", summary_content)
-        Logger.info("📄 Summary saved to SCAFFOLD_SUMMARY.md")
-      end
-
-      # Generate file list for summary
-      private def generate_file_list(components_generated : Array(String)) : String
-        files = [] of String
-        crud_actions = ["index", "show", "new", "create", "edit", "update", "destroy"]
-
-        components_generated.each do |component|
-          case component
-          when "model"
-            files << "- `src/models/#{@generator_name.underscore}.cr`"
-          when "migration"
-            files << "- `src/db/migrations/*_create_#{@generator_name.underscore.pluralize}.cr`"
-          when "endpoint"
-            crud_actions.each do |action|
-              files << "- `src/endpoints/#{@generator_name.underscore.pluralize}/#{@generator_name.underscore}_#{action}_endpoint.cr`"
-            end
-          when "service"
-            ["create", "index", "show", "update", "destroy"].each do |action|
-              files << "- `src/services/#{@generator_name.underscore}/#{action}_service.cr`"
-            end
-            files << "- `src/services/result.cr`"
-          when "request"
-            crud_actions.each do |action|
-              files << "- `src/requests/#{@generator_name.underscore}/#{action}_request.cr`"
-            end
-          when "response", "page"
-            if @api_only
-              crud_actions.each do |action|
-                files << "- `src/pages/#{@generator_name.underscore}/#{@generator_name.underscore}_#{action}_json.cr`"
-              end
-            else
-              crud_actions.each do |action|
-                files << "- `src/pages/#{@generator_name.underscore}/#{action}_page.cr`"
-              end
-            end
-          when "template"
-            ["index", "show", "new", "edit"].each do |action|
-              files << "- `public/templates/#{@generator_name.underscore}/#{action}_page.jinja`"
-            end
-          end
-        end
-
-        files.join("\n")
-      end
-
-      # Generate endpoint list for summary
-      private def generate_endpoint_list : String
-        base_path = "/#{@generator_name.underscore.pluralize}"
-        endpoints = [
-          "GET    #{base_path}           - List all #{@generator_name.underscore.pluralize}",
-          "GET    #{base_path}/new       - New #{@generator_name.underscore} form",
-          "POST   #{base_path}           - Create #{@generator_name.underscore}",
-          "GET    #{base_path}/:id       - Show #{@generator_name.underscore}",
-          "GET    #{base_path}/:id/edit  - Edit #{@generator_name.underscore} form",
-          "PATCH  #{base_path}/:id       - Update #{@generator_name.underscore}",
-          "DELETE #{base_path}/:id       - Delete #{@generator_name.underscore}",
-        ]
-        endpoints.join("\n")
       end
 
       # Helper method to check if a component should be skipped
@@ -1339,7 +1095,7 @@ SUMMARY
         puts
         puts "Options:"
         puts "  --force                    Overwrite existing files without prompting"
-        puts "  --skip-tests               Skip generating test files"
+        puts "  --skip-tests               Do not generate the migration (generate model)"
         puts "  --api-only                 Generate API-only components (JSON responses)"
         puts "  --web-only                 Generate web-only components (HTML pages)"
         puts "  --skip COMPONENTS          Skip specific components (comma-separated)"

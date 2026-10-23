@@ -1,0 +1,9 @@
+module <%= app_module %>
+  class <%= namespace %>::CreateService
+    def call(request : <%= request_type %>) : <%= model_name %>
+      record = <%= model_name %>.new(<%= assignments %>)
+      record.save!
+      record
+    end
+  end
+end

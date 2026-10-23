@@ -1,0 +1,18 @@
+module <%= app_module %>
+  struct <%= namespace %>::DestroyEndpoint
+    include Azu::Endpoint(<%= request_type %>, <%= response_type %>)
+
+    delete "<%= route %>"
+
+    def call : <%= response_type %>
+      record = <%= find_record %>
+      <%= namespace %>::DestroyService.new.call(record)
+<% if api? -%>
+      status 204
+      Azu::Response::Empty.new
+<% else -%>
+      redirect to: "/<%= resource_plural %>", status: 303
+<% end -%>
+    end
+  end
+end

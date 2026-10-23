@@ -140,7 +140,7 @@ module AzuCLI
         puts
         puts "Options:"
         puts "  --force                    Overwrite existing files"
-        puts "  --skip-tests               Skip test file generation"
+        puts "  --skip-tests               Do not generate the migration (generate model)"
         puts "  --api-only                 Generate API-only components"
         puts "  --web-only                 Generate web-only components"
         puts

@@ -8,6 +8,10 @@ module AzuCLI
   module Commands
     # Base class for database commands
     abstract class Database < Base
+      # A SQLite URL that names no file (`sqlite3::memory:`, `sqlite3:`): there is nothing to create or drop.
+      class InMemoryDatabase < Exception
+      end
+
       property database_url : String?
       property adapter : String = "postgres"
       property database_name : String?
@@ -16,6 +20,8 @@ module AzuCLI
       property username : String = "postgres"
       property password : String = ""
       property environment : String = "development"
+      @sqlite_file : String?
+      @url_database_name : String?
 
       # Connection pool configuration
       property pool_size : Int32 = 10
@@ -33,6 +39,8 @@ module AzuCLI
 
       # Load database configuration from environment or config files
       private def load_database_config
+        @environment = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || @environment
+
         # Try DATABASE_URL first
         if url = ENV["DATABASE_URL"]?
           @database_url = url
@@ -47,10 +55,8 @@ module AzuCLI
           @database_name = ENV["AZU_DB_NAME"]? || ENV["DATABASE_NAME"]? || infer_database_name
           @username = ENV["AZU_DB_USER"]? || ENV["DATABASE_USER"]? || @username
           @password = ENV["AZU_DB_PASSWORD"]? || ENV["DATABASE_PASSWORD"]? || @password
-          @adapter = ENV["AZU_DB_ADAPTER"]? || @adapter
+          @adapter = ENV["AZU_DB_ADAPTER"]? || project_adapter || @adapter
         end
-
-        @environment = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || @environment
 
         # Load connection pool configuration
         @pool_size = ENV["AZU_DB_POOL_SIZE"]?.try(&.to_i) || @pool_size
@@ -60,6 +66,11 @@ module AzuCLI
 
       # Parse DATABASE_URL into components
       private def parse_database_url(url : String)
+        if url.matches?(/\Asqlite3?:/i)
+          @adapter = "sqlite3"
+          return remember_sqlite_file(url) # URI.parse rejects `sqlite3://:memory:` and reads the `.` of `./db` as a host
+        end
+
         uri = URI.parse(url)
         @adapter = uri.scheme || "postgres"
         @host = uri.host || "localhost"
@@ -67,6 +78,13 @@ module AzuCLI
         @username = uri.user || "postgres"
         @password = uri.password || ""
         @database_name = uri.path.try(&.lstrip('/')) || ""
+      end
+
+      # The file a SQLite URL names (`sqlite3://./db/app.db?journal_mode=wal` is `./db/app.db`), and the
+      # database name it goes by. The scheme is cut by hand because a SQLite URL is not an authority URL.
+      private def remember_sqlite_file(url : String)
+        @sqlite_file = url.sub(/\Asqlite3?:(\/\/)?/i, "").split('?', 2).first
+        @database_name = @url_database_name = File.basename(@sqlite_file.to_s, ".db")
       end
 
       # Get default port for database adapter
@@ -81,6 +99,27 @@ module AzuCLI
         else
           5432
         end
+      end
+
+      # Adapter of the project's database driver shard (sqlite3, mysql). PostgreSQL, the default, wins
+      # when its driver is there, and is what a project without any driver gets.
+      private def project_adapter : String?
+        dependencies = Utils.project_dependencies
+        return if dependencies.includes?("pg")
+        {"sqlite3", "mysql"}.find { |driver| dependencies.includes?(driver) }
+      end
+
+      # File of a SQLite database. The file of DATABASE_URL belongs to the database that URL names; any
+      # other name (`--database other`) is `db/<name>.db`, like the generated project's initializer, so
+      # db:drop never deletes the URL's file for another name. SQLite needs no server and creates the
+      # file on first use.
+      protected def sqlite_path(db_name : String) : String
+        file = @sqlite_file
+        return "./db/#{db_name}.db" unless file && db_name == @url_database_name
+        if file.empty? || file.lstrip('/').starts_with?(":memory:")
+          raise InMemoryDatabase.new("#{@database_url} is an in-memory database: it has no file to create, check or drop")
+        end
+        file
       end
 
       # Infer database name from current directory
@@ -106,7 +145,7 @@ module AzuCLI
         when "mysql"
           "mysql://#{@username}:#{@password}@#{@host}:#{@port}/mysql"
         when "sqlite", "sqlite3"
-          "sqlite3:./#{@database_name}.db"
+          "sqlite3:#{sqlite_path(@database_name || infer_database_name)}"
         else
           raise "Unsupported database adapter: #{@adapter}"
         end
@@ -122,7 +161,7 @@ module AzuCLI
         when "mysql"
           "mysql://#{@username}:#{@password}@#{@host}:#{@port}/#{db}"
         when "sqlite", "sqlite3"
-          "sqlite3:./#{db}.db"
+          "sqlite3:#{sqlite_path(db)}"
         else
           raise "Unsupported database adapter: #{@adapter}"
         end
@@ -233,10 +272,12 @@ module AzuCLI
             ) == 1
           end
         when "sqlite", "sqlite3"
-          File.exists?("./#{db}.db")
+          File.exists?(sqlite_path(db))
         else
           false
         end
+      rescue ex : InMemoryDatabase
+        raise ex
       rescue ex : Exception
         Logger.debug("Failed to check database existence: #{ex.message}")
         false

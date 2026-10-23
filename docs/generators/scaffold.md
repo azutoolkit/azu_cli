@@ -29,144 +29,128 @@ azu generate scaffold Post title:string content:text user_id:references publishe
 azu generate scaffold Product name:string price:float64 --api-only
 ```
 
+## Naming
+
+One scheme runs through every layer. For `Post` in a project named `blog` (module `Blog`):
+
+| Layer      | Constant                           | File                                    |
+| ---------- | ---------------------------------- | --------------------------------------- |
+| Model      | `Post`                             | `src/models/post.cr`                    |
+| Migration  | `CreatePosts`                      | `src/db/migrations/<timestamp>_create_posts.cr` |
+| Request    | `Blog::Posts::CreateRequest`       | `src/requests/posts/create_request.cr`  |
+| Endpoint   | `Blog::Posts::CreateEndpoint`      | `src/endpoints/posts/create_endpoint.cr` |
+| Service    | `Blog::Posts::CreateService`       | `src/services/posts/create_service.cr`  |
+| Page       | `Blog::Posts::IndexPage`           | `src/pages/posts/index_page.cr`         |
+| Template   |                                    | `public/templates/blog/posts/index_page.jinja` |
+
+The model is a top-level class (`Post.create!`, `Post.find?`); everything that belongs to the web layer lives
+in the plural namespace `Blog::Posts`, so the two never collide. The template path is the one
+`Azu::Templates::Renderable#page_path` derives from the page's class name (`Blog::Posts::IndexPage` is
+`blog/posts/index_page.jinja`).
+
 ## Generated Files
 
 ```text
 src/
-├── models/
-│   └── user.cr
-├── endpoints/
-│   └── users/
-│       ├── user_index_endpoint.cr
-│       ├── user_show_endpoint.cr
-│       ├── user_create_endpoint.cr
-│       ├── user_update_endpoint.cr
-│       └── user_destroy_endpoint.cr
-├── requests/
-│   └── users/
-│       ├── index_request.cr
-│       ├── show_request.cr
-│       ├── create_request.cr
-│       └── update_request.cr
-├── pages/
-│   └── users/
-│       ├── index_page.cr
-│       └── show_page.cr
-├── services/
-│   └── users/
-│       ├── index_service.cr
-│       ├── show_service.cr
-│       ├── create_service.cr
-│       ├── update_service.cr
-│       └── destroy_service.cr
-└── db/
-    └── migrations/
-        └── 20240115103045_create_users.cr
+├── models/post.cr
+├── db/
+│   ├── schema.cr                    # gets the `posts` table
+│   └── migrations/20240115103045_create_posts.cr
+├── requests/posts/                  # index, show, new, create, edit, update, destroy
+├── endpoints/posts/                 # the same seven actions
+├── services/posts/                  # create, update, destroy
+└── pages/posts/                     # index, show, new, edit
+public/templates/blog/posts/         # index, show, new, edit and the shared _form partial
 ```
+
+An API project (`--api-only`, or `azu new --type api`) has no forms: it gets `src/responses/posts/` (index,
+show) instead of pages and templates, and endpoints without `new` and `edit`.
+
+Run `azu db:setup` to create the database and the table, then `azu serve`. The pages are at `/posts`.
 
 ## Generated Code
 
 ### Model
 
-```crystal
-# src/models/user.cr
-struct User
-  include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :users
+Columns and associations only; validation lives in the request contracts.
 
-  getter id : Int64?
-  getter name : String
-  getter email : String
+```crystal
+# src/models/post.cr
+class Post
+  include CQL::ActiveRecord::Model(Int64)
+  db_context BlogDB, :posts
+
+  getter title : String
+  getter body : String
+  getter published : Bool
   getter created_at : Time?
   getter updated_at : Time?
 
-  validate :name, presence: true, size: 2..100
-  validate :email, presence: true
-
-  def initialize(@name : String, @email : String)
+  def initialize(@title : String, @body : String, @published : Bool)
   end
 end
 ```
 
 ### Migration
 
+The same `table` block is added to `src/db/schema.cr`, where the models look their columns up.
+
 ```crystal
-# src/db/migrations/20240115103045_create_users.cr
-class CreateUsers < CQL::Migration(20240115103045)
+# src/db/migrations/20240115103045_create_posts.cr
+class CreatePosts < CQL::Migration(20240115103045)
   def up
-    schema.table :users do
-      primary :id, Int64
-      text :name
-      text :email
+    schema.table :posts do
+      primary :id, Int64, auto_increment: true
+      text :title
+      text :body
+      boolean :published, default: false
       timestamps
     end
-    schema.users.create!
+    schema.posts.create!
   end
 
   def down
-    schema.users.drop!
-  end
-end
-```
-
-### Endpoint
-
-```crystal
-# src/endpoints/users/user_index_endpoint.cr
-module App::Users
-  struct IndexEndpoint
-    include Azu::Endpoint(Users::IndexRequest, Users::IndexPage)
-
-    get "/users"
-
-    def call : Users::IndexPage
-      result = IndexService.new.call
-
-      if result.success?
-        users = result.data.not_nil!
-        Users::IndexPage.new(users: users)
-      else
-        Users::IndexPage.new(users: [] of User)
-      end
-    end
+    schema.posts.drop!
   end
 end
 ```
 
 ### Request
 
+An invalid request never reaches the endpoint: Azu answers it with a 422.
+
 ```crystal
-# src/requests/users/create_request.cr
-struct Users::CreateRequest
-  include Azu::Request
-  include JSON::Serializable
+# src/requests/posts/create_request.cr
+module Blog
+  struct Posts::CreateRequest
+    include Azu::Request
 
-  getter name : String
-  getter email : String
+    getter title : String
+    getter body : String
+    getter published : Bool = false
 
-  def initialize(@name = "", @email = "")
+    validate title, presence: true
+    validate body, presence: true
   end
-
-  validate :name, presence: true, size: 2..100
-  validate :email, presence: true
 end
 ```
 
-### Page (Response)
+### Endpoint
+
+Writes answer with a `303 See Other`, so a browser reload does not repeat the form.
 
 ```crystal
-# src/pages/users/index_page.cr
-struct Users::IndexPage
-  include Azu::Response
-  include JSON::Serializable
+# src/endpoints/posts/create_endpoint.cr
+module Blog
+  struct Posts::CreateEndpoint
+    include Azu::Endpoint(Posts::CreateRequest, Azu::Response::Empty)
 
-  getter users : Array(User)
+    post "/posts"
 
-  def initialize(@users : Array(User))
-  end
-
-  def render
-    to_json
+    def call : Azu::Response::Empty
+      post = Posts::CreateService.new.call(create_request)
+      redirect to: "/posts/#{post.id}", status: 303
+    end
   end
 end
 ```
@@ -174,30 +158,51 @@ end
 ### Service
 
 ```crystal
-# src/services/users/create_service.cr
-module App::Users
-  class CreateService
-    def call(request : CreateRequest) : Result(User)
-      user = User.new(
-        name: request.name,
-        email: request.email
-      )
-
-      if user.save
-        Result(User).success(user)
-      else
-        Result(User).failure(user.errors)
-      end
+# src/services/posts/create_service.cr
+module Blog
+  class Posts::CreateService
+    def call(request : Posts::CreateRequest) : Post
+      post = Post.new(title: request.title, body: request.body, published: request.published)
+      post.save!
+      post
     end
   end
 end
 ```
 
+### Forms
+
+The `_form` partial carries the CSRF field (`csrf_tag`, the project enables `Azu::Handler::CSRF`) and
+the edit page adds `_method=patch`, which the router turns into a `PATCH`. Delete is a form on the show page
+with `_method=delete`. Values are escaped with `| e`: `.jinja` templates are not auto-escaped.
+
+## Attributes
+
+`name:type[?][:modifier...]`, for example `title:string`, `age:int32?`, `email:string:unique`,
+`owner_id:int64:ref:users`.
+
+- `?` makes the column and the request field optional; without it a column is NOT NULL and a string must be present.
+- `unique` and `index` become column options, `required` is the default and accepted for clarity,
+  `ref:<table>` (or the `references` type) adds a foreign key.
+- Names are lowercase identifiers and not Crystal keywords (`end`, `class`, `select`, ...) or methods of the model (`errors`, `table`, ...).
+- Resource names must differ in singular and plural (`Series`, `News`, `Fish` are rejected) and must not hide a constant
+  the generated code uses (`Status`, `Request`, `Context`, ...). A typed name is taken for a plural only when it is the plural of its own singular: `Posts` and `People` give `Post` and `Person`, while `Campus`, `Analysis`, `Address` and `Business` stay as typed (tables `campuses`, `analyses`, ...). The checks run for every generator that takes a resource name, not only the scaffold.
+- Not supported yet by the scaffold forms: `json` and `uuid` fields (they generate, but their forms are untested).
+
+An update is a `PATCH`: its request fields are all optional and only the ones sent change the record
+(a given string must not be blank). The edit form sends a hidden `false` before each checkbox so an unchecked box is saved.
+
+## Production
+
+Generated web projects refuse to boot in production (`CRYSTAL_ENV=production`; Azu does not read `AZU_ENV`) without
+`CSRF_SECRET` in the process environment. That includes a job worker, because `src/worker.cr` loads the app file.
+`azu serve --env production` prints the last lines the server wrote to stderr when it exits early.
+
 ## Field Types
 
 | Type         | Crystal Type | Description           |
 | ------------ | ------------ | --------------------- |
-| `string`     | `String`     | Text field            |
+| `string`     | `String`     | Text field (must be present) |
 | `text`       | `String`     | Long text field       |
 | `int32`      | `Int32`      | 32-bit integer        |
 | `int64`      | `Int64`      | 64-bit integer        |

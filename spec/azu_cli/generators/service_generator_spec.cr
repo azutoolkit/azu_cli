@@ -1,73 +1,43 @@
 require "../../spec_helper"
-require "teeplate"
+require "../../support/generator_helpers"
+
+include GeneratorHelpers
 
 describe AzuCLI::Generate::Service do
-  it "creates a service generator with name" do
-    generator = AzuCLI::Generate::Service.new("UserService")
+  attributes = {"title" => "string", "published" => "bool"}
 
-    generator.name.should eq("UserService")
-    generator.snake_case_name.should eq("user_service")
-    generator.camel_case_name.should eq("UserService")
-  end
-
-  it "creates a service generator with custom action" do
-    generator = AzuCLI::Generate::Service.new("UserService", "update")
-
-    generator.action.should eq("update")
-    generator.service_class_name.should eq("UpdateService")
-  end
-
-  it "initializes with create action by default" do
-    generator = AzuCLI::Generate::Service.new("OrderService")
-
-    generator.action.should eq("create")
-    generator.service_class_name.should eq("CreateService")
-  end
-
-  it "converts name to snake_case" do
-    generator = AzuCLI::Generate::Service.new("UserAccountService")
-
-    generator.snake_case_name.should eq("user_account_service")
-  end
-
-  it "converts name to CamelCase" do
-    generator = AzuCLI::Generate::Service.new("user_service")
-
-    generator.camel_case_name.should eq("UserService")
-  end
-
-  describe "#param_list" do
-    it "generates parameter list from attributes" do
-      attributes = {"name" => "string", "email" => "string", "age" => "int32"}
-      generator = AzuCLI::Generate::Service.new("UserService", "create", attributes)
-
-      param_list = generator.param_list
-      param_list.should contain("name : String")
-      param_list.should contain("email : String")
-      param_list.should contain("age : Int32")
+  service = ->(action : String) do
+    in_generated_project do
+      rendered(AzuCLI::Generate::Service.new("Post", action, attributes), "src/services", "posts/#{action}_service.cr")
     end
   end
 
-  describe "#model_class" do
-    it "generates model class name without Model suffix" do
-      generator = AzuCLI::Generate::Service.new("UserService")
+  it "saves a new record built from the request" do
+    content = service.call("create")
 
-      model_class = generator.model_class
-      model_class.should eq("UserService::UserService")
-    end
+    content.should contain("class Posts::CreateService")
+    content.should contain("def call(request : Posts::CreateRequest) : Post")
+    content.should contain("Post.new(title: request.title, published: request.published)")
+    content.should contain("record.save!")
   end
 
-  describe "#crystal_type" do
-    it "converts string type to String" do
-      generator = AzuCLI::Generate::Service.new("UserService")
+  it "updates the record it is given" do
+    content = service.call("update")
 
-      generator.crystal_type("string").should eq("String")
-    end
+    content.should contain("def call(record : Post, request : Posts::UpdateRequest) : Post")
+    content.should contain("request.title.try { |value| record.title = value }")
+    content.should contain("request.published.try { |value| record.published = value }")
+    content.should_not contain("attributes(")
+    content.should contain("record.save!")
+  end
 
-    it "converts int32 type to Int32" do
-      generator = AzuCLI::Generate::Service.new("UserService")
+  it "deletes the record it is given" do
+    service.call("destroy").should contain("record.delete!")
+  end
 
-      generator.crystal_type("int32").should eq("Int32")
+  it "does not need a Result class" do
+    AzuCLI::Generate::Service::ACTIONS.each do |action|
+      service.call(action).should_not contain("Result")
     end
   end
 end

@@ -500,7 +500,7 @@ azu version
 | Option          | Description               | Default |
 | --------------- | ------------------------- | ------- |
 | `--force`       | Overwrite existing files  | false   |
-| `--skip-tests`  | Skip test file generation | false   |
+| `--skip-tests`  | `generate model`: skip the migration | false   |
 | `--skip-routes` | Skip route registration   | false   |
 
 ### Server Options
@@ -527,7 +527,7 @@ Azu CLI respects these environment variables:
 
 | Variable           | Description             | Default     |
 | ------------------ | ----------------------- | ----------- |
-| `AZU_ENV`          | Current environment     | development |
+| `AZU_ENV`          | Environment the CLI uses (Azu reads only `CRYSTAL_ENV`; `azu serve` sets both) | development |
 | `AZU_DATABASE_URL` | Database connection URL |             |
 | `AZU_PORT`         | Default server port     | 4000        |
 | `AZU_HOST`         | Default server host     | localhost   |

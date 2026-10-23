@@ -27,6 +27,12 @@ module AzuCLI
       pascal_case(project_name)
     end
 
+    # Names of the shards the project depends on (shard.yml `dependencies`)
+    def project_dependencies : Array(String)
+      dependencies = parse_shard_yml.try(&.["dependencies"]?).try(&.as_h?)
+      dependencies ? dependencies.keys.map(&.as_s) : [] of String
+    end
+
     # Get project version from shard.yml
     def project_version : String
       shard_data = parse_shard_yml

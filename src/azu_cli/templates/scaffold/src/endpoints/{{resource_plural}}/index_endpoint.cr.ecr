@@ -1,0 +1,11 @@
+module <%= app_module %>
+  struct <%= namespace %>::<%= action_class %>Endpoint
+    include Azu::Endpoint(<%= request_type %>, <%= response_type %>)
+
+    <%= verb %> "<%= route %>"
+
+    def call : <%= response_type %>
+      <%= response_type %>.new(<%= model_name %>.all.to_a)
+    end
+  end
+end

@@ -11,7 +11,7 @@ describe "Migration Generator E2E" do
       result.success?.should be_true
 
       # Verify migration file created (filename is {timestamp}_add_users.cr for AddEmailToUsers migration)
-      migration_files = Dir.glob(File.join(project_path, "db/migrations/*_add_users.cr"))
+      migration_files = Dir.glob(File.join(project_path, "src/db/migrations/*_add_users.cr"))
       migration_files.size.should be > 0
 
       # Check migration content

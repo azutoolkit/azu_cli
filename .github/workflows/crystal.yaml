@@ -58,7 +58,8 @@ jobs:
           shards install --ignore-crystal-version
           mkdir -p bin
           crystal build src/azu_cli.cr -o bin/azu --no-debug
-      - name: Generate, build, boot and request a new project
+      # On SQLite the script also generates a Post scaffold, migrates it with `azu db:setup` and exercises its CRUD.
+      - name: Generate, build, boot and request a new project and its scaffold
         run: E2E_DB=${{ matrix.db }} scripts/e2e_generated_app.sh ${{ matrix.type }}
   release:
     runs-on: ubuntu-latest

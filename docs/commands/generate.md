@@ -28,7 +28,7 @@ azu generate <generator_type> <name> [attributes] [options]
 | Option          | Description                                | Default |
 | --------------- | ------------------------------------------ | ------- |
 | `--force`       | Overwrite existing files without prompting | false   |
-| `--skip-tests`  | Don't generate test files                  | false   |
+| `--skip-tests`  | `generate model`: don't generate the migration | false   |
 | `--skip-routes` | Don't register routes automatically        | false   |
 | `--help`        | Show help for the generator                |         |
 
@@ -54,8 +54,8 @@ azu generate endpoint posts index show create
 # Generate API endpoint
 azu generate endpoint api/v1/posts --api
 
-# Skip test generation
-azu generate endpoint users --skip-tests
+# A model without its migration
+azu generate model User name:string --skip-tests
 ```
 
 ### Generated Files

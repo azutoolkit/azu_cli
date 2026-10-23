@@ -1,0 +1,11 @@
+# Predicates of the scaffolded request contracts.
+module GivenPredicate
+  # Valid unless given blank: a PATCH leaves out what it does not change.
+  def given?(value, other)
+    value.nil? || !value.empty?
+  end
+end
+
+module Schema::Predicates
+  include GivenPredicate
+end

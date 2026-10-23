@@ -292,7 +292,7 @@ azu generate endpoint Users
 azu generate endpoint Users index show create
 
 # Endpoint with options
-azu generate endpoint Users --skip-tests --skip-routes
+azu generate endpoint Users
 ```
 
 ### Component Generator
@@ -331,7 +331,7 @@ azu generate scaffold User name:string email:string
 azu generate scaffold Post title:string content:text author_id:integer published:boolean
 
 # Scaffold with options
-azu generate scaffold Product name:string price:decimal --skip-tests
+azu generate scaffold Product name:string price:float64 --skip migration
 ```
 
 ## Database Reference

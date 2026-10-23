@@ -318,6 +318,14 @@ a.card h2, a.card h3 { color: var(--text); }
 
 .code code { padding: 0; background: none; border-radius: 0; font-size: inherit; }
 
+/* Forms (scaffolded CRUD pages) */
+.field { display: block; font-weight: 600; }
+.field input[type="text"], .field input[type="number"], .field textarea {
+  display: block; width: 100%; margin-top: var(--s-1); padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface);
+}
+.field--check { display: flex; align-items: center; gap: var(--s-2); }
+
 /* ---------- 5. Pages ---------- */
 .hero { padding: var(--s-6) 0 var(--s-7); max-width: 46rem; }
 .hero h1 { font-size: var(--fs-3xl); letter-spacing: -0.03em; }

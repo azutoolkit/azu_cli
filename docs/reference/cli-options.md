@@ -107,7 +107,7 @@ azu generate <generator> <name> [options]
 | Option         | Description              | Default           | Example              |
 | -------------- | ------------------------ | ----------------- | -------------------- |
 | `--force`      | Overwrite existing files | `false`           | `--force`            |
-| `--skip-tests` | Skip test generation     | `false`           | `--skip-tests`       |
+| `--skip-tests` | `generate model`: skip the migration | `false`           | `--skip-tests`       |
 | `--api-only`   | Generate API components  | `false`           | `--api-only`         |
 | `--web-only`   | Generate web components  | `false`           | `--web-only`         |
 | `--skip COMP`  | Skip specific components | None              | `--skip model,page`  |

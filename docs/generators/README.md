@@ -176,7 +176,7 @@ Available for all generators:
 | Option         | Description               | Default |
 | -------------- | ------------------------- | ------- |
 | `--force`      | Overwrite existing files  | false   |
-| `--skip-tests` | Don't generate test files | false   |
+| `--skip-tests` | `generate model`: don't generate the migration | false   |
 | `--help`       | Show generator help       |         |
 
 ### Specific Options

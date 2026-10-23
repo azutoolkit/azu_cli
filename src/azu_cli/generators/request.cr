@@ -1,105 +1,51 @@
-require "teeplate"
+require "./resource"
 
 module AzuCLI
   module Generate
-    # Request generator that creates request structs for request validation
-    # Aligns with Azu::Request convention
-    class Request < Teeplate::FileTree
+    # Request generator: the Azu::Request contract of one action. Create and update carry the
+    # resource's fields and validate them (an update carries them optionally); show, edit and destroy carry the id of the record.
+    class Request < Resource
       directory "#{__DIR__}/../templates/scaffold/src/requests"
       OUTPUT_DIR = "./src/requests"
+      ACTIONS    = CRUD_ACTIONS
 
-      getter project : String
-      getter resource : String
-      getter action : String
-      getter name : String
-      getter fields : FieldCollection
-      getter snake_case_name : String
-      getter camelcase_name : String
-      getter module_name : String
-
-      def initialize(@project : String, @resource : String, @action : String, attributes : Hash(String, String))
-        @name = @resource
-        @snake_case_name = @resource.underscore
-        @camelcase_name = @resource.camelcase
-        @module_name = @project.camelcase
-        @fields = FieldCollection.new(attributes)
-      end
-
-      # Get the full nested module name for the request
-      def full_module_name : String
-        "#{@module_name}::#{@camelcase_name}"
-      end
-
-      # Get the request struct name
       def request_struct_name : String
-        "#{@action.camelcase}Request"
+        "#{action_class}Request"
       end
 
-      def self.generate_for_scaffold(project : String, resource : String, actions : Array(String), attributes : Hash(String, String))
-        actions.each do |action|
-          generator = new(project, resource, action, attributes)
-          Dir.mkdir_p(OUTPUT_DIR) unless Dir.exists?(OUTPUT_DIR)
-          generator.render(OUTPUT_DIR, force: false, interactive: false)
-        end
+      def id? : Bool
+        {"show", "edit", "destroy"}.includes?(@action)
       end
 
-      # Field collection helper class
-      class FieldCollection
-        getter common_fields : Array(Field)
-        getter references : Array(Field)
-        getter id : Field
-
-        def initialize(attributes : Hash(String, String))
-          @common_fields = [] of Field
-          @references = [] of Field
-          @id = Field.new("id", "Int64", "Primary64")
-
-          attributes.each do |name, type|
-            case type.downcase
-            when "reference", "belongs_to"
-              @references << Field.new(name, crystal_type(type), type)
-            else
-              @common_fields << Field.new(name, crystal_type(type), type)
-            end
-          end
-        end
-
-        private def crystal_type(attr_type : String) : String
-          case attr_type.downcase
-          when "string", "text"
-            "String"
-          when "int32", "integer"
-            "Int32"
-          when "int64"
-            "Int64"
-          when "float32"
-            "Float32"
-          when "float64", "float"
-            "Float64"
-          when "bool", "boolean"
-            "Bool"
-          when "time", "datetime"
-            "Time"
-          when "date"
-            "Date"
-          when "json"
-            "JSON::Any"
-          when "reference", "belongs_to"
-            "Int64"
-          else
-            "String"
-          end
-        end
+      def fields? : Bool
+        {"create", "update"}.includes?(@action)
       end
 
-      # Field helper class
-      class Field
-        getter field_name : String
-        getter cr_type : String
-        getter original_type : String
+      # Strings must be present unless they are optional.
+      def validated_fields : Array(Field)
+        fields.select { |field| field.string? && !field.nilable? }
+      end
 
-        def initialize(@field_name : String, @cr_type : String, @original_type : String)
-        end
+      def update? : Bool
+        @action == "update"
+      end
+
+      # An update changes what it carries (PATCH): every field is optional, a given string must not be blank.
+      def type_of(field : Field) : String
+        update? ? "#{field.crystal_type.chomp('?')}?" : field.crystal_type
+      end
+
+      def default_of(field : Field) : String
+        field.bool? && !field.nilable? && !update? ? " = false" : ""
+      end
+
+      def validation : String
+        update? ? "given: true" : "presence: true"
+      end
+
+      # The `given` predicate is rendered once, with the first update.
+      def rendered_file_entries
+        file_entries.reject { |entry| File.basename(entry.path) == "predicates.cr" && !update? }
       end
     end
   end

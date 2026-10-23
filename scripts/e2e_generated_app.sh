@@ -1,6 +1,8 @@
 #!/bin/sh
-# End-to-end gate for `azu new`: generate a project with the built CLI, install its shards,
-# compile it, boot it on a free port and check that it serves.
+# End-to-end gate for `azu new` and `azu generate scaffold`: generate a project with the built CLI,
+# install its shards, compile it, boot it on a free port and check that it serves. A project on
+# SQLite also gets a `Post` scaffold: `azu db:setup` creates its table and curl exercises the CRUD
+# (web: forms with a CSRF token and a `_method` override, writes redirect with 303; api: JSON).
 #
 # Usage: scripts/e2e_generated_app.sh [web|api]      (default: web)
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
@@ -15,6 +17,10 @@ MODULE="E2eApp"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AZU_BIN="${AZU_BIN:-$REPO_ROOT/bin/azu}"
 READY_TRIES=60 # one second apart
+
+# The scaffold needs a database that works without a server.
+SCAFFOLD=0
+[ "$DB" = sqlite ] && SCAFFOLD=1
 
 command -v curl >/dev/null || { echo "curl is required" >&2; exit 2; }
 [ -x "$AZU_BIN" ] || { echo "azu binary not found at $AZU_BIN (build it first or set AZU_BIN)" >&2; exit 2; }
@@ -50,9 +56,10 @@ free_port() {
   return 1
 }
 
-# fetch PATH: stores the body in $WORK/body, returns the HTTP status code.
+# fetch PATH [JAR]: stores the body in $WORK/body, returns the HTTP status code. With JAR the
+# cookies the server sets (the CSRF token) are saved there and sent back.
 fetch() {
-  curl -s -o "$WORK/body" -w '%{http_code}' --max-time 10 "http://127.0.0.1:$PORT$1"
+  curl -s -o "$WORK/body" -w '%{http_code}' --max-time 10 ${2:+-c "$2" -b "$2"} "http://127.0.0.1:$PORT$1"
 }
 
 expect_status() {
@@ -66,14 +73,131 @@ expect_body() {
   echo "ok: body contains '$1'"
 }
 
+expect_no_body() {
+  ! grep -q -- "$1" "$WORK/body" || fail "response body contains '$1'"
+  echo "ok: body does not contain '$1'"
+}
+
+# The CSRF token of the first form in the last response body.
+csrf_token() {
+  sed -n 's/.*name="_csrf" value="\([^"]*\)".*/\1/p' "$WORK/body" | head -n 1
+}
+
+# submit JAR PATH STATUS [form fields...]: POSTs a urlencoded form with the token of the last
+# fetched page; the response headers go to $WORK/headers.
+submit() {
+  jar="$1"; path="$2"; want="$3"; shift 3
+  got="$(curl -s -o "$WORK/body" -D "$WORK/headers" -w '%{http_code}' --max-time 10 -b "$jar" \
+    --data-urlencode "_csrf=$(csrf_token)" "$@" "http://127.0.0.1:$PORT$path")"
+  [ "$got" = "$want" ] || fail "POST $path returned $got, expected $want"
+  echo "ok: POST $path -> $got"
+}
+
+expect_redirect() {
+  tr -d '\r' <"$WORK/headers" | grep -qi "^location: $1\$" || fail "not redirected to $1"
+  echo "ok: redirected to $1"
+}
+
+# api_request METHOD PATH STATUS [JSON]: sends the request, stores the body in $WORK/body.
+api_request() {
+  method="$1"; path="$2"; want="$3"; json="${4:-}"
+  got="$(curl -s -o "$WORK/body" -w '%{http_code}' --max-time 10 -X "$method" \
+    ${json:+-H 'Content-Type: application/json' -d "$json"} "http://127.0.0.1:$PORT$path")"
+  [ "$got" = "$want" ] || fail "$method $path returned $got, expected $want"
+  echo "ok: $method $path -> $got"
+}
+
+# The Post scaffold of an API project: JSON in and out.
+check_api_scaffold() {
+  api_request GET /posts 200
+  expect_body '^\[\]$'
+  api_request POST /posts 422 '{"title":"","body":""}'
+  api_request POST /posts 201 '{"title":"Hello","body":"First post","published":true}'
+  expect_body '"title":"Hello"'
+  api_request GET /posts/1 200
+  expect_body '"body":"First post"'
+  api_request PATCH /posts/1 200 '{"title":"Updated","body":"Edited"}'
+  expect_body '"title":"Updated"'
+  expect_body '"published":true' # a PATCH without published keeps it
+  api_request PATCH /posts/1 422 '{"title":""}'
+  api_request GET /posts 200
+  expect_body '"title":"Updated"'
+  api_request DELETE /posts/1 204
+  api_request GET /posts/1 404
+}
+
+# The Post scaffold of a web project: list, form, create, show, edit, update, delete. Every form is
+# fetched with a fresh cookie jar because the CSRF cookie is scoped to the page that set it.
+check_web_scaffold() {
+  jar="$WORK/jar"
+  expect_status /posts 200
+  expect_status /posts/new 200
+  expect_body '<form action="/posts" method="post"'
+  expect_body 'name="title"'
+  expect_no_body '_method'
+
+  got="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 --data-urlencode title=x --data-urlencode body=y "http://127.0.0.1:$PORT/posts")"
+  [ "$got" = 403 ] || fail "POST /posts without a CSRF token returned $got, expected 403"
+  echo "ok: POST /posts without a CSRF token -> 403"
+
+  fetch /posts/new "$jar" >/dev/null
+  submit "$jar" /posts 422 --data-urlencode title= --data-urlencode body=
+
+  fetch /posts/new "$jar" >/dev/null
+  submit "$jar" /posts 303 --data-urlencode "title=Hello <e2e>" --data-urlencode "body=First post" --data-urlencode published=false --data-urlencode published=true
+  expect_redirect /posts/1
+  expect_status /posts/1 200
+  expect_body 'Hello &lt;e2e&gt;'
+  expect_body 'First post'
+  expect_body '<dd>true</dd>'
+  expect_status /posts 200
+  expect_body 'href="/posts/1"'
+
+  rm -f "$jar"
+  [ "$(fetch /posts/1/edit "$jar")" = 200 ] || fail "GET /posts/1/edit did not return 200"
+  expect_body 'name="_method" value="patch"'
+  expect_body 'First post</textarea>'
+  submit "$jar" /posts/1 422 --data-urlencode _method=patch --data-urlencode "title="
+  fetch /posts/1/edit "$jar" >/dev/null
+  submit "$jar" /posts/1 303 --data-urlencode _method=patch --data-urlencode "title=Updated title" --data-urlencode "body=Edited"
+  expect_redirect /posts/1
+  expect_status /posts/1 200
+  expect_body 'Updated title'
+  expect_body '<dd>true</dd>' # a PATCH without published keeps it
+
+  rm -f "$jar"
+  fetch /posts/1/edit "$jar" >/dev/null
+  submit "$jar" /posts/1 303 --data-urlencode _method=patch --data-urlencode published=false
+  expect_status /posts/1 200
+  expect_body '<dd>false</dd>'
+  expect_body 'Updated title'
+
+  rm -f "$jar"
+  fetch /posts/1 "$jar" >/dev/null
+  submit "$jar" /posts/1 303 --data-urlencode _method=delete
+  expect_redirect /posts
+  expect_status /posts/1 404
+  expect_status /posts 200
+}
+
 step "generate a $TYPE project ($DB) with $AZU_BIN"
 cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
   --type "$TYPE" --db "$DB" --no-git --no-docker
 cd "$NAME"
 
+if [ "$SCAFFOLD" = 1 ]; then
+  step "generate a Post scaffold"
+  "$AZU_BIN" generate scaffold Post title:string body:text published:bool
+fi
+
 step "shards install"
 shards install --ignore-crystal-version
+
+if [ "$SCAFFOLD" = 1 ]; then
+  step "create and migrate the database (azu db:setup)"
+  "$AZU_BIN" db:setup
+fi
 
 ENTRY=src/server.cr
 [ "$TYPE" = api ] && ENTRY=src/api.cr
@@ -104,6 +228,11 @@ if [ "$TYPE" = web ]; then
   expect_body "Welcome to $MODULE"
   expect_body "Typed contracts"
   expect_status /assets/app.css 200
+fi
+
+if [ "$SCAFFOLD" = 1 ]; then
+  step "check the Post scaffold"
+  if [ "$TYPE" = web ]; then check_web_scaffold; else check_api_scaffold; fi
 fi
 
 kill -0 "$SERVER_PID" 2>/dev/null || fail "server died while serving requests"

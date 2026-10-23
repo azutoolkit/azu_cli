@@ -23,6 +23,7 @@ module AzuCLI
       property include_joobq : Bool
       property github_name : String
       property env : String
+      @csrf_secret : String?
 
       def initialize(@project : String, @module_name : String, @author : String, @email : String,
                      @license : String = "MIT", @project_type : String = "web",
@@ -32,6 +33,11 @@ module AzuCLI
                      @env : String = "development")
         # Extract GitHub username from email or use author name
         @github_name = extract_github_name(@email, @author)
+      end
+
+      # Secret the CSRF handler signs its tokens with; goes into the generated .env as CSRF_SECRET
+      def csrf_secret : String
+        @csrf_secret ||= Random::Secure.hex(32)
       end
 
       # Extract GitHub username from email or fallback to author name

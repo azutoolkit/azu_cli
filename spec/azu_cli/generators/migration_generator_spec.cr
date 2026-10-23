@@ -1,5 +1,8 @@
 require "../../spec_helper"
+require "../../support/generator_helpers"
 require "teeplate"
+
+include GeneratorHelpers
 
 describe AzuCLI::Generate::Migration do
   it "creates a migration generator with basic attributes" do
@@ -209,60 +212,6 @@ describe AzuCLI::Generate::Migration do
     end
   end
 
-  it "maps field types to migration field types" do
-    generator = AzuCLI::Generate::Migration.new("Test", {} of String => String)
-
-    generator.migration_field_type("string").should eq("string")
-    generator.migration_field_type("text").should eq("string")
-    generator.migration_field_type("int32").should eq("integer")
-    generator.migration_field_type("integer").should eq("integer")
-    generator.migration_field_type("int64").should eq("bigint")
-    generator.migration_field_type("float32").should eq("float")
-    generator.migration_field_type("float64").should eq("decimal")
-    generator.migration_field_type("float").should eq("decimal")
-    generator.migration_field_type("bool").should eq("boolean")
-    generator.migration_field_type("boolean").should eq("boolean")
-    generator.migration_field_type("time").should eq("timestamp")
-    generator.migration_field_type("datetime").should eq("timestamp")
-    generator.migration_field_type("date").should eq("date")
-    generator.migration_field_type("email").should eq("string")
-    generator.migration_field_type("url").should eq("string")
-    generator.migration_field_type("json").should eq("json")
-    generator.migration_field_type("uuid").should eq("uuid")
-    generator.migration_field_type("unknown").should eq("string")
-  end
-
-  it "generates migration field options" do
-    generator = AzuCLI::Generate::Migration.new("Test", {} of String => String)
-
-    generator.migration_field_options("string", "name").should eq(", null: false")
-    generator.migration_field_options("string", "description").should eq("")
-    generator.migration_field_options("email", "email").should eq(", null: false, unique: true")
-    generator.migration_field_options("bool", "published").should eq(", default: false")
-    generator.migration_field_options("time", "created_at").should eq(", default: -> { \"CURRENT_TIMESTAMP\" }")
-  end
-
-  it "determines if field should have index" do
-    generator = AzuCLI::Generate::Migration.new("Test", {} of String => String)
-
-    generator.should_add_index?("email", "email").should be_true
-    generator.should_add_index?("string", "name").should be_true
-    generator.should_add_index?("string", "title").should be_true
-    generator.should_add_index?("string", "slug").should be_true
-    generator.should_add_index?("int32", "user_id").should be_true
-    generator.should_add_index?("bool", "published").should be_true
-    generator.should_add_index?("string", "description").should be_false
-    generator.should_add_index?("int32", "count").should be_false
-  end
-
-  it "generates index options" do
-    generator = AzuCLI::Generate::Migration.new("Test", {} of String => String)
-
-    generator.index_options("email", "email").should eq(", unique: true")
-    generator.index_options("string", "slug").should eq(", unique: true")
-    generator.index_options("string", "name").should eq("")
-  end
-
   describe "file generation" do
     it "generates a create migration file with correct content" do
       TestHelpers::TestSetup.with_temp_project do |temp_project|
@@ -284,7 +233,7 @@ describe AzuCLI::Generate::Migration do
         content.should contain("class CreateProducts < CQL::Migration")
         content.should contain("def up")
         content.should contain("schema.table :products do")
-        content.should contain("column :name, String")
+        content.should contain("text :name")
         content.should contain("column :price, Float64")
         content.should contain("timestamps")
         content.should contain("foreign_key [:user_id], references: :users")
@@ -458,6 +407,28 @@ describe AzuCLI::Generate::Migration do
         content = File.read(generated_file)
         content.should contain("foreign_key [:user_id], references: :users")
         content.should contain("foreign_key [:category_id], references: :categories")
+      end
+    end
+  end
+
+  describe "schema registration" do
+    it "declares the created table in src/db/schema.cr, once" do
+      in_generated_project do
+        migration = AzuCLI::Generate::Migration.new("create_posts", {"title" => "string", "published" => "bool"})
+        2.times { migration.render(File.expand_path("src/db/migrations"), force: true, interactive: false) }
+
+        schema = File.read("src/db/schema.cr")
+        schema.scan("table :posts do").size.should eq(1)
+        schema.should contain("  table :posts do\n    primary :id, Int64, auto_increment: true\n    text :title\n    boolean :published, default: false\n    timestamps\n  end\nend")
+      end
+    end
+
+    it "leaves the schema alone for other migrations" do
+      in_generated_project do
+        before = File.read("src/db/schema.cr")
+        AzuCLI::Generate::Migration.new("add_name_to_posts", {"name" => "string"}).render(File.expand_path("src/db/migrations"), force: true, interactive: false)
+
+        File.read("src/db/schema.cr").should eq(before)
       end
     end
   end

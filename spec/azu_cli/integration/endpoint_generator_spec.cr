@@ -15,8 +15,8 @@ describe "Endpoint Generator E2E" do
       result.success?.should be_true
 
       # Verify files created
-      file_exists?(project_path, "src/endpoints/posts/post_index_endpoint.cr").should be_true
-      file_exists?(project_path, "src/endpoints/posts/post_show_endpoint.cr").should be_true
+      file_exists?(project_path, "src/endpoints/posts/index_endpoint.cr").should be_true
+      file_exists?(project_path, "src/endpoints/posts/show_endpoint.cr").should be_true
 
       # Skip build and server tests for now - focus on file generation
       # TODO: Fix build issues in generated projects
@@ -46,8 +46,8 @@ describe "Endpoint Generator E2E" do
       result.success?.should be_true
 
       # Verify API-specific files (using correct naming pattern)
-      file_exists?(project_path, "src/endpoints/users/user_index_endpoint.cr").should be_true
-      file_exists?(project_path, "src/endpoints/users/user_show_endpoint.cr").should be_true
+      file_exists?(project_path, "src/endpoints/users/index_endpoint.cr").should be_true
+      file_exists?(project_path, "src/endpoints/users/show_endpoint.cr").should be_true
 
       # Skip build and server tests for now - focus on file generation
       # TODO: Fix build issues in generated projects

@@ -73,7 +73,7 @@ module AzuCLI
           when "mysql"
             execute_on_server("DROP DATABASE #{db_name}")
           when "sqlite", "sqlite3"
-            File.delete("./#{db_name}.db") if File.exists?("./#{db_name}.db")
+            File.delete(sqlite_path(db_name)) if File.exists?(sqlite_path(db_name))
           else
             raise "Unsupported adapter: #{@adapter}"
           end

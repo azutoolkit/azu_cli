@@ -1,0 +1,13 @@
+module <%= app_module %>
+  struct <%= namespace %>::ShowPage
+    include Azu::Response
+    include Azu::Templates::Renderable
+
+    def initialize(@<%= resource_singular %> : <%= model_name %>, @csrf_tag : String)
+    end
+
+    def render
+      view data: {"<%= resource_singular %>" => @<%= resource_singular %>.attributes.transform_keys(&.to_s), "csrf_tag" => @csrf_tag}
+    end
+  end
+end

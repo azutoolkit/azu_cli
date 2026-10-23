@@ -1,0 +1,11 @@
+module <%= app_module %>
+  class <%= namespace %>::UpdateService
+    def call(record : <%= model_name %>, request : <%= request_type %>) : <%= model_name %>
+<% changes.each do |change| -%>
+      <%= change %>
+<% end -%>
+      record.save!
+      record
+    end
+  end
+end

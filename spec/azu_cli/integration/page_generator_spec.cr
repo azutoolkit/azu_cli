@@ -12,7 +12,7 @@ describe "Page Generator E2E" do
 
       # Verify page files created
       file_exists?(project_path, "src/pages/posts/index_page.cr").should be_true
-      file_exists?(project_path, "public/templates/posts/index_page.jinja").should be_true
+      file_exists?(project_path, "public/templates/testapp/posts/index_page.jinja").should be_true
 
       # Verify content of generated files
       page_content = read_file(project_path, "src/pages/posts/index_page.cr").not_nil!
@@ -20,7 +20,7 @@ describe "Page Generator E2E" do
       page_content.should contain("Posts::IndexPage")
       page_content.should contain("include Azu::Response")
 
-      template_content = read_file(project_path, "public/templates/posts/index_page.jinja").not_nil!
+      template_content = read_file(project_path, "public/templates/testapp/posts/index_page.jinja").not_nil!
       template_content.should contain("posts")
     end
   end

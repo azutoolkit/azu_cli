@@ -66,14 +66,20 @@ module <%= @module_name %>
 <% if @project_type == "web" -%>
   Azu::Handler::CSRF.configure do |csrf|
     csrf.strategy = Azu::Handler::CSRF::Strategy::SignedDoubleSubmit
-    csrf.secret_key = "1234567890"
+    # CSRF_SECRET must be in the process environment: export it (the generated .env lists one, but nothing
+    # loads .env for you) or set it in your process manager. Development falls back to a random key per
+    # process, which breaks forms behind several processes; production refuses to boot without it.
+    csrf.secret_key = ENV["CSRF_SECRET"]?.presence || begin
+      raise "CSRF_SECRET is not set" if Azu::CONFIG.env.production?
+      Random::Secure.urlsafe_base64(64)
+    end
   end
 
 <% end -%>
   def self.handlers
     [
 <% if @project_type == "web" -%>
-      Azu::Handler::CSRF.new,
+      Azu::Handler::CSRF.default, # the instance configured above signs the tokens the forms render
 <% end -%>
       Azu::Handler::RequestId.new,
 <% if @env == "development" -%>

@@ -1,197 +1,82 @@
 require "../../spec_helper"
-require "teeplate"
+require "../../support/generator_helpers"
+
+include GeneratorHelpers
 
 describe AzuCLI::Generate::Model do
-  it "creates a model generator with basic attributes" do
-    attributes = {"name" => "string", "price" => "float64"}
-    generator = AzuCLI::Generate::Model.new("Product", attributes)
+  attributes = {"title" => "string", "views" => "int32", "published" => "bool"}
 
-    generator.name.should eq("Product")
-    generator.attributes.should eq(attributes)
-    generator.timestamps.should be_true
-    generator.database.should eq("AppDB")
-    generator.id_type.should eq("Int64")
-    generator.generate_migration.should be_true
+  it "derives the table name from the model name" do
+    AzuCLI::Generate::Model.new("UserProfile", {} of String => String).table_name.should eq("user_profiles")
   end
 
-  it "creates a model generator with custom options" do
-    attributes = {"title" => "string", "content" => "text"}
-    generator = AzuCLI::Generate::Model.new(
-      "Post",
-      attributes,
-      timestamps: false,
-      database: "AppDB",
-      id_type: "Int32",
-      generate_migration: false
-    )
-
-    generator.name.should eq("Post")
-    generator.timestamps.should be_false
-    generator.database.should eq("AppDB")
-    generator.id_type.should eq("Int32")
-    generator.generate_migration.should be_false
+  it "takes the schema constant from src/db/schema.cr" do
+    in_generated_project do
+      AzuCLI::Generate::Model.new("Post", attributes).database.should eq("BlogDB")
+    end
   end
 
-  it "converts name to snake_case" do
-    generator = AzuCLI::Generate::Model.new("UserProfile", {} of String => String)
-    generator.snake_case_name.should eq("user_profile")
+  it "generates constructor parameters from the columns" do
+    generator = AzuCLI::Generate::Model.new("Post", attributes.merge({"comments" => "has_many"}))
+    generator.constructor_params.should eq("@title : String, @views : Int32, @published : Bool")
   end
 
-  it "converts name to table name" do
-    generator = AzuCLI::Generate::Model.new("Product", {} of String => String)
-    generator.table_name.should eq("products")
+  it "declares associations" do
+    generator = AzuCLI::Generate::Model.new("Post", {"user_id" => "references", "comments" => "has_many"})
+    generator.associations.should eq([
+      "belongs_to :user, User, foreign_key: :user_id",
+      "has_many :comments, Comment, foreign_key: :post_id",
+    ])
   end
 
-  it "maps field types to Crystal types" do
-    generator = AzuCLI::Generate::Model.new("Test", {} of String => String)
+  it "renders a top-level class with its columns" do
+    in_generated_project do
+      content = rendered(AzuCLI::Generate::Model.new("Post", attributes, generate_migration: false), "src/models", "post.cr")
 
-    generator.crystal_type("string").should eq("String")
-    generator.crystal_type("text").should eq("String")
-    generator.crystal_type("int32").should eq("Int32")
-    generator.crystal_type("integer").should eq("Int32")
-    generator.crystal_type("int64").should eq("Int64")
-    generator.crystal_type("float32").should eq("Float32")
-    generator.crystal_type("float64").should eq("Float64")
-    generator.crystal_type("float").should eq("Float64")
-    generator.crystal_type("bool").should eq("Bool")
-    generator.crystal_type("boolean").should eq("Bool")
-    generator.crystal_type("time").should eq("Time")
-    generator.crystal_type("datetime").should eq("Time")
-    generator.crystal_type("date").should eq("Date")
-    generator.crystal_type("email").should eq("String")
-    generator.crystal_type("url").should eq("String")
-    generator.crystal_type("json").should eq("JSON::Any")
-    generator.crystal_type("uuid").should eq("UUID")
-    generator.crystal_type("references").should eq("Int64")
-    generator.crystal_type("belongs_to").should eq("Int64")
-    generator.crystal_type("unknown").should eq("String")
+      content.should contain("class Post\n")
+      content.should contain("include CQL::ActiveRecord::Model(Int64)")
+      content.should contain("db_context BlogDB, :posts")
+      content.should contain("property title : String")
+      content.should contain("property published : Bool")
+      content.should contain("property created_at : Time?")
+      content.should contain("def initialize(@title : String, @views : Int32, @published : Bool)")
+      content.should_not contain("validate")
+    end
   end
 
-  it "generates constructor parameters" do
-    attributes = {"name" => "string", "price" => "float64"}
-    generator = AzuCLI::Generate::Model.new("Product", attributes)
+  it "leaves out the timestamps on request" do
+    in_generated_project do
+      content = rendered(AzuCLI::Generate::Model.new("Post", attributes, timestamps: false, generate_migration: false), "src/models", "post.cr")
 
-    params = generator.constructor_params
-    params.should contain("@name : String")
-    params.should contain("@price : Float64")
+      content.should_not contain("created_at")
+    end
   end
 
-  it "generates getter declarations" do
-    attributes = {"name" => "string", "price" => "float64"}
-    generator = AzuCLI::Generate::Model.new("Product", attributes)
+  it "renders the create-table migration in src/db/migrations and registers the table in the schema" do
+    in_generated_project do
+      rendered(AzuCLI::Generate::Model.new("Post", attributes), "src/models", "post.cr")
 
-    getters = generator.getter_declarations
-    getters.should contain("getter id : Int64")
-    getters.should contain("getter name : String")
-    getters.should contain("getter price : Float64")
-    getters.should contain("getter created_at : Time")
-    getters.should contain("getter updated_at : Time")
+      migration = Dir.glob("src/db/migrations/*_create_posts.cr").first
+      File.read(migration).should contain("schema.table :posts do")
+      File.read("src/db/schema.cr").should contain("  table :posts do\n    primary :id, Int64, auto_increment: true\n    text :title\n    column :views, Int32\n")
+    end
   end
 
-  it "generates validation declarations" do
-    attributes = {"name" => "string", "price" => "float64"}
-    generator = AzuCLI::Generate::Model.new("Product", attributes)
+  it "creates a create-table migration even for names that look like another kind" do
+    in_generated_project do
+      {"UpdateLog" => "update_logs", "DeleteItem" => "delete_items", "DropZone" => "drop_zones", "Person" => "people", "Analysis" => "analyses", "Campus" => "campuses"}.each do |name, table|
+        rendered(AzuCLI::Generate::Model.new(name, {"title" => "string"}), "src/models", "#{name.underscore}.cr")
 
-    validations = generator.validation_declarations
-    validations.should contain("validate :name, presence: true")
-    validations.should contain("validate :name, length: {min: 2, max: 100}")
-    validations.should contain("validate :price, numericality: {greater_than: 0.0}")
+        File.read(Dir.glob("src/db/migrations/*_create_#{table}.cr").first).should contain("schema.table :#{table} do")
+      end
+    end
   end
 
-  it "generates a model file with correct content and migration by default" do
-    attributes = {"name" => "string", "price" => "float64"}
-    generator = AzuCLI::Generate::Model.new("Product", attributes)
+  it "does not render a migration when asked not to" do
+    in_generated_project do
+      rendered(AzuCLI::Generate::Model.new("Post", attributes, generate_migration: false), "src/models", "post.cr")
 
-    # Generate the file
-    test_dir = "./tmp_test"
-    FileUtils.mkdir_p(test_dir)
-    generator.render(test_dir)
-
-    # Read the generated file
-    generated_file = File.join(test_dir, "product.cr")
-    File.exists?(generated_file).should be_true
-
-    content = File.read(generated_file)
-    # Model should be a flat struct without module wrapping
-    content.should contain("struct Product")
-    content.should contain("include CQL::ActiveRecord::Model(Int64)")
-    content.should contain("db_context AppDB, :products")
-    content.should contain("getter name : String")
-    content.should contain("getter price : Float64")
-    content.should contain("validate :name, presence: true, size: 2..100")
-    content.should contain("def initialize(@name : String, @price : Float64)")
-    content.should contain("end")
-    # Should NOT have module wrapping
-    content.should_not contain("module AppDB::Product")
-
-    # Migration file should also be generated by default
-    migration_dir = File.join(test_dir, "db", "migrations")
-    migration_files = Dir.entries(migration_dir).select { |f| f =~ /create_products/ }
-    migration_files.size.should be > 0
-    migration_file = migration_files.first
-    migration_file.should_not be_nil
-    File.exists?(File.join(migration_dir, migration_file)).should be_true
-
-    # Clean up
-    FileUtils.rm_rf(test_dir)
-  end
-
-  it "does not generate migration if generate_migration is false" do
-    attributes = {"name" => "string"}
-    generator = AzuCLI::Generate::Model.new("User", attributes, generate_migration: false)
-
-    # Generate the file
-    test_dir = "./tmp_test"
-    FileUtils.mkdir_p(test_dir)
-    generator.render(test_dir)
-
-    # Read the generated file
-    generated_file = File.join(test_dir, "user.cr")
-    File.exists?(generated_file).should be_true
-
-    # There should be no migration file
-    migration_file = Dir.entries(test_dir).find { |f| f =~ /create_users/ }
-    migration_file.should be_nil
-
-    # Clean up
-    FileUtils.rm_rf(test_dir)
-  end
-
-  it "handles associations correctly" do
-    attributes = {"user_id" => "references", "comments" => "has_many"}
-    generator = AzuCLI::Generate::Model.new("Post", attributes)
-
-    generator.has_associations?.should be_true
-    associations = generator.association_declarations
-    associations.should contain("belongs_to :user, User, foreign_key: :user_id")
-    associations.should contain("has_many :comments, Comment, foreign_key: :post_id")
-  end
-
-  it "handles scopes correctly" do
-    attributes = {"published" => "bool", "title" => "string"}
-    generator = AzuCLI::Generate::Model.new("Post", attributes)
-
-    generator.has_scopes?.should be_true
-    scopes = generator.scope_declarations
-    scopes.should contain("scope :published, -> { where(published: true) }")
-    # Scope uses database-agnostic equality matching
-    scopes.should contain("scope :by_title, ->(value : String) { where(title: value) }")
-  end
-
-  it "handles timestamps correctly" do
-    attributes = {"name" => "string"}
-    generator = AzuCLI::Generate::Model.new("User", attributes, timestamps: false)
-
-    getters = generator.getter_declarations
-    getters.should_not contain("created_at")
-    getters.should_not contain("updated_at")
-  end
-
-  it "handles different ID types" do
-    attributes = {"name" => "string"}
-    generator = AzuCLI::Generate::Model.new("User", attributes, id_type: "Int32")
-
-    getters = generator.getter_declarations
-    getters.should contain("getter id : Int32")
+      Dir.glob("src/db/migrations/*").should be_empty
+    end
   end
 end

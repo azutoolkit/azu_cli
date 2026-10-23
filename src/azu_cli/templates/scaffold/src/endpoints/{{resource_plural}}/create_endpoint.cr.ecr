@@ -1,0 +1,17 @@
+module <%= app_module %>
+  struct <%= namespace %>::CreateEndpoint
+    include Azu::Endpoint(<%= request_type %>, <%= response_type %>)
+
+    post "<%= route %>"
+
+    def call : <%= response_type %>
+      record = <%= namespace %>::CreateService.new.call(create_request)
+<% if api? -%>
+      status 201
+      <%= response_type %>.new(record)
+<% else -%>
+      redirect to: "<%= route %>/#{record.id}", status: 303
+<% end -%>
+    end
+  end
+end
