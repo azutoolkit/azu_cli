@@ -1,3 +1,5 @@
+require "../process_tree"
+
 module AzuCLI
   module DevServer
     # Builds the app. The compiler's output is streamed to the terminal as it is produced and kept, so a
@@ -7,60 +9,38 @@ module AzuCLI
       getter args : Array(String)
 
       @process : Process?
+      @cancelled = false
+      @lock = Mutex.new
 
       def initialize(@command : String, @args : Array(String))
       end
 
-      record Result, success : Bool, seconds : Float64, output : String
+      record Result, success : Bool, seconds : Float64, output : String, cancelled : Bool = false
 
       def build(chdir : String = ".", sink : IO = STDERR) : Result
         output = IO::Memory.new
         both = IO::MultiWriter.new(sink, output)
         started = Time.instant
-        process = Process.new(command, args, chdir: chdir, output: both, error: both)
-        @process = process
+        process = @lock.synchronize do
+          return Result.new(false, 0.0, "", cancelled: true) if @cancelled
+
+          @process = Process.new(command, args, chdir: chdir, output: both, error: both)
+        end
         status = process.wait
-        Result.new(status.success?, (Time.instant - started).total_seconds, output.to_s)
+        Result.new(status.success?, (Time.instant - started).total_seconds, output.to_s, cancelled: @cancelled)
       rescue ex : IO::Error
         Result.new(false, 0.0, "could not run #{command}: #{ex.message}")
       ensure
-        @process = nil
+        @lock.synchronize { @process = nil }
       end
 
-      # Stops a build in progress (SIGTERM to the build and everything it started: `shards build` runs the
-      # compiler as a child, which would otherwise keep compiling and holding the output).
+      # Stops a build in progress, and one that is only starting (the next `build` returns at once): SIGTERM to the
+      # build and everything it started, since `shards build` runs the compiler as a child that would otherwise keep
+      # compiling and holding the output.
       def cancel : Nil
-        process = @process
-        return unless process && process.exists?
-
-        (descendants(process.pid) + [process.pid]).each { |pid| Process.signal(Signal::TERM, pid) rescue nil }
-      end
-
-      # Every process below pid, deepest first.
-      private def descendants(pid : Int64) : Array(Int64)
-        children_of(pid).flat_map { |child| descendants(child) + [child] }
-      end
-
-      # `pgrep -P`, or without pgrep a scan of /proc (Linux), so a missing tool cannot leave the compiler running.
-      private def children_of(pid : Int64) : Array(Int64)
-        output = IO::Memory.new
-        Process.run("pgrep", ["-P", pid.to_s], output: output, error: Process::Redirect::Close)
-        output.to_s.split.compact_map(&.to_i64?)
-      rescue IO::Error
-        proc_children_of(pid)
-      end
-
-      def proc_children_of(pid : Int64) : Array(Int64)
-        return [] of Int64 unless Dir.exists?("/proc/self")
-
-        Dir.children("/proc").compact_map do |name|
-          candidate = name.to_i64?
-          next unless candidate
-
-          stat = File.read("/proc/#{name}/stat") rescue next
-          # "pid (name) S ppid ...": the name may hold spaces and parentheses, so count from the last ")"
-          parent = stat[(stat.rindex(')') || 0) + 1..].split[1]?.try(&.to_i64?)
-          candidate if parent == pid
+        @lock.synchronize do
+          @cancelled = true
+          @process.try { |process| ProcessTree.terminate(process) }
         end
       end
     end

@@ -1,5 +1,13 @@
 # Changelog - Azu CLI
 
+## Unreleased - Review fixes, round 2
+
+- Fixed: `azu doctor` no longer prints a piece of a password when an `@` follows a `?` or `#` in `DATABASE_URL`; it warns and asks for percent-encoding instead
+- Fixed: `azu doctor` no longer reads `user:password` as `host:port` when a URL has no `@` (`postgres://user:secret`, `postgres://user:12345678`): it warns without printing a host; a port outside 1-65535 fails
+- Fixed: `azu console` stops the interpreter on SIGTERM too; scratch files are removed when writing fails; nested scratch scopes; the process tree walk never starts from pid <= 1 and falls back to `ps` on hosts without `pgrep` and `/proc`
+- Fixed: Ctrl-C/SIGTERM during `azu routes` also stops the `crystal run` it started (exit 130/143); scratch files are created with `O_EXCL` under a random name (a planted file or symlink is skipped); `azu dev` stopped while a build is only starting no longer orphans the build and logs no failure during shutdown
+- Fixed: formatting differences between Crystal 1.19.1 and latest that failed CI on 1.19.1
+
 ## Unreleased - Review fixes for the development commands
 
 - Fixed: `azu doctor` printed pieces of a database password (or the user) for URLs it could not parse as intended (`user:pw@host/db`, a password with `/`, `:` or `@`); it now cuts the URL at its last `@` first and prints only known schemes, host, port and a plain database name

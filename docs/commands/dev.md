@@ -54,3 +54,5 @@ The end-to-end script (`scripts/e2e_generated_app.sh`) drives all of this agains
 change (no build), broken source (old app keeps serving), fixed source (restart with the new code), SIGTERM (app gone).
 
 Stopping: Ctrl-C and SIGTERM end a build in progress (and the compiler it started; `pgrep` or `/proc` finds it) and the app, and no app is started after that. SIGKILL of `azu dev` cannot be handled: the app keeps running and holding its port until you end it.
+
+On shutdown the compiler's partial output that was already printed stays on the terminal; only the "build failed" message is suppressed. `SIGTERM` is not followed by `SIGKILL`: a build that traps `SIGTERM` keeps running.

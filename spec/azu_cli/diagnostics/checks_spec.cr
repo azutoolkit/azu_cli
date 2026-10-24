@@ -214,6 +214,68 @@ describe AzuCLI::Diagnostics::Checks do
       end
     end
 
+    it "does not guess a host when an @ follows a ? or #, and never prints what follows it" do
+      [
+        "postgres://u@db.local/app?password=p@ss-leak",
+        "postgres://u:p?w@ss-leak@db.local/app",
+        "postgres://u:pw#frag@ss-leak@db.local/app",
+        "postgres://u@db.local/app?application_name=a@b-leak",
+      ].each do |url|
+        in_tmp_project do |dir|
+          system = FakeSystem.new(GOOD_COMMANDS)
+          check = checks(dir, {"DATABASE_URL" => url}, system).database
+          text = check.message + " " + check.hint.to_s
+
+          check.status.warn?.should be_true
+          text.should contain("percent-encode")
+          ["ss-leak", "db.local", "b-leak", "u:p"].each { |piece| text.should_not contain(piece) }
+          system.calls.select(&.starts_with?("tcp")).should be_empty
+        end
+      end
+    end
+
+    it "reads nothing from a URL without @ whose \":\" is followed by something that is no port" do
+      {
+        "postgres://leaky-user:12345678"      => ["leaky-user", "12345678"],
+        "postgres://leaky-user:pw-secret/123" => ["leaky-user", "pw-secret"],
+        "postgres://leaky-user:secret"        => ["leaky-user", "secret"],
+        "postgres://leaky-user:0"             => ["leaky-user"],
+        "postgres://leaky-user:70000/db"      => ["leaky-user"],
+      }.each do |url, secrets|
+        in_tmp_project do |dir|
+          system = FakeSystem.new(GOOD_COMMANDS)
+          check = checks(dir, {"DATABASE_URL" => url}, system).database
+          text = check.message + " " + check.hint.to_s
+
+          check.status.warn?.should be_true
+          secrets.each { |secret| text.should_not contain(secret) }
+          system.calls.select(&.starts_with?("tcp")).should be_empty
+        end
+      end
+    end
+
+    it "checks a plain host:port URL and fails, without echoing it, on a bad port after the @" do
+      in_tmp_project do |dir|
+        system = FakeSystem.new(GOOD_COMMANDS)
+        checks(dir, {"DATABASE_URL" => "postgres://localhost:5432/db"}, system).database.status.ok?.should be_true
+        system.calls.should contain("tcp localhost:5432")
+
+        check = checks(dir, {"DATABASE_URL" => "postgres://u:p@db.local:99999/db"}, system).database
+        check.status.fail?.should be_true
+        (check.message + check.hint.to_s).should_not contain("99999")
+      end
+    end
+
+    it "uses a query without an @ and the last @ before it" do
+      in_tmp_project do |dir|
+        system = FakeSystem.new(GOOD_COMMANDS)
+        check = checks(dir, {"DATABASE_URL" => "postgres://u:p@ss@db.local:5432/app?application_name=web"}, system).database
+
+        check.status.ok?.should be_true
+        system.calls.should contain("tcp db.local:5432")
+      end
+    end
+
     it "still checks the host when the user and password are stripped from a malformed URL" do
       in_tmp_project do |dir|
         system = FakeSystem.new(GOOD_COMMANDS)

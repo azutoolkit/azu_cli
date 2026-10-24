@@ -57,7 +57,8 @@ module AzuCLI
         ScratchFile.with("tmp_routes_", script, dir) do |path|
           output = IO::Memory.new
           error = IO::Memory.new
-          status = Process.run("crystal", ["run", path], chdir: dir, output: output, error: error)
+          process = ScratchFile.watch(Process.new("crystal", ["run", path], chdir: dir, output: output, error: error))
+          status = process.wait
           raise Error.new(failure_message(error.to_s)) unless status.success?
 
           self.class.parse(output.to_s)
