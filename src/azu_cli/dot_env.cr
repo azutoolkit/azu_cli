@@ -5,6 +5,22 @@ module AzuCLI
   #
   # Precedence, highest first: the process environment (never overridden), `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`.
   # Files are data: no interpolation, nothing is executed, and errors never print a value.
+  #
+  # Trust (best effort, NOT a sandbox): the CLI runs in whatever project you are in and then starts `crystal`,
+  # `shards` and others with this environment, so a file may only set application settings:
+  #
+  # 1. A name on the denylist (`UNSAFE_NAME`: `LD_*`, `DYLD_*`, `PATH`, `SHELL`, `HOME`, the compiler and linker
+  #    variables `CC`, `CXX`, `*FLAGS`, ..., `SHARDS_*`, `GIT_*`, `CRYSTAL_*` except `CRYSTAL_ENV`/`CRYSTAL_LOG_*`,
+  #    `DOCKER_*`, `COMPOSE_*`, `SSH_*`, proxies, certificates, interpreter and editor variables, ...) is always skipped,
+  #    even when `.env.example` lists it.
+  # 2. Any other name is applied only if it looks like an application setting (`DATABASE_URL`, `PORT`, `*_SECRET`,
+  #    `*_URL`, `AZU_*`, ...; see `APP_NAME`) or the project's `.env.example` lists it.
+  #
+  # `.env.example` is NOT a security gate: a hostile repository controls it as much as `.env`, so it only widens which
+  # harmless names are accepted. Only the denylist protects.
+  #
+  # A skipped name is reported on STDERR with the name only (never the value). Running the CLI in a checkout you do not
+  # trust is still unsafe: `serve`, `test`, `db:*` and `generate` compile and run the project's own Crystal code.
   module DotEnv
     class ParseError < Exception
       getter origin : String
@@ -15,6 +31,34 @@ module AzuCLI
       end
     end
 
+    MAX_FILE_SIZE = 1_048_576
+    # BASH_FUNC_*%% (exported shell functions) is unreachable: the parser rejects a name with `%`.
+    UNSAFE_NAME = /\A(?:
+      LD_.*|DYLD_.*|SHARDS_.*|GIT_.*|CRYSTAL_(?!ENV\z|LOG_).*|DOCKER_.*|COMPOSE_.*|SSH_.*|PKG_CONFIG(?:_.*)?|PYTHON.*|PERL5.*|RUBY.*|XDG_.*
+      |PATH|SHELL|IFS|BASH_ENV|ENV|HOME|TMPDIR|SHELLOPTS|PS4|PROMPT_COMMAND|CDPATH|GLOBIGNORE
+      |CC|CXX|CPP|.*FLAGS|LDLIBS|LIBS|AR|AS|LD|COMPILER_PATH|GCC_EXEC_PREFIX|OBJC_INCLUDE_PATH|SDKROOT|DEVELOPER_DIR|CPATH|C_INCLUDE_PATH|CPLUS_INCLUDE_PATH|LIBRARY_PATH
+      |GLIBC_TUNABLES|GCONV_PATH|LOCPATH|NLSPATH|SSL_CERT_FILE|SSL_CERT_DIR
+      |HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY|FTP_PROXY|EDITOR|VISUAL|PAGER|BROWSER|NODE_OPTIONS
+      |OPENSSL_CONF|OPENSSL_MODULES|CURL_CA_BUNDLE|REQUESTS_CA_BUNDLE|NODE_EXTRA_CA_CERTS|CURL_HOME|WGETRC|HOSTALIASES|LOCALDOMAIN|RES_OPTIONS
+      |PERLLIB|PERLIO|RUBYOPT|LUA_PATH|LUA_CPATH|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|CLASSPATH|GEM_HOME|GEM_PATH
+      |BUNDLE_.*|NPM_CONFIG_.*|HOMEBREW_.*|GOPROXY|GOFLAGS|CARGO_.*|RUSTC_WRAPPER|MAKEFLAGS
+      |TERMINFO|TERMINFO_DIRS|TERMCAP|MANPATH|LANG|LANGUAGE|LC_.*|LOCALE_ARCHIVE|TZ|TZDIR|MALLOC_.*|ARGV0|_
+      |USER|LOGNAME|PWD|OLDPWD|USERPROFILE|AZU_OUTPUT_PATH|AZU_TEMPLATES_PATH
+    )\z/ix
+    # What an application setting looks like. Anything else must be listed in the project's `.env.example`.
+    APP_NAME = /\A(?:DATABASE_URL|REDIS_URL|PORT|HOST|CRYSTAL_ENV|AZU_.*|APP_.*|SESSION_.*|CSRF_.*|JOOBQ_.*|SMTP_.*|MAIL_.*|.*_SECRET|.*_KEY|.*_TOKEN|.*_URL|.*_HOST|.*_PORT|.*_PASSWORD)\z/i
+
+    # Where warnings about skipped names go; specs swap it.
+    class_property warning_io : IO = STDERR
+
+    def self.unsafe_name?(name : String) : Bool
+      name.matches?(UNSAFE_NAME)
+    end
+
+    def self.app_name?(name : String) : Bool
+      name.matches?(APP_NAME)
+    end
+
     def self.parse(source : String, origin : String = "(string)") : Hash(String, String)
       Parser.new(source, origin).parse
     end
@@ -23,7 +67,7 @@ module AzuCLI
     def self.load(path : String = ".env") : Array(String)
       return [] of String unless File.file?(path)
 
-      apply(parse(File.read(path), path))
+      apply(read(path), example_names(File.dirname(path)))
     end
 
     # Loads `.env`, `.env.<CRYSTAL_ENV>` and `.env.local` from `dir`.
@@ -33,17 +77,47 @@ module AzuCLI
       env = (ENV["CRYSTAL_ENV"]?.presence || local["CRYSTAL_ENV"]? || base["CRYSTAL_ENV"]? || "development").strip.downcase
       merged = base
       merged = merged.merge(read(File.join(dir, ".env.#{env}"))) if env.matches?(/\A[a-z0-9_\-]+\z/)
-      apply(merged.merge(local))
+      apply(merged.merge(local), example_names(dir))
+    end
+
+    # The names `.env.example` mentions (commented-out entries count: they document the setting).
+    private def self.example_names(dir : String) : Set(String)
+      path = File.join(dir, ".env.example")
+      names = Set(String).new
+      return names unless File.file?(path) && File.size(path) <= MAX_FILE_SIZE
+
+      File.read(path).scan(/^\s*#?\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/m) { |match| names << match[1] }
+      names
     end
 
     private def self.read(path : String) : Hash(String, String)
-      File.file?(path) ? parse(File.read(path), path) : {} of String => String
+      return {} of String => String unless File.file?(path)
+      raise ParseError.new(path, 1, "file is larger than 1 MB") if File.size(path) > MAX_FILE_SIZE
+
+      parse(File.read(path), path)
     end
 
-    private def self.apply(vars : Hash(String, String)) : Array(String)
+    # A blank CRYSTAL_ENV counts as unset (as in Azu::Env), so the file that picked `.env.<env>` can set it.
+    private def self.in_process?(name : String) : Bool
+      name == "CRYSTAL_ENV" ? !ENV[name]?.presence.nil? : ENV.has_key?(name)
+    end
+
+    # Why a name may not be set from a file, or nil when it may.
+    private def self.refusal(name : String, listed : Set(String)) : String?
+      return "it changes how processes start (set it in your shell)" if unsafe_name?(name)
+      return nil if app_name?(name) || listed.includes?(name)
+
+      "it is not a known application setting (add it to .env.example to allow it)"
+    end
+
+    private def self.apply(vars : Hash(String, String), listed : Set(String)) : Array(String)
       applied = [] of String
       vars.each do |name, value|
-        next if ENV.has_key?(name)
+        if reason = refusal(name, listed)
+          warning_io.puts "warning: ignoring #{name} from a .env file: #{reason}"
+          next
+        end
+        next if in_process?(name)
 
         ENV[name] = value
         applied << name

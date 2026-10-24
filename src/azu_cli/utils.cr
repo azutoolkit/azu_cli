@@ -701,7 +701,7 @@ module AzuCLI
       } of String => String
 
       # Add environment info (sanitized)
-      if env = ENV["AZU_ENV"]?
+      if env = ENV["AZU_ENV"]?.presence || ENV["CRYSTAL_ENV"]?.presence
         info["environment"] = env
       end
 

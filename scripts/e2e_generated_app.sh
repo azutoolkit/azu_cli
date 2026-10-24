@@ -10,6 +10,8 @@
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
 #        E2E_DB   database adapter for `azu new`     (default: sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
+#        Secrets: CSRF_SECRET (web) always; SESSION_SECRET only once `azu generate auth` ran, which this script does for
+#        web on SQLite (not for PostgreSQL, which only boots). The production checks run in a clean environment.
 #        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
 set -eu
 
@@ -51,6 +53,12 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT INT TERM
+
+# The octal mode of a file (GNU stat, then BSD stat).
+file_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
+
+# A command that must finish: wrapped in timeout when the host has it.
+bounded() { if command -v timeout >/dev/null; then timeout 20 "$@"; else "$@"; fi; }
 
 step() { echo "==> $*"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -334,6 +342,7 @@ step "the generated .env lists the secrets, .env.example and the per-environment
 if [ "$TYPE" = web ]; then
   grep -Eq '^CSRF_SECRET=[0-9a-f]{64}$' .env || fail ".env has no random CSRF_SECRET"
 fi
+[ "$(file_mode .env)" = 600 ] || fail ".env is not mode 600"
 [ -f .env.example ] && [ -f .env.development ] && [ -f .env.test ] || fail ".env.example / .env.development / .env.test missing"
 git check-ignore -q .env 2>/dev/null || grep -qx '/.env' .gitignore || fail ".env is not git-ignored"
 ! grep -Eq '[0-9a-f]{64}' .env.example || fail ".env.example holds a secret"
@@ -440,20 +449,40 @@ if [ "$TYPE" = web ] && [ "$SCAFFOLD" = 1 ]; then
 fi
 
 # Production reads the environment, not a file lying around: from a directory without .env the app refuses to
-# boot and names the missing secret (authentication is generated here, so SESSION_SECRET is checked first).
+# boot, and each secret is required on its own (which one is reported first depends on initialization order, so
+# boot with all but one set and expect that one to be named).
 if [ "$TYPE" = web ]; then
   step "production refuses to boot without its secrets"
   APP_DIR="$(pwd)"
   mkdir -p "$WORK/bare"
-  expect_production_refusal() {
-    missing="$1"; shift
+  secret_value="0123456789abcdef0123456789abcdef"
+  # A clean environment: whatever the caller or the CI job exports cannot mask a missing guard or add a secret.
+  production_boot() {
     code=0
-    (cd "$WORK/bare" && env "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+    (cd "$WORK/bare" && bounded env -u SESSION_SECRET -u CSRF_SECRET -u DATABASE_URL "$@" CRYSTAL_ENV=production PORT="$(free_port)" "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+  }
+  production_boot
+  [ "$code" -ne 0 ] || fail "production booted without any secret"
+  echo "ok: production without secrets exits with status $code"
+  expect_missing() {
+    missing="$1"; shift
+    production_boot "$@"
     [ "$code" -ne 0 ] || fail "production booted without $missing"
     grep -q "$missing is not set" "$WORK/production.log" || fail "production did not say $missing is not set: $(grep -v ' INFO \| WARN \|^  from' "$WORK/production.log" | head -n 4)"
     echo "ok: production without $missing exits with '$missing is not set'"
   }
-  expect_production_refusal SESSION_SECRET
-  expect_production_refusal CSRF_SECRET SESSION_SECRET=0123456789abcdef0123456789abcdef
+  # SESSION_SECRET is required only by the authentication initializer, which is generated with the scaffold
+  # (SQLite); without it a web app boots in production with CSRF_SECRET alone, as it should.
+  if [ "$SCAFFOLD" = 1 ]; then
+    expect_missing SESSION_SECRET CSRF_SECRET="$secret_value"
+    expect_missing CSRF_SECRET SESSION_SECRET="$secret_value"
+  else
+    expect_missing CSRF_SECRET
+    # Without authentication CSRF_SECRET alone is enough: the app boots (until `timeout` stops it: 124/137/143).
+    production_boot CSRF_SECRET="$secret_value"
+    case "$code" in 124 | 137 | 143) ;; *) fail "production with only CSRF_SECRET did not boot (status $code): $(head -n 3 "$WORK/production.log")" ;; esac
+    ! grep -q "is not set" "$WORK/production.log" || fail "production with only CSRF_SECRET asked for another secret"
+    echo "ok: production boots with CSRF_SECRET alone when authentication is not generated"
+  fi
 fi
 step "PASS: generated $TYPE app compiles, boots and serves"

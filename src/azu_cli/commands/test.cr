@@ -61,9 +61,12 @@ module AzuCLI
         error = IO::Memory.new
         start_time = Time.monotonic
 
+        # The specs run as `test` whatever the shell says: .env.test (loaded at startup for this command) names
+        # the test database.
         status = Process.run(
           "crystal",
           args,
+          env: {"CRYSTAL_ENV" => "test"},
           output: output,
           error: error
         )
