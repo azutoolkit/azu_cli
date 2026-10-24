@@ -65,6 +65,8 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+bounded() { if command -v timeout >/dev/null; then timeout 20 "$@"; else "$@"; fi; }
+
 step() { echo "==> $*"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -382,12 +384,25 @@ expect_doctor() {
 
 # `azu doctor`: a fresh project has no failing check; the port is free before the server runs and taken after.
 check_doctor() {
-  "$AZU_BIN" doctor >"$WORK/doctor.txt" || { cat "$WORK/doctor.txt" >&2; fail "azu doctor failed on a fresh project"; }
-  grep -q '^ok  *crystal' "$WORK/doctor.txt" || fail "azu doctor: crystal is not ok"
+  # A fresh project has no failing check. The PostgreSQL and MySQL variants only boot (no database server runs), so
+  # there exactly the database check fails and every other check is ok.
+  code=0
+  "$AZU_BIN" doctor >"$WORK/doctor.txt" || code=$?
+  grep -q '^ok  *crystal' "$WORK/doctor.txt" || { cat "$WORK/doctor.txt" >&2; fail "azu doctor: crystal is not ok"; }
   grep -q 'failures$' "$WORK/doctor.txt" || fail "azu doctor prints no summary"
-  echo "ok: azu doctor passes on a fresh project"
+  case "$DB" in
+    sqlite) [ "$code" = 0 ] || { cat "$WORK/doctor.txt" >&2; fail "azu doctor failed on a fresh project (exit $code)"; } ;;
+    *)
+      [ "$code" = 1 ] || { cat "$WORK/doctor.txt" >&2; fail "azu doctor exited $code without a database server, expected 1"; }
+      [ "$(grep -c '^fail ' "$WORK/doctor.txt")" = 1 ] && grep -q '^fail  *database' "$WORK/doctor.txt" ||
+        { cat "$WORK/doctor.txt" >&2; fail "azu doctor: expected exactly the database check to fail"; }
+      ;;
+  esac
+  echo "ok: azu doctor on a fresh project ($DB)"
 
-  PORT="$1" "$AZU_BIN" doctor --json >"$WORK/doctor.json" || fail "azu doctor --json failed"
+  code=0
+  PORT="$1" "$AZU_BIN" doctor --json >"$WORK/doctor.json" || code=$?
+  [ "$code" = 0 ] || [ "$DB" != sqlite ] || fail "azu doctor --json failed"
   [ "$(head -c 1 "$WORK/doctor.json")" = "{" ] || fail "azu doctor --json prints something besides JSON"
   for id in crystal shards dependencies database env secrets port docker gitignore; do
     grep -q "\"id\": \"$id\"" "$WORK/doctor.json" || fail "azu doctor --json lacks the $id check"
@@ -395,7 +410,14 @@ check_doctor() {
   expect_doctor crystal ok
   expect_doctor dependencies ok
   expect_doctor port "$2"
-  [ "$(doctor_status database)" != fail ] || fail "azu doctor: the database check failed"
+  if [ "$DB" = sqlite ]; then
+    expect_doctor database ok
+  else
+    expect_doctor database fail
+    for id in crystal shards dependencies env secrets port gitignore; do
+      [ "$(doctor_status "$id")" != fail ] || fail "azu doctor: $id failed besides the database"
+    done
+  fi
 
   code=0
   PORT=not-a-port "$AZU_BIN" doctor >/dev/null 2>&1 || code=$?
@@ -605,7 +627,9 @@ if [ "$SCAFFOLD" = 1 ] && [ "$TYPE" = web ]; then
 fi
 
 step "azu doctor (the port is taken by the running server)"
-PORT="$PORT" "$AZU_BIN" doctor --json >"$WORK/doctor.json" || fail "azu doctor --json failed while the server runs"
+code=0
+PORT="$PORT" "$AZU_BIN" doctor --json >"$WORK/doctor.json" || code=$?
+[ "$code" = 0 ] || [ "$DB" != sqlite ] || fail "azu doctor --json failed while the server runs"
 expect_doctor port warn
 
 kill -0 "$SERVER_PID" 2>/dev/null || fail "server died while serving requests"
@@ -622,21 +646,41 @@ if [ "$TYPE" = web ] && [ "$SCAFFOLD" = 1 ]; then
 fi
 
 # Production reads the environment, not a file lying around: from a directory without .env the app refuses to
-# boot and names the missing secret (authentication is generated here, so SESSION_SECRET is checked first).
+# boot, and each secret is required on its own (which one is reported first depends on initialization order, so
+# boot with all but one set and expect that one to be named).
 if [ "$TYPE" = web ]; then
   step "production refuses to boot without its secrets"
   APP_DIR="$(pwd)"
   mkdir -p "$WORK/bare"
-  expect_production_refusal() {
-    missing="$1"; shift
+  secret_value="0123456789abcdef0123456789abcdef"
+  # A clean environment: whatever the caller or the CI job exports cannot mask a missing guard or add a secret.
+  production_boot() {
     code=0
-    (cd "$WORK/bare" && env "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+    (cd "$WORK/bare" && bounded env -u SESSION_SECRET -u CSRF_SECRET -u DATABASE_URL "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+  }
+  production_boot
+  [ "$code" -ne 0 ] || fail "production booted without any secret"
+  echo "ok: production without secrets exits with status $code"
+  expect_missing() {
+    missing="$1"; shift
+    production_boot "$@"
     [ "$code" -ne 0 ] || fail "production booted without $missing"
     grep -q "$missing is not set" "$WORK/production.log" || fail "production did not say $missing is not set: $(grep -v ' INFO \| WARN \|^  from' "$WORK/production.log" | head -n 4)"
     echo "ok: production without $missing exits with '$missing is not set'"
   }
-  expect_production_refusal SESSION_SECRET
-  expect_production_refusal CSRF_SECRET SESSION_SECRET=0123456789abcdef0123456789abcdef
+  # SESSION_SECRET is required only by the authentication initializer, which is generated with the scaffold
+  # (SQLite); without it a web app boots in production with CSRF_SECRET alone, as it should.
+  if [ "$SCAFFOLD" = 1 ]; then
+    expect_missing SESSION_SECRET CSRF_SECRET="$secret_value"
+    expect_missing CSRF_SECRET SESSION_SECRET="$secret_value"
+  else
+    expect_missing CSRF_SECRET
+    # Without authentication CSRF_SECRET alone is enough: the app boots (until `timeout` stops it: 124/137/143).
+    production_boot CSRF_SECRET="$secret_value"
+    case "$code" in 124 | 137 | 143) ;; *) fail "production with only CSRF_SECRET did not boot (status $code): $(head -n 3 "$WORK/production.log")" ;; esac
+    ! grep -q "is not set" "$WORK/production.log" || fail "production with only CSRF_SECRET asked for another secret"
+    echo "ok: production boots with CSRF_SECRET alone when authentication is not generated"
+  fi
 fi
 
 if [ "$SCAFFOLD" = 1 ] && [ "${E2E_SKIP_DEV:-0}" != 1 ]; then
