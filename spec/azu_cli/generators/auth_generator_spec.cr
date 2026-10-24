@@ -83,6 +83,18 @@ describe AzuCLI::Generate::Auth do
     end
   end
 
+  it "leaves a .env that is a symlink alone and says so" do
+    in_generated_project do
+      File.write("real.env", "PORT=4000\n")
+      File.delete(".env") if File.exists?(".env")
+      File.symlink("real.env", ".env")
+      render.call(".")
+
+      File.read("real.env").should eq "PORT=4000\n"
+      File.symlink?(".env").should be_true
+    end
+  end
+
   describe ".conflict" do
     it "is nil in a project without authentication" do
       in_generated_project do

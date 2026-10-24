@@ -177,7 +177,12 @@ variable (never the value). A denylist is always enforced, even for names `.env.
 `SHELL`, `HOME`, `TMPDIR`, `IFS`, `BASH_ENV`, `ENV`, `SHARDS_*`, `GIT_*`, `CRYSTAL_*` (except `CRYSTAL_ENV` and
 `CRYSTAL_LOG_*`), `DOCKER_*`, `COMPOSE_*`, `SSH_*`, the compiler and linker variables (`CC`, `CXX`, `CPP`, `*FLAGS`,
 `CPATH`, `LIBRARY_PATH`, `PKG_CONFIG*`, ...), proxy and certificate variables, `EDITOR`/`VISUAL`/`PAGER`/`BROWSER`,
-`PYTHON*`, `PERL5*`, `RUBY*`, `NODE_OPTIONS`, `XDG_*` and a few more (see `DotEnv::UNSAFE_NAME`). Set those in your shell.
+`PYTHON*`, `PERL5*`, `RUBY*`, `NODE_OPTIONS`, `XDG_*`, TLS, resolver, language-runtime (`GEM_*`, `BUNDLE_*`,
+`NPM_CONFIG_*`, `CARGO_*`, `HOMEBREW_*`, `GO*`, `JAVA_TOOL_OPTIONS`, ...), locale and terminal (`LANG`, `LC_*`, `TZ`, `TERMINFO`), identity
+(`USER`, `LOGNAME`, `PWD`) and the CLI's own path overrides (`AZU_OUTPUT_PATH`, `AZU_TEMPLATES_PATH`) and a few more (see `DotEnv::UNSAFE_NAME`). Set those in your shell.
+
+`.env.example` is not a security gate: a hostile repository controls it as much as `.env`, so it only decides which harmless
+names are accepted; the denylist is what protects.
 
 **This does not make an untrusted checkout safe.** `serve`, `test`, `db:*` and `generate` compile and run the project's
 own Crystal code (macros, specs, migrations, initializers), and `shards install` runs a dependency's postinstall. Only

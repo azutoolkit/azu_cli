@@ -68,6 +68,11 @@ module AzuCLI
 
       # The .env (created if missing) lists a random secret and is git-ignored; the app loads it at boot (`Azu::Env.load_all`).
       private def add_session_secret(env_file : String)
+        if File.symlink?(env_file)
+          Logger.warn("#{env_file} is a symlink: SESSION_SECRET was not written; set it in your environment")
+          return
+        end
+
         content = File.exists?(env_file) ? File.read(env_file) : ""
         return if content.includes?("SESSION_SECRET=")
 

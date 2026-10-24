@@ -459,7 +459,7 @@ if [ "$TYPE" = web ]; then
   # A clean environment: whatever the caller or the CI job exports cannot mask a missing guard or add a secret.
   production_boot() {
     code=0
-    (cd "$WORK/bare" && bounded env -u SESSION_SECRET -u CSRF_SECRET -u DATABASE_URL "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+    (cd "$WORK/bare" && bounded env -u SESSION_SECRET -u CSRF_SECRET -u DATABASE_URL "$@" CRYSTAL_ENV=production PORT="$(free_port)" "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
   }
   production_boot
   [ "$code" -ne 0 ] || fail "production booted without any secret"

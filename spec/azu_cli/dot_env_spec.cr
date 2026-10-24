@@ -86,8 +86,37 @@ describe AzuCLI::DotEnv do
         EDITOR VISUAL PAGER BROWSER NODE_OPTIONS PYTHONPATH PYTHONSTARTUP PERL5LIB PERL5OPT RUBYOPT RUBYLIB XDG_CONFIG_HOME XDG_DATA_DIRS].each do |name|
         AzuCLI::DotEnv.unsafe_name?(name).should be_true
       end
-      %w[PORT DATABASE_URL CSRF_SECRET PATHS MY_PATH CRYSTAL_ENV CRYSTAL_LOG_SOURCES GITHUB_TOKEN HOMEPAGE TERM USER LOGNAME CCACHE_X LOG_LEVEL].each do |name|
+      %w[PORT DATABASE_URL CSRF_SECRET PATHS MY_PATH CRYSTAL_ENV CRYSTAL_LOG_SOURCES GITHUB_TOKEN HOMEPAGE TERM CCACHE_X LOG_LEVEL LANGUAGE_X TIMEZONE MY_TZ GOFLAGS_X].each do |name|
         AzuCLI::DotEnv.unsafe_name?(name).should be_false
+      end
+    end
+
+    it "knows the toolchain, TLS, resolver, language-runtime, locale and path-redirecting families" do
+      %w[CPPFLAGS cppflags FFLAGS RUSTFLAGS LDLIBS LIBS AR AS LD COMPILER_PATH GCC_EXEC_PREFIX OBJC_INCLUDE_PATH SDKROOT DEVELOPER_DIR
+        OPENSSL_CONF OPENSSL_MODULES CURL_CA_BUNDLE REQUESTS_CA_BUNDLE NODE_EXTRA_CA_CERTS FTP_PROXY CURL_HOME WGETRC HOSTALIASES LOCALDOMAIN RES_OPTIONS
+        PERLLIB PERLIO LUA_PATH LUA_CPATH JAVA_TOOL_OPTIONS _JAVA_OPTIONS CLASSPATH GEM_HOME GEM_PATH BUNDLE_GEMFILE bundle_path
+        NPM_CONFIG_REGISTRY npm_config_registry HOMEBREW_PREFIX homebrew_no_auto_update GOPROXY GOFLAGS CARGO_HOME CARGO_BUILD_RUSTC RUSTC_WRAPPER MAKEFLAGS
+        TERMINFO TERMINFO_DIRS TERMCAP MANPATH LANG LANGUAGE LC_ALL lc_messages LOCALE_ARCHIVE TZ TZDIR MALLOC_CHECK_ MALLOC_PERTURB_ ARGV0 _
+        USER LOGNAME PWD OLDPWD USERPROFILE AZU_OUTPUT_PATH azu_templates_path].each do |name|
+        AzuCLI::DotEnv.unsafe_name?(name).should be_true
+      end
+    end
+
+    it "skips a denylisted name even when .env.example lists it" do
+      with_dir do |dir|
+        File.write(File.join(dir, ".env"), "CPPFLAGS=-include./evil.h\nnpm_config_registry=http://evil\nAZU_OUTPUT_PATH=/etc\nSPEC_FINE_URL=http://ok\n")
+        File.write(File.join(dir, ".env.example"), "CPPFLAGS=\nnpm_config_registry=\n")
+        AzuCLI::DotEnv.warning_io = IO::Memory.new
+        begin
+          with_env({"CPPFLAGS" => nil, "npm_config_registry" => nil, "AZU_OUTPUT_PATH" => nil, "SPEC_FINE_URL" => nil}) do
+            AzuCLI::DotEnv.load_all(dir).should eq ["SPEC_FINE_URL"]
+            ENV["CPPFLAGS"]?.should be_nil
+            ENV["npm_config_registry"]?.should be_nil
+            ENV["AZU_OUTPUT_PATH"]?.should be_nil
+          end
+        ensure
+          AzuCLI::DotEnv.warning_io = STDERR
+        end
       end
     end
 

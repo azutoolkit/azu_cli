@@ -16,6 +16,9 @@ module AzuCLI
   # 2. Any other name is applied only if it looks like an application setting (`DATABASE_URL`, `PORT`, `*_SECRET`,
   #    `*_URL`, `AZU_*`, ...; see `APP_NAME`) or the project's `.env.example` lists it.
   #
+  # `.env.example` is NOT a security gate: a hostile repository controls it as much as `.env`, so it only widens which
+  # harmless names are accepted. Only the denylist protects.
+  #
   # A skipped name is reported on STDERR with the name only (never the value). Running the CLI in a checkout you do not
   # trust is still unsafe: `serve`, `test`, `db:*` and `generate` compile and run the project's own Crystal code.
   module DotEnv
@@ -29,12 +32,18 @@ module AzuCLI
     end
 
     MAX_FILE_SIZE = 1_048_576
-    UNSAFE_NAME   = /\A(?:
+    # BASH_FUNC_*%% (exported shell functions) is unreachable: the parser rejects a name with `%`.
+    UNSAFE_NAME = /\A(?:
       LD_.*|DYLD_.*|SHARDS_.*|GIT_.*|CRYSTAL_(?!ENV\z|LOG_).*|DOCKER_.*|COMPOSE_.*|SSH_.*|PKG_CONFIG(?:_.*)?|PYTHON.*|PERL5.*|RUBY.*|XDG_.*
       |PATH|SHELL|IFS|BASH_ENV|ENV|HOME|TMPDIR|SHELLOPTS|PS4|PROMPT_COMMAND|CDPATH|GLOBIGNORE
-      |CC|CXX|CPP|CFLAGS|CXXFLAGS|LDFLAGS|CPATH|C_INCLUDE_PATH|CPLUS_INCLUDE_PATH|LIBRARY_PATH
+      |CC|CXX|CPP|.*FLAGS|LDLIBS|LIBS|AR|AS|LD|COMPILER_PATH|GCC_EXEC_PREFIX|OBJC_INCLUDE_PATH|SDKROOT|DEVELOPER_DIR|CPATH|C_INCLUDE_PATH|CPLUS_INCLUDE_PATH|LIBRARY_PATH
       |GLIBC_TUNABLES|GCONV_PATH|LOCPATH|NLSPATH|SSL_CERT_FILE|SSL_CERT_DIR
-      |HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY|EDITOR|VISUAL|PAGER|BROWSER|NODE_OPTIONS
+      |HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY|FTP_PROXY|EDITOR|VISUAL|PAGER|BROWSER|NODE_OPTIONS
+      |OPENSSL_CONF|OPENSSL_MODULES|CURL_CA_BUNDLE|REQUESTS_CA_BUNDLE|NODE_EXTRA_CA_CERTS|CURL_HOME|WGETRC|HOSTALIASES|LOCALDOMAIN|RES_OPTIONS
+      |PERLLIB|PERLIO|RUBYOPT|LUA_PATH|LUA_CPATH|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|CLASSPATH|GEM_HOME|GEM_PATH
+      |BUNDLE_.*|NPM_CONFIG_.*|HOMEBREW_.*|GOPROXY|GOFLAGS|CARGO_.*|RUSTC_WRAPPER|MAKEFLAGS
+      |TERMINFO|TERMINFO_DIRS|TERMCAP|MANPATH|LANG|LANGUAGE|LC_.*|LOCALE_ARCHIVE|TZ|TZDIR|MALLOC_.*|ARGV0|_
+      |USER|LOGNAME|PWD|OLDPWD|USERPROFILE|AZU_OUTPUT_PATH|AZU_TEMPLATES_PATH
     )\z/ix
     # What an application setting looks like. Anything else must be listed in the project's `.env.example`.
     APP_NAME = /\A(?:DATABASE_URL|REDIS_URL|PORT|HOST|CRYSTAL_ENV|AZU_.*|APP_.*|SESSION_.*|CSRF_.*|JOOBQ_.*|SMTP_.*|MAIL_.*|.*_SECRET|.*_KEY|.*_TOKEN|.*_URL|.*_HOST|.*_PORT|.*_PASSWORD)\z/i
