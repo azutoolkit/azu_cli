@@ -36,7 +36,8 @@ module AzuCLI
     return "test" if {"test", "t"}.includes?(args.first?)
 
     args.each_with_index do |arg, index|
-      return args[index + 1]? if arg == "--env" || arg == "-e"
+      return nil if arg == "--" # what follows belongs to the program being run
+      return args[index + 1]?.try { |value| value.starts_with?("-") ? nil : value } if arg == "--env" || arg == "-e"
       return arg.lchop("--env=") if arg.starts_with?("--env=")
     end
     nil
@@ -53,7 +54,15 @@ module AzuCLI
     if environment = command_environment(args).try(&.presence)
       ENV["CRYSTAL_ENV"] = environment.downcase
     end
+    warn_about_inherited_database_url(args)
     DotEnv.load_all(dir)
+  end
+
+  # `azu test` loads .env.test, but a DATABASE_URL already in the process wins over it.
+  private def self.warn_about_inherited_database_url(args : Array(String)) : Nil
+    return unless {"test", "t"}.includes?(args.first?) && ENV["DATABASE_URL"]?.presence
+
+    DotEnv.warning_io.puts "warning: DATABASE_URL is set in your environment and wins over .env.test: the specs will use it"
   end
 
   # Main CLI entry point using Topia

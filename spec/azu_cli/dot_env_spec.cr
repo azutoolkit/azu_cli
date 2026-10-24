@@ -1,6 +1,7 @@
 require "../spec_helper"
 require "file_utils"
 require "json"
+require "digest/sha256"
 
 private def with_env(vars : Hash(String, String?), &)
   saved = vars.keys.to_h { |name| {name, ENV[name]?} }
@@ -54,7 +55,13 @@ describe AzuCLI::DotEnv do
   describe "the shared parser corpus" do
     # spec/fixtures/dotenv_corpus.json is identical in azu and azu_cli (this parser is a copy of Azu::Env's):
     # change one, change both.
-    corpus = JSON.parse(File.read(File.join(__DIR__, "../fixtures/dotenv_corpus.json"))).as_a
+    path = File.join(__DIR__, "../fixtures/dotenv_corpus.json")
+    corpus = JSON.parse(File.read(path)).as_a
+
+    it "is the corpus azu pins (same SHA256 in azu's spec/azu/env_spec.cr)" do
+      corpus.size.should be > 0
+      Digest::SHA256.hexdigest(File.read(path)).should eq "67bad3660aca88d0600542f9f9587b3d5545d963872c290cf054470ef6594a2e"
+    end
 
     corpus.each do |entry|
       it entry["name"].as_s do
@@ -70,12 +77,46 @@ describe AzuCLI::DotEnv do
   end
 
   describe "untrusted projects" do
-    it "knows the names that change how processes start, case-insensitively" do
-      %w[LD_PRELOAD ld_library_path DYLD_INSERT_LIBRARIES PATH path SHELL IFS BASH_ENV ENV SHARDS_CACHE_PATH SHARDS_INSTALL_PATH
-        CRYSTAL_PATH CRYSTAL_OPTS CRYSTAL_LIBRARY_PATH GIT_SSH_COMMAND GIT_DIR DOCKER_HOST HOME].each do |name|
+    it "knows the names and families that change how processes start, case-insensitively" do
+      %w[LD_PRELOAD ld_library_path DYLD_INSERT_LIBRARIES PATH path SHELL IFS BASH_ENV ENV HOME TMPDIR SHELLOPTS PS4 PROMPT_COMMAND CDPATH GLOBIGNORE
+        SHARDS_CACHE_PATH SHARDS_INSTALL_PATH GIT_SSH_COMMAND GIT_DIR CRYSTAL_PATH CRYSTAL_OPTS CRYSTAL_LIBRARY_PATH CRYSTAL_CACHE_DIR CRYSTAL_WORKERS
+        DOCKER_HOST DOCKER_CONFIG DOCKER_CONTEXT COMPOSE_FILE COMPOSE_PROJECT_NAME SSH_ASKPASS SSH_AUTH_SOCK
+        CC cc CXX CPP CFLAGS CXXFLAGS LDFLAGS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR
+        GLIBC_TUNABLES GCONV_PATH LOCPATH NLSPATH SSL_CERT_FILE SSL_CERT_DIR HTTP_PROXY https_proxy ALL_PROXY no_proxy
+        EDITOR VISUAL PAGER BROWSER NODE_OPTIONS PYTHONPATH PYTHONSTARTUP PERL5LIB PERL5OPT RUBYOPT RUBYLIB XDG_CONFIG_HOME XDG_DATA_DIRS].each do |name|
         AzuCLI::DotEnv.unsafe_name?(name).should be_true
       end
-      %w[PORT DATABASE_URL CSRF_SECRET PATHS MY_PATH CRYSTAL_ENV GITHUB_TOKEN HOMEPAGE].each { |name| AzuCLI::DotEnv.unsafe_name?(name).should be_false }
+      %w[PORT DATABASE_URL CSRF_SECRET PATHS MY_PATH CRYSTAL_ENV CRYSTAL_LOG_SOURCES GITHUB_TOKEN HOMEPAGE TERM USER LOGNAME CCACHE_X LOG_LEVEL].each do |name|
+        AzuCLI::DotEnv.unsafe_name?(name).should be_false
+      end
+    end
+
+    it "recognises application settings by their name" do
+      %w[DATABASE_URL REDIS_URL PORT HOST CRYSTAL_ENV AZU_DB_LAZY APP_NAME SESSION_SECRET CSRF_SECRET JOOBQ_REDIS SMTP_USER MAIL_FROM
+        STRIPE_SECRET API_KEY GITHUB_TOKEN CACHE_URL DB_HOST DB_PORT DB_PASSWORD].each { |name| AzuCLI::DotEnv.app_name?(name).should be_true }
+      %w[LOG_LEVEL TEMPLATES_PATH PORT_REUSE SOMETHING_ELSE].each { |name| AzuCLI::DotEnv.app_name?(name).should be_false }
+    end
+
+    it "applies an unknown name only when .env.example lists it, and never a denylisted one" do
+      with_dir do |dir|
+        File.write(File.join(dir, ".env"), "AZU_CLI_SPEC_OK=1\nSPEC_LOG_LEVEL=debug\nSPEC_UNLISTED=x\nCC=./evil.sh\nSPEC_COMMENTED=1\n")
+        File.write(File.join(dir, ".env.example"), "# docs\nSPEC_LOG_LEVEL=info\n# SPEC_COMMENTED=\nCC=\n")
+        warnings = IO::Memory.new
+        AzuCLI::DotEnv.warning_io = warnings
+        begin
+          with_env({"AZU_CLI_SPEC_OK" => nil, "SPEC_LOG_LEVEL" => nil, "SPEC_UNLISTED" => nil, "CC" => nil, "SPEC_COMMENTED" => nil}) do
+            AzuCLI::DotEnv.load_all(dir).sort.should eq ["AZU_CLI_SPEC_OK", "SPEC_COMMENTED", "SPEC_LOG_LEVEL"]
+            ENV["CC"]?.should be_nil
+            ENV["SPEC_UNLISTED"]?.should be_nil
+            warnings.to_s.should contain("SPEC_UNLISTED")
+            warnings.to_s.should contain(".env.example")
+            warnings.to_s.should contain("ignoring CC")
+            warnings.to_s.should_not contain("evil.sh")
+          end
+        ensure
+          AzuCLI::DotEnv.warning_io = STDERR
+        end
+      end
     end
 
     it "does not let a project's file set them, and warns without printing the value" do
@@ -173,6 +214,30 @@ describe AzuCLI::DotEnv do
         with_env({"AZU_CLI_SPEC_P" => nil, "CRYSTAL_ENV" => "test"}) do
           AzuCLI.load_project_env(["db:migrate"], dir).should eq ["AZU_CLI_SPEC_P"]
           ENV["AZU_CLI_SPEC_P"].should eq "from-project"
+        end
+      end
+    end
+
+    it "ignores an --env value that is another flag, and flags after --" do
+      AzuCLI.command_environment(["serve", "--env", "--port", "3000"]).should be_nil
+      AzuCLI.command_environment(["serve", "-e"]).should be_nil
+      AzuCLI.command_environment(["db:migrate", "--", "--env", "production"]).should be_nil
+    end
+
+    it "warns when the shell's DATABASE_URL will win over .env.test" do
+      with_dir do |dir|
+        File.write(File.join(dir, ".env.test"), "DATABASE_URL=sqlite3://./test.db\n")
+        warnings = IO::Memory.new
+        AzuCLI::DotEnv.warning_io = warnings
+        begin
+          with_env({"DATABASE_URL" => "postgres://prod:hunter2@db/prod", "CRYSTAL_ENV" => nil}) do
+            AzuCLI.load_project_env(["test"], dir)
+            warnings.to_s.should contain("DATABASE_URL is set in your environment")
+            warnings.to_s.should_not contain("hunter2")
+            ENV["DATABASE_URL"].should eq "postgres://prod:hunter2@db/prod"
+          end
+        ensure
+          AzuCLI::DotEnv.warning_io = STDERR
         end
       end
     end

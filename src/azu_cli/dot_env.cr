@@ -6,11 +6,18 @@ module AzuCLI
   # Precedence, highest first: the process environment (never overridden), `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`.
   # Files are data: no interpolation, nothing is executed, and errors never print a value.
   #
-  # Trust: the CLI runs in whatever project you are in, including a clone you do not trust, and then starts
-  # `crystal`, `shards` and others with this environment. A file therefore cannot set a variable that changes how
-  # processes start (`LD_*`, `DYLD_*`, `PATH`, `SHELL`, `IFS`, `BASH_ENV`, `ENV`, `SHARDS_*`, `CRYSTAL_PATH`,
-  # `CRYSTAL_OPTS`, `CRYSTAL_LIBRARY_PATH`, `GIT_*`, `DOCKER_HOST`, `HOME`): it is skipped with a warning on STDERR
-  # naming the variable (never the value). Set those in your shell.
+  # Trust (best effort, NOT a sandbox): the CLI runs in whatever project you are in and then starts `crystal`,
+  # `shards` and others with this environment, so a file may only set application settings:
+  #
+  # 1. A name on the denylist (`UNSAFE_NAME`: `LD_*`, `DYLD_*`, `PATH`, `SHELL`, `HOME`, the compiler and linker
+  #    variables `CC`, `CXX`, `*FLAGS`, ..., `SHARDS_*`, `GIT_*`, `CRYSTAL_*` except `CRYSTAL_ENV`/`CRYSTAL_LOG_*`,
+  #    `DOCKER_*`, `COMPOSE_*`, `SSH_*`, proxies, certificates, interpreter and editor variables, ...) is always skipped,
+  #    even when `.env.example` lists it.
+  # 2. Any other name is applied only if it looks like an application setting (`DATABASE_URL`, `PORT`, `*_SECRET`,
+  #    `*_URL`, `AZU_*`, ...; see `APP_NAME`) or the project's `.env.example` lists it.
+  #
+  # A skipped name is reported on STDERR with the name only (never the value). Running the CLI in a checkout you do not
+  # trust is still unsafe: `serve`, `test`, `db:*` and `generate` compile and run the project's own Crystal code.
   module DotEnv
     class ParseError < Exception
       getter origin : String
@@ -22,10 +29,25 @@ module AzuCLI
     end
 
     MAX_FILE_SIZE = 1_048_576
-    UNSAFE_NAME   = /\A(?:LD_.*|DYLD_.*|SHARDS_.*|GIT_.*|PATH|SHELL|IFS|BASH_ENV|ENV|CRYSTAL_PATH|CRYSTAL_OPTS|CRYSTAL_LIBRARY_PATH|DOCKER_HOST|HOME)\z/i
+    UNSAFE_NAME   = /\A(?:
+      LD_.*|DYLD_.*|SHARDS_.*|GIT_.*|CRYSTAL_(?!ENV\z|LOG_).*|DOCKER_.*|COMPOSE_.*|SSH_.*|PKG_CONFIG(?:_.*)?|PYTHON.*|PERL5.*|RUBY.*|XDG_.*
+      |PATH|SHELL|IFS|BASH_ENV|ENV|HOME|TMPDIR|SHELLOPTS|PS4|PROMPT_COMMAND|CDPATH|GLOBIGNORE
+      |CC|CXX|CPP|CFLAGS|CXXFLAGS|LDFLAGS|CPATH|C_INCLUDE_PATH|CPLUS_INCLUDE_PATH|LIBRARY_PATH
+      |GLIBC_TUNABLES|GCONV_PATH|LOCPATH|NLSPATH|SSL_CERT_FILE|SSL_CERT_DIR
+      |HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY|EDITOR|VISUAL|PAGER|BROWSER|NODE_OPTIONS
+    )\z/ix
+    # What an application setting looks like. Anything else must be listed in the project's `.env.example`.
+    APP_NAME = /\A(?:DATABASE_URL|REDIS_URL|PORT|HOST|CRYSTAL_ENV|AZU_.*|APP_.*|SESSION_.*|CSRF_.*|JOOBQ_.*|SMTP_.*|MAIL_.*|.*_SECRET|.*_KEY|.*_TOKEN|.*_URL|.*_HOST|.*_PORT|.*_PASSWORD)\z/i
+
+    # Where warnings about skipped names go; specs swap it.
+    class_property warning_io : IO = STDERR
 
     def self.unsafe_name?(name : String) : Bool
       name.matches?(UNSAFE_NAME)
+    end
+
+    def self.app_name?(name : String) : Bool
+      name.matches?(APP_NAME)
     end
 
     def self.parse(source : String, origin : String = "(string)") : Hash(String, String)
@@ -36,7 +58,7 @@ module AzuCLI
     def self.load(path : String = ".env") : Array(String)
       return [] of String unless File.file?(path)
 
-      apply(read(path))
+      apply(read(path), example_names(File.dirname(path)))
     end
 
     # Loads `.env`, `.env.<CRYSTAL_ENV>` and `.env.local` from `dir`.
@@ -46,7 +68,17 @@ module AzuCLI
       env = (ENV["CRYSTAL_ENV"]?.presence || local["CRYSTAL_ENV"]? || base["CRYSTAL_ENV"]? || "development").strip.downcase
       merged = base
       merged = merged.merge(read(File.join(dir, ".env.#{env}"))) if env.matches?(/\A[a-z0-9_\-]+\z/)
-      apply(merged.merge(local))
+      apply(merged.merge(local), example_names(dir))
+    end
+
+    # The names `.env.example` mentions (commented-out entries count: they document the setting).
+    private def self.example_names(dir : String) : Set(String)
+      path = File.join(dir, ".env.example")
+      names = Set(String).new
+      return names unless File.file?(path) && File.size(path) <= MAX_FILE_SIZE
+
+      File.read(path).scan(/^\s*#?\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/m) { |match| names << match[1] }
+      names
     end
 
     private def self.read(path : String) : Hash(String, String)
@@ -61,17 +93,22 @@ module AzuCLI
       name == "CRYSTAL_ENV" ? !ENV[name]?.presence.nil? : ENV.has_key?(name)
     end
 
-    private def self.skip_unsafe(name : String) : Bool
-      return false unless unsafe_name?(name)
+    # Why a name may not be set from a file, or nil when it may.
+    private def self.refusal(name : String, listed : Set(String)) : String?
+      return "it changes how processes start (set it in your shell)" if unsafe_name?(name)
+      return nil if app_name?(name) || listed.includes?(name)
 
-      STDERR.puts "warning: ignoring #{name} from a .env file: it changes how processes start (set it in your shell)"
-      true
+      "it is not a known application setting (add it to .env.example to allow it)"
     end
 
-    private def self.apply(vars : Hash(String, String)) : Array(String)
+    private def self.apply(vars : Hash(String, String), listed : Set(String)) : Array(String)
       applied = [] of String
       vars.each do |name, value|
-        next if skip_unsafe(name) || in_process?(name)
+        if reason = refusal(name, listed)
+          warning_io.puts "warning: ignoring #{name} from a .env file: #{reason}"
+          next
+        end
+        next if in_process?(name)
 
         ENV[name] = value
         applied << name

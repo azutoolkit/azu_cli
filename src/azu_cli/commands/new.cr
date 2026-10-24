@@ -354,7 +354,11 @@ module AzuCLI
           )
 
           # Generate the project in the target directory
+          # The directory is closed to others while the files are written, so the .env (secrets) is never briefly
+          # readable; it is opened up afterwards like any project directory.
+          Dir.mkdir_p(@project_name, 0o700)
           generator.render(@project_name, force: false, interactive: false, list: false, color: true)
+          File.chmod(@project_name, 0o755)
           env_file = File.join(@project_name, ".env")
           File.chmod(env_file, 0o600) if File.exists?(env_file) # it holds the generated secrets
 

@@ -72,8 +72,8 @@ module AzuCLI
         return if content.includes?("SESSION_SECRET=")
 
         separator = content.empty? || content.ends_with?("\n") ? "" : "\n"
-        File.write(env_file, "#{content}#{separator}SESSION_SECRET=#{Random::Secure.hex(32)}\n")
-        File.chmod(env_file, 0o600) # it holds secrets
+        File.write(env_file, "#{content}#{separator}SESSION_SECRET=#{Random::Secure.hex(32)}\n", perm: 0o600) # a new file is never readable by others
+        File.chmod(env_file, 0o600)                                                                           # nor an existing one
       end
     end
   end

@@ -284,6 +284,12 @@ describe AzuCLI::Generate::Project do
       File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=sqlite3://./db/myapp_development.db")
       File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=sqlite3://./db/myapp_test.db")
       example = File.read(File.join(test_dir, ".env.example"))
+      # the CLI applies a name only when it looks like a setting or .env.example lists it: every generated name must pass
+      listed = example.scan(/^\s*#?\s*([A-Za-z_][A-Za-z0-9_]*)=/m).map(&.[1])
+      env.scan(/^([A-Za-z_][A-Za-z0-9_]*)=/m).map(&.[1]).each do |name|
+        (AzuCLI::DotEnv.app_name?(name) || listed.includes?(name)).should be_true
+        AzuCLI::DotEnv.unsafe_name?(name).should be_false
+      end
       example.should match(/^CSRF_SECRET=$/m)
       example.should_not match(/[0-9a-f]{64}/)
 

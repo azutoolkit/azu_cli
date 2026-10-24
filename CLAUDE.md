@@ -362,11 +362,15 @@ Generators extend `Teeplate::FileTree`:
 - `AzuCLI.run` calls `load_project_env` (`AzuCLI::DotEnv`, `src/azu_cli/dot_env.cr`) before `Config.load!`, for every
   command except `new`, `init`, `help`, `version`, `completion`. The CLI does not depend on azu, so `DotEnv` is a copy of
   the parser in azu's `src/azu/env.cr`: change both, and keep `spec/azu_cli/dot_env_spec.cr` in step with `spec/azu/env_spec.cr`
-- Trust model: the CLI loads the `.env*` of whatever project it runs in and then spawns tools, so `DotEnv` (and
-  `Azu::Env`, unless `unsafe: true`) skips `LD_*`, `DYLD_*`, `PATH`, `SHELL`, `IFS`, `BASH_ENV`, `ENV`, `SHARDS_*`,
-  `CRYSTAL_PATH`, `CRYSTAL_OPTS`, `CRYSTAL_LIBRARY_PATH`, `GIT_*`, `DOCKER_HOST`, `HOME` with a warning naming the variable.
-  `load_project_env` honours the command's `--env` (and `test` = `test`) before loading, so children never inherit
-  another environment's `DATABASE_URL`. `spec/fixtures/dotenv_corpus.json` must stay identical to azu's
+- Trust model (best effort, not a sandbox): the CLI loads the `.env*` of whatever project it runs in and then spawns
+  tools. `DotEnv` always skips the `UNSAFE_NAME` denylist (`LD_*`, `PATH`, `HOME`, `CC`/`CXX`/`*FLAGS`, `SHARDS_*`, `GIT_*`,
+  `CRYSTAL_*` except `CRYSTAL_ENV`/`CRYSTAL_LOG_*`, `DOCKER_*`, `COMPOSE_*`, `SSH_*`, proxies, certs, interpreter and editor
+  variables, ...), and applies any other name only if it matches `APP_NAME` (DATABASE_URL, PORT, `*_SECRET`, `*_URL`, ...)
+  or is listed in the project's `.env.example` (so every name the generated `.env` holds must be in the generated
+  `.env.example`: a spec checks it). The CLI still compiles and runs the project's own code, so it is NOT safe in an
+  untrusted checkout. `load_project_env` honours the command's `--env` (a value starting with `-` and anything after `--`
+  are ignored; `test` = `test`) before loading, and `azu test` warns when a shell `DATABASE_URL` will win.
+  `spec/fixtures/dotenv_corpus.json` must stay identical to azu's (both specs pin its SHA256)
 - Generated files: `.env` (git-ignored, chmod 0600, random secrets), `.env.development` / `.env.test` (committed, `DATABASE_URL` only),
   `.env.example` (committed, secrets blank), `.env.local` is git-ignored. Do not put empty values in `.env`: once it
   is loaded an empty `SSL_MODE=` replaces a default
