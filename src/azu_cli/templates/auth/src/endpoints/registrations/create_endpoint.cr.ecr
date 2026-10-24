@@ -3,10 +3,12 @@ require "crypto/bcrypt/password"
 module <%= app_module %>
   struct Registrations::CreateEndpoint
     include Azu::Endpoint(Registrations::CreateRequest, Azu::Response::Empty)
+    include Authentication
 
     post "/register"
 
     def call : Azu::Response::Empty
+      throttle_register!
       email = create_request.email.strip.downcase
       return email_taken if User.find_by(email: email)
 

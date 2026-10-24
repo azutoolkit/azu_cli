@@ -17,6 +17,19 @@ module <%= app_module %>
       user if verified && user
     end
 
+    # Counts a sign-in attempt for this address and email, and for this address with any email; raises a 429 over the
+    # limit. An email alone is never counted: that would let a stranger lock the account out.
+    private def throttle_login!(email : String) : Nil
+      address = AuthThrottle.client_address(context.request)
+      AuthThrottle.login.attempt!("#{address}|#{email}")
+      AuthThrottle.address.attempt!(address)
+    end
+
+    # Counts a sign-up attempt for this address; raises a 429 over the limit.
+    private def throttle_register! : Nil
+      AuthThrottle.register.attempt!(AuthThrottle.client_address(context.request))
+    end
+
     private def flash_messages : Hash(String, String)
       messages = {} of String => String
       {"notice", "error"}.each { |kind| Session.session.flash[kind]?.try { |message| messages[kind] = message } }

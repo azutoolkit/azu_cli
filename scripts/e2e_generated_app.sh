@@ -6,10 +6,14 @@
 # A web project also gets a Chat channel (two WebSocket clients) and authentication (sign up, sign in,
 # a protected page, sign out; the password is stored as a bcrypt digest).
 #
+# It also drives the CLI's own development commands against the project: `azu routes`, `azu doctor`, and
+# `azu dev` (rebuild and restart on a source change, no rebuild for a template, a failed build keeps the old app).
+#
 # Usage: scripts/e2e_generated_app.sh [web|api]      (default: web)
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
 #        E2E_DB   database adapter for `azu new`     (default: sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
+#        E2E_SKIP_DEV set to 1 to skip the `azu dev` check (two more compiles, a few minutes)
 #        Secrets: CSRF_SECRET (web) always; SESSION_SECRET only once `azu generate auth` ran, which this script does for
 #        web on SQLite (not for PostgreSQL, which only boots). The production checks run in a clean environment.
 #        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
@@ -38,9 +42,14 @@ fi
 
 WORK="$(mktemp -d)"
 SERVER_PID=""
+DEV_PID=""
 
 cleanup() {
   status=$?
+  if [ -n "$DEV_PID" ] && kill -0 "$DEV_PID" 2>/dev/null; then
+    kill "$DEV_PID" 2>/dev/null || true
+    wait "$DEV_PID" 2>/dev/null || true
+  fi
   if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
@@ -48,6 +57,10 @@ cleanup() {
   if [ "$status" -ne 0 ] && [ -f "$WORK/server.log" ]; then
     echo "--- server log ---" >&2
     tail -n 40 "$WORK/server.log" >&2
+  fi
+  if [ "$status" -ne 0 ] && [ -f "$WORK/dev.log" ]; then
+    echo "--- azu dev log ---" >&2
+    tail -n 60 "$WORK/dev.log" >&2
   fi
   [ "${KEEP_TMP:-0}" = 1 ] && echo "kept $WORK" || rm -rf "$WORK"
   exit "$status"
@@ -332,6 +345,183 @@ check_auth() {
   expect_redirect /login
 }
 
+# `azu routes`: the routes of the app, as a table and as JSON, filtered, with the exit codes it documents.
+check_routes() {
+  "$AZU_BIN" routes >"$WORK/routes.txt" || fail "azu routes failed"
+  for expected in "GET *\/health  *$MODULE::Health::HealthEndpoint  *$MODULE::Health::HealthRequest  *$MODULE::Health::HealthPage  *link_to_get_health_health" \
+    "GET  *\/ .*$MODULE::Welcome::IndexEndpoint"; do
+    [ "$TYPE" = api ] && [ "${expected#*Welcome}" != "$expected" ] && continue
+    grep -q -- "$expected" "$WORK/routes.txt" || { cat "$WORK/routes.txt" >&2; fail "azu routes does not list: $expected"; }
+  done
+  grep -q '^METHOD  *PATH  *ENDPOINT  *REQUEST  *RESPONSE  *HELPERS' "$WORK/routes.txt" || fail "azu routes has no header row"
+  ! grep -q '^OPTIONS\|^HEAD' "$WORK/routes.txt" || fail "azu routes shows the implicit HEAD/OPTIONS routes"
+  echo "ok: azu routes lists the health endpoint with its types and helpers"
+
+  "$AZU_BIN" routes --format json >"$WORK/routes.json" || fail "azu routes --format json failed"
+  [ "$(head -c 1 "$WORK/routes.json")" = "[" ] || fail "azu routes --format json prints something besides JSON: $(head -n 1 "$WORK/routes.json")"
+  grep -q "\"endpoint\": \"$MODULE::Health::HealthEndpoint\"" "$WORK/routes.json" || fail "routes JSON lacks the health endpoint"
+  echo "ok: azu routes --format json is JSON only"
+
+  if [ "$SCAFFOLD" = 1 ]; then
+    "$AZU_BIN" routes --method POST --path /posts >"$WORK/routes.txt" || fail "azu routes --method POST failed"
+    grep -q "POST  *\/posts  *$MODULE::Posts::CreateEndpoint" "$WORK/routes.txt" || fail "azu routes --method POST --path /posts lacks the create endpoint"
+    ! grep -q "GET\|DELETE" "$WORK/routes.txt" || fail "azu routes --method POST lists other methods"
+    "$AZU_BIN" routes --method DELETE >"$WORK/routes.txt" || fail "azu routes --method DELETE failed"
+    grep -q "button_to_delete_posts_destroy" "$WORK/routes.txt" || fail "the delete route lists no button_to_delete helper"
+    echo "ok: azu routes --method/--path filter"
+  fi
+
+  code=0
+  "$AZU_BIN" routes --format xml >/dev/null 2>&1 || code=$?
+  [ "$code" = 2 ] || fail "azu routes --format xml exited $code, expected 2"
+  echo "ok: azu routes rejects an unknown format with exit 2"
+}
+
+# doctor_status ID: the status of a check in $WORK/doctor.json (the JSON puts the id before the status).
+doctor_status() {
+  grep -A1 "\"id\": \"$1\"" "$WORK/doctor.json" | sed -n 's/.*"status": "\([a-z]*\)".*/\1/p'
+}
+
+expect_doctor() {
+  got="$(doctor_status "$1")"
+  [ "$got" = "$2" ] || { cat "$WORK/doctor.json" >&2; fail "azu doctor: $1 is '$got', expected '$2'"; }
+  echo "ok: azu doctor $1 -> $2"
+}
+
+# `azu doctor`: a fresh project has no failing check; the port is free before the server runs and taken after.
+check_doctor() {
+  # A fresh project has no failing check. The PostgreSQL and MySQL variants only boot (no database server runs), so
+  # there exactly the database check fails and every other check is ok.
+  code=0
+  "$AZU_BIN" doctor >"$WORK/doctor.txt" || code=$?
+  grep -q '^ok  *crystal' "$WORK/doctor.txt" || { cat "$WORK/doctor.txt" >&2; fail "azu doctor: crystal is not ok"; }
+  grep -q 'failures$' "$WORK/doctor.txt" || fail "azu doctor prints no summary"
+  case "$DB" in
+    sqlite) [ "$code" = 0 ] || { cat "$WORK/doctor.txt" >&2; fail "azu doctor failed on a fresh project (exit $code)"; } ;;
+    *)
+      [ "$code" = 1 ] || { cat "$WORK/doctor.txt" >&2; fail "azu doctor exited $code without a database server, expected 1"; }
+      [ "$(grep -c '^fail ' "$WORK/doctor.txt")" = 1 ] && grep -q '^fail  *database' "$WORK/doctor.txt" ||
+        { cat "$WORK/doctor.txt" >&2; fail "azu doctor: expected exactly the database check to fail"; }
+      ;;
+  esac
+  echo "ok: azu doctor on a fresh project ($DB)"
+
+  code=0
+  PORT="$1" "$AZU_BIN" doctor --json >"$WORK/doctor.json" || code=$?
+  [ "$code" = 0 ] || [ "$DB" != sqlite ] || fail "azu doctor --json failed"
+  [ "$(head -c 1 "$WORK/doctor.json")" = "{" ] || fail "azu doctor --json prints something besides JSON"
+  for id in crystal shards dependencies database env secrets port docker gitignore; do
+    grep -q "\"id\": \"$id\"" "$WORK/doctor.json" || fail "azu doctor --json lacks the $id check"
+  done
+  expect_doctor crystal ok
+  expect_doctor dependencies ok
+  expect_doctor port "$2"
+  if [ "$DB" = sqlite ]; then
+    expect_doctor database ok
+  else
+    expect_doctor database fail
+    for id in crystal shards dependencies env secrets port gitignore; do
+      [ "$(doctor_status "$id")" != fail ] || fail "azu doctor: $id failed besides the database"
+    done
+  fi
+
+  code=0
+  PORT=not-a-port "$AZU_BIN" doctor >/dev/null 2>&1 || code=$?
+  [ "$code" = 1 ] || fail "azu doctor with an invalid PORT exited $code, expected 1"
+  code=0
+  "$AZU_BIN" doctor --fix >/dev/null 2>&1 || code=$?
+  [ "$code" = 2 ] || fail "azu doctor --fix exited $code, expected 2"
+  echo "ok: azu doctor exits 1 on a failing check and 2 on an unknown option"
+}
+
+# Sign-in is limited to 5 attempts per address and email (429 with Retry-After on the 6th, another email is
+# unaffected), sign-up to 5 per address. The server runs with a long window so the check cannot straddle one.
+check_throttle() {
+  jar="$WORK/throttle.jar"
+  rm -f "$jar"
+  for attempt in 1 2 3 4 5; do
+    fetch /login "$jar" >/dev/null
+    submit "$jar" /login 303 --data-urlencode email=victim@example.com --data-urlencode "password=wrong password $attempt"
+  done
+  fetch /login "$jar" >/dev/null
+  submit "$jar" /login 429 --data-urlencode email=victim@example.com --data-urlencode "password=wrong password 6"
+  retry="$(tr -d '\r' <"$WORK/headers" | sed -n 's/^[Rr]etry-[Aa]fter: *//p')"
+  case "$retry" in ''|*[!0-9]*) fail "the 429 has no numeric Retry-After header: '$retry'" ;; esac
+  [ "$retry" -ge 1 ] && [ "$retry" -le 300 ] || fail "Retry-After is $retry, expected 1..300"
+  echo "ok: the 6th sign-in attempt is refused with 429, Retry-After: $retry"
+
+  fetch /login "$jar" >/dev/null
+  submit "$jar" /login 303 --data-urlencode email=bystander@example.com --data-urlencode "password=wrong password"
+  echo "ok: another account is not throttled"
+
+  # Two sign-ups from the dev account steps above are already counted: three more are allowed, the next is refused.
+  for n in 1 2 3; do
+    fetch /register "$jar" >/dev/null
+    submit "$jar" /register 303 --data-urlencode "email=throttle$n@example.com" --data-urlencode "password=correct horse"
+  done
+  fetch /register "$jar" >/dev/null
+  submit "$jar" /register 429 --data-urlencode "email=throttle4@example.com" --data-urlencode "password=correct horse"
+  [ "$(sqlite3 "db/${NAME}_development.db" "select count(*) from users where email = 'throttle4@example.com'")" = 0 ] || fail "a throttled sign-up created a user"
+  echo "ok: the 6th sign-up attempt is refused with 429 and creates nothing"
+}
+
+# `azu dev`: builds and runs the app; a source change rebuilds and restarts it; a template change does neither; a
+# broken source keeps the old app serving; SIGTERM stops the app too.
+check_dev() {
+  dev_port="$(free_port)" || fail "no free port found"
+  PORT="$dev_port" HOST=127.0.0.1 "$AZU_BIN" dev --port "$dev_port" --debounce 300 --interval 200 >"$WORK/dev.log" 2>&1 &
+  DEV_PID=$!
+  dev_fetch() { curl -s -o "$WORK/dev_body" -w '%{http_code}' --max-time 5 "http://127.0.0.1:$dev_port$1" || true; }
+  wait_until() { # wait_until SECONDS DESCRIPTION COMMAND...
+    limit="$1"; what="$2"; shift 2
+    waited=0
+    until "$@" >/dev/null 2>&1; do
+      kill -0 "$DEV_PID" 2>/dev/null || fail "azu dev exited while waiting for $what"
+      waited=$((waited + 1))
+      [ "$waited" -lt "$limit" ] || fail "timed out waiting for $what"
+      sleep 1
+    done
+  }
+  dev_body_has() { [ "$(dev_fetch /health)" = 200 ] && grep -q -- "$1" "$WORK/dev_body"; }
+  log_has() { grep -q -- "$1" "$WORK/dev.log"; }
+  builds() { grep -c 'Built in' "$WORK/dev.log" || true; }
+
+  wait_until 400 "the first build and start" dev_body_has '"status":"ok"'
+  echo "ok: azu dev built and started the app"
+  [ "$(builds)" = 1 ] || fail "expected one build, saw $(builds)"
+
+  if [ -f public/templates/layout.jinja ]; then
+    printf '\n{# touched by the e2e #}\n' >>public/templates/layout.jinja
+    wait_until 30 "the template change to be noticed" log_has 'public/templates/layout.jinja'
+    sleep 2
+    [ "$(builds)" = 1 ] || fail "a template change started a build"
+    grep -q 'Changed: public/templates/layout.jinja.*no rebuild' "$WORK/dev.log" || fail "azu dev did not say that a template change needs no rebuild"
+    echo "ok: a template change does not rebuild"
+  fi
+
+  endpoint=src/endpoints/health/health_endpoint.cr
+  cp "$endpoint" "$WORK/health_endpoint.cr.orig"
+  printf '\nthis is not crystal (\n' >>"$endpoint"
+  wait_until 300 "the failed build" log_has 'Build failed'
+  [ "$(dev_fetch /health)" = 200 ] || fail "the app stopped serving after a failed build"
+  grep -q '"status":"ok"' "$WORK/dev_body" || fail "the app serves something else after a failed build"
+  log_has 'previous build keeps running' || fail "azu dev did not say it keeps the previous build running"
+  echo "ok: a failed build keeps the old app serving"
+
+  sed 's/status: "ok"/status: "ok-rebuilt"/' "$WORK/health_endpoint.cr.orig" >"$endpoint"
+  wait_until 300 "the rebuilt app" dev_body_has '"status":"ok-rebuilt"'
+  [ "$(builds)" = 2 ] || fail "expected two successful builds, saw $(builds)"
+  echo "ok: a source change rebuilds and restarts the app"
+
+  kill -TERM "$DEV_PID"
+  wait "$DEV_PID" 2>/dev/null || true
+  DEV_PID=""
+  code=0
+  curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$dev_port/health" || code=$?
+  [ "$code" = 7 ] || fail "the app still answers after azu dev was stopped (curl exit $code)"
+  echo "ok: SIGTERM stops azu dev and the app"
+}
+
 step "generate a $TYPE project ($DB) with $AZU_BIN"
 cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
@@ -380,6 +570,9 @@ step "compile $ENTRY"
 mkdir -p bin
 crystal build "$ENTRY" -o "bin/$NAME"
 
+step "azu routes"
+check_routes
+
 # The generated CI workflow must pass on a fresh project: run the commands it runs (the Crystal
 # version is the one this script runs with, the workflow pins another).
 step "run the generated workflow's checks (format, specs)"
@@ -391,7 +584,8 @@ done
 
 # Starts the server from the project directory (it loads .env there) and waits until /health answers.
 start_server() {
-  HOST=127.0.0.1 PORT="$PORT" "./bin/$NAME" >"$WORK/server.log" 2>&1 &
+  # A long throttle window, so the sign-in/sign-up limits cannot be reset in the middle of check_throttle.
+  AUTH_THROTTLE_WINDOW=300 HOST=127.0.0.1 PORT="$PORT" "./bin/$NAME" >"$WORK/server.log" 2>&1 &
   SERVER_PID=$!
   tries=0
   until curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/health"; do
@@ -411,6 +605,8 @@ stop_server() {
 step "start the server (no secrets exported: it loads .env)"
 PORT="$(free_port)" || fail "no free port found"
 echo "port $PORT"
+step "azu doctor (before the server runs)"
+check_doctor "$PORT" ok
 start_server
 
 step "check responses"
@@ -433,7 +629,15 @@ if [ "$SCAFFOLD" = 1 ] && [ "$TYPE" = web ]; then
   check_channel
   step "check authentication"
   check_auth
+  step "check sign-in and sign-up throttling"
+  check_throttle
 fi
+
+step "azu doctor (the port is taken by the running server)"
+code=0
+PORT="$PORT" "$AZU_BIN" doctor --json >"$WORK/doctor.json" || code=$?
+[ "$code" = 0 ] || [ "$DB" != sqlite ] || fail "azu doctor --json failed while the server runs"
+expect_doctor port warn
 
 kill -0 "$SERVER_PID" 2>/dev/null || fail "server died while serving requests"
 
@@ -485,4 +689,13 @@ if [ "$TYPE" = web ]; then
     echo "ok: production boots with CSRF_SECRET alone when authentication is not generated"
   fi
 fi
+
+if [ "$SCAFFOLD" = 1 ] && [ "${E2E_SKIP_DEV:-0}" != 1 ]; then
+  step "stop the server, then check azu dev"
+  kill "$SERVER_PID" 2>/dev/null || true
+  wait "$SERVER_PID" 2>/dev/null || true
+  SERVER_PID=""
+  check_dev
+fi
+
 step "PASS: generated $TYPE app compiles, boots and serves"

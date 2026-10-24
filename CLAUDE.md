@@ -354,6 +354,19 @@ Generators extend `Teeplate::FileTree`:
 - Use `pp` macro for inspecting values during development
 - Stack traces shown in debug mode on errors
 
+## Development commands (`dev`, `routes`, `console`, `doctor`)
+
+- A command answers with `Result#exit_code` (`usage_error` is 2); `machine_output?` keeps the CLI's own log lines off stdout
+  (`routes`, `doctor`), and a command writes its data to `stdout` (a property, so specs capture it)
+- `routes` compiles and runs a script that requires `./src/<project>.cr` and prints `Azu::CONFIG.router.route_info` plus the
+  `Azu::Endpoint(Request, Response)` type arguments gathered by a macro (`route_listing/`); `console` runs `crystal i` and exits 2
+  when the compiler has no interpreter (the official Docker images have none); `doctor` is a list of side-effect-free checks
+  behind a `Diagnostics::System` seam (`diagnostics/`)
+- `dev` = `dev_server/` (`Classifier`/`Batcher`/`Watcher` are pure and unit tested, `Builder`/`Child` run processes). Templates
+  never rebuild; a failed build keeps the running app. `scripts/e2e_generated_app.sh` drives it; `E2E_SKIP_DEV=1` skips it
+- Generated authentication throttles through its own `AuthThrottle` (`templates/auth/src/services`), not `Azu::Handler::Throttle`
+  (that one keys by address only, on every path)
+
 ## Environment files (`.env`)
 
 - The generated app file starts with `require "azu/env"; Azu::Env.load_all` BEFORE `require "azu"` (Azu::CONFIG reads
