@@ -71,7 +71,8 @@ describe AzuCLI::DevServer::Child do
 
     child.stop
     child.running?.should be_false
-    File.read(File.join(dir, "term")).strip.should eq "term" # it got SIGTERM and could clean up
+    # it got SIGTERM and could clean up
+    File.read(File.join(dir, "term")).strip.should eq "term"
   ensure
     FileUtils.rm_rf(dir) if dir
   end
