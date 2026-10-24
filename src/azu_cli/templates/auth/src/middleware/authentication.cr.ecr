@@ -21,8 +21,8 @@ module <%= app_module %>
     # limit. An email alone is never counted: that would let a stranger lock the account out.
     private def throttle_login!(email : String) : Nil
       address = AuthThrottle.client_address(context.request)
+      AuthThrottle.address.attempt!(address) # first: a blocked address must not add (or evict) per-email keys
       AuthThrottle.login.attempt!("#{address}|#{email}")
-      AuthThrottle.address.attempt!(address)
     end
 
     # Counts a sign-up attempt for this address; raises a 429 over the limit.

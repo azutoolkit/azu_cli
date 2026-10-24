@@ -63,7 +63,7 @@ Sign-in and sign-up are throttled by `Blog::AuthThrottle` (`src/services/auth_th
 | `AUTH_THROTTLE_ADDRESS`     | 20      | client address, any email (sign-in), against one address trying many accounts |
 | `AUTH_THROTTLE_REGISTER`    | 5       | client address (sign-up)                                      |
 | `AUTH_THROTTLE_WINDOW`      | 60      | seconds in a window                                           |
-| `AUTH_THROTTLE_TRUST_PROXY` | unset   | `true`: the client address is the last `X-Forwarded-For` entry (exactly one trusted hop) |
+| `AUTH_THROTTLE_TRUST_PROXY` | unset   | `true`: the client address is the last `X-Forwarded-For` entry (exactly one trusted hop; spoofable when the app can also be reached directly, so firewall it to the proxy) |
 
 - Attempts are counted before the password is checked, so a right and a wrong password cost the same; requests that fail
   validation (`422`) or the CSRF check (`403`) never reach the endpoint and are not counted.
@@ -71,8 +71,14 @@ Sign-in and sign-up are throttled by `Blog::AuthThrottle` (`src/services/auth_th
   their own address. Each source address has its own budget per account (`AUTH_THROTTLE_LOGIN`) and an overall
   budget for trying many accounts (`AUTH_THROTTLE_ADDRESS`). Guessing spread over many addresses is not stopped by
   this; use a shared store, a CAPTCHA or an account lock the owner can clear.
-- At most 10,000 counters are kept (an attacker can invent keys): expired ones go first, then the oldest, so memory
-  and the time per attempt stay bounded.
+- At most 10,000 counters are kept (an attacker can invent keys). When the table is full the counter whose window ends
+  first is dropped: an expired one if there is any, otherwise a live one. Memory and the time per attempt stay bounded;
+  a flood from 10,000 distinct addresses inside one window can still reset other clients' counts. The per-address
+  counter is checked before the per-email one, so an address that is already blocked adds no per-email keys.
+- The limits are per client address. Several users behind one address (an office, a campus, carrier-grade NAT) share
+  the `AUTH_THROTTLE_ADDRESS` and `AUTH_THROTTLE_REGISTER` budgets, so raise them for such audiences. An IPv6 client is
+  keyed by its full address, and a /64 holds as many addresses as an attacker cares to use, so the address limits do not
+  stop an IPv6 client that rotates addresses.
 - The counters live in the process: several processes or hosts each allow the limit, and a restart forgets them. Count
   in a shared store (Redis) when that matters.
 - The client address is the peer of the connection. Behind a reverse proxy that is the proxy's address, so every client

@@ -108,38 +108,52 @@ module AzuCLI
         Check.warn("database", "SQLite file #{file} does not exist yet", "run 'azu db:setup'")
       end
 
-      private def server_database(url : String) : Check
-        uri = URI.parse(url)
-        scheme = uri.scheme.to_s.downcase
-        return Check.fail("database", "DATABASE_URL has no host or an unknown scheme '#{scheme}'", "use scheme://user:password@host:port/name") unless DEFAULT_DATABASE_PORTS.has_key?(scheme)
-        if unix_socket?(uri)
-          return Check.warn("database", "#{scheme} through a unix socket: reachability is not checked", "run 'azu db:status' to test the connection")
+      # What is left of a URL once the user and password are cut off at its last "@". A password may hold "@", "/",
+      # ":" or "?", so URI.parse would take pieces of it for the host, the port or the path; nothing parsed from the
+      # part before the last "@" is ever printed.
+      private record ServerUrl, scheme : String, host : String, port : Int32?, path : String, socket : Bool
+
+      private def split_server_url(url : String) : ServerUrl?
+        scheme, separator, rest = url.partition("://")
+        scheme = scheme.downcase
+        return unless !separator.empty? && DEFAULT_DATABASE_PORTS.has_key?(scheme)
+
+        rest = rest[(rest.rindex('@').not_nil! + 1)..] if rest.includes?('@')
+        location, _, query = rest.partition('?')
+        authority, slash, path = location.partition('/')
+        socket = authority.empty? || query.split('&').any? { |pair| pair.starts_with?("host=/") }
+        host, port = authority_parts(authority)
+        ServerUrl.new(scheme, host, port, "#{slash}#{path}", socket)
+      end
+
+      private def authority_parts(authority : String) : {String, Int32?}
+        if authority.starts_with?('[') && (close = authority.index(']'))
+          return {authority[1...close], authority[(close + 2)..]?.try(&.to_i?)}
         end
 
-        port = uri.port || DEFAULT_DATABASE_PORTS[scheme]
-        host = uri.hostname.presence
-        return Check.fail("database", "DATABASE_URL has no host", "use scheme://user:password@host:port/name") unless host
+        host, _, port = authority.partition(':')
+        {host, port.to_i?}
+      end
 
-        target = "#{scheme}://#{host.includes?(':') ? "[#{host}]" : host}:#{port}#{database_name(uri)}"
-        if @system.tcp_reachable?(host, port, CONNECT_TIMEOUT)
+      private def server_database(url : String) : Check
+        parts = split_server_url(url)
+        unless parts
+          return Check.fail("database", "DATABASE_URL does not start with postgres:// or mysql://", "use scheme://user:password@host:port/name")
+        end
+        if parts.socket
+          return Check.warn("database", "#{parts.scheme} through a unix socket: reachability is not checked", "run 'azu db:status' to test the connection")
+        end
+        return Check.fail("database", "DATABASE_URL has no usable host", "use scheme://user:password@host:port/name") unless parts.host.matches?(/\A[\w.:-]+\z/)
+
+        port = parts.port || DEFAULT_DATABASE_PORTS[parts.scheme]
+        name = parts.path.split('/').last? || ""
+        shown = parts.host.includes?(':') ? "[#{parts.host}]" : parts.host
+        target = "#{parts.scheme}://#{shown}:#{port}#{name.matches?(/\A[\w.-]+\z/) ? "/#{name}" : ""}"
+        if @system.tcp_reachable?(parts.host, port, CONNECT_TIMEOUT)
           Check.ok("database", "#{target} accepts connections (credentials are not tried)")
         else
           Check.fail("database", "cannot connect to #{target} within #{CONNECT_TIMEOUT.total_seconds.to_i}s", "start the database server or fix DATABASE_URL")
         end
-      rescue URI::Error
-        Check.fail("database", "DATABASE_URL is not a valid URL", "use scheme://user:password@host:port/name")
-      end
-
-      # No host, or a `host=/path` parameter: the server is reached through a socket file.
-      private def unix_socket?(uri : URI) : Bool
-        uri.host.to_s.empty? || uri.host.to_s.starts_with?('/') || !!uri.query_params["host"]?.try(&.starts_with?('/'))
-      end
-
-      # "/name" from the last path segment, and only when it looks like a name: a password written with an
-      # unescaped "/" leaves its tail in the path, which must not reach the output.
-      private def database_name(uri : URI) : String
-        name = uri.path.split('/').last? || ""
-        name.matches?(/\A[\w.-]+\z/) ? "/#{name}" : ""
       end
 
       # -- environment --------------------------------------------------------------------------
