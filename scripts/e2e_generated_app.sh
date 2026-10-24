@@ -10,6 +10,8 @@
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
 #        E2E_DB   database adapter for `azu new`     (default: sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
+#        Secrets: CSRF_SECRET (web) always; SESSION_SECRET only once `azu generate auth` ran, which this script does for
+#        web on SQLite (not for PostgreSQL, which only boots). The production checks run in a clean environment.
 #        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
 set -eu
 
@@ -454,9 +456,10 @@ if [ "$TYPE" = web ]; then
   APP_DIR="$(pwd)"
   mkdir -p "$WORK/bare"
   secret_value="0123456789abcdef0123456789abcdef"
+  # A clean environment: whatever the caller or the CI job exports cannot mask a missing guard or add a secret.
   production_boot() {
     code=0
-    (cd "$WORK/bare" && bounded env "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+    (cd "$WORK/bare" && bounded env -u SESSION_SECRET -u CSRF_SECRET -u DATABASE_URL "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
   }
   production_boot
   [ "$code" -ne 0 ] || fail "production booted without any secret"
@@ -468,7 +471,18 @@ if [ "$TYPE" = web ]; then
     grep -q "$missing is not set" "$WORK/production.log" || fail "production did not say $missing is not set: $(grep -v ' INFO \| WARN \|^  from' "$WORK/production.log" | head -n 4)"
     echo "ok: production without $missing exits with '$missing is not set'"
   }
-  expect_missing SESSION_SECRET CSRF_SECRET="$secret_value"
-  expect_missing CSRF_SECRET SESSION_SECRET="$secret_value"
+  # SESSION_SECRET is required only by the authentication initializer, which is generated with the scaffold
+  # (SQLite); without it a web app boots in production with CSRF_SECRET alone, as it should.
+  if [ "$SCAFFOLD" = 1 ]; then
+    expect_missing SESSION_SECRET CSRF_SECRET="$secret_value"
+    expect_missing CSRF_SECRET SESSION_SECRET="$secret_value"
+  else
+    expect_missing CSRF_SECRET
+    # Without authentication CSRF_SECRET alone is enough: the app boots (until `timeout` stops it: 124/137/143).
+    production_boot CSRF_SECRET="$secret_value"
+    case "$code" in 124 | 137 | 143) ;; *) fail "production with only CSRF_SECRET did not boot (status $code): $(head -n 3 "$WORK/production.log")" ;; esac
+    ! grep -q "is not set" "$WORK/production.log" || fail "production with only CSRF_SECRET asked for another secret"
+    echo "ok: production boots with CSRF_SECRET alone when authentication is not generated"
+  fi
 fi
 step "PASS: generated $TYPE app compiles, boots and serves"
