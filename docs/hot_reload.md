@@ -69,14 +69,10 @@ Examples:
   azu serve --verbose                # Show detailed output
 ```
 
-### Using the `dev` Alias
+### `azu dev`
 
-For convenience, you can use the shorter `dev` command:
-
-```bash
-azu serve
-azu serve --port 4000
-```
+`azu dev` is a separate command, not an alias: it builds without `--production`, never rebuilds for template changes
+and restarts only the app. See [azu dev](commands/dev.md).
 
 ## How It Works
 

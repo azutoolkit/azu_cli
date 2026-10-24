@@ -6,7 +6,9 @@ module <%= app_module %>
     post "/login"
 
     def call : Azu::Response::Empty
-      unless user = authenticate(create_request.email, create_request.password)
+      email = create_request.email.strip.downcase
+      throttle_login!(email)
+      unless user = authenticate(email, create_request.password)
         Session.session.flash["error"] = "Invalid email or password"
         return redirect to: "/login", status: 303
       end

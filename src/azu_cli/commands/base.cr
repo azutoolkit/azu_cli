@@ -7,16 +7,19 @@ module AzuCLI
       property success : Bool
       property message : String
       property error : String
+      # The process exit code the CLI ends with: 0 for success, 1 for a failure, 2 for invalid usage.
+      property exit_code : Int32
 
-      def initialize(@success : Bool, @message : String = "", @error : String = "")
+      def initialize(@success : Bool, @message : String = "", @error : String = "", exit_code : Int32? = nil)
+        @exit_code = exit_code || (success ? 0 : 1)
       end
 
       def self.success(message : String = "") : Result
         new(true, message)
       end
 
-      def self.error(error : String) : Result
-        new(false, "", error)
+      def self.error(error : String, exit_code : Int32 = 1) : Result
+        new(false, "", error, exit_code)
       end
 
       def success? : Bool
@@ -31,6 +34,8 @@ module AzuCLI
       property options : Hash(String, String)
       property args : Array(String)
       property all_args : Array(String)
+      # Where a command writes its data (a table, JSON, help); replaced in specs.
+      property stdout : IO = STDOUT
 
       def initialize(@name : String, @description : String = "")
         @options = {} of String => String
@@ -40,6 +45,11 @@ module AzuCLI
 
       # Abstract method that all commands must implement
       abstract def execute : Result
+
+      # Whether stdout carries the command's data (a table, JSON): then the CLI adds no log lines of its own to it.
+      def machine_output? : Bool
+        false
+      end
 
       # Parse command line arguments using Crystal's OptionParser
       def parse_args(args : Array(String))
@@ -128,6 +138,20 @@ module AzuCLI
       # Success result
       def success(message : String = "") : Result
         Result.success(message)
+      end
+
+      # Invalid usage (an unknown option, a bad value): exit code 2. The CLI prints the message.
+      def usage_error(message : String) : Result
+        Result.error(message, AzuCLI::Config::EXIT_INVALID_USAGE)
+      end
+
+      # The first option the command does not know, as it was given (`--bogus`), or nil. `--help` is always known.
+      def unknown_option(known : Array(String)) : String?
+        @options.each_key do |key|
+          next if key == "help" || key == "h" || known.includes?(key)
+          return key.size == 1 ? "-#{key}" : "--#{key}"
+        end
+        nil
       end
 
       # Error result

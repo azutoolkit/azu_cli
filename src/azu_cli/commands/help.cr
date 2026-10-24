@@ -44,7 +44,11 @@ module AzuCLI
         puts "  db:validate            Validate the database configuration and connection"
         puts
         puts "Development Commands:"
-        puts "  serve                  Start development server with hot reload (alias: s)"
+        puts "  dev                    Run the app, rebuilding and restarting it when the code changes"
+        puts "  serve                  Compile and run the app with a --production build (alias: s)"
+        puts "  routes                 List the routes: method, path, endpoint, request/response, helpers"
+        puts "  console                Open Crystal's interpreter with the app loaded (needs `crystal i`)"
+        puts "  doctor                 Check Crystal, shards, database, env, secrets and port"
         puts "  test                   Run application tests (alias: t)"
         puts
         puts "Job Queue Commands:"
@@ -82,7 +86,9 @@ module AzuCLI
         puts "  azu generate auth"
         puts "  azu db:create"
         puts "  azu db:migrate"
-        puts "  azu serve"
+        puts "  azu dev"
+        puts "  azu routes --method POST"
+        puts "  azu doctor"
         puts "  azu test --watch"
         puts "  azu jobs:worker --workers 4"
         puts
@@ -97,6 +103,14 @@ module AzuCLI
           show_generate_help
         when "db"
           show_db_help
+        when "dev"
+          Dev.new.show_help
+        when "routes"
+          Routes.new.show_help
+        when "console"
+          Console.new.show_help
+        when "doctor"
+          Doctor.new.show_help
         when "serve", "s"
           show_serve_help
         when "test", "t"

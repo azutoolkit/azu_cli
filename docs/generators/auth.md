@@ -51,10 +51,31 @@ endpoints or a `create_users` migration exist already (a scaffold named `User` c
 `Azu::Handler::RequestId.new,` line to put the session handler after. Remove what it names, or add the handler by hand.
 Do not combine it with `azu session:setup`: both define the session initializer and handler.
 
-## Brute force
+## Brute force: throttling
 
-Nothing throttles sign-in attempts, and each attempt costs a bcrypt check. Put a limit in front of `/login` and `/register`
-(a reverse proxy, or `Azu::Handler::Throttle` once it fits your traffic: it counts every request per client, not only failures).
+Sign-in and sign-up are throttled by `Blog::AuthThrottle` (`src/services/auth_throttle.cr`, with a spec in
+`spec/services/auth_throttle_spec.cr`): a fixed-window counter per key, in memory. An attempt over the limit answers
+**429** with a **`Retry-After`** header (seconds) and is not processed. Defaults, per window of 60 seconds:
+
+| Setting                     | Default | Key                                                           |
+| --------------------------- | ------- | ------------------------------------------------------------- |
+| `AUTH_THROTTLE_LOGIN`       | 5       | client address and email (sign-in)                            |
+| `AUTH_THROTTLE_ACCOUNT`     | 20      | email from any address (sign-in), against distributed guessing |
+| `AUTH_THROTTLE_REGISTER`    | 5       | client address (sign-up)                                      |
+| `AUTH_THROTTLE_WINDOW`      | 60      | seconds in a window                                           |
+| `AUTH_THROTTLE_TRUST_PROXY` | unset   | `true`: the client address is the last `X-Forwarded-For` entry |
+
+- Attempts are counted before the password is checked, so a right and a wrong password cost the same; requests that fail
+  validation (`422`) or the CSRF check (`403`) never reach the endpoint and are not counted.
+- The counters live in the process: several processes or hosts each allow the limit, and a restart forgets them. Count
+  in a shared store (Redis) when that matters.
+- The client address is the peer of the connection. Behind a reverse proxy that is the proxy's address, so every client
+  shares the sign-up limit and only the email part of the sign-in key tells users apart; set
+  `AUTH_THROTTLE_TRUST_PROXY=true` only when a proxy you run appends the real address to `X-Forwarded-For` (the header is
+  client-controlled otherwise).
+- It is generated code rather than `Azu::Handler::Throttle` because that handler keys by client address only, counts every
+  request on every path, and blocks the address for its whole `duration` once over the threshold; a per-account,
+  per-path limit needs a key the handler cannot see.
 
 ## Not generated
 
