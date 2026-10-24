@@ -164,6 +164,25 @@ describe AzuCLI::Commands::Dev do
   end
 
   describe "stopping" do
+    it "ends a build in progress and starts no app afterwards" do
+      in_tmp_project do |dir|
+        write_app(dir)
+        command = dev
+        command.attach_child("blog")
+        started = Time.instant
+        with_builder("sh", ["-c", "sleep 30; true"]) do
+          spawn do
+            sleep 400.milliseconds
+            command.stop
+          end
+          command.apply(AzuCLI::DevServer::Plan.new(AzuCLI::DevServer::Action::Rebuild, ["src/blog.cr"]), "blog")
+        end
+
+        (Time.instant - started).should be < 10.seconds
+        starts(dir).should eq 0
+      end
+    end
+
     it "starts no new app once it was stopped, even when a build finishes afterwards" do
       in_tmp_project do |dir|
         write_app(dir)

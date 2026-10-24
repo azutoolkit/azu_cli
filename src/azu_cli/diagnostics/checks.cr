@@ -115,15 +115,21 @@ module AzuCLI
       # What is left of a URL once the user and password are cut off at its last "@". A password may hold "@", "/",
       # ":" or "?", so URI.parse would take pieces of it for the host, the port or the path; nothing parsed from the
       # part before the last "@" is ever printed.
-      private record ServerUrl, scheme : String, host : String, port : Int32?, path : String, socket : Bool
+      private record ServerUrl, scheme : String, host : String, port : Int32?, path : String, socket : Bool, ambiguous : Bool = false
 
       private def split_server_url(url : String) : ServerUrl?
         scheme, separator, rest = url.partition("://")
         scheme = scheme.downcase
         return unless !separator.empty? && DEFAULT_DATABASE_PORTS.has_key?(scheme)
 
-        rest = rest[(rest.rindex('@').not_nil! + 1)..] if rest.includes?('@')
-        location, _, query = rest.partition('?')
+        # An "@" after the first "?" or "#" may be the end of a password that holds a "?" or "#", or part of a query
+        # value: either way the host cannot be told from a piece of a secret.
+        cut = rest.index(/[?#]/)
+        query = cut ? rest[(cut + 1)..] : ""
+        return ServerUrl.new(scheme, "", nil, "", false, true) if query.includes?('@')
+
+        location = cut ? rest[0, cut] : rest
+        location = location[(location.rindex('@').not_nil! + 1)..] if location.includes?('@')
         authority, slash, path = location.partition('/')
         socket = authority.empty? || query.split('&').any? { |pair| pair.starts_with?("host=/") }
         host, port = authority_parts(authority)
@@ -143,6 +149,9 @@ module AzuCLI
         parts = split_server_url(url)
         unless parts
           return Check.fail("database", "DATABASE_URL does not start with postgres:// or mysql://", "use scheme://user:password@host:port/name")
+        end
+        if parts.ambiguous
+          return Check.warn("database", "DATABASE_URL has an '@' after a '?' or '#', so its host cannot be told from the password: not checked", "percent-encode '@', '?', '#' and '/' in the user and password (%40, %3F, %23, %2F)")
         end
         if parts.socket
           return Check.warn("database", "#{parts.scheme} through a unix socket: reachability is not checked", "run 'azu db:status' to test the connection")

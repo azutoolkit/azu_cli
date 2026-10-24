@@ -37,13 +37,23 @@ describe AzuCLI::DevServer::Builder do
     it "finds the children of a process through /proc, for hosts without pgrep" do
       parent = Process.new("sh", ["-c", "sleep 5; true"])
       sleep 300.milliseconds
-      found = AzuCLI::DevServer::Builder.new("true", [] of String).proc_children_of(parent.pid)
+      found = AzuCLI::ProcessTree.proc_children_of(parent.pid)
       parent.terminate
       found.should_not be_empty
       found.each { |pid| Process.signal(Signal::TERM, pid) rescue nil }
       parent.wait
     end
   {% end %}
+
+  it "does not start a build that was cancelled before it began" do
+    builder = AzuCLI::DevServer::Builder.new("sh", ["-c", "touch #{File.join(Dir.tempdir, "azu_cancelled_#{Process.pid}")}"])
+    builder.cancel
+    result = builder.build(sink: IO::Memory.new)
+
+    result.cancelled.should be_true
+    result.success.should be_false
+    File.exists?(File.join(Dir.tempdir, "azu_cancelled_#{Process.pid}")).should be_false
+  end
 
   it "reports a command that cannot be run instead of raising" do
     result = AzuCLI::DevServer::Builder.new("azu-no-such-command", [] of String).build(sink: IO::Memory.new)
@@ -115,5 +125,19 @@ describe AzuCLI::DevServer::Child do
     child.running?.should be_true
     child.pid.should_not eq first
     child.stop
+  end
+end
+
+describe AzuCLI::ProcessTree do
+  it "terminates a process together with the processes it started" do
+    parent = Process.new("sh", ["-c", "sleep 30; true"])
+    sleep 300.milliseconds
+    children = AzuCLI::ProcessTree.descendants(parent.pid)
+    AzuCLI::ProcessTree.terminate(parent)
+    parent.wait
+    sleep 200.milliseconds
+
+    children.should_not be_empty
+    children.each { |pid| File.exists?("/proc/#{pid}").should be_false } if Dir.exists?("/proc/self")
   end
 end

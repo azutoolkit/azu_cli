@@ -139,12 +139,17 @@ module AzuCLI
       end
 
       def rebuild_and_restart(target : String, first : Bool = false) : Nil
+        return if @stopping
+
         Logger.info("Building #{target}...")
         builder = self.class.builder.call(target)
         @builder = builder
+        builder.cancel if @stopping # stop() ran between the check above and the line before
         result = builder.build
         @builder = nil
-        if result.success
+        if result.cancelled || @stopping
+          nil # shutting down: neither a failure nor a restart
+        elsif result.success
           Logger.info("Built in #{result.seconds.round(1)}s")
           restart
         else
@@ -168,7 +173,7 @@ module AzuCLI
         Logger.error("Could not start the app: #{ex.message}")
       end
 
-      # "exited with code 1" or "was killed by SIGSEGV" (a process that died from a signal has no exit code).
+      # "exited with code 1" or "was killed by SEGV" (a process that died from a signal has no exit code).
       def self.describe_exit(status : Process::Status) : String
         status.normal_exit? ? "exited with code #{status.exit_code}" : "was killed by #{status.exit_signal}"
       end
