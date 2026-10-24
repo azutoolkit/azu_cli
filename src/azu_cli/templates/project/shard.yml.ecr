@@ -19,11 +19,9 @@ dependencies:
     github: azutoolkit/azu
     version: ~> 0.5.69
 
-  # TODO: unpin once cql supports crystal-db 0.15. cql 0.0.562 and later bring a native PostgreSQL
-  # driver that does not compile against it (CQL::Postgres::Connection lacks #driver_name).
   cql:
     github: azutoolkit/cql
-    version: 0.0.541
+    version: ~> 0.0.604
 
   session:
     github: azutoolkit/session

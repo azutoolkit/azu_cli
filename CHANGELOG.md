@@ -1,5 +1,9 @@
 # Changelog - Azu CLI
 
+## Unreleased - CQL 0.0.604
+
+- Changed: generated projects require `cql ~> 0.0.604` instead of the exact 0.0.541, and the stale "unpin once cql supports crystal-db 0.15" TODO is gone: cql 0.0.565 defines the `CQL::Postgres::Connection#driver_name` that 0.0.562 lacked, so cql compiles against crystal-db 0.15 (the CLI itself already built with 0.0.578). The web and api e2e gates pass on SQLite with cql 0.0.604, crystal-db 0.15.0 and crystal-sqlite3 0.24.0
+
 ## Unreleased - Database command fixes
 
 - Fixed: `db:status`, `db:rollback`, `db:migrate --dry-run` and `db:migrations:verify` showed every migration as pending on SQLite and MySQL projects, because the CLI only linked the PostgreSQL driver and swallowed the error. The applied versions now come from one helper: read directly on PostgreSQL and MySQL, through a runner script on SQLite; an unreadable table is reported instead of hidden
