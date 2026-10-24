@@ -15,7 +15,11 @@ Azu CLI provides a comprehensive set of commands to help you develop, manage, an
 
 ### Development Tools
 
+- [`azu dev`](dev.md) - Run the app, rebuilding and restarting it when the code changes
 - [`azu serve`](serve.md) - Start development server with hot reloading
+- [`azu routes`](routes.md) - List the routes of the application
+- [`azu console`](console.md) - Open Crystal's interpreter with the application loaded
+- [`azu doctor`](doctor.md) - Check the environment the project runs in
 - [`azu test`](test.md) - Run application tests with watch mode
 
 ### Background Jobs

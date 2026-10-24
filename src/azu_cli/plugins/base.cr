@@ -13,12 +13,12 @@ module AzuCLI
 
       # Called when plugin is loaded
       def on_load
-        Logger.info("Plugin #{@name} v#{@version} loaded")
+        Logger.debug("Plugin #{@name} v#{@version} loaded")
       end
 
       # Called when plugin is unloaded
       def on_unload
-        Logger.info("Plugin #{@name} unloaded")
+        Logger.debug("Plugin #{@name} unloaded")
       end
 
       # Called before command execution

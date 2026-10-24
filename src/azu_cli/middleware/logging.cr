@@ -5,12 +5,13 @@ module AzuCLI
     # Logging middleware for command execution
     class Logging < Base
       def before(command : Commands::Base, args : Array(String))
+        return if command.machine_output?
         Logger.info("Executing command: #{command.name} with args: #{args.join(" ")}")
       end
 
       def after(command : Commands::Base, result : Commands::Result)
         if result.success?
-          Logger.info("Command #{command.name} completed successfully")
+          Logger.info("Command #{command.name} completed successfully") unless command.machine_output?
         else
           Logger.error("Command #{command.name} failed: #{result.error}")
         end

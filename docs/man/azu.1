@@ -61,7 +61,19 @@ Create and migrate database.
 .SS Development
 .TP
 .B serve, server, s
-Start development server with hot reload.
+Compile with a production build and run the app, rebuilding when sources change.
+.TP
+.B dev
+Run the app and rebuild (not a release build) and restart it when src/, config/, shard.yml or shard.lock change; templates under public/templates are not rebuilt; .env files restart without a build. Options: --port, --host, --env, --debounce MS, --interval MS.
+.TP
+.B routes
+List the routes of the application: method, path, endpoint, request and response types, helpers. Options: --format table|json, --method METHOD, --path TEXT.
+.TP
+.B console
+Open Crystal's interpreter (crystal i) with the application loaded; exits with 2 when the compiler was built without the interpreter.
+.TP
+.B doctor
+Check Crystal, shards, dependencies, database, environment variables, secrets, port, docker and .env. Option: --json. Exits 1 when a check fails.
 .SS Testing
 .TP
 .B test, t
@@ -110,6 +122,9 @@ for detailed options and usage.
   azu new my-app
   azu generate model User name:string email:string
   azu db:create && azu db:migrate
+  azu dev
+  azu routes --method POST
+  azu doctor
   azu serve
   azu test --watch
 .fi

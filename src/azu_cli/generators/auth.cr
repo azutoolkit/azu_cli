@@ -10,6 +10,7 @@ module AzuCLI
     #   Blog::Registrations::{New,Create}   GET, POST /register
     #   Blog::Sessions::{New,Create,Destroy} GET, POST /login, DELETE /logout
     #   Blog::Account::Show                 GET /account (needs a signed-in user)
+    #   Blog::AuthThrottle                  429 with Retry-After after too many sign-in or sign-up attempts
     class Auth < Teeplate::FileTree
       directory "#{__DIR__}/../templates/auth"
       OUTPUT_DIR      = "."
@@ -22,7 +23,7 @@ module AzuCLI
       # Why authentication cannot be generated into `root`, if it cannot: something it would write
       # exists already (a second run, or a `User` made by a scaffold), or the app file has no place for the handler.
       def self.conflict(root : String = ".") : String?
-        existing = ["src/models/user.cr", "src/initializers/session.cr", "src/endpoints/sessions", "src/endpoints/registrations", "src/endpoints/account"]
+        existing = ["src/models/user.cr", "src/initializers/session.cr", "src/services/auth_throttle.cr", "spec/services/auth_throttle_spec.cr", "src/endpoints/sessions", "src/endpoints/registrations", "src/endpoints/account"]
           .select { |path| File.exists?(File.join(root, path)) }
         existing.concat(Dir.glob(File.join(root, AzuCLI::Config::Paths::MIGRATIONS, "*_create_users.cr")).map { |path| path.sub("#{root}/", "") })
         unless existing.empty?

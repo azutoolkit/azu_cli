@@ -1,7 +1,7 @@
 # Azu CLI Reference
 
 Quick reference for the Azu CLI commands. For detail, see [docs/](docs/). `azu help` lists the commands;
-`azu help <new|generate|db|serve|test|jobs|session>` shows more. `azu --help` and `azu --version` are not
+`azu help <new|generate|db|serve|dev|routes|console|doctor|test|jobs|session>` shows more. `azu --help` and `azu --version` are not
 options: use `azu help` and `azu version`.
 
 ## Project Commands
@@ -10,6 +10,10 @@ options: use `azu help` and `azu version`.
 azu new <name> [options]      # Create new project
 azu init                      # Initialize in existing project
 azu serve [options]           # Start the development server (aliases: server, s)
+azu dev [options]             # Run the app; rebuild (not a release build) and restart when the code changes
+azu routes [options]          # List the routes: method, path, endpoint, request/response types, helpers
+azu console                   # Crystal's interpreter (crystal i) with the app loaded
+azu doctor [--json]           # Check Crystal, shards, database, env, secrets, port, docker, .env
 azu test [options]            # Run specs (alias: t)
 ```
 
@@ -32,6 +36,26 @@ azu test [options]            # Run specs (alias: t)
 ### `azu serve` Options
 
 `--port`/`-p`, `--host`/`-h`, `--env`/`-e`, `--no-watch`, `--verbose`/`-v`.
+
+### `azu dev` Options
+
+`--port PORT`, `--host HOST`, `--env NAME` (each only overrides what your environment or `.env` files say when given),
+`--debounce MS` (default 300), `--interval MS` (polling interval, default 250). `src/**`, `config/**`, `shard.yml` and
+`shard.lock` changes build and restart; `public/templates/**` changes neither build nor restart; `.env*` changes restart
+without a build. A failed build keeps the running app. See [docs/commands/dev.md](docs/commands/dev.md).
+
+### `azu routes` Options
+
+`--format table|json` (default `table`), `--method METHOD`, `--path TEXT` (substring). Exit 0, 1 (the app could not
+be loaded), 2 (invalid usage). See [docs/commands/routes.md](docs/commands/routes.md).
+
+### `azu doctor` Options
+
+`--json`. Exit 0 (warnings allowed) or 1 (a check failed). See [docs/commands/doctor.md](docs/commands/doctor.md).
+
+### `azu console`
+
+No options. Needs a Crystal built with the interpreter, else exits 2. See [docs/commands/console.md](docs/commands/console.md).
 
 ### `azu test` Options
 
@@ -127,7 +151,7 @@ azu config:env [--list|--show|--set K=V|--unset K]
 ```bash
 azu completion bash|zsh|fish   # shell completion script
 azu version
-azu help [new|generate|db|serve|test|jobs|session]
+azu help [new|generate|db|serve|dev|routes|console|doctor|test|jobs|session]
 ```
 
 ## Common Workflows

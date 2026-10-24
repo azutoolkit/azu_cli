@@ -118,6 +118,71 @@ describe AzuCLI::Generate::Auth do
     end
   end
 
+  describe "throttling" do
+    it "generates a throttle service and its spec in the project module" do
+      in_generated_project do
+        render.call(".")
+
+        File.exists?("spec/services/auth_throttle_spec.cr").should be_true
+        throttle = File.read("src/services/auth_throttle.cr")
+        throttle.should contain("module Blog")
+        throttle.should contain("class AuthThrottle")
+        File.read("spec/services/auth_throttle_spec.cr").should contain("describe Blog::AuthThrottle")
+      end
+    end
+
+    it "limits sign-in per address and email, sign-up per address, with limits and window from the environment" do
+      in_generated_project do
+        render.call(".")
+
+        throttle = File.read("src/services/auth_throttle.cr")
+        throttle.should contain(%(setting("AUTH_THROTTLE_LOGIN", 5)))
+        throttle.should contain(%(setting("AUTH_THROTTLE_ACCOUNT", 20)))
+        throttle.should contain(%(setting("AUTH_THROTTLE_REGISTER", 5)))
+        throttle.should contain(%(setting("AUTH_THROTTLE_WINDOW", 60)))
+        File.read("src/endpoints/sessions/create_endpoint.cr").should contain("throttle_login!(email)")
+        File.read("src/endpoints/registrations/create_endpoint.cr").should contain("throttle_register!")
+        File.read("src/middleware/authentication.cr").should contain(%(AuthThrottle.login.attempt!("\#{address}|\#{email}")))
+      end
+    end
+
+    it "answers 429 with Retry-After through Azu's rate limit error" do
+      in_generated_project do
+        render.call(".")
+
+        File.read("src/services/auth_throttle.cr").should contain("raise Azu::Response::RateLimitError.new(retry_after: wait)")
+      end
+    end
+
+    it "counts before it checks the password, so a wrong password and a right one cost the same" do
+      in_generated_project do
+        render.call(".")
+
+        endpoint = File.read("src/endpoints/sessions/create_endpoint.cr")
+        endpoint.index("throttle_login!").not_nil!.should be < endpoint.index("authenticate(").not_nil!
+      end
+    end
+
+    it "trusts X-Forwarded-For only when asked, and never hard-codes a secret" do
+      in_generated_project do
+        render.call(".")
+
+        throttle = File.read("src/services/auth_throttle.cr")
+        throttle.should contain(%(ENV["AUTH_THROTTLE_TRUST_PROXY"]? == "true"))
+        throttle.should_not match(/secret\s*=\s*"/)
+        File.read("src/endpoints/sessions/create_endpoint.cr").should contain("Azu::Response::Empty") # CSRF-protected form flow is unchanged
+      end
+    end
+
+    it "is part of what a second run would overwrite" do
+      in_generated_project do
+        render.call(".")
+
+        AzuCLI::Generate::Auth.conflict.not_nil!.should contain("src/services/auth_throttle.cr")
+      end
+    end
+  end
+
   it "validates passwords by bytes, because bcrypt rejects more than 72" do
     in_generated_project do
       render.call(".")

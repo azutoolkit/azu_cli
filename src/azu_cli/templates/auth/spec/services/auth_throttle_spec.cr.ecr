@@ -1,0 +1,58 @@
+require "../spec_helper"
+
+describe <%= app_module %>::AuthThrottle do
+  start = Time.instant
+
+  it "allows the limit and throttles the next attempt, saying how long to wait" do
+    throttle = <%= app_module %>::AuthThrottle.new(3, 60.seconds)
+
+    3.times { throttle.attempt("login:1.2.3.4|a@example.com", start).should be_nil }
+    throttle.attempt("login:1.2.3.4|a@example.com", start + 10.seconds).should eq 50
+    throttle.attempt("login:1.2.3.4|a@example.com", start + 59.seconds + 500.milliseconds).should eq 1
+  end
+
+  it "counts every key on its own" do
+    throttle = <%= app_module %>::AuthThrottle.new(1, 60.seconds)
+
+    throttle.attempt("1.2.3.4|a@example.com", start).should be_nil
+    throttle.attempt("1.2.3.4|b@example.com", start).should be_nil
+    throttle.attempt("5.6.7.8|a@example.com", start).should be_nil
+    throttle.attempt("1.2.3.4|a@example.com", start).should_not be_nil
+  end
+
+  it "starts a new window when the old one is over" do
+    throttle = <%= app_module %>::AuthThrottle.new(1, 60.seconds)
+
+    throttle.attempt("k", start).should be_nil
+    throttle.attempt("k", start + 30.seconds).should_not be_nil
+    throttle.attempt("k", start + 61.seconds).should be_nil
+  end
+
+  it "raises a 429 with a Retry-After once the limit is passed" do
+    throttle = <%= app_module %>::AuthThrottle.new(1, 60.seconds)
+
+    throttle.attempt!("k")
+    error = expect_raises(Azu::Response::RateLimitError) { throttle.attempt!("k") }
+    error.status.should eq HTTP::Status::TOO_MANY_REQUESTS
+    error.retry_after.not_nil!.should be > 0
+  end
+
+  it "reads its limits from the environment, ignoring values that are not positive numbers" do
+    <%= app_module %>::AuthThrottle.setting("AUTH_THROTTLE_SPEC_UNSET", 5).should eq 5
+    ENV["AUTH_THROTTLE_SPEC"] = "9"
+    <%= app_module %>::AuthThrottle.setting("AUTH_THROTTLE_SPEC", 5).should eq 9
+    ["0", "-3", "many", ""].each do |value|
+      ENV["AUTH_THROTTLE_SPEC"] = value
+      <%= app_module %>::AuthThrottle.setting("AUTH_THROTTLE_SPEC", 5).should eq 5
+    end
+  ensure
+    ENV.delete("AUTH_THROTTLE_SPEC")
+  end
+
+  it "takes the client address from the connection, not from a header the client controls" do
+    request = HTTP::Request.new("POST", "/login", HTTP::Headers{"X-Forwarded-For" => "9.9.9.9"})
+    request.remote_address = Socket::IPAddress.new("10.0.0.7", 51000)
+
+    <%= app_module %>::AuthThrottle.client_address(request).should eq "10.0.0.7"
+  end
+end

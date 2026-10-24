@@ -49,6 +49,12 @@ module AzuCLI
       register_command("server", Commands::Serve) # Alias
       register_command("s", Commands::Serve)      # Short alias
 
+      # Development workflow commands
+      register_command("dev", Commands::Dev)
+      register_command("routes", Commands::Routes)
+      register_command("console", Commands::Console)
+      register_command("doctor", Commands::Doctor)
+
       # Job queue commands
       register_command("jobs:worker", Commands::Jobs::Worker)
       register_command("jobs:status", Commands::Jobs::Status)
@@ -158,11 +164,11 @@ module AzuCLI
     # Handle command result
     private def handle_result(result : Commands::Result) : Int32
       if result.success?
-        Logger.info(result.message) if result.message
+        Logger.info(result.message) unless result.message.empty?
         0
       else
-        Logger.error(result.error) if result.error
-        1
+        Logger.error(result.error) unless result.error.empty?
+        result.exit_code
       end
     end
 

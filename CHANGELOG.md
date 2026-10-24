@@ -1,5 +1,14 @@
 # Changelog - Azu CLI
 
+## Unreleased - Development commands and sign-in throttling
+
+- Added: `azu dev` runs the app and rebuilds it (`shards build`, not a release build) and restarts it when `src/`, `config/`, `shard.yml` or `shard.lock` change. Changes are polled (no new dependency) and debounced; a failed build prints the compiler output and keeps the previous app running; `public/templates/**` changes trigger no build (the running app reloads templates when template hot reload is on, the default in development); `.env*` changes restart without a build; SIGINT/SIGTERM stop the app before the command exits
+- Added: `azu routes` lists the routes of the app (method, path, endpoint, request and response types, template helpers) by compiling and running a small script against `Router#route_info`; `--format json`, `--method`, `--path`
+- Added: `azu console` opens `crystal i` with the app loaded, and says so (exit 2) when the compiler was built without the interpreter, as the official Docker images are
+- Added: `azu doctor` checks Crystal against the `crystal:` of `shard.yml`, shards, installed dependencies, the database (SQLite file writable, PostgreSQL/MySQL reachable within 3 s, credentials never printed), blank variables of `.env.example`, weak or hard-coded secrets, the port, docker and the git-ignored `.env`; `--json`; exit 1 when a check fails
+- Added: the generated authentication throttles sign-in (5 attempts per window for an address and email, 20 for an email from anywhere) and sign-up (5 per address) with a 429 and `Retry-After`; `AUTH_THROTTLE_LOGIN`, `AUTH_THROTTLE_ACCOUNT`, `AUTH_THROTTLE_REGISTER`, `AUTH_THROTTLE_WINDOW`, `AUTH_THROTTLE_TRUST_PROXY`. It is a small generated counter (`AuthThrottle`) because `Azu::Handler::Throttle` keys by address only and applies to every path
+- Changed: commands can answer with an exit code (`Result#exit_code`); the CLI no longer prints empty result messages, and the plugin load lines are debug messages, so a command's stdout carries only its data (`azu routes --format json` is JSON)
+
 ## Unreleased - One config story (`.env`)
 
 **Requires an `azu` release that contains `Azu::Env` (azutoolkit/azu, branch `claude/azu-crystal-framework-plan-phqt6e-envconfig`); the template's `azu ~> 0.5.69` floor is not raised here because that release does not exist yet.**

@@ -8,7 +8,8 @@ channels, session authentication, jobs and more), manages the CQL database and r
 - **Project generator** - `azu new` creates a web, API or CLI project; `--docker` adds a multi-stage Dockerfile, `--ci` a GitHub Actions workflow
 - **Generators** - models, endpoints, scaffolds (CRUD), migrations, services, requests, pages, channels, session authentication, jobs and more
 - **Database commands** - create, migrate, rollback, seed, reset, status (CQL migrations)
-- **Development server** - `azu serve` rebuilds and restarts when sources change
+- **Development server** - `azu dev` rebuilds (not a release build) and restarts when sources change; `azu serve` is the older `--production` variant
+- **Diagnostics** - `azu routes` lists the routes, `azu doctor` checks the environment, `azu console` opens Crystal's interpreter with the app loaded
 - **JoobQ and sessions** - `jobs:*` and `session:*` commands
 - **OpenAPI** - export a spec from the code, or generate code from a spec
 
@@ -35,7 +36,7 @@ azu generate scaffold Post title:string content:text published:bool
 azu db:setup
 
 # Start the development server
-azu serve
+azu dev
 ```
 
 Visit `http://localhost:4000/posts` to see your application.
@@ -48,7 +49,7 @@ Run `azu help` for the list (`azu --help` and `azu --version` are not options: u
 | ----------- | ---------------------------------------------------------------------------------------------- |
 | Project     | `new`, `init`, `generate` (`g`)                                                                |
 | Database    | `db:create`, `db:drop`, `db:setup`, `db:reset`, `db:migrate`, `db:rollback`, `db:status`, `db:seed`, `db:schema:load`, `db:data:migrate`, `db:migrations:verify`, `db:validate` |
-| Development | `serve` (`server`, `s`), `test` (`t`)                                                          |
+| Development | `dev`, `serve` (`server`, `s`), `routes`, `console`, `doctor`, `test` (`t`)                    |
 | Jobs        | `jobs:worker`, `jobs:status`, `jobs:clear`, `jobs:retry`, `jobs:ui`                            |
 | Session     | `session:setup`, `session:clear`                                                               |
 | OpenAPI     | `openapi:export`, `openapi:generate`                                                           |
