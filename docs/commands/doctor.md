@@ -1,6 +1,6 @@
 # azu doctor
 
-Diagnoses the environment the project runs in. Nothing is changed and no value of a variable and no password of a URL is printed. A `DATABASE_URL` is cut at its last `@` before the first `?` or `#`; when an `@` follows a `?` or `#` the host cannot be told from a piece of the password, so the check only warns (no host printed) and asks you to percent-encode `@ ? # /` in the user and password. Write `crystal:` in shard.yml as a quoted string (`'>= 1.10'`): an unquoted `1.10` is read by YAML as the number 1.1.
+Diagnoses the environment the project runs in. Nothing is changed and no value of a variable and no password of a URL is printed. A `DATABASE_URL` is cut at its last `@` before the first `?` or `#`; when an `@` follows a `?` or `#` the host cannot be told from a piece of the password, so the check only warns (no host printed). The same goes for a URL without `@` whose `:` is not followed by a valid port (`postgres://user:secret`, `postgres://user:12345678`), which could be a user and password that lost their `@`; a port after the `@` that is not 1-65535 fails without being printed. Only `postgres://user:1234` (digits that are a valid port) reads as host `user`, which is what a URL parser would also do and asks you to percent-encode `@ ? # /` in the user and password. Write `crystal:` in shard.yml as a quoted string (`'>= 1.10'`): an unquoted `1.10` is read by YAML as the number 1.1.
 
 ```bash
 azu doctor [--json]

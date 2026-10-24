@@ -27,8 +27,10 @@ module AzuCLI
         end
 
         def run_interpreter(script : String, dir : String) : Int32
-          status = Process.run("crystal", ["i", script], chdir: dir, input: Process::Redirect::Inherit, output: Process::Redirect::Inherit, error: Process::Redirect::Inherit)
-          status.normal_exit? ? status.exit_code : 1 # killed by a signal: there is no exit code
+          process = ScratchFile.watch(Process.new("crystal", ["i", script], chdir: dir, input: Process::Redirect::Inherit, output: Process::Redirect::Inherit, error: Process::Redirect::Inherit))
+          status = process.wait
+          # killed by a signal: there is no exit code
+          status.normal_exit? ? status.exit_code : 1
         end
       end
 

@@ -33,18 +33,6 @@ describe AzuCLI::DevServer::Builder do
     (Time.instant - started).should be < 10.seconds
   end
 
-  {% if flag?(:linux) %}
-    it "finds the children of a process through /proc, for hosts without pgrep" do
-      parent = Process.new("sh", ["-c", "sleep 5; true"])
-      sleep 300.milliseconds
-      found = AzuCLI::ProcessTree.proc_children_of(parent.pid)
-      parent.terminate
-      found.should_not be_empty
-      found.each { |pid| Process.signal(Signal::TERM, pid) rescue nil }
-      parent.wait
-    end
-  {% end %}
-
   it "does not start a build that was cancelled before it began" do
     builder = AzuCLI::DevServer::Builder.new("sh", ["-c", "touch #{File.join(Dir.tempdir, "azu_cancelled_#{Process.pid}")}"])
     builder.cancel
@@ -129,10 +117,17 @@ describe AzuCLI::DevServer::Child do
 end
 
 # A process that was killed but not yet reaped (its parent is gone and PID 1 of a container may never wait for it)
-# still has a /proc entry, in state Z; it is not running.
+# still has a /proc entry, in state Z; it is not running. Only a missing entry (or the zombie state) means gone: a
+# read that is merely refused (hidepid) says nothing.
 private def gone?(pid : Int64) : Bool
-  stat = File.read("/proc/#{pid}/stat") rescue return true
+  return !Process.exists?(pid) unless Dir.exists?("/proc/self")
+
+  stat = File.read("/proc/#{pid}/stat")
   stat[(stat.rindex(')') || 0) + 1..].split[0]? == "Z"
+rescue File::NotFoundError
+  true
+rescue File::Error
+  false
 end
 
 private def gone_within?(pids : Array(Int64), timeout : Time::Span) : Bool
@@ -154,6 +149,40 @@ describe AzuCLI::ProcessTree do
     parent.wait
 
     children.should_not be_empty
-    gone_within?(children, 5.seconds).should be_true if Dir.exists?("/proc/self")
+    gone_within?(children, 5.seconds).should be_true
   end
+
+  it "reaches grandchildren" do
+    parent = Process.new("sh", ["-c", "sh -c 'sleep 30; true'; true"])
+    sleep 500.milliseconds
+    descendants = AzuCLI::ProcessTree.descendants(parent.pid)
+    AzuCLI::ProcessTree.terminate(parent)
+    parent.wait
+
+    descendants.size.should be >= 2
+    gone_within?(descendants, 5.seconds).should be_true
+  end
+
+  it "never walks from init or from pid 0" do
+    AzuCLI::ProcessTree.descendants(0_i64).should be_empty
+    AzuCLI::ProcessTree.descendants(1_i64).should be_empty
+    AzuCLI::ProcessTree.children_of(1_i64).should be_empty
+  end
+
+  it "reads the children out of `ps -A -o pid=,ppid=` for hosts without pgrep and /proc" do
+    text = "    1     0\n  100     1\n  200   100\n  300   100\n  400   200\njunk\n"
+    AzuCLI::ProcessTree.parse_ps(text, 100_i64).should eq [200_i64, 300_i64]
+  end
+
+  {% if flag?(:linux) %}
+    it "finds the children of a process through /proc, for hosts without pgrep" do
+      parent = Process.new("sh", ["-c", "sleep 5; true"])
+      sleep 300.milliseconds
+      found = AzuCLI::ProcessTree.proc_children_of(parent.pid)
+      parent.terminate
+      found.should_not be_empty
+      found.each { |pid| Process.signal(Signal::TERM, pid) rescue nil }
+      parent.wait
+    end
+  {% end %}
 end

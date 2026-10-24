@@ -115,7 +115,7 @@ module AzuCLI
       # What is left of a URL once the user and password are cut off at its last "@". A password may hold "@", "/",
       # ":" or "?", so URI.parse would take pieces of it for the host, the port or the path; nothing parsed from the
       # part before the last "@" is ever printed.
-      private record ServerUrl, scheme : String, host : String, port : Int32?, path : String, socket : Bool, ambiguous : Bool = false
+      private record ServerUrl, scheme : String, host : String, port : Int32?, path : String, socket : Bool, ambiguous : Bool = false, bad_port : Bool = false
 
       private def split_server_url(url : String) : ServerUrl?
         scheme, separator, rest = url.partition("://")
@@ -129,20 +129,32 @@ module AzuCLI
         return ServerUrl.new(scheme, "", nil, "", false, true) if query.includes?('@')
 
         location = cut ? rest[0, cut] : rest
-        location = location[(location.rindex('@').not_nil! + 1)..] if location.includes?('@')
+        userinfo = location.includes?('@')
+        location = location[(location.rindex('@').not_nil! + 1)..] if userinfo
         authority, slash, path = location.partition('/')
         socket = authority.empty? || query.split('&').any? { |pair| pair.starts_with?("host=/") }
-        host, port = authority_parts(authority)
-        ServerUrl.new(scheme, host, port, "#{slash}#{path}", socket)
+        host, port_text = authority_parts(authority)
+        port = port_text.try { |text| valid_port(text) }
+        # Without "@" the "user:password" of a URL that lost its "@" reads as host:port, and a port that is no port
+        # means the text before the ":" may be a user name: say nothing about it.
+        return ServerUrl.new(scheme, "", nil, "", false, true) if !userinfo && port_text && port.nil?
+
+        ServerUrl.new(scheme, host, port, "#{slash}#{path}", socket, bad_port: !port_text.nil? && port.nil?)
       end
 
-      private def authority_parts(authority : String) : {String, Int32?}
+      private def valid_port(text : String) : Int32?
+        number = text.to_i?
+        number if number && (1..65535).includes?(number) && text.matches?(/\A\d+\z/)
+      end
+
+      private def authority_parts(authority : String) : {String, String?}
         if authority.starts_with?('[') && (close = authority.index(']'))
-          return {authority[1...close], authority[(close + 2)..]?.try(&.to_i?)}
+          rest = authority[(close + 1)..]
+          return {authority[1...close], rest.starts_with?(':') ? rest[1..] : nil}
         end
 
-        host, _, port = authority.partition(':')
-        {host, port.to_i?}
+        host, colon, port = authority.partition(':')
+        {host, colon.empty? ? nil : port}
       end
 
       private def server_database(url : String) : Check
@@ -151,8 +163,9 @@ module AzuCLI
           return Check.fail("database", "DATABASE_URL does not start with postgres:// or mysql://", "use scheme://user:password@host:port/name")
         end
         if parts.ambiguous
-          return Check.warn("database", "DATABASE_URL has an '@' after a '?' or '#', so its host cannot be told from the password: not checked", "percent-encode '@', '?', '#' and '/' in the user and password (%40, %3F, %23, %2F)")
+          return Check.warn("database", "DATABASE_URL has no '@' before a ':' that is no port, or an '@' after a '?' or '#', so its host cannot be told from the user and password: not checked", "write scheme://user:password@host:port/name and percent-encode '@', '?', '#', '/' and ':' in the user and password (%40, %3F, %23, %2F, %3A)")
         end
+        return Check.fail("database", "the port of DATABASE_URL is not a number from 1 to 65535", "use scheme://user:password@host:port/name") if parts.bad_port
         if parts.socket
           return Check.warn("database", "#{parts.scheme} through a unix socket: reachability is not checked", "run 'azu db:status' to test the connection")
         end

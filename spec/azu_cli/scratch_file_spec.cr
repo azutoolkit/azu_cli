@@ -76,4 +76,14 @@ describe AzuCLI::ScratchFile do
       end
     end
   end
+
+  it "keeps the signal scope of an outer block when a nested one ends" do
+    in_tmp_project do |dir|
+      AzuCLI::ScratchFile.with("outer_", "x", dir) do |outer|
+        AzuCLI::ScratchFile.with("inner_", "y", dir) { |inner| File.exists?(inner).should be_true }
+
+        File.exists?(outer).should be_true
+      end
+    end
+  end
 end
