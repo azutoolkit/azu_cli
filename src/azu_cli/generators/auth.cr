@@ -67,7 +67,7 @@ module AzuCLI
         File.write(app_file, source.sub(self.class.handler_anchor) { "#{$1}Azu::Handler::RequestId.new,\n#{$1}#{SESSION_HANDLER}" })
       end
 
-      # The .env (created if missing) lists a random secret and is git-ignored; nothing loads it, so it has to be exported.
+      # The .env (created if missing) lists a random secret and is git-ignored; the app loads it at boot (`Azu::Env.load_all`).
       private def add_session_secret(env_file : String)
         content = File.exists?(env_file) ? File.read(env_file) : ""
         return if content.includes?("SESSION_SECRET=")

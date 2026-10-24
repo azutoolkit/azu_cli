@@ -9,6 +9,14 @@
 - Added: the generated authentication throttles sign-in (5 attempts per window for an address and email, 20 for an email from anywhere) and sign-up (5 per address) with a 429 and `Retry-After`; `AUTH_THROTTLE_LOGIN`, `AUTH_THROTTLE_ACCOUNT`, `AUTH_THROTTLE_REGISTER`, `AUTH_THROTTLE_WINDOW`, `AUTH_THROTTLE_TRUST_PROXY`. It is a small generated counter (`AuthThrottle`) because `Azu::Handler::Throttle` keys by address only and applies to every path
 - Changed: commands can answer with an exit code (`Result#exit_code`); the CLI no longer prints empty result messages, and the plugin load lines are debug messages, so a command's stdout carries only its data (`azu routes --format json` is JSON)
 
+## Unreleased - One config story (`.env`)
+
+**Requires an `azu` release that contains `Azu::Env` (azutoolkit/azu, branch `claude/azu-crystal-framework-plan-phqt6e-envconfig`); the template's `azu ~> 0.5.69` floor is not raised here because that release does not exist yet.**
+
+- Added: generated apps load `.env` at boot (`require "azu/env"; Azu::Env.load_all` before `require "azu"`): `.env.local` > `.env.<CRYSTAL_ENV>` > `.env`, never overriding a variable already in the environment, so production containers that inject real values are unaffected. `CSRF_SECRET` and `SESSION_SECRET` are read with `Azu::Env.secret` (env value, random outside production, error in production), replacing the per-file copies of that guard; there is no more `export` step
+- Added: `azu` loads the same files from the working directory before every command except `new`, `init`, `help`, `version` and `completion` (`AzuCLI::DotEnv`, same grammar as `Azu::Env`: `KEY=VALUE`, comments, quotes, `export`, no interpolation, nothing executed), so `db:*`, `serve`, `test`, `jobs:*` and `generate` see `DATABASE_URL` and the secrets. `azu serve` takes its default port, host and environment from them
+- Changed: generated `DATABASE_URL` moved from `.env` to the committed `.env.development` and `.env.test` (specs no longer open the development database); `azu new` also writes a committed `.env.example`; `.env.local` is git-ignored. The empty `SSL_*` and `PERFORMANCE_MONITORING` lines are gone from `.env`: once `.env` is loaded, an empty `SSL_MODE` would have replaced the `none` default
+
 ## Unreleased - CQL 0.0.604
 
 - Changed: generated projects pin `cql` to exactly 0.0.604 (was 0.0.541) and the drivers to `pg ~> 0.31.0`, `mysql ~> 0.18.0` and `sqlite3 ~> 0.24.0` (each needs crystal-db `~> 0.15.0`, so `db` stays implicit), instead of floating to the latest releases. The stale "unpin once cql supports crystal-db 0.15" TODO is replaced by a note on how to bump. The TODO blamed `CQL::Postgres::Connection#driver_name`, which is absent in cql tag v0.0.562 and present from v0.0.565 (checked in the cql repository); the CLI itself already builds with cql 0.0.578 on crystal-db 0.15, and the e2e gates pass on SQLite (web, api) and PostgreSQL (web) with cql 0.0.604

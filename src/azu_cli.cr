@@ -3,6 +3,7 @@ require "cadmium_inflector"
 require "teeplate"
 require "topia"
 
+require "./azu_cli/dot_env"
 require "./azu_cli/config"
 require "./azu_cli/config/**"
 require "./azu_cli/logger"
@@ -26,9 +27,24 @@ module AzuCLI
   # The shard version, read from shard.yml when the CLI is compiled.
   VERSION = {{ read_file("#{__DIR__}/../shard.yml").lines.find(&.starts_with?("version:")).split(":")[1].strip }}
 
+  # Commands that run outside a project (or print only), so the working directory's `.env` is none of their business.
+  COMMANDS_WITHOUT_DOT_ENV = %w[new init help version completion --help -h --version -v]
+
+  # Loads the project's `.env` files into the process environment, so database commands, the server, the
+  # test runner and the programs they start see DATABASE_URL, the secrets and the rest. Variables the shell
+  # already exported win. Returns the names it set (never the values).
+  def self.load_project_env(args : Array(String), dir : String = ".") : Array(String)
+    return [] of String if args.empty? || COMMANDS_WITHOUT_DOT_ENV.includes?(args.first)
+
+    DotEnv.load_all(dir)
+  end
+
   # Main CLI entry point using Topia
   def self.run
-    # Initialize configuration and logging first
+    # The environment first: the configuration below reads AZU_ENV, DATABASE_URL and friends
+    load_project_env(ARGV)
+
+    # Initialize configuration and logging
     Config.load!
     Logger.setup
 
@@ -36,6 +52,9 @@ module AzuCLI
     cli = CLI.new
     code = cli.run(ARGV)
     exit(code) unless code.zero?
+  rescue ex : DotEnv::ParseError
+    Logger.error("Invalid .env file: #{ex.message}")
+    exit(Config::EXIT_FAILURE)
   rescue ex : Topia::Error
     Logger.error("Topia error: #{ex.message}")
     Logger.info("Run 'azu --help' to see available options")

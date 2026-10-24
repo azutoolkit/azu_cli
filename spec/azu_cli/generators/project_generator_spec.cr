@@ -256,12 +256,36 @@ describe AzuCLI::Generate::Project do
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
 
       source = File.read(File.join(test_dir, "src", "myapp.cr"))
-      source.should contain(%(csrf.secret_key = ENV["CSRF_SECRET"]?.presence || begin))
-      source.should contain(%(raise "CSRF_SECRET is not set" if Azu::CONFIG.env.production?))
-      source.should contain("nothing\n    # loads .env for you")
+      source.should contain(%(csrf.secret_key = Azu::Env.secret("CSRF_SECRET")))
+      source.should_not contain("Random::Secure")
+      source.should_not contain("loads .env for you")
       source.should_not contain("1234567890")
       File.read(File.join(test_dir, ".env")).should match(/^CSRF_SECRET=[0-9a-f]{64}$/m)
       File.read(File.join(test_dir, ".gitignore")).lines.should contain("/.env")
+      File.read(File.join(test_dir, ".gitignore")).lines.should contain("/.env.local")
+
+      FileUtils.rm_rf(test_dir)
+    end
+
+    it "loads .env before azu is required, and keeps per-environment database URLs out of .env" do
+      test_dir = "./tmp_test_dotenv"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: "sqlite").render(test_dir)
+
+      source = File.read(File.join(test_dir, "src", "myapp.cr"))
+      load = source.index(%(Azu::Env.load_all)) || fail("the app file does not load .env")
+      (source.index(%(require "azu/env")) || fail("no require azu/env")).should be < load
+      load.should be < (source.index(%(\nrequire "azu"\n)) || fail("no require azu"))
+
+      env = File.read(File.join(test_dir, ".env"))
+      env.should_not contain("DATABASE_URL")
+      env.should_not match(/^\w+=$/m) # an empty value would replace a default once .env is loaded
+      env.should_not contain("PERFORMANCE_MONITORING")
+      File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=sqlite3://./db/myapp_development.db")
+      File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=sqlite3://./db/myapp_test.db")
+      example = File.read(File.join(test_dir, ".env.example"))
+      example.should match(/^CSRF_SECRET=$/m)
+      example.should_not match(/[0-9a-f]{64}/)
 
       FileUtils.rm_rf(test_dir)
     end

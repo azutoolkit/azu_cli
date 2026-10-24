@@ -43,11 +43,10 @@ describe AzuCLI::Generate::Auth do
       render.call(".")
 
       session = File.read("src/initializers/session.cr")
-      session.should contain(%(ENV["SESSION_SECRET"]?.presence))
-      session.should contain(%(raise "SESSION_SECRET is not set" if Azu::CONFIG.env.production?))
+      session.should contain(%(config.secret = Azu::Env.secret("SESSION_SECRET")))
       session.should contain("config.timeout = 8.hours")
       session.should contain("SameSite=Strict")
-      session.should contain("Random::Secure.hex(32)")
+      session.should_not contain("Random::Secure")
       session.should_not match(/secret = "/)
     end
   end

@@ -309,6 +309,15 @@ targets:
     main: src/my_app.cr
 ```
 
+**`.env`, `.env.development`, `.env.test`, `.env.example`** - Environment files. The app (and every `azu` command
+except `new`) loads them at boot; precedence, highest first: variables already in the environment (never
+overridden), `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`.
+
+- `.env` is git-ignored: random `CSRF_SECRET` (and `SESSION_SECRET` after `azu generate auth`), `PORT`, `HOST`, log settings
+- `.env.development` / `.env.test` are committed: only the `DATABASE_URL` of that environment
+- `.env.example` is committed: every variable the app reads, with the secrets left blank
+- `.env.local` (git-ignored) is yours for machine-specific overrides
+
 **`README.md`** - Project documentation:
 
 ````markdown

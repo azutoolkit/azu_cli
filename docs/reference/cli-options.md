@@ -163,8 +163,10 @@ docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) my_app
 
 ## Environment Variables
 
-The CLI reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
-generated app reads `PORT`, `HOST`, `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
+The CLI loads the project's `.env`, `.env.<CRYSTAL_ENV>` and `.env.local` before every command except `new`, `init`, `help`,
+`version` and `completion` (precedence: shell environment, `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`; a variable already
+exported is never overridden). It reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
+generated app loads the same files at boot (`Azu::Env.load_all`) and reads `PORT`, `HOST`, `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
 in production (`CRYSTAL_ENV=production`) it refuses to boot without the secrets.
 
 ---
