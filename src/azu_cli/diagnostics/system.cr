@@ -21,7 +21,7 @@ module AzuCLI
       def capture(command : String, args : Array(String), chdir : String) : {Int32, String}?
         output = IO::Memory.new
         status = Process.run(command, args, chdir: chdir, output: output, error: output)
-        {status.exit_code, output.to_s}
+        {status.normal_exit? ? status.exit_code : 128, output.to_s} # 128: ended by a signal
       rescue IO::Error
         nil
       end

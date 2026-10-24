@@ -69,6 +69,11 @@ describe AzuCLI::Diagnostics::Checks do
     end
 
     it "reads floors written as a requirement, with two components, or not at all" do
+      {"'< 2.0, >= 1.19'" => "1.19", "'>= 1.19.1, < 2.0'" => "1.19.1", "'< 2.0'" => nil, "1.19.1" => "1.19.1"}.each do |requirement, floor|
+        in_tmp_project(shard_yml: "name: blog\nversion: 0.1.0\ncrystal: #{requirement}\n") do |dir|
+          checks(dir).crystal_floor.should eq floor
+        end
+      end
       in_tmp_project(shard_yml: "name: blog\nversion: 0.1.0\ncrystal: '~> 1.19'\n") do |dir|
         checks(dir).crystal_floor.should eq "1.19"
         checks(dir).crystal.status.ok?.should be_true

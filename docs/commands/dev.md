@@ -9,7 +9,7 @@ azu dev [--port PORT] [--host HOST] [--env NAME] [--debounce MS] [--interval MS]
 
 ## What happens on a change
 
-Files are polled (modification time and size) every `--interval` ms; there is no file system event watcher and no new
+Files are polled (modification time and size) every `--interval` ms (about three system calls per watched file each time, so a very large `src/` or `public/templates` tree costs CPU: raise `--interval`; symlinked directories are not followed); there is no file system event watcher and no new
 dependency. Changes are collected until the files have been quiet for `--debounce` ms, so saving several files, or switching
 branches, costs one rebuild.
 
@@ -52,3 +52,5 @@ template changes. Prefer `azu dev` while developing.
 
 The end-to-end script (`scripts/e2e_generated_app.sh`) drives all of this against a generated project: start, template
 change (no build), broken source (old app keeps serving), fixed source (restart with the new code), SIGTERM (app gone).
+
+Stopping: Ctrl-C and SIGTERM end a build in progress (and the compiler it started; `pgrep` or `/proc` finds it) and the app, and no app is started after that. SIGKILL of `azu dev` cannot be handled: the app keeps running and holding its port until you end it.

@@ -62,12 +62,13 @@ describe AzuCLI::Commands::Console do
     end
   end
 
-  it "fails with the interpreter's exit code" do
+  it "reports a failing interpreter as exit 1 (2 means no interpreter), with its own status in the message" do
     in_tmp_project(files: {"src/blog.cr" => ""}) do
       with_environment(FakeEnvironment.new(interpreter: true, code: 3)) do
         result, _ = run_command(AzuCLI::Commands::Console.new, [] of String)
 
-        result.exit_code.should eq 3
+        result.exit_code.should eq 1
+        result.error.should contain("exited with 3")
       end
     end
   end

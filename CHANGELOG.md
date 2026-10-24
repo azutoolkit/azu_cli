@@ -1,5 +1,12 @@
 # Changelog - Azu CLI
 
+## Unreleased - Review fixes for the development commands
+
+- Fixed: `azu doctor` printed pieces of a database password (or the user) for URLs it could not parse as intended (`user:pw@host/db`, a password with `/`, `:` or `@`); it now cuts the URL at its last `@` first and prints only known schemes, host, port and a plain database name
+- Fixed: generated sign-in counts the client address before the address+email key, so a blocked address cannot evict per-email counters
+- Changed: the scratch files of `azu routes` and `azu console` are created exclusively with random names, owner-only, and removed on Ctrl-C/SIGTERM too; `azu console` reports a failing interpreter as exit 1
+- Fixed: `azu dev` starts no app after SIGTERM, names a signal exit instead of crashing, and stops the compiler without `pgrep`; `azu doctor` reads a `crystal:` range like `< 2.0, >= 1.19` correctly
+
 ## Unreleased - Development commands and sign-in throttling
 
 - Added: `azu dev` runs the app and rebuilds it (`shards build`, not a release build) and restarts it when `src/`, `config/`, `shard.yml` or `shard.lock` change. Changes are polled (no new dependency) and debounced; a failed build prints the compiler output and keeps the previous app running; `public/templates/**` changes trigger no build (the running app reloads templates when template hot reload is on, the default in development); `.env*` changes restart without a build; SIGINT/SIGTERM stop the app before the command exits
