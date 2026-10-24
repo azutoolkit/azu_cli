@@ -128,6 +128,23 @@ describe AzuCLI::DevServer::Child do
   end
 end
 
+# A process that was killed but not yet reaped (its parent is gone and PID 1 of a container may never wait for it)
+# still has a /proc entry, in state Z; it is not running.
+private def gone?(pid : Int64) : Bool
+  stat = File.read("/proc/#{pid}/stat") rescue return true
+  stat[(stat.rindex(')') || 0) + 1..].split[0]? == "Z"
+end
+
+private def gone_within?(pids : Array(Int64), timeout : Time::Span) : Bool
+  deadline = Time.instant + timeout
+  until pids.all? { |pid| gone?(pid) }
+    return false if Time.instant > deadline
+
+    sleep 50.milliseconds
+  end
+  true
+end
+
 describe AzuCLI::ProcessTree do
   it "terminates a process together with the processes it started" do
     parent = Process.new("sh", ["-c", "sleep 30; true"])
@@ -135,9 +152,8 @@ describe AzuCLI::ProcessTree do
     children = AzuCLI::ProcessTree.descendants(parent.pid)
     AzuCLI::ProcessTree.terminate(parent)
     parent.wait
-    sleep 200.milliseconds
 
     children.should_not be_empty
-    children.each { |pid| File.exists?("/proc/#{pid}").should be_false } if Dir.exists?("/proc/self")
+    gone_within?(children, 5.seconds).should be_true if Dir.exists?("/proc/self")
   end
 end
