@@ -25,6 +25,7 @@ module AzuCLI
       class_property builder : String -> AzuCLI::DevServer::Builder = ->(target : String) { AzuCLI::DevServer::Builder.new("shards", ["build", target]) }
 
       @child : Child?
+      @builder : AzuCLI::DevServer::Builder?
       @lock = Mutex.new
 
       def initialize
@@ -98,6 +99,7 @@ module AzuCLI
       # Ends the child with the CLI: SIGINT and SIGTERM stop the app (it holds the port) and exit.
       private def trap_termination
         Process.on_terminate do |_reason|
+          @builder.try(&.cancel)
           @lock.synchronize { @child.try(&.stop) }
           Logger.info("azu dev stopped")
           exit 0
@@ -131,7 +133,10 @@ module AzuCLI
 
       def rebuild_and_restart(target : String, first : Bool = false) : Nil
         Logger.info("Building #{target}...")
-        result = self.class.builder.call(target).build
+        builder = self.class.builder.call(target)
+        @builder = builder
+        result = builder.build
+        @builder = nil
         if result.success
           Logger.info("Built in #{result.seconds.round(1)}s")
           restart
@@ -179,7 +184,9 @@ module AzuCLI
 
           Changes are collected until the files have been quiet for the debounce time. Files are polled
           (modification time and size); there is no file system event watcher. Ctrl-C or SIGTERM stops the
-          app before the command exits. The app's output goes to the terminal as the app writes it.
+          app (and a build in progress) before the command exits. The app's output goes to the terminal as the app
+          writes it. If the command itself is killed with SIGKILL nothing can stop the app: it keeps the port until you
+          end it (its pid is printed when it starts).
 
           Options:
             --port PORT        PORT for the app (default: your environment or .env, else the app's 4000)

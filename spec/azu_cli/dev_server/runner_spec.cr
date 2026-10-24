@@ -20,6 +20,19 @@ describe AzuCLI::DevServer::Builder do
     result.output.should contain("In src/a.cr:1")
   end
 
+  it "stops a build in progress when cancelled" do
+    builder = AzuCLI::DevServer::Builder.new("sh", ["-c", "sleep 30; true"])
+    spawn do
+      sleep 200.milliseconds
+      builder.cancel
+    end
+    started = Time.instant
+    result = builder.build(sink: IO::Memory.new)
+
+    result.success.should be_false
+    (Time.instant - started).should be < 10.seconds
+  end
+
   it "reports a command that cannot be run instead of raising" do
     result = AzuCLI::DevServer::Builder.new("azu-no-such-command", [] of String).build(sink: IO::Memory.new)
 

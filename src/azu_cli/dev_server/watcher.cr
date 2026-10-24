@@ -1,7 +1,8 @@
 module AzuCLI
   module DevServer
     # Detects changed files by polling modification times and sizes (no inotify, so it works the same
-    # everywhere and needs no dependency). Only the places the app reads from are scanned.
+    # everywhere and needs no dependency). Only the places the app reads from are scanned; symlinked directories
+    # are not followed (files inside them are not watched), symlinked files are.
     class Watcher
       DIRECTORIES = ["src", "config", "public/templates"]
       ROOT_FILES  = /\A(shard\.(yml|lock)|\.env.*)\z/
@@ -37,7 +38,10 @@ module AzuCLI
 
         Dir.each_child(absolute) do |name|
           child = File.join(relative, name)
-          File.directory?(File.join(root, child)) ? walk(child, stamps) : record(child, stamps)
+          path = File.join(root, child)
+          next if File.symlink?(path) && File.directory?(path) # a link back up the tree would never end
+
+          File.directory?(path) ? walk(child, stamps) : record(child, stamps)
         end
       rescue File::Error
         # a directory removed while scanning: the next poll sees the result

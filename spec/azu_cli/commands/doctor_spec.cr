@@ -21,8 +21,8 @@ private class StubSystem < AzuCLI::Diagnostics::System
     true
   end
 
-  def port_free?(port : Int32) : Bool
-    true
+  def port_state(port : Int32) : AzuCLI::Diagnostics::PortState
+    AzuCLI::Diagnostics::PortState::Free
   end
 end
 

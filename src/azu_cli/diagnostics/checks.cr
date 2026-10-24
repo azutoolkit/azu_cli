@@ -111,13 +111,16 @@ module AzuCLI
       private def server_database(url : String) : Check
         uri = URI.parse(url)
         scheme = uri.scheme.to_s.downcase
-        port = uri.port || DEFAULT_DATABASE_PORTS[scheme]?
-        host = uri.host.presence
-        unless host && port
-          return Check.fail("database", "DATABASE_URL has no host or an unknown scheme '#{scheme}'", "use scheme://user:password@host:port/name")
+        return Check.fail("database", "DATABASE_URL has no host or an unknown scheme '#{scheme}'", "use scheme://user:password@host:port/name") unless DEFAULT_DATABASE_PORTS.has_key?(scheme)
+        if unix_socket?(uri)
+          return Check.warn("database", "#{scheme} through a unix socket: reachability is not checked", "run 'azu db:status' to test the connection")
         end
 
-        target = "#{scheme}://#{host}:#{port}#{uri.path}"
+        port = uri.port || DEFAULT_DATABASE_PORTS[scheme]
+        host = uri.hostname.presence
+        return Check.fail("database", "DATABASE_URL has no host", "use scheme://user:password@host:port/name") unless host
+
+        target = "#{scheme}://#{host.includes?(':') ? "[#{host}]" : host}:#{port}#{database_name(uri)}"
         if @system.tcp_reachable?(host, port, CONNECT_TIMEOUT)
           Check.ok("database", "#{target} accepts connections (credentials are not tried)")
         else
@@ -125,6 +128,18 @@ module AzuCLI
         end
       rescue URI::Error
         Check.fail("database", "DATABASE_URL is not a valid URL", "use scheme://user:password@host:port/name")
+      end
+
+      # No host, or a `host=/path` parameter: the server is reached through a socket file.
+      private def unix_socket?(uri : URI) : Bool
+        uri.host.to_s.empty? || uri.host.to_s.starts_with?('/') || !!uri.query_params["host"]?.try(&.starts_with?('/'))
+      end
+
+      # "/name" from the last path segment, and only when it looks like a name: a password written with an
+      # unescaped "/" leaves its tail in the path, which must not reach the output.
+      private def database_name(uri : URI) : String
+        name = uri.path.split('/').last? || ""
+        name.matches?(/\A[\w.-]+\z/) ? "/#{name}" : ""
       end
 
       # -- environment --------------------------------------------------------------------------
@@ -172,9 +187,12 @@ module AzuCLI
         raw = @env.call("PORT").presence
         number = raw ? raw.to_i? : DEFAULT_PORT
         return Check.fail("port", "PORT is not a port number", "set PORT to a number between 1 and 65535") unless number && (1..65535).includes?(number)
-        return Check.ok("port", "port #{number} is free") if @system.port_free?(number)
-
-        Check.warn("port", "port #{number} is in use (the application may be running)", "stop the process using it or set PORT")
+        case @system.port_state(number)
+        in .free?   then Check.ok("port", "port #{number} is free")
+        in .in_use? then Check.warn("port", "port #{number} is in use (the application may be running)", "stop the process using it or set PORT")
+        in .denied?
+          Check.warn("port", "port #{number} cannot be used by this user (ports below 1024 need privileges)", "set PORT to a port above 1023 or run with the needed privileges")
+        end
       end
 
       def docker : Check

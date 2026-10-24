@@ -60,19 +60,26 @@ Sign-in and sign-up are throttled by `Blog::AuthThrottle` (`src/services/auth_th
 | Setting                     | Default | Key                                                           |
 | --------------------------- | ------- | ------------------------------------------------------------- |
 | `AUTH_THROTTLE_LOGIN`       | 5       | client address and email (sign-in)                            |
-| `AUTH_THROTTLE_ACCOUNT`     | 20      | email from any address (sign-in), against distributed guessing |
+| `AUTH_THROTTLE_ADDRESS`     | 20      | client address, any email (sign-in), against one address trying many accounts |
 | `AUTH_THROTTLE_REGISTER`    | 5       | client address (sign-up)                                      |
 | `AUTH_THROTTLE_WINDOW`      | 60      | seconds in a window                                           |
-| `AUTH_THROTTLE_TRUST_PROXY` | unset   | `true`: the client address is the last `X-Forwarded-For` entry |
+| `AUTH_THROTTLE_TRUST_PROXY` | unset   | `true`: the client address is the last `X-Forwarded-For` entry (exactly one trusted hop) |
 
 - Attempts are counted before the password is checked, so a right and a wrong password cost the same; requests that fail
   validation (`422`) or the CSRF check (`403`) never reach the endpoint and are not counted.
+- There is no counter per email alone: one would let anyone lock a known account out by failing sign-ins for it from
+  their own address. Each source address has its own budget per account (`AUTH_THROTTLE_LOGIN`) and an overall
+  budget for trying many accounts (`AUTH_THROTTLE_ADDRESS`). Guessing spread over many addresses is not stopped by
+  this; use a shared store, a CAPTCHA or an account lock the owner can clear.
+- At most 10,000 counters are kept (an attacker can invent keys): expired ones go first, then the oldest, so memory
+  and the time per attempt stay bounded.
 - The counters live in the process: several processes or hosts each allow the limit, and a restart forgets them. Count
   in a shared store (Redis) when that matters.
 - The client address is the peer of the connection. Behind a reverse proxy that is the proxy's address, so every client
   shares the sign-up limit and only the email part of the sign-in key tells users apart; set
-  `AUTH_THROTTLE_TRUST_PROXY=true` only when a proxy you run appends the real address to `X-Forwarded-For` (the header is
-  client-controlled otherwise).
+  `AUTH_THROTTLE_TRUST_PROXY=true` only when exactly one proxy you run sits in front of the app and appends the real
+  address to `X-Forwarded-For`: the last entry is used, so a second proxy hop would make every client share the proxy's
+  address (the header is client-controlled otherwise).
 - It is generated code rather than `Azu::Handler::Throttle` because that handler keys by client address only, counts every
   request on every path, and blocks the address for its whole `duration` once over the threshold; a per-account,
   per-path limit needs a key the handler cannot see.

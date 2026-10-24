@@ -60,7 +60,9 @@ module AzuCLI
 
           List the routes of the application: method, path, endpoint class, request and response types
           and the template helpers Azu registers for the endpoint. The application's code is compiled
-          and loaded (the server is not started), so the first run takes as long as a build.
+          and loaded (the server is not started), so the first run takes as long as a build. That runs the
+          top-level code of src/<project>.cr (initializers, .env loading, database connections); do not point
+          it at a production environment.
 
           Options:
             --format FORMAT   table (default) or json

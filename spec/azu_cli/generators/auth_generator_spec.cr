@@ -137,7 +137,7 @@ describe AzuCLI::Generate::Auth do
 
         throttle = File.read("src/services/auth_throttle.cr")
         throttle.should contain(%(setting("AUTH_THROTTLE_LOGIN", 5)))
-        throttle.should contain(%(setting("AUTH_THROTTLE_ACCOUNT", 20)))
+        throttle.should contain(%(setting("AUTH_THROTTLE_ADDRESS", 20)))
         throttle.should contain(%(setting("AUTH_THROTTLE_REGISTER", 5)))
         throttle.should contain(%(setting("AUTH_THROTTLE_WINDOW", 60)))
         File.read("src/endpoints/sessions/create_endpoint.cr").should contain("throttle_login!(email)")

@@ -9,7 +9,12 @@ azu routes [--format table|json] [--method METHOD] [--path TEXT]
 The application's code is compiled and loaded (its server is **not** started) by a small script the command writes to
 the project directory, runs with `crystal run` and deletes. The script prints `Azu::CONFIG.router.route_info`, plus the
 `Request` and `Response` type arguments of every `Azu::Endpoint(Request, Response)` it finds at compile time. Because of
-the compile, the first run takes about as long as a build. `src/<project name>.cr` must exist (every generated web and api
+the compile, the first run takes about as long as a build.
+
+**It runs your project's top-level code.** Requiring `src/<project name>.cr` executes everything that file loads at
+require time: initializers, `.env` loading, database connections, anything with side effects. Only the server start
+(`src/server.cr`) is skipped. Do not run it against a production environment. The scratch file
+(`tmp_routes_<pid>.cr`) is git-ignored in generated projects and deleted when the command ends. `src/<project name>.cr` must exist (every generated web and api
 project has it).
 
 ## Options

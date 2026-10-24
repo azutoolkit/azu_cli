@@ -55,7 +55,7 @@ module AzuCLI
         <<-CRYSTAL
           require #{app_file.inspect}
 
-          puts "Azu console: #{Utils.project_module_name} is loaded. Type Crystal code; `exit` leaves."
+          puts #{"Azu console: #{Utils.project_module_name} is loaded. Type Crystal code; `exit` leaves.".inspect}
           debugger
         CRYSTAL
       end
@@ -86,7 +86,9 @@ module AzuCLI
           Usage: azu console
 
           Loads the application (its server is not started) in Crystal's interpreter, `crystal i`, and stops
-          at a prompt where you can run Crystal code against it. `exit` leaves.
+          at a prompt where you can run Crystal code against it. `exit` leaves. Loading the application runs the
+          top-level code of src/<project>.cr (initializers, .env loading, database connections), and what you
+          type runs against whatever the environment points at: do not use it against production by accident.
 
           This is the interpreter, not a Rails-style console. Its limits:
             * It needs a Crystal built with the interpreter (`crystal i --help` must work). The official

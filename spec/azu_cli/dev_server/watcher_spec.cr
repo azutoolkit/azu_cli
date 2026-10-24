@@ -73,4 +73,15 @@ describe AzuCLI::DevServer::Watcher do
       watcher.poll.should eq ["src/deep/a.cr"]
     end
   end
+
+  it "does not follow symlinked directories, so a link back up the tree cannot loop or add files" do
+    in_tmp_project(files: {"src/a.cr" => "a", "elsewhere/b.cr" => "b"}) do |dir|
+      File.symlink("..", File.join(dir, "src", "loop"))
+      File.symlink(File.join(dir, "elsewhere"), File.join(dir, "src", "linked"))
+      watcher = AzuCLI::DevServer::Watcher.new(dir)
+      File.write(File.join(dir, "elsewhere", "b.cr"), "changed and longer")
+
+      watcher.poll.should be_empty
+    end
+  end
 end

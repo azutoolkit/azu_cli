@@ -8,6 +8,7 @@ private class FakeSystem < AzuCLI::Diagnostics::System
   getter calls = [] of String
   property reachable = true
   property free = true
+  property denied = false
 
   def initialize(@commands : Hash(String, {Int32, String}) = {} of String => {Int32, String})
   end
@@ -23,9 +24,10 @@ private class FakeSystem < AzuCLI::Diagnostics::System
     reachable
   end
 
-  def port_free?(port : Int32) : Bool
+  def port_state(port : Int32) : AzuCLI::Diagnostics::PortState
     @calls << "bind #{port}"
-    free
+    return AzuCLI::Diagnostics::PortState::Denied if denied
+    free ? AzuCLI::Diagnostics::PortState::Free : AzuCLI::Diagnostics::PortState::InUse
   end
 end
 
@@ -165,6 +167,38 @@ describe AzuCLI::Diagnostics::Checks do
       end
     end
 
+    it "connects to an IPv6 literal without its brackets and prints it with them" do
+      in_tmp_project do |dir|
+        system = FakeSystem.new(GOOD_COMMANDS)
+        check = checks(dir, {"DATABASE_URL" => "postgres://u:p@[::1]:5432/db"}, system).database
+
+        check.status.ok?.should be_true
+        system.calls.should contain("tcp ::1:5432")
+        check.message.should contain("postgres://[::1]:5432/db")
+      end
+    end
+
+    it "only warns for a unix socket URL, without connecting" do
+      in_tmp_project do |dir|
+        ["postgres:///db?host=/var/run/postgresql", "postgres://u:p@/db", "mysql://u@localhost/db?host=/tmp/mysql.sock"].each do |url|
+          system = FakeSystem.new(GOOD_COMMANDS)
+          check = checks(dir, {"DATABASE_URL" => url}, system).database
+
+          check.status.warn?.should be_true
+          system.calls.reject(&.starts_with?("git")).select(&.starts_with?("tcp")).should be_empty
+        end
+      end
+    end
+
+    it "never prints the tail of a password that contains a slash" do
+      in_tmp_project do |dir|
+        system = FakeSystem.new(GOOD_COMMANDS)
+        check = checks(dir, {"DATABASE_URL" => "postgres://app:12/tail-of-secret@db.internal:5432/blog"}, system).database
+
+        (check.message + check.hint.to_s).should_not contain("tail-of-secret")
+      end
+    end
+
     it "fails on a URL without a host" do
       in_tmp_project do |dir|
         checks(dir, {"DATABASE_URL" => "blog"}).database.status.fail?.should be_true
@@ -249,6 +283,17 @@ describe AzuCLI::Diagnostics::Checks do
         check = checks(dir, {"PORT" => "8080"}, system).port
         check.status.warn?.should be_true
         check.message.should contain("8080")
+      end
+    end
+
+    it "says so when a port below 1024 is not allowed, instead of calling it in use" do
+      in_tmp_project do |dir|
+        system = FakeSystem.new(GOOD_COMMANDS)
+        system.denied = true
+        check = checks(dir, {"PORT" => "80"}, system).port
+        check.status.warn?.should be_true
+        check.message.should contain("cannot be used")
+        check.message.should_not contain("in use")
       end
     end
 

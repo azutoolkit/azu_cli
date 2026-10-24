@@ -6,6 +6,8 @@ module AzuCLI
       getter command : String
       getter args : Array(String)
 
+      @process : Process?
+
       def initialize(@command : String, @args : Array(String))
       end
 
@@ -15,10 +17,33 @@ module AzuCLI
         output = IO::Memory.new
         both = IO::MultiWriter.new(sink, output)
         started = Time.instant
-        status = Process.run(command, args, chdir: chdir, output: both, error: both)
+        process = Process.new(command, args, chdir: chdir, output: both, error: both)
+        @process = process
+        status = process.wait
         Result.new(status.success?, (Time.instant - started).total_seconds, output.to_s)
       rescue ex : IO::Error
         Result.new(false, 0.0, "could not run #{command}: #{ex.message}")
+      ensure
+        @process = nil
+      end
+
+      # Stops a build in progress (SIGTERM to the build and everything it started: `shards build` runs the
+      # compiler as a child, which would otherwise keep compiling and holding the output).
+      def cancel : Nil
+        process = @process
+        return unless process && process.exists?
+
+        (descendants(process.pid) + [process.pid]).each { |pid| Process.signal(Signal::TERM, pid) rescue nil }
+      end
+
+      # Every process below pid, deepest first.
+      private def descendants(pid : Int64) : Array(Int64)
+        output = IO::Memory.new
+        Process.run("pgrep", ["-P", pid.to_s], output: output, error: Process::Redirect::Close)
+        children = output.to_s.split.compact_map(&.to_i64?)
+        children.flat_map { |child| descendants(child) + [child] }
+      rescue IO::Error
+        [] of Int64
       end
     end
 

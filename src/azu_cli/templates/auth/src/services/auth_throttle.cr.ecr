@@ -6,13 +6,20 @@ module <%= app_module %>
   #
   # Settings, read from the environment when the app boots:
   #   AUTH_THROTTLE_LOGIN        sign-in attempts per window for one client address and email (default 5)
-  #   AUTH_THROTTLE_ACCOUNT      sign-in attempts per window for one email from any address (default 20)
+  #   AUTH_THROTTLE_ADDRESS      sign-in attempts per window for one client address, any email (default 20)
   #   AUTH_THROTTLE_REGISTER     sign-up attempts per window for one client address (default 5)
   #   AUTH_THROTTLE_WINDOW       seconds in a window (default 60)
   #   AUTH_THROTTLE_TRUST_PROXY  "true" to take the client address from the last X-Forwarded-For entry,
   #                              which only a proxy you run may append; leave it unset otherwise, the header is
   #                              client-controlled
   # An attempt over the limit answers 429 with a Retry-After header. Attempts that fail validation (422) are not counted.
+  #
+  # There is deliberately no counter per email alone: it would let anyone lock a known account out by failing 20
+  # sign-ins for it from their own address. Every source gets its own budget per account; guessing spread over many
+  # addresses needs a shared store, a CAPTCHA or an account lock the owner can clear, which are not generated.
+  #
+  # At most MAX_KEYS counters are kept (an attacker can choose the keys): expired ones are dropped first, then the
+  # oldest, so memory and the time per attempt stay bounded.
   class AuthThrottle
     WINDOW        = setting("AUTH_THROTTLE_WINDOW", 60).seconds
     MAX_KEYS      = 10_000
@@ -20,7 +27,7 @@ module <%= app_module %>
     FORWARDED_FOR = "X-Forwarded-For"
 
     class_getter login : AuthThrottle = new(setting("AUTH_THROTTLE_LOGIN", 5), WINDOW)
-    class_getter account : AuthThrottle = new(setting("AUTH_THROTTLE_ACCOUNT", 20), WINDOW)
+    class_getter address : AuthThrottle = new(setting("AUTH_THROTTLE_ADDRESS", 20), WINDOW)
     class_getter register : AuthThrottle = new(setting("AUTH_THROTTLE_REGISTER", 5), WINDOW)
 
     private record Counter, count : Int32, resets_at : Time::Instant
@@ -53,10 +60,9 @@ module <%= app_module %>
     # Counts an attempt for `key`. Returns nil when it is allowed, else the seconds to wait before the next one.
     def attempt(key : String, now : Time::Instant = Time.instant) : Int32?
       @mutex.synchronize do
-        prune(now) if @counters.size >= MAX_KEYS
         counter = @counters[key]?
         if counter.nil? || counter.resets_at <= now
-          @counters[key] = Counter.new(1, now + @window)
+          start_window(key, now)
           nil
         elsif counter.count < limit
           @counters[key] = Counter.new(counter.count + 1, counter.resets_at)
@@ -67,6 +73,10 @@ module <%= app_module %>
       end
     end
 
+    def size : Int32
+      @mutex.synchronize { @counters.size }
+    end
+
     # Raises a 429 (with Retry-After) when `key` is over the limit.
     def attempt!(key : String) : Nil
       if wait = attempt(key)
@@ -74,8 +84,16 @@ module <%= app_module %>
       end
     end
 
-    private def prune(now : Time::Instant) : Nil
-      @counters.reject! { |_, counter| counter.resets_at <= now }
+    # Entries are kept in the order their windows end (a new window is appended, a counted attempt keeps its place),
+    # so the expired ones are at the front and the oldest is the first.
+    private def start_window(key : String, now : Time::Instant) : Nil
+      @counters.delete(key)
+      make_room
+      @counters[key] = Counter.new(1, now + @window)
+    end
+
+    private def make_room : Nil
+      @counters.delete(@counters.first_key) while @counters.size >= MAX_KEYS
     end
   end
 end

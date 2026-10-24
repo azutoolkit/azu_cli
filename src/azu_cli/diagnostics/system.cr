@@ -2,12 +2,19 @@ require "socket"
 
 module AzuCLI
   module Diagnostics
+    # Free, taken by another process, or not allowed to this user (ports below 1024).
+    enum PortState
+      Free
+      InUse
+      Denied
+    end
+
     # What the checks need from the machine; replaced in specs.
     abstract class System
       # Runs a command and returns its exit code and combined output, or nil when it cannot be started.
       abstract def capture(command : String, args : Array(String), chdir : String) : {Int32, String}?
       abstract def tcp_reachable?(host : String, port : Int32, timeout : Time::Span) : Bool
-      abstract def port_free?(port : Int32) : Bool
+      abstract def port_state(port : Int32) : PortState
     end
 
     class LocalSystem < System
@@ -26,11 +33,11 @@ module AzuCLI
         false
       end
 
-      def port_free?(port : Int32) : Bool
+      def port_state(port : Int32) : PortState
         TCPServer.new("0.0.0.0", port).close
-        true
-      rescue Socket::Error | IO::Error
-        false
+        PortState::Free
+      rescue error : Socket::Error | IO::Error
+        error.os_error == Errno::EACCES ? PortState::Denied : PortState::InUse
       end
     end
   end

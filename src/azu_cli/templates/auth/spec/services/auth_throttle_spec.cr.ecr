@@ -55,4 +55,29 @@ describe <%= app_module %>::AuthThrottle do
 
     <%= app_module %>::AuthThrottle.client_address(request).should eq "10.0.0.7"
   end
+
+  it "gives every address its own budget per account, so a stranger cannot lock the owner out" do
+    throttle = <%= app_module %>::AuthThrottle.new(2, 60.seconds)
+
+    5.times { throttle.attempt("6.6.6.6|victim@example.com", start) }
+    throttle.attempt("6.6.6.6|victim@example.com", start).should_not be_nil
+    throttle.attempt("1.2.3.4|victim@example.com", start).should be_nil
+  end
+
+  it "keeps the number of counters bounded when the keys are chosen by an attacker" do
+    throttle = <%= app_module %>::AuthThrottle.new(1, 60.seconds)
+
+    (<%= app_module %>::AuthThrottle::MAX_KEYS * 2 + 5).times { |index| throttle.attempt("attacker-#{index}", start) }
+    throttle.size.should be <= <%= app_module %>::AuthThrottle::MAX_KEYS
+    throttle.attempt("attacker-#{<%= app_module %>::AuthThrottle::MAX_KEYS * 2 + 4}", start).should_not be_nil
+  end
+
+  it "drops expired counters before it drops live ones" do
+    throttle = <%= app_module %>::AuthThrottle.new(1, 60.seconds)
+
+    throttle.attempt("old", start)
+    (<%= app_module %>::AuthThrottle::MAX_KEYS - 1).times { |index| throttle.attempt("live-#{index}", start + 50.seconds) }
+    throttle.attempt("new", start + 70.seconds)
+    throttle.attempt("live-0", start + 70.seconds).should_not be_nil
+  end
 end
