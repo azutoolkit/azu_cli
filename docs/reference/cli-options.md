@@ -165,7 +165,31 @@ docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) my_app
 
 The CLI loads the project's `.env`, `.env.<CRYSTAL_ENV>` and `.env.local` before every command except `new`, `init`, `help`,
 `version` and `completion` (precedence: shell environment, `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`; a variable already
-exported is never overridden). It reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
+exported is never overridden). A command takes its
+environment from its own `--env`/`-e` flag (`azu serve --env production` loads `.env.production`, `azu db:migrate --env test`
+loads `.env.test`), `azu test` always runs as `test`, and a project's `.env` never replaces the shell's variables.
+
+**Trust model (best effort, not a sandbox).** A `.env` file may only set application settings. A name is applied when it
+looks like one (`DATABASE_URL`, `REDIS_URL`, `PORT`, `HOST`, `CRYSTAL_ENV`, `AZU_*`, `APP_*`, `SESSION_*`, `CSRF_*`,
+`JOOBQ_*`, `SMTP_*`, `MAIL_*`, `*_SECRET`, `*_KEY`, `*_TOKEN`, `*_URL`, `*_HOST`, `*_PORT`, `*_PASSWORD`) or when the
+project's `.env.example` lists it (add a new setting there). Anything else is skipped with a warning on STDERR naming the
+variable (never the value). A denylist is always enforced, even for names `.env.example` lists: `LD_*`, `DYLD_*`, `PATH`,
+`SHELL`, `HOME`, `TMPDIR`, `IFS`, `BASH_ENV`, `ENV`, `SHARDS_*`, `GIT_*`, `CRYSTAL_*` (except `CRYSTAL_ENV` and
+`CRYSTAL_LOG_*`), `DOCKER_*`, `COMPOSE_*`, `SSH_*`, the compiler and linker variables (`CC`, `CXX`, `CPP`, `*FLAGS`,
+`CPATH`, `LIBRARY_PATH`, `PKG_CONFIG*`, ...), proxy and certificate variables, `EDITOR`/`VISUAL`/`PAGER`/`BROWSER`,
+`PYTHON*`, `PERL5*`, `RUBY*`, `NODE_OPTIONS`, `XDG_*`, TLS, resolver, language-runtime (`GEM_*`, `BUNDLE_*`,
+`NPM_CONFIG_*`, `CARGO_*`, `HOMEBREW_*`, `GO*`, `JAVA_TOOL_OPTIONS`, ...), locale and terminal (`LANG`, `LC_*`, `TZ`, `TERMINFO`), identity
+(`USER`, `LOGNAME`, `PWD`) and the CLI's own path overrides (`AZU_OUTPUT_PATH`, `AZU_TEMPLATES_PATH`) and a few more (see `DotEnv::UNSAFE_NAME`). Set those in your shell.
+
+`.env.example` is not a security gate: a hostile repository controls it as much as `.env`, so it only decides which harmless
+names are accepted; the denylist is what protects.
+
+**This does not make an untrusted checkout safe.** `serve`, `test`, `db:*` and `generate` compile and run the project's
+own Crystal code (macros, specs, migrations, initializers), and `shards install` runs a dependency's postinstall. Only
+run `azu` in a project you trust; the filter only stops a copied `.env` from redirecting the tools. A file larger than
+1 MB, or with one malformed line, is refused whole. A `DATABASE_URL` already exported in your shell wins over
+`.env.test`; `azu test` warns when that is the case.
+The generated `.env` is written with mode 0600. It reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
 generated app loads the same files at boot (`Azu::Env.load_all`) and reads `PORT`, `HOST`, `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
 in production (`CRYSTAL_ENV=production`) it refuses to boot without the secrets.
 
