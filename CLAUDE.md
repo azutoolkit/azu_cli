@@ -362,7 +362,12 @@ Generators extend `Teeplate::FileTree`:
 - `AzuCLI.run` calls `load_project_env` (`AzuCLI::DotEnv`, `src/azu_cli/dot_env.cr`) before `Config.load!`, for every
   command except `new`, `init`, `help`, `version`, `completion`. The CLI does not depend on azu, so `DotEnv` is a copy of
   the parser in azu's `src/azu/env.cr`: change both, and keep `spec/azu_cli/dot_env_spec.cr` in step with `spec/azu/env_spec.cr`
-- Generated files: `.env` (git-ignored, random secrets), `.env.development` / `.env.test` (committed, `DATABASE_URL` only),
+- Trust model: the CLI loads the `.env*` of whatever project it runs in and then spawns tools, so `DotEnv` (and
+  `Azu::Env`, unless `unsafe: true`) skips `LD_*`, `DYLD_*`, `PATH`, `SHELL`, `IFS`, `BASH_ENV`, `ENV`, `SHARDS_*`,
+  `CRYSTAL_PATH`, `CRYSTAL_OPTS`, `CRYSTAL_LIBRARY_PATH`, `GIT_*`, `DOCKER_HOST`, `HOME` with a warning naming the variable.
+  `load_project_env` honours the command's `--env` (and `test` = `test`) before loading, so children never inherit
+  another environment's `DATABASE_URL`. `spec/fixtures/dotenv_corpus.json` must stay identical to azu's
+- Generated files: `.env` (git-ignored, chmod 0600, random secrets), `.env.development` / `.env.test` (committed, `DATABASE_URL` only),
   `.env.example` (committed, secrets blank), `.env.local` is git-ignored. Do not put empty values in `.env`: once it
   is loaded an empty `SSL_MODE=` replaces a default
 - `scripts/e2e_generated_app.sh` unsets the secrets and asserts the app boots from `.env` alone, keeps its CSRF key
@@ -373,7 +378,7 @@ Generators extend `Teeplate::FileTree`:
 - `azu new --docker` writes a multi-stage `Dockerfile` and `.dockerignore`; `--ci` (default `GitHub Actions`) writes
   `.github/workflows/ci.yml`. Both use `Generate::Project::CRYSTAL_VERSION` (also `.tool-versions`) and the package
   lists in `Generate::Project#build_packages` / `#runtime_packages`; change a Crystal version in one place
-- Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there; first release with it is azu 0.5.69, which the generated shard.yml requires as `~> 0.5.69`; `E2E_AZU_BRANCH=<ref>` pins the generated project's azu to a branch in the e2e scripts, opt-in)
+- Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there; first release with it is azu 0.5.69, the generated shard.yml requires `~> 0.5.99`, the first release with `Azu::Env` (azu#163; it also contains the SQLite pragmas of azu#152, first in 0.5.93); `E2E_AZU_BRANCH=<ref>` pins the generated project's azu to a branch in the e2e scripts, opt-in)
 - Development handlers (DevDashboard, PerformanceMonitor) are mounted by `def self.dev_handlers` in the generated app
   file, guarded by `Azu::CONFIG.env.development?` at runtime, never by the environment at generation time
 - The generated app's `handlers` is `Array(HTTP::Handler)` (literal `of HTTP::Handler`): an array of a union of handler classes passed as `Array(HTTP::Handler)` is corrupted in optimized builds (IndexError / SIGSEGV at boot). `scripts/e2e_generated_app.sh` builds unoptimized, so only `scripts/e2e_docker.sh` (a `--release` build) catches this class of bug

@@ -355,6 +355,8 @@ module AzuCLI
 
           # Generate the project in the target directory
           generator.render(@project_name, force: false, interactive: false, list: false, color: true)
+          env_file = File.join(@project_name, ".env")
+          File.chmod(env_file, 0o600) if File.exists?(env_file) # it holds the generated secrets
 
           # Remove JoobQ files if not included
           unless @include_joobq

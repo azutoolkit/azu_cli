@@ -334,6 +334,7 @@ step "the generated .env lists the secrets, .env.example and the per-environment
 if [ "$TYPE" = web ]; then
   grep -Eq '^CSRF_SECRET=[0-9a-f]{64}$' .env || fail ".env has no random CSRF_SECRET"
 fi
+[ "$(stat -c %a .env)" = 600 ] || fail ".env is not mode 600"
 [ -f .env.example ] && [ -f .env.development ] && [ -f .env.test ] || fail ".env.example / .env.development / .env.test missing"
 git check-ignore -q .env 2>/dev/null || grep -qx '/.env' .gitignore || fail ".env is not git-ignored"
 ! grep -Eq '[0-9a-f]{64}' .env.example || fail ".env.example holds a secret"
@@ -440,20 +441,28 @@ if [ "$TYPE" = web ] && [ "$SCAFFOLD" = 1 ]; then
 fi
 
 # Production reads the environment, not a file lying around: from a directory without .env the app refuses to
-# boot and names the missing secret (authentication is generated here, so SESSION_SECRET is checked first).
+# boot, and each secret is required on its own (which one is reported first depends on initialization order, so
+# boot with all but one set and expect that one to be named).
 if [ "$TYPE" = web ]; then
   step "production refuses to boot without its secrets"
   APP_DIR="$(pwd)"
   mkdir -p "$WORK/bare"
-  expect_production_refusal() {
-    missing="$1"; shift
+  secret_value="0123456789abcdef0123456789abcdef"
+  production_boot() {
     code=0
     (cd "$WORK/bare" && env "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+  }
+  production_boot
+  [ "$code" -ne 0 ] || fail "production booted without any secret"
+  echo "ok: production without secrets exits with status $code"
+  expect_missing() {
+    missing="$1"; shift
+    production_boot "$@"
     [ "$code" -ne 0 ] || fail "production booted without $missing"
     grep -q "$missing is not set" "$WORK/production.log" || fail "production did not say $missing is not set: $(grep -v ' INFO \| WARN \|^  from' "$WORK/production.log" | head -n 4)"
     echo "ok: production without $missing exits with '$missing is not set'"
   }
-  expect_production_refusal SESSION_SECRET
-  expect_production_refusal CSRF_SECRET SESSION_SECRET=0123456789abcdef0123456789abcdef
+  expect_missing SESSION_SECRET CSRF_SECRET="$secret_value"
+  expect_missing CSRF_SECRET SESSION_SECRET="$secret_value"
 fi
 step "PASS: generated $TYPE app compiles, boots and serves"

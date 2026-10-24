@@ -79,6 +79,7 @@ describe AzuCLI::Generate::Auth do
       render.call(".")
 
       File.read(".env").should match(/\ASESSION_SECRET=[0-9a-f]{64}\n\z/)
+      File.info(".env").permissions.value.should eq 0o600
     end
   end
 

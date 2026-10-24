@@ -165,7 +165,17 @@ docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) my_app
 
 The CLI loads the project's `.env`, `.env.<CRYSTAL_ENV>` and `.env.local` before every command except `new`, `init`, `help`,
 `version` and `completion` (precedence: shell environment, `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`; a variable already
-exported is never overridden). It reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
+exported is never overridden). A command takes its
+environment from its own `--env`/`-e` flag (`azu serve --env production` loads `.env.production`, `azu db:migrate --env test`
+loads `.env.test`), `azu test` always runs as `test`, and a project's `.env` never replaces the shell's variables.
+
+**Trust model.** `azu` runs in whatever project you are in, then starts `crystal`, `shards` or `docker`. A `.env` from a
+clone you do not trust must not be able to hijack them, so the CLI **skips, with a warning naming the variable (never
+the value)**, `LD_*`, `DYLD_*`, `PATH`, `SHELL`, `IFS`, `BASH_ENV`, `ENV`, `SHARDS_*`, `CRYSTAL_PATH`, `CRYSTAL_OPTS`,
+`CRYSTAL_LIBRARY_PATH`, `GIT_*`, `DOCKER_HOST` and `HOME` from every file (case-insensitive); set those in your shell.
+Everything else in an untrusted project's files (`DATABASE_URL`, `CRYSTAL_ENV`, ...) is still loaded, so read an unknown
+project's `.env*` before running its commands. A file larger than 1 MB, or with one malformed line, is refused whole.
+The generated `.env` is written with mode 0600. It reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
 generated app loads the same files at boot (`Azu::Env.load_all`) and reads `PORT`, `HOST`, `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
 in production (`CRYSTAL_ENV=production`) it refuses to boot without the secrets.
 

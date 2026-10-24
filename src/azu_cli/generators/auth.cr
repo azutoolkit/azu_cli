@@ -73,6 +73,7 @@ module AzuCLI
 
         separator = content.empty? || content.ends_with?("\n") ? "" : "\n"
         File.write(env_file, "#{content}#{separator}SESSION_SECRET=#{Random::Secure.hex(32)}\n")
+        File.chmod(env_file, 0o600) # it holds secrets
       end
     end
   end

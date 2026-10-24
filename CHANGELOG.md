@@ -2,16 +2,17 @@
 
 ## Unreleased - One config story (`.env`)
 
-**Requires an `azu` release that contains `Azu::Env` (azutoolkit/azu, branch `claude/azu-crystal-framework-plan-phqt6e-envconfig`); the template's `azu ~> 0.5.69` floor is not raised here because that release does not exist yet.**
+**The generated `shard.yml` now requires `azu ~> 0.5.99`, the first release that contains `Azu::Env` (azutoolkit/azu#163) and, from 0.5.93, the SQLite pragmas of azutoolkit/azu#152.**
 
 - Added: generated apps load `.env` at boot (`require "azu/env"; Azu::Env.load_all` before `require "azu"`): `.env.local` > `.env.<CRYSTAL_ENV>` > `.env`, never overriding a variable already in the environment, so production containers that inject real values are unaffected. `CSRF_SECRET` and `SESSION_SECRET` are read with `Azu::Env.secret` (env value, random outside production, error in production), replacing the per-file copies of that guard; there is no more `export` step
 - Added: `azu` loads the same files from the working directory before every command except `new`, `init`, `help`, `version` and `completion` (`AzuCLI::DotEnv`, same grammar as `Azu::Env`: `KEY=VALUE`, comments, quotes, `export`, no interpolation, nothing executed), so `db:*`, `serve`, `test`, `jobs:*` and `generate` see `DATABASE_URL` and the secrets. `azu serve` takes its default port, host and environment from them
+- Security: the CLI loads the `.env*` of the project it runs in, so it skips (with a warning naming the variable, never the value) `LD_*`, `DYLD_*`, `PATH`, `SHELL`, `IFS`, `BASH_ENV`, `ENV`, `SHARDS_*`, `CRYSTAL_PATH`, `CRYSTAL_OPTS`, `CRYSTAL_LIBRARY_PATH`, `GIT_*`, `DOCKER_HOST` and `HOME`; files over 1 MB are refused; the generated `.env` is mode 0600; `--env`/`-e` and `azu test` pick `.env.<env>` before loading, so `azu serve --env production` and `azu test` no longer hand the app the development `DATABASE_URL`; `azu test` runs the specs with `CRYSTAL_ENV=test`; `Config#environment` falls back to `CRYSTAL_ENV`
 - Changed: generated `DATABASE_URL` moved from `.env` to the committed `.env.development` and `.env.test` (specs no longer open the development database); `azu new` also writes a committed `.env.example`; `.env.local` is git-ignored. The empty `SSL_*` and `PERFORMANCE_MONITORING` lines are gone from `.env`: once `.env` is loaded, an empty `SSL_MODE` would have replaced the `none` default
 
 ## Unreleased - CQL 0.0.604
 
 - Changed: generated projects pin `cql` to exactly 0.0.604 (was 0.0.541) and the drivers to `pg ~> 0.31.0`, `mysql ~> 0.18.0` and `sqlite3 ~> 0.24.0` (each needs crystal-db `~> 0.15.0`, so `db` stays implicit), instead of floating to the latest releases. The stale "unpin once cql supports crystal-db 0.15" TODO is replaced by a note on how to bump. The TODO blamed `CQL::Postgres::Connection#driver_name`, which is absent in cql tag v0.0.562 and present from v0.0.565 (checked in the cql repository); the CLI itself already builds with cql 0.0.578 on crystal-db 0.15, and the e2e gates pass on SQLite (web, api) and PostgreSQL (web) with cql 0.0.604
-- Note: foreign keys on and WAL for generated SQLite apps need an azu release that contains azutoolkit/azu#152 (`Azu::CQL.schema` applies CQL's SQLite defaults). The template's floor `azu ~> 0.5.69` predates it, so apps resolved to an older azu keep SQLite's own defaults; raise the floor when that release exists
+- Note: foreign keys on and WAL for generated SQLite apps need an azu release that contains azutoolkit/azu#152 (`Azu::CQL.schema` applies CQL's SQLite defaults). The floor is now `~> 0.5.99`, which contains it
 
 ## Unreleased - Database command fixes
 
