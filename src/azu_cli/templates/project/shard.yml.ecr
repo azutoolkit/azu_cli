@@ -14,10 +14,11 @@ targets:
 <% end -%>
 
 dependencies:
-  # The generated app requires "azu/dev", which first shipped in azu 0.5.69.
+  # The generated app requires "azu/env" (azu 0.5.99, which also has the SQLite pragmas of azu 0.5.93) and
+  # "azu/dev" (azu 0.5.69).
   azu:
     github: azutoolkit/azu
-    version: ~> 0.5.69
+    version: ~> 0.5.99
 
   # Exact on purpose: cql 0.0.N releases have broken generated apps before (0.0.562). To bump, change this
   # version and run scripts/e2e_generated_app.sh web and api (and E2E_DB=postgresql web).

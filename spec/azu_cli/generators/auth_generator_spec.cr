@@ -79,6 +79,19 @@ describe AzuCLI::Generate::Auth do
       render.call(".")
 
       File.read(".env").should match(/\ASESSION_SECRET=[0-9a-f]{64}\n\z/)
+      File.info(".env").permissions.value.should eq 0o600
+    end
+  end
+
+  it "leaves a .env that is a symlink alone and says so" do
+    in_generated_project do
+      File.write("real.env", "PORT=4000\n")
+      File.delete(".env") if File.exists?(".env")
+      File.symlink("real.env", ".env")
+      render.call(".")
+
+      File.read("real.env").should eq "PORT=4000\n"
+      File.symlink?(".env").should be_true
     end
   end
 

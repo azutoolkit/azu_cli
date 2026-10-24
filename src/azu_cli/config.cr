@@ -164,7 +164,7 @@ module AzuCLI
     property verbose : Bool = false
     property quiet : Bool = false
     property config_file_path : String?
-    property environment : String = ENV.fetch("AZU_ENV", "development")
+    property environment : String = ENV["AZU_ENV"]?.presence || ENV["CRYSTAL_ENV"]?.presence || "development"
 
     # Project configuration
     property project_name : String = ""

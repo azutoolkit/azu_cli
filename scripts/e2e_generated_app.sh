@@ -14,6 +14,8 @@
 #        E2E_DB   database adapter for `azu new`     (default: sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
 #        E2E_SKIP_DEV set to 1 to skip the `azu dev` check (two more compiles, a few minutes)
+#        Secrets: CSRF_SECRET (web) always; SESSION_SECRET only once `azu generate auth` ran, which this script does for
+#        web on SQLite (not for PostgreSQL, which only boots). The production checks run in a clean environment.
 #        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
 set -eu
 
@@ -65,6 +67,10 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# The octal mode of a file (GNU stat, then BSD stat).
+file_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
+
+# A command that must finish: wrapped in timeout when the host has it.
 bounded() { if command -v timeout >/dev/null; then timeout 20 "$@"; else "$@"; fi; }
 
 step() { echo "==> $*"; }
@@ -526,6 +532,7 @@ step "the generated .env lists the secrets, .env.example and the per-environment
 if [ "$TYPE" = web ]; then
   grep -Eq '^CSRF_SECRET=[0-9a-f]{64}$' .env || fail ".env has no random CSRF_SECRET"
 fi
+[ "$(file_mode .env)" = 600 ] || fail ".env is not mode 600"
 [ -f .env.example ] && [ -f .env.development ] && [ -f .env.test ] || fail ".env.example / .env.development / .env.test missing"
 git check-ignore -q .env 2>/dev/null || grep -qx '/.env' .gitignore || fail ".env is not git-ignored"
 ! grep -Eq '[0-9a-f]{64}' .env.example || fail ".env.example holds a secret"
@@ -656,7 +663,7 @@ if [ "$TYPE" = web ]; then
   # A clean environment: whatever the caller or the CI job exports cannot mask a missing guard or add a secret.
   production_boot() {
     code=0
-    (cd "$WORK/bare" && bounded env -u SESSION_SECRET -u CSRF_SECRET -u DATABASE_URL "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+    (cd "$WORK/bare" && bounded env -u SESSION_SECRET -u CSRF_SECRET -u DATABASE_URL "$@" CRYSTAL_ENV=production PORT="$(free_port)" "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
   }
   production_boot
   [ "$code" -ne 0 ] || fail "production booted without any secret"
