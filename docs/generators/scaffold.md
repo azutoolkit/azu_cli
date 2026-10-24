@@ -195,7 +195,8 @@ An update is a `PATCH`: its request fields are all optional and only the ones se
 ## Production
 
 Generated web projects refuse to boot in production (`CRYSTAL_ENV=production`; Azu does not read `AZU_ENV`) without
-`CSRF_SECRET` in the process environment. That includes a job worker, because `src/worker.cr` loads the app file.
+`CSRF_SECRET` in the process environment (the generated app loads `.env` itself, so development needs no `export`;
+production containers inject real variables, which always win over a file). That includes a job worker, because `src/worker.cr` loads the app file.
 `azu serve --env production` prints the last lines the server wrote to stderr when it exits early.
 
 ## Field Types

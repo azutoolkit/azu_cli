@@ -13,6 +13,9 @@
 #        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
 set -eu
 
+# The secrets come from the generated .env, which the app loads at boot: do not let the caller's shell supply them.
+unset CSRF_SECRET SESSION_SECRET DATABASE_URL
+
 TYPE="${1:-web}"
 DB="${E2E_DB:-sqlite}"
 NAME="e2e_app"
@@ -327,6 +330,14 @@ cd "$WORK"
   --type "$TYPE" --db "$DB" --no-git --no-docker --ci "GitHub Actions"
 cd "$NAME"
 
+step "the generated .env lists the secrets, .env.example and the per-environment files exist"
+if [ "$TYPE" = web ]; then
+  grep -Eq '^CSRF_SECRET=[0-9a-f]{64}$' .env || fail ".env has no random CSRF_SECRET"
+fi
+[ -f .env.example ] && [ -f .env.development ] && [ -f .env.test ] || fail ".env.example / .env.development / .env.test missing"
+git check-ignore -q .env 2>/dev/null || grep -qx '/.env' .gitignore || fail ".env is not git-ignored"
+! grep -Eq '[0-9a-f]{64}' .env.example || fail ".env.example holds a secret"
+
 # Opt-in: test against a branch of azu instead of the release the generated shard.yml requires (its version
 # constraint is dropped for the branch).
 if [ -n "${E2E_AZU_BRANCH:-}" ]; then
@@ -369,20 +380,29 @@ for command in "crystal tool format --check src spec" "crystal spec"; do
   echo "ok: $command"
 done
 
-step "start the server"
+# Starts the server from the project directory (it loads .env there) and waits until /health answers.
+start_server() {
+  HOST=127.0.0.1 PORT="$PORT" "./bin/$NAME" >"$WORK/server.log" 2>&1 &
+  SERVER_PID=$!
+  tries=0
+  until curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/health"; do
+    kill -0 "$SERVER_PID" 2>/dev/null || fail "server exited before becoming ready"
+    tries=$((tries + 1))
+    [ "$tries" -lt "$READY_TRIES" ] || fail "server not ready after $READY_TRIES tries"
+    sleep 1
+  done
+}
+
+stop_server() {
+  kill "$SERVER_PID" 2>/dev/null || true
+  wait "$SERVER_PID" 2>/dev/null || true
+  SERVER_PID=""
+}
+
+step "start the server (no secrets exported: it loads .env)"
 PORT="$(free_port)" || fail "no free port found"
 echo "port $PORT"
-HOST=127.0.0.1 PORT="$PORT" "./bin/$NAME" >"$WORK/server.log" 2>&1 &
-SERVER_PID=$!
-
-step "wait for readiness (up to $READY_TRIES tries)"
-tries=0
-until curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/health"; do
-  kill -0 "$SERVER_PID" 2>/dev/null || fail "server exited before becoming ready"
-  tries=$((tries + 1))
-  [ "$tries" -lt "$READY_TRIES" ] || fail "server not ready after $READY_TRIES tries"
-  sleep 1
-done
+start_server
 
 step "check responses"
 expect_status /health 200
@@ -407,4 +427,33 @@ if [ "$SCAFFOLD" = 1 ] && [ "$TYPE" = web ]; then
 fi
 
 kill -0 "$SERVER_PID" 2>/dev/null || fail "server died while serving requests"
+
+# The CSRF key comes from .env, so a token issued before a restart is still accepted afterwards. A random
+# per-process key would answer 403 here.
+if [ "$TYPE" = web ] && [ "$SCAFFOLD" = 1 ]; then
+  step "the CSRF key survives a restart (it comes from .env)"
+  jar="$WORK/jar_restart"
+  fetch /posts/new "$jar" >/dev/null
+  stop_server
+  start_server
+  submit "$jar" /posts 422 --data-urlencode title= --data-urlencode body=
+fi
+
+# Production reads the environment, not a file lying around: from a directory without .env the app refuses to
+# boot and names the missing secret (authentication is generated here, so SESSION_SECRET is checked first).
+if [ "$TYPE" = web ]; then
+  step "production refuses to boot without its secrets"
+  APP_DIR="$(pwd)"
+  mkdir -p "$WORK/bare"
+  expect_production_refusal() {
+    missing="$1"; shift
+    code=0
+    (cd "$WORK/bare" && env "$@" CRYSTAL_ENV=production PORT=1 "$APP_DIR/bin/$NAME" >"$WORK/production.log" 2>&1) || code=$?
+    [ "$code" -ne 0 ] || fail "production booted without $missing"
+    grep -q "$missing is not set" "$WORK/production.log" || fail "production did not say $missing is not set: $(grep -v ' INFO \| WARN \|^  from' "$WORK/production.log" | head -n 4)"
+    echo "ok: production without $missing exits with '$missing is not set'"
+  }
+  expect_production_refusal SESSION_SECRET
+  expect_production_refusal CSRF_SECRET SESSION_SECRET=0123456789abcdef0123456789abcdef
+fi
 step "PASS: generated $TYPE app compiles, boots and serves"

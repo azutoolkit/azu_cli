@@ -12,13 +12,9 @@ end
 Session.use_store(Session::CookieStore(UserSession))
 
 Session.configure do |config|
-  # SESSION_SECRET must be in the process environment: export it (the generated .env lists one, but
-  # nothing loads .env for you) or set it in your process manager. Development falls back to a random
-  # key per process, which signs users out on every restart; production refuses to boot without it.
-  config.secret = ENV["SESSION_SECRET"]?.presence || begin
-    raise "SESSION_SECRET is not set" if Azu::CONFIG.env.production?
-    Random::Secure.hex(32)
-  end
+  # SESSION_SECRET comes from the environment or the git-ignored .env. Development falls back to a random key
+  # per process, which signs users out on every restart; production refuses to boot without it.
+  config.secret = Azu::Env.secret("SESSION_SECRET")
   config.session_key = "<%= app_dir %>_session"
 
   # The session shard sets the cookie flags itself: Secure, HttpOnly, SameSite=Strict (browsers keep a

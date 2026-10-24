@@ -31,7 +31,8 @@ ENV DATABASE_URL=sqlite3:///data/<%= @project %>.db
 USER app
 
 # CSRF_SECRET (and SESSION_SECRET, once you generate authentication) are required in production:
-# pass them with `docker run -e`; they are deliberately not part of the image.
+# pass them with `docker run -e`; they are deliberately not part of the image (.dockerignore keeps .env* out,
+# and real environment variables win over any .env file anyway).
 # TZ: Crystal cannot read the zone from /etc/localtime on this base image; override with `-e TZ=...`.
 ENV CRYSTAL_ENV=production HOST=0.0.0.0 PORT=4000 TZ=UTC
 EXPOSE 4000

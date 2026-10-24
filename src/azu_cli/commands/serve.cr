@@ -5,9 +5,10 @@ module AzuCLI
   module Commands
     # Development server with hot reloading
     class Serve < Base
-      property port : Int32 = 4000
-      property host : String = "localhost"
-      property environment : String = "development"
+      # The defaults come from the project's .env (loaded at startup); the flags below override them.
+      property port : Int32 = ENV["PORT"]?.try(&.to_i?) || 4000
+      property host : String = ENV["HOST"]?.presence || "localhost"
+      property environment : String = ENV["CRYSTAL_ENV"]?.presence || "development"
       property watch : Bool = true
       property verbose : Bool = false
       property reload_delay : Float64 = 0.5

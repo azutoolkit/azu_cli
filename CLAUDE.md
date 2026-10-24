@@ -354,6 +354,20 @@ Generators extend `Teeplate::FileTree`:
 - Use `pp` macro for inspecting values during development
 - Stack traces shown in debug mode on errors
 
+## Environment files (`.env`)
+
+- The generated app file starts with `require "azu/env"; Azu::Env.load_all` BEFORE `require "azu"` (Azu::CONFIG reads
+  PORT/HOST/CRYSTAL_ENV when azu is required). Precedence: process env > `.env.local` > `.env.<CRYSTAL_ENV>` > `.env`;
+  a file never overrides a variable the process already has
+- `AzuCLI.run` calls `load_project_env` (`AzuCLI::DotEnv`, `src/azu_cli/dot_env.cr`) before `Config.load!`, for every
+  command except `new`, `init`, `help`, `version`, `completion`. The CLI does not depend on azu, so `DotEnv` is a copy of
+  the parser in azu's `src/azu/env.cr`: change both, and keep `spec/azu_cli/dot_env_spec.cr` in step with `spec/azu/env_spec.cr`
+- Generated files: `.env` (git-ignored, random secrets), `.env.development` / `.env.test` (committed, `DATABASE_URL` only),
+  `.env.example` (committed, secrets blank), `.env.local` is git-ignored. Do not put empty values in `.env`: once it
+  is loaded an empty `SSL_MODE=` replaces a default
+- `scripts/e2e_generated_app.sh` unsets the secrets and asserts the app boots from `.env` alone, keeps its CSRF key
+  across a restart, and refuses to boot in production without `CSRF_SECRET`
+
 ## Delivery files of generated projects
 
 - `azu new --docker` writes a multi-stage `Dockerfile` and `.dockerignore`; `--ci` (default `GitHub Actions`) writes
@@ -369,8 +383,8 @@ Generators extend `Teeplate::FileTree`:
 ## Quality rules (from the PR reviews)
 
 - Validate every name a generator turns into code (identifiers, paths); never interpolate raw input into generated Crystal
-- No hard-coded secrets in generated code: read them from the environment (`ENV[...]?.presence`), fall back to a
-  random value outside production, raise in production (`Azu::CONFIG.env.production?`), and list a random value in
+- No hard-coded secrets in generated code: read them with `Azu::Env.secret("NAME")` (the environment value, a random
+  one outside production, an error in production; never a per-file copy of that guard) and list a random value in
   the git-ignored `.env`. Azu reads `CRYSTAL_ENV` only
 - Escape template output (`| e`; Jinja `.jinja` files are not autoescaped); redirects after writes are 303
 - Check what a generator would overwrite and refuse (`Auth.conflict`, duplicate migration class names)

@@ -632,7 +632,7 @@ module AzuCLI
         render_generator(Generators::Auth.new, Generators::Auth::OUTPUT_DIR)
 
         Logger.success("✓ Authentication generated: /register, /login, /logout and /account")
-        Logger.info("Next steps: azu db:migrate; export SESSION_SECRET (the generated .env lists one); azu serve")
+        Logger.info("Next steps: azu db:migrate; azu serve (SESSION_SECRET is in the git-ignored .env)")
 
         success("Generated authentication successfully")
       end

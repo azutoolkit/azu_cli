@@ -39,6 +39,11 @@ end
 # The specs (CRYSTAL_ENV=test) load this file without running the program.
 <%= @module_name %>.run(ARGV) unless ENV["CRYSTAL_ENV"]? == "test"
 <% else -%>
+# Load .env, .env.<CRYSTAL_ENV> and .env.local from the working directory before azu is required: Azu::CONFIG
+# reads PORT, HOST and CRYSTAL_ENV when it is created. A variable already in the process environment always
+# wins, so a container that injects real values is unaffected. See docs/reference/configuration/env.md in azu.
+require "azu/env"
+Azu::Env.load_all
 require "azu"
 # The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.69).
 require "azu/dev"
@@ -71,13 +76,9 @@ module <%= @module_name %>
 <% if @project_type == "web" -%>
   Azu::Handler::CSRF.configure do |csrf|
     csrf.strategy = Azu::Handler::CSRF::Strategy::SignedDoubleSubmit
-    # CSRF_SECRET must be in the process environment: export it (the generated .env lists one, but nothing
-    # loads .env for you) or set it in your process manager. Development falls back to a random key per
-    # process, which breaks forms behind several processes; production refuses to boot without it.
-    csrf.secret_key = ENV["CSRF_SECRET"]?.presence || begin
-      raise "CSRF_SECRET is not set" if Azu::CONFIG.env.production?
-      Random::Secure.urlsafe_base64(64)
-    end
+    # CSRF_SECRET comes from the environment or the git-ignored .env. Development falls back to a random key per
+    # process (forms break behind several processes); production refuses to boot without it.
+    csrf.secret_key = Azu::Env.secret("CSRF_SECRET")
   end
 
 <% end -%>

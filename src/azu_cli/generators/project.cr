@@ -40,7 +40,7 @@ module AzuCLI
         @github_name = extract_github_name(@email, @author)
       end
 
-      # Secret the CSRF handler signs its tokens with; goes into the generated .env as CSRF_SECRET
+      # Secret the CSRF handler signs its tokens with; goes into the git-ignored .env as CSRF_SECRET (the app loads it at boot with Azu::Env.load_all)
       def csrf_secret : String
         @csrf_secret ||= Random::Secure.hex(32)
       end
