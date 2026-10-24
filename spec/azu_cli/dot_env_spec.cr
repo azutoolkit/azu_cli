@@ -1,5 +1,6 @@
 require "../spec_helper"
 require "file_utils"
+require "json"
 
 private def with_env(vars : Hash(String, String?), &)
   saved = vars.keys.to_h { |name| {name, ENV[name]?} }
@@ -47,6 +48,70 @@ describe AzuCLI::DotEnv do
       expect_raises(AzuCLI::DotEnv::ParseError) { AzuCLI::DotEnv.parse("A=\"never closed\nB=2") }
       expect_raises(AzuCLI::DotEnv::ParseError) { AzuCLI::DotEnv.parse(%(A="x" y)) }
       expect_raises(AzuCLI::DotEnv::ParseError) { AzuCLI::DotEnv.parse("1A=x") }
+    end
+  end
+
+  describe "the shared parser corpus" do
+    # spec/fixtures/dotenv_corpus.json is identical in azu and azu_cli (this parser is a copy of Azu::Env's):
+    # change one, change both.
+    corpus = JSON.parse(File.read(File.join(__DIR__, "../fixtures/dotenv_corpus.json"))).as_a
+
+    corpus.each do |entry|
+      it entry["name"].as_s do
+        input = entry["input"].as_s
+        if line = entry["error_line"]?
+          error = expect_raises(AzuCLI::DotEnv::ParseError) { AzuCLI::DotEnv.parse(input) }
+          error.line.should eq line.as_i
+        else
+          AzuCLI::DotEnv.parse(input).should eq entry["expect"].as_h.transform_values(&.as_s)
+        end
+      end
+    end
+  end
+
+  describe "untrusted projects" do
+    it "knows the names that change how processes start, case-insensitively" do
+      %w[LD_PRELOAD ld_library_path DYLD_INSERT_LIBRARIES PATH path SHELL IFS BASH_ENV ENV SHARDS_CACHE_PATH SHARDS_INSTALL_PATH
+        CRYSTAL_PATH CRYSTAL_OPTS CRYSTAL_LIBRARY_PATH GIT_SSH_COMMAND GIT_DIR DOCKER_HOST HOME].each do |name|
+        AzuCLI::DotEnv.unsafe_name?(name).should be_true
+      end
+      %w[PORT DATABASE_URL CSRF_SECRET PATHS MY_PATH CRYSTAL_ENV GITHUB_TOKEN HOMEPAGE].each { |name| AzuCLI::DotEnv.unsafe_name?(name).should be_false }
+    end
+
+    it "does not let a project's file set them, and warns without printing the value" do
+      with_dir do |dir|
+        path = File.join(dir, ".env")
+        File.write(path, "AZU_CLI_SPEC_OK=1\nLD_PRELOAD=/tmp/evil.so\nCRYSTAL_OPTS=evil-value\nPATH=/tmp/evil\n")
+        original_path = ENV["PATH"]
+        with_env({"AZU_CLI_SPEC_OK" => nil, "LD_PRELOAD" => nil, "CRYSTAL_OPTS" => nil}) do
+          AzuCLI::DotEnv.load(path).should eq ["AZU_CLI_SPEC_OK"]
+          ENV["LD_PRELOAD"]?.should be_nil
+          ENV["CRYSTAL_OPTS"]?.should be_nil
+          ENV["PATH"].should eq original_path
+        end
+      end
+    end
+
+    it "refuses a file larger than 1 MB" do
+      with_dir do |dir|
+        path = File.join(dir, ".env")
+        File.write(path, "A=" + "x" * 1_048_577)
+        expect_raises(AzuCLI::DotEnv::ParseError, /larger than 1 MB/) { AzuCLI::DotEnv.load(path) }
+      end
+    end
+  end
+
+  describe "a blank CRYSTAL_ENV" do
+    it "counts as unset, when choosing the file and when applying" do
+      with_dir do |dir|
+        File.write(File.join(dir, ".env"), "CRYSTAL_ENV=staging\nAZU_CLI_SPEC_P=base\n")
+        File.write(File.join(dir, ".env.staging"), "AZU_CLI_SPEC_P=staging\n")
+        with_env({"CRYSTAL_ENV" => "", "AZU_CLI_SPEC_P" => nil}) do
+          AzuCLI::DotEnv.load_all(dir)
+          ENV["CRYSTAL_ENV"].should eq "staging"
+          ENV["AZU_CLI_SPEC_P"].should eq "staging"
+        end
+      end
     end
   end
 
@@ -108,6 +173,41 @@ describe AzuCLI::DotEnv do
         with_env({"AZU_CLI_SPEC_P" => nil, "CRYSTAL_ENV" => "test"}) do
           AzuCLI.load_project_env(["db:migrate"], dir).should eq ["AZU_CLI_SPEC_P"]
           ENV["AZU_CLI_SPEC_P"].should eq "from-project"
+        end
+      end
+    end
+
+    it "reads the environment from the command's --env flag, so the child gets that environment's database" do
+      AzuCLI.command_environment(["serve", "--env", "production"]).should eq "production"
+      AzuCLI.command_environment(["db:migrate", "-e", "test"]).should eq "test"
+      AzuCLI.command_environment(["db:migrate", "--env=staging"]).should eq "staging"
+      AzuCLI.command_environment(["serve"]).should be_nil
+      AzuCLI.command_environment(["test"]).should eq "test"
+      AzuCLI.command_environment(["t", "--env", "production"]).should eq "test"
+
+      with_dir do |dir|
+        File.write(File.join(dir, ".env.development"), "AZU_CLI_SPEC_DB=dev\n")
+        File.write(File.join(dir, ".env.test"), "AZU_CLI_SPEC_DB=test\n")
+        File.write(File.join(dir, ".env.production"), "AZU_CLI_SPEC_DB=prod\n")
+        {
+          {["serve"], "dev"}, {["serve", "--env", "production"], "prod"}, {["db:migrate", "-e", "test"], "test"}, {["test"], "test"},
+        }.each do |args, expected|
+          with_env({"AZU_CLI_SPEC_DB" => nil, "CRYSTAL_ENV" => nil}) do
+            AzuCLI.load_project_env(args, dir)
+            ENV["AZU_CLI_SPEC_DB"].should eq expected
+          end
+        end
+      end
+    end
+
+    it "lets the test command override a CRYSTAL_ENV of the shell" do
+      with_dir do |dir|
+        File.write(File.join(dir, ".env.development"), "AZU_CLI_SPEC_DB=dev\n")
+        File.write(File.join(dir, ".env.test"), "AZU_CLI_SPEC_DB=test\n")
+        with_env({"AZU_CLI_SPEC_DB" => nil, "CRYSTAL_ENV" => "development"}) do
+          AzuCLI.load_project_env(["test"], dir)
+          ENV["AZU_CLI_SPEC_DB"].should eq "test"
+          ENV["CRYSTAL_ENV"].should eq "test"
         end
       end
     end

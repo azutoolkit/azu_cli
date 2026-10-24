@@ -5,6 +5,12 @@ module AzuCLI
   #
   # Precedence, highest first: the process environment (never overridden), `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`.
   # Files are data: no interpolation, nothing is executed, and errors never print a value.
+  #
+  # Trust: the CLI runs in whatever project you are in, including a clone you do not trust, and then starts
+  # `crystal`, `shards` and others with this environment. A file therefore cannot set a variable that changes how
+  # processes start (`LD_*`, `DYLD_*`, `PATH`, `SHELL`, `IFS`, `BASH_ENV`, `ENV`, `SHARDS_*`, `CRYSTAL_PATH`,
+  # `CRYSTAL_OPTS`, `CRYSTAL_LIBRARY_PATH`, `GIT_*`, `DOCKER_HOST`, `HOME`): it is skipped with a warning on STDERR
+  # naming the variable (never the value). Set those in your shell.
   module DotEnv
     class ParseError < Exception
       getter origin : String
@@ -15,6 +21,13 @@ module AzuCLI
       end
     end
 
+    MAX_FILE_SIZE = 1_048_576
+    UNSAFE_NAME   = /\A(?:LD_.*|DYLD_.*|SHARDS_.*|GIT_.*|PATH|SHELL|IFS|BASH_ENV|ENV|CRYSTAL_PATH|CRYSTAL_OPTS|CRYSTAL_LIBRARY_PATH|DOCKER_HOST|HOME)\z/i
+
+    def self.unsafe_name?(name : String) : Bool
+      name.matches?(UNSAFE_NAME)
+    end
+
     def self.parse(source : String, origin : String = "(string)") : Hash(String, String)
       Parser.new(source, origin).parse
     end
@@ -23,7 +36,7 @@ module AzuCLI
     def self.load(path : String = ".env") : Array(String)
       return [] of String unless File.file?(path)
 
-      apply(parse(File.read(path), path))
+      apply(read(path))
     end
 
     # Loads `.env`, `.env.<CRYSTAL_ENV>` and `.env.local` from `dir`.
@@ -37,13 +50,28 @@ module AzuCLI
     end
 
     private def self.read(path : String) : Hash(String, String)
-      File.file?(path) ? parse(File.read(path), path) : {} of String => String
+      return {} of String => String unless File.file?(path)
+      raise ParseError.new(path, 1, "file is larger than 1 MB") if File.size(path) > MAX_FILE_SIZE
+
+      parse(File.read(path), path)
+    end
+
+    # A blank CRYSTAL_ENV counts as unset (as in Azu::Env), so the file that picked `.env.<env>` can set it.
+    private def self.in_process?(name : String) : Bool
+      name == "CRYSTAL_ENV" ? !ENV[name]?.presence.nil? : ENV.has_key?(name)
+    end
+
+    private def self.skip_unsafe(name : String) : Bool
+      return false unless unsafe_name?(name)
+
+      STDERR.puts "warning: ignoring #{name} from a .env file: it changes how processes start (set it in your shell)"
+      true
     end
 
     private def self.apply(vars : Hash(String, String)) : Array(String)
       applied = [] of String
       vars.each do |name, value|
-        next if ENV.has_key?(name)
+        next if skip_unsafe(name) || in_process?(name)
 
         ENV[name] = value
         applied << name
