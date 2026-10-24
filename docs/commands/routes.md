@@ -14,7 +14,7 @@ the compile, the first run takes about as long as a build.
 **It runs your project's top-level code.** Requiring `src/<project name>.cr` executes everything that file loads at
 require time: initializers, `.env` loading, database connections, anything with side effects. Only the server start
 (`src/server.cr`) is skipped. Do not run it against a production environment. The scratch file
-(`tmp_routes_<pid>.cr`) is git-ignored in generated projects and deleted when the command ends. `src/<project name>.cr` must exist (every generated web and api
+(`tmp_routes_<pid>.cr`) is created exclusively with a random name (`tmp_routes_<random>.cr`), is git-ignored in generated projects (add `/tmp_routes_*.cr` and `/.azu_console_*.cr` to the `.gitignore` of an existing project) and is deleted when the command ends, also on Ctrl-C or SIGTERM. After a crash or SIGKILL it can remain; delete it. `src/<project name>.cr` must exist (every generated web and api
 project has it).
 
 ## Options

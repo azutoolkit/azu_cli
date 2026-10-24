@@ -38,12 +38,30 @@ module AzuCLI
 
       # Every process below pid, deepest first.
       private def descendants(pid : Int64) : Array(Int64)
+        children_of(pid).flat_map { |child| descendants(child) + [child] }
+      end
+
+      # `pgrep -P`, or without pgrep a scan of /proc (Linux), so a missing tool cannot leave the compiler running.
+      private def children_of(pid : Int64) : Array(Int64)
         output = IO::Memory.new
         Process.run("pgrep", ["-P", pid.to_s], output: output, error: Process::Redirect::Close)
-        children = output.to_s.split.compact_map(&.to_i64?)
-        children.flat_map { |child| descendants(child) + [child] }
+        output.to_s.split.compact_map(&.to_i64?)
       rescue IO::Error
-        [] of Int64
+        proc_children_of(pid)
+      end
+
+      def proc_children_of(pid : Int64) : Array(Int64)
+        return [] of Int64 unless Dir.exists?("/proc/self")
+
+        Dir.children("/proc").compact_map do |name|
+          candidate = name.to_i64?
+          next unless candidate
+
+          stat = File.read("/proc/#{name}/stat") rescue next
+          # "pid (name) S ppid ...": the name may hold spaces and parentheses, so count from the last ")"
+          parent = stat[(stat.rindex(')') || 0) + 1..].split[1]?.try(&.to_i64?)
+          candidate if parent == pid
+        end
       end
     end
 

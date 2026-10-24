@@ -33,6 +33,18 @@ describe AzuCLI::DevServer::Builder do
     (Time.instant - started).should be < 10.seconds
   end
 
+  {% if flag?(:linux) %}
+    it "finds the children of a process through /proc, for hosts without pgrep" do
+      parent = Process.new("sh", ["-c", "sleep 5; true"])
+      sleep 300.milliseconds
+      found = AzuCLI::DevServer::Builder.new("true", [] of String).proc_children_of(parent.pid)
+      parent.terminate
+      found.should_not be_empty
+      found.each { |pid| Process.signal(Signal::TERM, pid) rescue nil }
+      parent.wait
+    end
+  {% end %}
+
   it "reports a command that cannot be run instead of raising" do
     result = AzuCLI::DevServer::Builder.new("azu-no-such-command", [] of String).build(sink: IO::Memory.new)
 

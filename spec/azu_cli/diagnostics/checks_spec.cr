@@ -69,6 +69,11 @@ describe AzuCLI::Diagnostics::Checks do
     end
 
     it "reads floors written as a requirement, with two components, or not at all" do
+      {"'< 2.0, >= 1.19'" => "1.19", "'>= 1.19.1, < 2.0'" => "1.19.1", "'< 2.0'" => nil, "1.19.1" => "1.19.1"}.each do |requirement, floor|
+        in_tmp_project(shard_yml: "name: blog\nversion: 0.1.0\ncrystal: #{requirement}\n") do |dir|
+          checks(dir).crystal_floor.should eq floor
+        end
+      end
       in_tmp_project(shard_yml: "name: blog\nversion: 0.1.0\ncrystal: '~> 1.19'\n") do |dir|
         checks(dir).crystal_floor.should eq "1.19"
         checks(dir).crystal.status.ok?.should be_true
@@ -190,12 +195,33 @@ describe AzuCLI::Diagnostics::Checks do
       end
     end
 
-    it "never prints the tail of a password that contains a slash" do
+    it "prints neither the user nor any part of a password, however the URL is malformed" do
+      leaks = {
+        "postgres://app:12/tail-of-secret@db.internal:5432/blog" => ["app", "12", "tail-of-secret"],
+        "postgres://app:p@ss-word@db.internal:5432/blog"         => ["app", "p@ss", "ss-word"],
+        "postgres://app:p/ss@w/rd@db.internal/blog"              => ["app", "ss", "rd"],
+        "jdoe-acct:secret-pass@db.internal/blog"                 => ["jdoe-acct", "secret-pass"],
+        "myuser:hunter2@db.internal:5432/blog"                   => ["myuser", "hunter2"],
+        "weird://alice:pw-x@db.internal/blog"                    => ["weird", "alice", "pw-x"],
+      }
+      leaks.each do |url, secrets|
+        in_tmp_project do |dir|
+          check = checks(dir, {"DATABASE_URL" => url}, FakeSystem.new(GOOD_COMMANDS)).database
+          text = check.message + " " + check.hint.to_s
+
+          secrets.each { |secret| text.should_not contain(secret) }
+        end
+      end
+    end
+
+    it "still checks the host when the user and password are stripped from a malformed URL" do
       in_tmp_project do |dir|
         system = FakeSystem.new(GOOD_COMMANDS)
-        check = checks(dir, {"DATABASE_URL" => "postgres://app:12/tail-of-secret@db.internal:5432/blog"}, system).database
+        check = checks(dir, {"DATABASE_URL" => "postgres://app:p@ss-word@db.internal:5432/blog"}, system).database
 
-        (check.message + check.hint.to_s).should_not contain("tail-of-secret")
+        check.status.ok?.should be_true
+        check.message.should contain("postgres://db.internal:5432/blog")
+        system.calls.should contain("tcp db.internal:5432")
       end
     end
 

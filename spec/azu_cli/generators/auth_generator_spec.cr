@@ -159,6 +159,17 @@ describe AzuCLI::Generate::Auth do
       end
     end
 
+    it "counts the address before the address and email, so a blocked address never adds login keys" do
+      in_generated_project do
+        render.call(".")
+
+        middleware = File.read("src/middleware/authentication.cr")
+        address_at = middleware.index("AuthThrottle.address.attempt!(address)").not_nil!
+        login_at = middleware.index("AuthThrottle.login.attempt!").not_nil!
+        address_at.should be < login_at
+      end
+    end
+
     it "answers 429 with Retry-After through Azu's rate limit error" do
       in_generated_project do
         render.call(".")

@@ -14,7 +14,7 @@ the file afterwards. Type `exit` to leave.
 
 Loading the application runs the top-level code of `src/<project name>.cr` (initializers, `.env` loading, database
 connections), and what you type runs against whatever the environment points at: do not use it against production by
-accident. The scratch file `.azu_console_<pid>.cr` is git-ignored in generated projects and deleted when the command ends.
+accident. The scratch file (`.azu_console_<random>.cr`, created exclusively, owner-only) is git-ignored in generated projects (add `/.azu_console_*.cr` to the `.gitignore` of an existing project) and deleted when the command ends. After a crash or SIGKILL it can remain; delete it. Ctrl-C goes to the interpreter, not to the CLI.
 
 This is the interpreter, not a Rails-style console, and it is not a mock of one:
 

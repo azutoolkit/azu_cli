@@ -26,6 +26,7 @@ module AzuCLI
 
       @child : Child?
       @builder : AzuCLI::DevServer::Builder?
+      @stopping = false
       @lock = Mutex.new
 
       def initialize
@@ -99,11 +100,17 @@ module AzuCLI
       # Ends the child with the CLI: SIGINT and SIGTERM stop the app (it holds the port) and exit.
       private def trap_termination
         Process.on_terminate do |_reason|
-          @builder.try(&.cancel)
-          @lock.synchronize { @child.try(&.stop) }
+          stop
           Logger.info("azu dev stopped")
           exit 0
         end
+      end
+
+      # Ends a build in progress and the app, and keeps a build that is finishing from starting a new app.
+      def stop : Nil
+        @stopping = true
+        @builder.try(&.cancel)
+        @lock.synchronize { @child.try(&.stop) }
       end
 
       private def serve(target : String) : Result
@@ -153,15 +160,22 @@ module AzuCLI
       end
 
       private def restart : Nil
-        @lock.synchronize { @child.try(&.restart) }
+        return if @stopping
+
+        @lock.synchronize { @child.try(&.restart) unless @stopping }
         Logger.info("App started (pid #{@child.try(&.pid)})")
       rescue ex : IO::Error
         Logger.error("Could not start the app: #{ex.message}")
       end
 
+      # "exited with code 1" or "was killed by SIGSEGV" (a process that died from a signal has no exit code).
+      def self.describe_exit(status : Process::Status) : String
+        status.normal_exit? ? "exited with code #{status.exit_code}" : "was killed by #{status.exit_signal}"
+      end
+
       private def report_exit : Nil
         status = @child.try(&.exited)
-        Logger.error("The app exited with code #{status.exit_code}; save a change to build and start it again.") if status
+        Logger.error("The app #{self.class.describe_exit(status)}; save a change to build and start it again.") if status
       end
 
       private def show_help_result : Result

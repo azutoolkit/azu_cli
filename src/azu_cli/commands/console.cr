@@ -27,7 +27,8 @@ module AzuCLI
         end
 
         def run_interpreter(script : String, dir : String) : Int32
-          Process.run("crystal", ["i", script], chdir: dir, input: Process::Redirect::Inherit, output: Process::Redirect::Inherit, error: Process::Redirect::Inherit).exit_code
+          status = Process.run("crystal", ["i", script], chdir: dir, input: Process::Redirect::Inherit, output: Process::Redirect::Inherit, error: Process::Redirect::Inherit)
+          status.normal_exit? ? status.exit_code : 1 # killed by a signal: there is no exit code
         end
       end
 
@@ -61,12 +62,11 @@ module AzuCLI
       end
 
       private def run_console(app_file : String) : Result
-        path = File.join(Dir.current, ".azu_console_#{Process.pid}.cr")
-        File.write(path, script(app_file))
-        code = self.class.environment.run_interpreter(path, Dir.current)
-        code.zero? ? success : Result.error("the interpreter exited with #{code}", code)
-      ensure
-        File.delete(path) if path && File.exists?(path)
+        code = ScratchFile.with(".azu_console_", script(app_file), ignore_interrupt: true) do |path|
+          self.class.environment.run_interpreter(path, Dir.current)
+        end
+        # 2 is "no interpreter" here, so whatever the interpreter answered is reported as a plain failure.
+        code.zero? ? success : Result.error("the interpreter exited with #{code}", 1)
       end
 
       private def unavailable : Result
@@ -100,7 +100,8 @@ module AzuCLI
           Options:
             --help   Show this help
 
-          Exit codes: 0 the session ended, 1 the interpreter failed, 2 the interpreter is not available or invalid usage.
+          Exit codes: 0 the session ended, 1 the interpreter failed (its own status is in the message), 2 the interpreter is
+          not available or invalid usage.
         HELP
         stdout.puts
         stdout.puts "Examples:"

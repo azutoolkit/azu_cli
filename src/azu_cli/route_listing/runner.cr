@@ -54,16 +54,14 @@ module AzuCLI
 
       # Compiles and runs the script from the project directory (its requires and `lib/` are relative to it).
       def run(dir : String = Dir.current) : Array(Entry)
-        path = File.join(dir, "tmp_routes_#{Process.pid}.cr")
-        File.write(path, script)
-        output = IO::Memory.new
-        error = IO::Memory.new
-        status = Process.run("crystal", ["run", path], chdir: dir, output: output, error: error)
-        raise Error.new(failure_message(error.to_s)) unless status.success?
+        ScratchFile.with("tmp_routes_", script, dir) do |path|
+          output = IO::Memory.new
+          error = IO::Memory.new
+          status = Process.run("crystal", ["run", path], chdir: dir, output: output, error: error)
+          raise Error.new(failure_message(error.to_s)) unless status.success?
 
-        self.class.parse(output.to_s)
-      ensure
-        File.delete(path) if path && File.exists?(path)
+          self.class.parse(output.to_s)
+        end
       end
 
       private def failure_message(stderr : String) : String

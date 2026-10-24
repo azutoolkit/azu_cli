@@ -18,8 +18,10 @@ module <%= app_module %>
   # sign-ins for it from their own address. Every source gets its own budget per account; guessing spread over many
   # addresses needs a shared store, a CAPTCHA or an account lock the owner can clear, which are not generated.
   #
-  # At most MAX_KEYS counters are kept (an attacker can choose the keys): expired ones are dropped first, then the
-  # oldest, so memory and the time per attempt stay bounded.
+  # At most MAX_KEYS counters are kept (an attacker can choose the keys): when the table is full the counter whose
+  # window ends first is dropped, which is an expired one if there is any. Memory and the time per attempt stay
+  # bounded; with MAX_KEYS live counters (that many distinct addresses in one window) a live counter is evicted too,
+  # so a flood from that many addresses can reset other clients' counts.
   class AuthThrottle
     WINDOW        = setting("AUTH_THROTTLE_WINDOW", 60).seconds
     MAX_KEYS      = 10_000
@@ -85,7 +87,7 @@ module <%= app_module %>
     end
 
     # Entries are kept in the order their windows end (a new window is appended, a counted attempt keeps its place),
-    # so the expired ones are at the front and the oldest is the first.
+    # so the first entry is the one that ends first (an expired one when there is any).
     private def start_window(key : String, now : Time::Instant) : Nil
       @counters.delete(key)
       make_room

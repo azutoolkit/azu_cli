@@ -163,6 +163,32 @@ describe AzuCLI::Commands::Dev do
     end
   end
 
+  describe "stopping" do
+    it "starts no new app once it was stopped, even when a build finishes afterwards" do
+      in_tmp_project do |dir|
+        write_app(dir)
+        command = dev
+        command.attach_child("blog")
+        command.stop
+        with_builder("sh", ["-c", "exit 0"]) do
+          command.apply(AzuCLI::DevServer::Plan.new(AzuCLI::DevServer::Action::Rebuild, ["src/blog.cr"]), "blog")
+          command.apply(AzuCLI::DevServer::Plan.new(AzuCLI::DevServer::Action::Restart, [".env"]), "blog")
+        end
+        sleep 200.milliseconds
+
+        starts(dir).should eq 0
+      end
+    end
+  end
+
+  describe ".describe_exit" do
+    it "names the code of a normal exit and the signal of a killed app, without raising" do
+      AzuCLI::Commands::Dev.describe_exit(Process.run("sh", ["-c", "exit 3"])).should eq "exited with code 3"
+      killed = Process.run("sh", ["-c", "kill -SEGV $$"])
+      AzuCLI::Commands::Dev.describe_exit(killed).should contain("SEGV")
+    end
+  end
+
   it "is registered with the CLI" do
     AzuCLI::CLI.new.command_names.should contain("dev")
   end
