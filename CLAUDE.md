@@ -141,7 +141,7 @@ make clean
 - `src/db/schema.cr` declares every table (`Azu::CQL.schema`); the model generator registers a created table there once
 - Supports PostgreSQL, MySQL, SQLite (only SQLite runs without a server: the e2e gate uses it)
 - Models include `CQL::ActiveRecord::Model(Int64)` and bind to the schema with `db_context`
-- Generated projects require `cql ~> 0.0.604` (`templates/project/shard.yml.ecr`); the e2e gates run them on crystal-db 0.15. 0.0.565 added the `driver_name` its native PostgreSQL driver lacked before, which is what had held generated apps at 0.0.541
+- Generated projects pin `cql` to exactly 0.0.604 and the drivers to `pg ~> 0.31.0`, `mysql ~> 0.18.0`, `sqlite3 ~> 0.24.0` (all on crystal-db ~> 0.15.0) (`templates/project/shard.yml.ecr`); the e2e gates run them on crystal-db 0.15. `CQL::Postgres::Connection#driver_name` is absent in tag v0.0.562 and present from v0.0.565, which is what the old TODO blamed for holding generated apps at 0.0.541
 
 ### Code Generation Workflow
 

@@ -19,9 +19,11 @@ dependencies:
     github: azutoolkit/azu
     version: ~> 0.5.69
 
+  # Exact on purpose: cql 0.0.N releases have broken generated apps before (0.0.562). To bump, change this
+  # version and run scripts/e2e_generated_app.sh web and api (and E2E_DB=postgresql web).
   cql:
     github: azutoolkit/cql
-    version: ~> 0.0.604
+    version: 0.0.604
 
   session:
     github: azutoolkit/session
@@ -45,12 +47,15 @@ dependencies:
 <% if @database == "postgresql" || @database == "postgres" || @database == "pg" -%>
   pg:
     github: will/crystal-pg
+    version: ~> 0.31.0
 <% elsif @database == "mysql" -%>
   mysql:
     github: crystal-lang/crystal-mysql
+    version: ~> 0.18.0
 <% elsif @database == "sqlite" || @database == "sqlite3" -%>
   sqlite3:
     github: crystal-lang/crystal-sqlite3
+    version: ~> 0.24.0
 <% end -%>
 
 <% if @test_framework == "minitest" -%>

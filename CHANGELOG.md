@@ -2,7 +2,8 @@
 
 ## Unreleased - CQL 0.0.604
 
-- Changed: generated projects require `cql ~> 0.0.604` instead of the exact 0.0.541, and the stale "unpin once cql supports crystal-db 0.15" TODO is gone: cql 0.0.565 defines the `CQL::Postgres::Connection#driver_name` that 0.0.562 lacked, so cql compiles against crystal-db 0.15 (the CLI itself already built with 0.0.578). The web and api e2e gates pass on SQLite with cql 0.0.604, crystal-db 0.15.0 and crystal-sqlite3 0.24.0
+- Changed: generated projects pin `cql` to exactly 0.0.604 (was 0.0.541) and the drivers to `pg ~> 0.31.0`, `mysql ~> 0.18.0` and `sqlite3 ~> 0.24.0` (each needs crystal-db `~> 0.15.0`, so `db` stays implicit), instead of floating to the latest releases. The stale "unpin once cql supports crystal-db 0.15" TODO is replaced by a note on how to bump. The TODO blamed `CQL::Postgres::Connection#driver_name`, which is absent in cql tag v0.0.562 and present from v0.0.565 (checked in the cql repository); the CLI itself already builds with cql 0.0.578 on crystal-db 0.15, and the e2e gates pass on SQLite (web, api) and PostgreSQL (web) with cql 0.0.604
+- Note: foreign keys on and WAL for generated SQLite apps need an azu release that contains azutoolkit/azu#152 (`Azu::CQL.schema` applies CQL's SQLite defaults). The template's floor `azu ~> 0.5.69` predates it, so apps resolved to an older azu keep SQLite's own defaults; raise the floor when that release exists
 
 ## Unreleased - Database command fixes
 

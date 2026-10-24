@@ -272,7 +272,7 @@ describe AzuCLI::Generate::Project do
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
 
       shard = File.read(File.join(test_dir, "shard.yml"))
-      shard.should match(/cql:\n    github: azutoolkit\/cql\n    version: ~> 0\.0\.604\n/)
+      shard.should match(/cql:\n    github: azutoolkit\/cql\n    version: 0\.0\.604\n/)
       shard.should match(/session:\n    github: azutoolkit\/session\n    version: ~> 1\.0\.31\n/)
       File.read(File.join(test_dir, "src", "myapp.cr")).should contain(%(require "./channels/**"))
       File.exists?(File.join(test_dir, "src", "channels", ".gitkeep")).should be_true
