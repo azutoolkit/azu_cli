@@ -93,7 +93,9 @@ module <%= app_module %>
     end
 
     private def make_room : Nil
-      @counters.delete(@counters.first_key) while @counters.size >= MAX_KEYS
+      while @counters.size >= MAX_KEYS
+        @counters.delete(@counters.first_key)
+      end
     end
   end
 end
