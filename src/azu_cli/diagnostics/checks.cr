@@ -53,7 +53,10 @@ module AzuCLI
       # only has an upper bound.
       def crystal_floor : String?
         requirement = shard_yml.try(&.["crystal"]?).try(&.to_s)
-        requirement.try { |text| text[/(?:>=|~>|==?)\s*(\d+\.\d+(?:\.\d+)?)/, 1]? || text[/(?<![<\d.])\s*(\d+\.\d+(?:\.\d+)?)/, 1]? }
+        requirement.try do |text|
+          lower_bounds = text.split(',').map(&.strip).reject(&.starts_with?('<'))
+          lower_bounds.compact_map(&.[/(\d+\.\d+(?:\.\d+)?)/, 1]?).first?
+        end
       end
 
       private def at_least?(installed : String, floor : String) : Bool
