@@ -7,7 +7,7 @@ bcrypt digests (`Crypto::Bcrypt`, no extra shard).
 ```bash
 azu generate auth
 azu db:migrate          # creates the users table
-export SESSION_SECRET=... # the generated .env lists one; nothing loads .env for you
+# SESSION_SECRET is already in the git-ignored .env, which the app loads at boot
 azu serve
 ```
 
@@ -35,7 +35,7 @@ requests, pages and Jinja templates under `public/templates/<app>/`. The generat
 - Signing in gives the session a new id (no session fixation); signing out discards it.
 - The email is stripped and downcased; an unknown email costs the same bcrypt check as a wrong password.
 - Visiting `/account` signed out answers `303` to `/login`. To protect another page, `include Authentication` in its endpoint and do the same with `current_user`.
-- `SESSION_SECRET` comes from the environment; development falls back to a random key per process, production
+- `SESSION_SECRET` comes from the environment or the git-ignored `.env` (`Azu::Env.secret`); development falls back to a random key per process, production
   (`CRYSTAL_ENV=production`) refuses to boot without it.
 
 - Passwords are limited to 72 bytes (bcrypt's limit; a multi-byte character counts for each of its bytes). The contracts answer `422` for longer ones instead of failing.
