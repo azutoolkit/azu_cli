@@ -1,5 +1,5 @@
 name: azu_cli
-version: 0.1.19
+version: 0.1.20
 authors:
   - Elias J. Perez <eliasjpr@gmail.com>
 crystal: '>= 1.19.1'
