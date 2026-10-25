@@ -89,11 +89,15 @@ module <%= @module_name %>
 <% end -%>
       Azu::Handler::RequestId.new,
       *dev_handlers,
-      Azu::Handler::Rescuer.new,
-      Azu::Handler::SecurityHeaders.new(hsts: Azu::CONFIG.tls?), # as azu's default_handlers: HSTS only over TLS
+      # Logger outside Rescuer, as azu's default_handlers: it logs the status the Rescuer set (a 404, not a 200).
       Azu::Handler::Logger.new,
+      Azu::Handler::Rescuer.new,
+      # HSTS only when this app terminates TLS itself (Azu::CONFIG.tls?); a TLS-terminating proxy must add it.
+      Azu::Handler::SecurityHeaders.new(hsts: Azu::CONFIG.tls?),
 <% if @project_type == "web" -%>
-      <%= @module_name %>::DenyTemplates.new, # becomes Static.new(except: ["/templates"]) once azu releases that option
+      # Denies every method for any path under /templates (a route of your own there would 404: the name is reserved).
+      # Becomes Static.new(except: ["/templates"]) once azu releases that option.
+      <%= @module_name %>::DenyTemplates.new,
       # Static files from public/: a missing file falls through to the router, so azu's own 404 answers it
       # (a handler used as a route has no next handler and would answer with a bare text/plain 404).
       Azu::Handler::Static.new,

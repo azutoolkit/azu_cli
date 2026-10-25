@@ -421,6 +421,9 @@ describe AzuCLI::Generate::Project do
 
         handlers = handler_block.call(dir)
         handlers.should contain("      Azu::Handler::SecurityHeaders.new(hsts: Azu::CONFIG.tls?),")
+        # Logger outside Rescuer, as azu's default_handlers: it then sees the status the Rescuer set (404, not 200)
+        (handlers.index("Handler::RequestId.new") || 0).should be < (handlers.index("Handler::Logger.new") || -1)
+        (handlers.index("Handler::Logger.new") || 0).should be < (handlers.index("Handler::Rescuer.new") || -1)
         (handlers.index("Handler::Rescuer.new") || 0).should be < (handlers.index("Handler::SecurityHeaders.new") || -1)
         handlers.should contain("] of HTTP::Handler")
       end
@@ -467,6 +470,17 @@ describe AzuCLI::Generate::Project do
                   "/templates/../templates/x", "/templates\\\\x"]
         allowed = ["/", "/assets/app.css", "/templates.css", "/templates-old/x", "/my/templates/x", "/template",
                    "/assets/../assets/app.css", "/health", "/bad%zz"]
+        handler = MyApp::DenyTemplates.new
+        handler.next = HTTP::Handler::HandlerProc.new { |_| puts "next" }
+        {"/templates/layout.jinja" => "denied", "/Templates/x" => "denied", "/assets/app.css" => "allowed"}.each do |path, kind|
+          context = HTTP::Server::Context.new(HTTP::Request.new("GET", path), HTTP::Server::Response.new(IO::Memory.new))
+          begin
+            handler.call(context)
+            puts "call \#{kind} \#{path} next"
+          rescue Azu::Response::NotFound
+            puts "call \#{kind} \#{path} raised"
+          end
+        end
         denied.each { |path| puts "denied \#{path} \#{MyApp::DenyTemplates.denied?(path)}" }
         allowed.each { |path| puts "allowed \#{path} \#{MyApp::DenyTemplates.denied?(path)}" }
         CR
@@ -477,9 +491,13 @@ describe AzuCLI::Generate::Project do
       status = Process.run("crystal", ["run", "--no-color", script_path], output: output, error: error)
       status.success?.should be_true, error.to_s
       lines = output.to_s.lines
-      lines.size.should eq(24)
+      lines.size.should eq(28)
       lines.select(&.starts_with?("denied ")).each { |line| line.should end_with(" true") }
       lines.select(&.starts_with?("allowed ")).each { |line| line.should end_with(" false") }
+      lines.select(&.starts_with?("call denied ")).each { |line| line.should end_with(" raised") }
+      lines.select(&.starts_with?("call allowed ")).each { |line| line.should end_with(" next") }
+      lines.count(&.starts_with?("call ")).should eq(3)
+      lines.count(&.==("next")).should eq(1) # only the allowed call reached the next handler
     end
   end
 

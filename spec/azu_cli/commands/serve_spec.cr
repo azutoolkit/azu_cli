@@ -124,6 +124,30 @@ describe AzuCLI::Commands::Serve do
       command.server_lines.first.should eq("Server: http://localhost:3000")
     end
 
+    it "reads the environment case-insensitively and ignores surrounding spaces" do
+      command = AzuCLI::Commands::Serve.new
+      command.host = nil
+      command.port = 4000
+      command.environment = " Development "
+      command.server_lines.should eq(["Server: http://127.0.0.1:4000"])
+    end
+
+    it "handles localhost, the IPv6 wildcard and already bracketed or long-form hosts" do
+      command = AzuCLI::Commands::Serve.new
+      command.port = 3000
+      command.host = "localhost"
+      command.server_lines.should eq(["Server: http://localhost:3000"])
+      command.host = "::"
+      command.server_lines.first.should eq("Server: http://localhost:3000")
+      command.server_lines.last.should contain("(::)")
+      command.host = "0:0:0:0:0:0:0:0"
+      command.server_lines.size.should eq(2)
+      command.host = "[::1]"
+      command.server_lines.should eq(["Server: http://[::1]:3000"])
+      command.host = "[::]"
+      command.server_lines.size.should eq(2)
+    end
+
     it "does not change what the child gets" do
       command = AzuCLI::Commands::Serve.new
       command.host = nil
