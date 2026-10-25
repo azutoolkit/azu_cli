@@ -1,5 +1,11 @@
 # Changelog - Azu CLI
 
+## Unreleased - Static `except:`
+
+- Changed: generated web apps keep `public/templates` unserved with `Azu::Handler::Static.new(except: ["/templates"])` (azu v0.5.116, azutoolkit/azu#212) instead of the generated `DenyTemplates` handler; `src/middleware/deny_templates.cr` is no longer generated and the handler chain keeps its order (RequestId, dev handlers, Logger, Rescuer, SecurityHeaders, Static) and the literal `] of HTTP::Handler`. A refused path falls through to the router, so azu's negotiated 404 answers it; the match is per whole segment, case-insensitive, with backslashes as separators and dot segments resolved. Once azu's "host-independent type table" change is released, Static also refuses files with an unknown extension (such as `.jinja`) by itself
+- Changed: generated apps require azu `~> 0.5.116` (v0.5.111: loopback default and `Azu::App#start`; v0.5.112: start-once and the container warning; v0.5.116: `Static`'s `except:`)
+- Migration for apps generated before: delete `src/middleware/deny_templates.cr`, replace `<App>::DenyTemplates.new,` and `Azu::Handler::Static.new,` in `def self.handlers` by `Azu::Handler::Static.new(except: ["/templates"]),`, set `azu` to `~> 0.5.116` in `shard.yml` and run `shards update azu`
+
 ## Unreleased - Review of the loopback PR
 
 - Fixed: `azu serve` prints the URL again (`http://127.0.0.1:4000` in development; `http://localhost:<port>` plus a note that the app listens on all interfaces in other environments); the old text said loopback for production too
