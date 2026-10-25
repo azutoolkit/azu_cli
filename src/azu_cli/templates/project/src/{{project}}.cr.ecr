@@ -45,7 +45,7 @@ end
 require "azu/env"
 Azu::Env.load_all
 require "azu"
-# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.116).
+# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.117).
 require "azu/dev"
 require "./initializers/**"
 # Only the schema: src/db/seed.cr would run on every boot, and `azu db:migrate` requires the migrations itself.
@@ -97,8 +97,8 @@ module <%= @module_name %>
 <% if @project_type == "web" -%>
       # Static files from public/: a missing file falls through to the router, so azu's own 404 answers it
       # (a handler used as a route has no next handler and would answer with a bare text/plain 404).
-      # except: keeps the Jinja sources in public/templates unserved, whatever the case, encoding or dot segments of
-      # the path; a route of your own under /templates would answer 404 as well (the name is reserved).
+      # except: never serves /templates from public/ (the Jinja sources), whatever the case, encoding or dot segments
+      # of the path; routes of your own under /templates still work, the router answers them.
       Azu::Handler::Static.new(except: ["/templates"]),
 <% end -%>
     ] of HTTP::Handler
