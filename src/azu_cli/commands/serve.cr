@@ -27,7 +27,7 @@ module AzuCLI
 
         Logger.info("🚀 Starting Azu development server...")
         Logger.info("Environment: #{@environment}")
-        Logger.info("Server: #{@host ? "http://#{@host}:#{@port}" : "port #{@port}, host from the app (loopback in development)"}")
+        server_lines.each { |line| Logger.info(line) }
         Logger.info("Hot reloading: #{@watch ? "enabled" : "disabled"}")
         puts ""
 
@@ -119,6 +119,25 @@ module AzuCLI
         puts "=" * 60
         puts ""
         false
+      end
+
+      ALL_INTERFACES = {"0.0.0.0", "::", "0:0:0:0:0:0:0:0"}
+
+      # Where the app will listen, for the banner (the app's own is piped away without --verbose). Without a host the
+      # app decides as azu does: loopback in development, all interfaces elsewhere. Only the report is computed here.
+      def server_lines : Array(String)
+        host = (@host || default_host).strip("[]")
+        return ["Server: http://#{url_host(host)}:#{@port}"] unless ALL_INTERFACES.includes?(host)
+
+        ["Server: http://localhost:#{@port}", "Listening on all interfaces (#{host}): reachable from other machines"]
+      end
+
+      private def default_host : String
+        @environment.strip.downcase == "development" ? "127.0.0.1" : "0.0.0.0"
+      end
+
+      private def url_host(host : String) : String
+        host.includes?(':') ? "[#{host}]" : host
       end
 
       # The environment added to the app's. HOST only when the user set it (ENV or --host).

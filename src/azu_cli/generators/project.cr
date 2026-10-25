@@ -250,7 +250,8 @@ module AzuCLI
         file_entries.reject do |entry|
           path = entry.path.to_s
           (!@docker_support && (path.ends_with?("Dockerfile") || path.ends_with?(".dockerignore"))) ||
-            (!has_ci? && path.includes?(".github/"))
+            (!has_ci? && path.includes?(".github/")) ||
+            (!web_project? && path.includes?("middleware/deny_templates"))
         end
       end
 

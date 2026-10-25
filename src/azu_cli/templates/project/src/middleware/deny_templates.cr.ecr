@@ -1,0 +1,28 @@
+require "http/server"
+require "uri"
+
+module <%= @module_name %>
+  # Answers azu's own 404 for everything under /templates, so the Jinja sources in public/templates are not served
+  # by Static. TODO: replace this file and its entry in `handlers` with `Azu::Handler::Static.new(except: ["/templates"])`
+  # once azu releases that option. It denies every method for any path under /templates, so a route of your own there
+  # would answer 404 as well; the name is reserved.
+  class DenyTemplates
+    include HTTP::Handler
+
+    DIRECTORY = "/templates"
+
+    def call(context : HTTP::Server::Context)
+      raise Azu::Response::NotFound.new(context.request.path) if self.class.denied?(context.request.path)
+
+      call_next(context)
+    end
+
+    # The path as Static resolves it: percent-decoded once, backslashes as slashes, dot segments and double slashes
+    # removed, compared case-insensitively (a case-insensitive file system serves /Templates).
+    def self.denied?(request_path : String) : Bool
+      decoded = request_path.includes?('%') ? URI.decode(request_path) : request_path
+      normalized = File.expand_path(decoded.tr("\\", "/"), "/").downcase
+      normalized == DIRECTORY || normalized.starts_with?("#{DIRECTORY}/")
+    end
+  end
+end

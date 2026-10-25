@@ -1,9 +1,18 @@
 # Changelog - Azu CLI
 
+## Unreleased - Review of the loopback PR
+
+- Fixed: `azu serve` prints the URL again (`http://127.0.0.1:4000` in development; `http://localhost:<port>` plus a note that the app listens on all interfaces in other environments); the old text said loopback for production too
+- Fixed: the version notes: azu v0.5.111 is the first release with the loopback default and `Azu::App#start`, v0.5.112 adds start-once and the container warning (the `~> 0.5.112` pin stays)
+- Added: generated web and api apps mount `Azu::Handler::SecurityHeaders.new(hsts: Azu::CONFIG.tls?)` after the Rescuer, as azu's `default_handlers` does
+- Fixed: the generated handler chain has the Logger outside the Rescuer (as azu's `default_handlers`), so a denied or missing path is logged with its 404 status, not 200
+- Changed: `azu serve` reads the environment case-insensitively and knows `[::]`/`0:0:0:0:0:0:0:0` as all interfaces and `[::1]` as bracketed; the template comments say HSTS needs `Azu::CONFIG.tls?` (a TLS-terminating proxy adds it) and that `/templates` is reserved
+- Fixed: generated web apps no longer serve the Jinja sources in `public/templates` through Static: a generated `DenyTemplates` handler (before Static) answers azu's 404 for any path under `/templates` (decoded, normalised, case-insensitive); it becomes `Static.new(except: ["/templates"])` once azu releases that option
+
 ## Unreleased - Loopback default, review round
 
 - Fixed: the generated web app serves `public/` with `Azu::Handler::Static` in its handler chain (after the logger, before the router) instead of a `/*` route: a missing file now gets azu's negotiated 404, not the bare stdlib `text/plain` one
-- Changed: generated apps require azu `~> 0.5.112` (first release with the loopback default, `Azu::App#start`, start-once and the container warning)
+- Changed: generated apps require azu `~> 0.5.112` (v0.5.111 is the first release with the loopback default and `Azu::App#start`; v0.5.112 adds start-once and the container warning)
 - Changed: the generated `.env` no longer sets `HOST` (azu binds `127.0.0.1` in development and `0.0.0.0` elsewhere); `.env.example` lists it commented; `azu serve` passes `HOST` to the app only when `HOST` is set or `--host` is given
 
 ## Unreleased - Review fixes, round 2

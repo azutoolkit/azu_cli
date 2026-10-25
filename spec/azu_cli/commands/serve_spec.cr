@@ -90,6 +90,73 @@ describe AzuCLI::Commands::Serve do
     end
   end
 
+  describe "#server_lines" do
+    it "names the loopback URL when no host is set in development" do
+      command = AzuCLI::Commands::Serve.new
+      command.host = nil
+      command.port = 4000
+      command.environment = "development"
+      command.server_lines.should eq(["Server: http://127.0.0.1:4000"])
+    end
+
+    it "says the app listens on all interfaces in production and staging, with a clickable localhost URL" do
+      %w[production staging].each do |environment|
+        command = AzuCLI::Commands::Serve.new
+        command.host = nil
+        command.port = 8080
+        command.environment = environment
+        lines = command.server_lines
+        lines.first.should eq("Server: http://localhost:8080")
+        lines.size.should eq(2)
+        lines.last.should contain("all interfaces")
+        lines.join.should_not contain("loopback")
+      end
+    end
+
+    it "prints an explicit host, and brackets an IPv6 one" do
+      command = AzuCLI::Commands::Serve.new
+      command.port = 3000
+      command.host = "192.168.1.5"
+      command.server_lines.should eq(["Server: http://192.168.1.5:3000"])
+      command.host = "::1"
+      command.server_lines.should eq(["Server: http://[::1]:3000"])
+      command.host = "0.0.0.0"
+      command.server_lines.first.should eq("Server: http://localhost:3000")
+    end
+
+    it "reads the environment case-insensitively and ignores surrounding spaces" do
+      command = AzuCLI::Commands::Serve.new
+      command.host = nil
+      command.port = 4000
+      command.environment = " Development "
+      command.server_lines.should eq(["Server: http://127.0.0.1:4000"])
+    end
+
+    it "handles localhost, the IPv6 wildcard and already bracketed or long-form hosts" do
+      command = AzuCLI::Commands::Serve.new
+      command.port = 3000
+      command.host = "localhost"
+      command.server_lines.should eq(["Server: http://localhost:3000"])
+      command.host = "::"
+      command.server_lines.first.should eq("Server: http://localhost:3000")
+      command.server_lines.last.should contain("(::)")
+      command.host = "0:0:0:0:0:0:0:0"
+      command.server_lines.size.should eq(2)
+      command.host = "[::1]"
+      command.server_lines.should eq(["Server: http://[::1]:3000"])
+      command.host = "[::]"
+      command.server_lines.size.should eq(2)
+    end
+
+    it "does not change what the child gets" do
+      command = AzuCLI::Commands::Serve.new
+      command.host = nil
+      command.environment = "production"
+      command.server_lines
+      command.child_env.has_key?("HOST").should be_false
+    end
+  end
+
   describe "#show_help" do
     it "displays help information" do
       command = AzuCLI::Commands::Serve.new
