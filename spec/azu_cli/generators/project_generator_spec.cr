@@ -281,7 +281,7 @@ describe AzuCLI::Generate::Project do
       env.should_not contain("DATABASE_URL")
       env.should_not match(/^\w+=$/m) # an empty value would replace a default once .env is loaded
       env.should_not contain("PERFORMANCE_MONITORING")
-      env.should match(/^HOST=127\.0\.0\.1$/m) # development listens on loopback only; containers set HOST=0.0.0.0 themselves
+      env.should_not match(/^\s*#?\s*HOST=/m) # azu binds loopback in development and 0.0.0.0 elsewhere; .env must not pin either
       File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=sqlite3://./db/myapp_development.db")
       File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=sqlite3://./db/myapp_test.db")
       example = File.read(File.join(test_dir, ".env.example"))
@@ -291,7 +291,8 @@ describe AzuCLI::Generate::Project do
         (AzuCLI::DotEnv.app_name?(name) || listed.includes?(name)).should be_true
         AzuCLI::DotEnv.unsafe_name?(name).should be_false
       end
-      example.should match(/^HOST=127\.0\.0\.1$/m)
+      example.should match(/^# HOST=127\.0\.0\.1 /m)
+      example.should_not match(/^HOST=/m)
       example.should match(/^CSRF_SECRET=$/m)
       example.should_not match(/[0-9a-f]{64}/)
 

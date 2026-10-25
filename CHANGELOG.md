@@ -1,5 +1,9 @@
 # Changelog - Azu CLI
 
+## Unreleased - Loopback default, review round
+
+- Changed: the generated `.env` no longer sets `HOST` (azu binds `127.0.0.1` in development and `0.0.0.0` elsewhere); `.env.example` lists it commented; `azu serve` passes `HOST` to the app only when `HOST` is set or `--host` is given
+
 ## Unreleased - Review fixes, round 2
 
 - Fixed: `azu doctor` no longer prints a piece of a password when an `@` follows a `?` or `#` in `DATABASE_URL`; it warns and asks for percent-encoding instead

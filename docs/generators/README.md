@@ -630,8 +630,10 @@ Create a `.env` file in the project root:
 DATABASE_URL=postgres://user:password@localhost:5432/database_name
 
 # Server configuration
-PORT=3000
-HOST=localhost
+PORT=4000
+# HOST is not set: azu binds 127.0.0.1 in development and 0.0.0.0 in other environments.
+# Uncomment to override (0.0.0.0 inside a container):
+# HOST=0.0.0.0
 
 # Environment
 ENVIRONMENT=development
