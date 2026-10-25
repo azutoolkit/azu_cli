@@ -184,7 +184,7 @@ docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) my_app
 ## Environment Variables
 
 The CLI reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
-generated app reads `PORT`, `HOST`, `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
+generated app reads `PORT`, `HOST` (the generated `.env` sets `127.0.0.1`; the production `Dockerfile` sets `0.0.0.0`; in a development container pass `-e HOST=0.0.0.0`), `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
 in production (`CRYSTAL_ENV=production`) it refuses to boot without the secrets.
 
 ---

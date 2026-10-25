@@ -281,6 +281,7 @@ describe AzuCLI::Generate::Project do
       env.should_not contain("DATABASE_URL")
       env.should_not match(/^\w+=$/m) # an empty value would replace a default once .env is loaded
       env.should_not contain("PERFORMANCE_MONITORING")
+      env.should match(/^HOST=127\.0\.0\.1$/m) # development listens on loopback only; containers set HOST=0.0.0.0 themselves
       File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=sqlite3://./db/myapp_development.db")
       File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=sqlite3://./db/myapp_test.db")
       example = File.read(File.join(test_dir, ".env.example"))
@@ -290,6 +291,7 @@ describe AzuCLI::Generate::Project do
         (AzuCLI::DotEnv.app_name?(name) || listed.includes?(name)).should be_true
         AzuCLI::DotEnv.unsafe_name?(name).should be_false
       end
+      example.should match(/^HOST=127\.0\.0\.1$/m)
       example.should match(/^CSRF_SECRET=$/m)
       example.should_not match(/[0-9a-f]{64}/)
 
@@ -395,7 +397,8 @@ describe AzuCLI::Generate::Project do
       dockerfile.should contain("mkdir -p bin && crystal build --release --no-debug src/server.cr -o bin/myapp")
       dockerfile.should contain("USER app")
       dockerfile.should contain("ENV CRYSTAL_ENV=production HOST=0.0.0.0 PORT=4000 TZ=UTC")
-      dockerfile.should contain("tzdata") # the app resolves time zones (Time::Location)
+      File.exists?("./tmp_test_docker/docker-compose.yml").should be_false # the CLI generates no compose file
+      dockerfile.should contain("tzdata")                                  # the app resolves time zones (Time::Location)
       dockerfile.should contain("HEALTHCHECK")
       dockerfile.should contain("/health")
       dockerfile.should contain("VOLUME /data")
