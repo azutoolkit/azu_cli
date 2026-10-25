@@ -388,6 +388,28 @@ describe AzuCLI::Generate::Project do
     end
   end
 
+  describe "static files" do
+    it "serves public/ from the handler chain, after the logger and before the router, not from a /* route" do
+      {"web" => true, "api" => false}.each do |type, serves|
+        dir = "./tmp_test_static_#{type}"
+        FileUtils.mkdir_p(dir)
+        AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
+
+        source = File.read("#{dir}/src/myapp.cr")
+        source.should_not contain(%(router.get "/*"))
+        source.should_not contain("Handler::Static.new\n  end") # the route in the configure block
+        source.includes?("      Azu::Handler::Logger.new,\n").should be_true
+        handlers = source[/def self\.handlers.*?\] of HTTP::Handler/m]
+        handlers.should contain("] of HTTP::Handler")
+        (handlers.includes?("      Azu::Handler::Static.new,\n")).should eq(serves)
+        if serves
+          (handlers.index("Handler::Logger.new") || 0).should be < (handlers.index("Handler::Static.new") || 0)
+        end
+        FileUtils.rm_rf(dir)
+      end
+    end
+  end
+
   describe "delivery files" do
     it "generates a Dockerfile and .dockerignore only with docker support" do
       FileUtils.mkdir_p("./tmp_test_nodocker")

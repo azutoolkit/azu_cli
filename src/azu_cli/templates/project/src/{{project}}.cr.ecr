@@ -68,8 +68,6 @@ module <%= @module_name %>
     # Docs: https://azutoolkit.org/spark
     # c.router.ws "/live-view", Spark
     c.templates.path = "./public/templates"
-    # Serve static files
-    c.router.get "/*", Handler::Static.new
 <% end -%>
   end
 
@@ -93,6 +91,11 @@ module <%= @module_name %>
       *dev_handlers,
       Azu::Handler::Rescuer.new,
       Azu::Handler::Logger.new,
+<% if @project_type == "web" -%>
+      # Static files from public/: a missing file falls through to the router, so azu's own 404 answers it
+      # (a handler used as a route has no next handler and would answer with a bare text/plain 404).
+      Azu::Handler::Static.new,
+<% end -%>
     ] of HTTP::Handler
   end
 

@@ -617,6 +617,11 @@ if [ "$TYPE" = web ]; then
   expect_body "Welcome to $MODULE"
   expect_body "Typed contracts"
   expect_status /assets/app.css 200
+  # A file that is not in public/ falls through Static to the router: azu's negotiated 404, not the bare
+  # text/plain "404 Not Found" of the stdlib handler (what a Static used as a route target answers).
+  expect_status /missing.css 404
+  ! grep -qx '404 Not Found' "$WORK/body" || fail "GET /missing.css answered the stdlib 404, not azu's"
+  expect_body 'missing.css'
 fi
 
 if [ "$SCAFFOLD" = 1 ]; then
