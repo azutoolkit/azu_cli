@@ -395,10 +395,11 @@ Generators extend `Teeplate::FileTree`:
 - `azu new --docker` writes a multi-stage `Dockerfile` and `.dockerignore`; `--ci` (default `GitHub Actions`) writes
   `.github/workflows/ci.yml`. Both use `Generate::Project::CRYSTAL_VERSION` (also `.tool-versions`) and the package
   lists in `Generate::Project#build_packages` / `#runtime_packages`; change a Crystal version in one place
-- Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there; the generated shard.yml requires `~> 0.5.112`, the first release with the loopback default in development, `Azu::App#start`, start-once and the container warning (`azu/dev` is there since 0.5.69, `Azu::Env` since 0.5.99, the SQLite pragmas since 0.5.93); `E2E_AZU_BRANCH=<ref>` pins the generated project's azu to a branch in the e2e scripts, opt-in)
+- Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there; the generated shard.yml requires `~> 0.5.112`, azu v0.5.111 is the first with the loopback default in development and `Azu::App#start`, v0.5.112 adds start-once and the container warning (`azu/dev` is there since 0.5.69, `Azu::Env` since 0.5.99, the SQLite pragmas since 0.5.93); `E2E_AZU_BRANCH=<ref>` pins the generated project's azu to a branch in the e2e scripts, opt-in)
 - Development handlers (DevDashboard, PerformanceMonitor) are mounted by `def self.dev_handlers` in the generated app
   file, guarded by `Azu::CONFIG.env.development?` at runtime, never by the environment at generation time
 - The generated app's `handlers` is `Array(HTTP::Handler)` (literal `of HTTP::Handler`): an array of a union of handler classes passed as `Array(HTTP::Handler)` is corrupted in optimized builds (IndexError / SIGSEGV at boot). `scripts/e2e_generated_app.sh` builds unoptimized, so only `scripts/e2e_docker.sh` (a `--release` build) catches this class of bug
+- Generated web apps mount `Azu::Handler::SecurityHeaders` (HSTS only with `Azu::CONFIG.tls?`) and `<App>::DenyTemplates` (`src/middleware/deny_templates.cr`, web only) before Static so `public/templates/*.jinja` is never served; delete the latter for `Static.new(except: ["/templates"])` once azu has it. The e2e probes both
 - The app requires `./db/schema` only: `src/db/seed.cr` would run on every boot (`azu db:migrate` requires the migrations itself)
 - The `Dockerfile` template starts with `FROM`, without a `# syntax=` line: that line makes BuildKit pull its frontend from the network
 

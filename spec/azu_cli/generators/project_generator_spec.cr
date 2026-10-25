@@ -410,6 +410,79 @@ describe AzuCLI::Generate::Project do
     end
   end
 
+  describe "security headers and template exposure" do
+    handler_block = ->(dir : String) { File.read("#{dir}/src/myapp.cr")[/def self\.handlers.*?\] of HTTP::Handler/m] }
+
+    it "adds SecurityHeaders after the Rescuer, with HSTS only over TLS, in web and api" do
+      %w[web api].each do |type|
+        dir = "./tmp_test_secheaders_#{type}"
+        FileUtils.mkdir_p(dir)
+        AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
+
+        handlers = handler_block.call(dir)
+        handlers.should contain("      Azu::Handler::SecurityHeaders.new(hsts: Azu::CONFIG.tls?),")
+        (handlers.index("Handler::Rescuer.new") || 0).should be < (handlers.index("Handler::SecurityHeaders.new") || -1)
+        handlers.should contain("] of HTTP::Handler")
+      end
+    end
+
+    it "generates DenyTemplates before Static in web projects, and not in api projects" do
+      web = "./tmp_test_deny_web"
+      FileUtils.mkdir_p(web)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "web").render(web)
+      File.exists?("#{web}/src/middleware/deny_templates.cr").should be_true
+      handlers = handler_block.call(web)
+      handlers.should contain("      MyApp::DenyTemplates.new,")
+      (handlers.index("Handler::Logger.new") || 0).should be < (handlers.index("DenyTemplates.new") || -1)
+      (handlers.index("DenyTemplates.new") || 0).should be < (handlers.index("Handler::Static.new") || -1)
+      File.read("#{web}/src/middleware/deny_templates.cr").should contain(%(Static.new(except: ["/templates"])))
+
+      api = "./tmp_test_deny_api"
+      FileUtils.mkdir_p(api)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "api").render(api)
+      File.exists?("#{api}/src/middleware/deny_templates.cr").should be_false
+      handler_block.call(api).should_not contain("DenyTemplates")
+    end
+
+    it "matches the template directory on the decoded, normalised path, case-insensitively" do
+      web = "./tmp_test_deny_match"
+      FileUtils.mkdir_p(web)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "web").render(web)
+      handler = File.read("#{web}/src/middleware/deny_templates.cr")
+      script = <<-CR
+        require "http/server"
+        module Azu
+          module Response
+            class NotFound < Exception
+              def initialize(path : String)
+                super(path)
+              end
+            end
+          end
+        end
+        #{handler}
+        denied = ["/templates", "/templates/", "/templates/layout.jinja", "/Templates/Layout.jinja", "/TEMPLATES/x",
+                  "/%74emplates/layout.jinja", "/%54EMPLATES/x", "/templates%2Flayout.jinja", "//templates/x",
+                  "/./templates/x", "/assets/../templates/x", "/assets/..%2ftemplates/x", "/a/%2e%2e/templates/x",
+                  "/templates/../templates/x", "/templates\\\\x"]
+        allowed = ["/", "/assets/app.css", "/templates.css", "/templates-old/x", "/my/templates/x", "/template",
+                   "/assets/../assets/app.css", "/health", "/bad%zz"]
+        denied.each { |path| puts "denied \#{path} \#{MyApp::DenyTemplates.denied?(path)}" }
+        allowed.each { |path| puts "allowed \#{path} \#{MyApp::DenyTemplates.denied?(path)}" }
+        CR
+      script_path = File.join(web, "check.cr")
+      File.write(script_path, script)
+      output = IO::Memory.new
+      error = IO::Memory.new
+      status = Process.run("crystal", ["run", "--no-color", script_path], output: output, error: error)
+      status.success?.should be_true, error.to_s
+      lines = output.to_s.lines
+      lines.size.should eq(24)
+      lines.select(&.starts_with?("denied ")).each { |line| line.should end_with(" true") }
+      lines.select(&.starts_with?("allowed ")).each { |line| line.should end_with(" false") }
+    end
+  end
+
   describe "delivery files" do
     it "generates a Dockerfile and .dockerignore only with docker support" do
       FileUtils.mkdir_p("./tmp_test_nodocker")

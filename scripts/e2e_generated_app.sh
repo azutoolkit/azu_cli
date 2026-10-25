@@ -622,7 +622,23 @@ if [ "$TYPE" = web ]; then
   expect_status /missing.css 404
   ! grep -qx '404 Not Found' "$WORK/body" || fail "GET /missing.css answered the stdlib 404, not azu's"
   expect_body 'missing.css'
+  # The Jinja sources under public/templates are not static files: they answer azu's 404, whatever the spelling.
+  tmpl="$(find public/templates -name '*.jinja' | head -n 1)"
+  [ -n "$tmpl" ] || fail "the generated project has no .jinja template to probe"
+  tmpl_url="/${tmpl#public/}"
+  for probe in "$tmpl_url" "$(printf %s "$tmpl_url" | sed 's|/templates|/Templates|')" "/assets/..$tmpl_url" "/%74emplates${tmpl_url#/templates}" "//${tmpl_url#/}"; do
+    got="$(curl -s --path-as-is -o "$WORK/body" -w '%{http_code}' --max-time 10 "http://127.0.0.1:$PORT$probe")"
+    [ "$got" = 404 ] || fail "GET $probe returned $got, expected 404 (template source exposed)"
+    ! grep -q -e '{%' -e '{{' "$WORK/body" || fail "GET $probe answered with template source"
+    echo "ok: GET $probe -> 404"
+  done
+  expect_status /assets/app.css 200
 fi
+# Every response carries the security headers; HSTS only over TLS (this server is plain http).
+curl -s -o /dev/null -D "$WORK/headers" --max-time 10 "http://127.0.0.1:$PORT/health"
+grep -qi '^x-content-type-options: nosniff' "$WORK/headers" || fail "GET /health lacks X-Content-Type-Options: nosniff"
+! grep -qi '^strict-transport-security' "$WORK/headers" || fail "HSTS sent over plain http"
+echo "ok: security headers present, no HSTS over http"
 
 if [ "$SCAFFOLD" = 1 ]; then
   step "check the Post scaffold"

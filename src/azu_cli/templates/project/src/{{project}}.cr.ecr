@@ -90,8 +90,10 @@ module <%= @module_name %>
       Azu::Handler::RequestId.new,
       *dev_handlers,
       Azu::Handler::Rescuer.new,
+      Azu::Handler::SecurityHeaders.new(hsts: Azu::CONFIG.tls?), # as azu's default_handlers: HSTS only over TLS
       Azu::Handler::Logger.new,
 <% if @project_type == "web" -%>
+      <%= @module_name %>::DenyTemplates.new, # becomes Static.new(except: ["/templates"]) once azu releases that option
       # Static files from public/: a missing file falls through to the router, so azu's own 404 answers it
       # (a handler used as a route has no next handler and would answer with a bare text/plain 404).
       Azu::Handler::Static.new,
