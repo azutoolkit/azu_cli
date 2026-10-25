@@ -349,6 +349,16 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf("./tmp_test_db_require")
     end
 
+    it "pins azu to the first release with the loopback default, start-once and the container warning" do
+      FileUtils.mkdir_p("./tmp_test_azu_pin")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_azu_pin")
+
+      shard = File.read("./tmp_test_azu_pin/shard.yml")
+      shard.should match(/github: azutoolkit\/azu\n\s+version: ~> 0\.5\.112\n/)
+      shard.should_not contain("0.5.69")
+      FileUtils.rm_rf("./tmp_test_azu_pin")
+    end
+
     it "requires azu/dev in web and api apps, where DevDashboard lives, and not in a cli app" do
       {"web" => true, "api" => true, "cli" => false}.each do |type, requires|
         dir = "./tmp_test_azu_dev_#{type}"
@@ -356,7 +366,7 @@ describe AzuCLI::Generate::Project do
         AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
 
         source = File.read("#{dir}/src/myapp.cr")
-        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.69).\nrequire "azu/dev"\n)).should eq(requires)
+        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.112).\nrequire "azu/dev"\n)).should eq(requires)
         FileUtils.rm_rf(dir)
       end
     end

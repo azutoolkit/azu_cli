@@ -2,6 +2,7 @@
 
 ## Unreleased - Loopback default, review round
 
+- Changed: generated apps require azu `~> 0.5.112` (first release with the loopback default, `Azu::App#start`, start-once and the container warning)
 - Changed: the generated `.env` no longer sets `HOST` (azu binds `127.0.0.1` in development and `0.0.0.0` elsewhere); `.env.example` lists it commented; `azu serve` passes `HOST` to the app only when `HOST` is set or `--host` is given
 
 ## Unreleased - Review fixes, round 2
