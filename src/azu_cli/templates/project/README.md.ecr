@@ -44,8 +44,9 @@ To start your Azu server:
 
 Now you can visit http://localhost:3000/ from your browser.
 
-In development the server listens on `127.0.0.1` only (`HOST` in `.env`). To reach it from another machine or from
-inside a container, set `HOST=0.0.0.0` in the environment (a real environment variable wins over `.env`).
+In development the server listens on `127.0.0.1` only (azu's default; `.env` does not set `HOST`). To reach it from
+another machine or from inside a container, set `HOST=0.0.0.0` in the environment (a real environment variable wins
+over `.env`); other environments listen on `0.0.0.0` by default.
 
 ## Configuration
 
@@ -82,7 +83,7 @@ crystal run spec/test_helper.cr
 
 The `Dockerfile` builds a release binary and runs it as a non-root user in production mode
 (`CRYSTAL_ENV=production`), listening on `HOST` (`0.0.0.0` in the image) and `PORT` (4000). To run the app
-in development inside a container, pass `-e HOST=0.0.0.0` (the default `127.0.0.1` is unreachable from the host). The secrets are not in the image: pass them in.
+in development inside a container, pass `-e HOST=0.0.0.0` (azu's development default `127.0.0.1` is unreachable from the host). The secrets are not in the image: pass them in.
 
 ```bash
 docker build -t <%= @project %> .

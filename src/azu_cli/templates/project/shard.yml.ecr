@@ -14,11 +14,11 @@ targets:
 <% end -%>
 
 dependencies:
-  # The generated app requires "azu/env" (azu 0.5.99, which also has the SQLite pragmas of azu 0.5.93) and
-  # "azu/dev" (azu 0.5.69).
+  # The generated app requires "azu/env" and "azu/dev". 0.5.112 is the first release with the loopback default
+  # in development (HOST unset), Azu::App#start, start-once and the container warning.
   azu:
     github: azutoolkit/azu
-    version: ~> 0.5.99
+    version: ~> 0.5.112
 
   # Exact on purpose: cql 0.0.N releases have broken generated apps before (0.0.562). To bump, change this
   # version and run scripts/e2e_generated_app.sh web and api (and E2E_DB=postgresql web).

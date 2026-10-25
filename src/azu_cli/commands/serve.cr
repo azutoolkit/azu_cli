@@ -7,7 +7,8 @@ module AzuCLI
     class Serve < Base
       # The defaults come from the project's .env (loaded at startup); the flags below override them.
       property port : Int32 = ENV["PORT"]?.try(&.to_i?) || 4000
-      property host : String = ENV["HOST"]?.presence || "localhost"
+      # nil leaves HOST to the app: azu binds 127.0.0.1 in development and 0.0.0.0 in other environments
+      property host : String? = ENV["HOST"]?.presence
       property environment : String = ENV["CRYSTAL_ENV"]?.presence || "development"
       property watch : Bool = true
       property verbose : Bool = false
@@ -26,7 +27,7 @@ module AzuCLI
 
         Logger.info("🚀 Starting Azu development server...")
         Logger.info("Environment: #{@environment}")
-        Logger.info("Server: http://#{@host}:#{@port}")
+        Logger.info("Server: #{@host ? "http://#{@host}:#{@port}" : "port #{@port}, host from the app (loopback in development)"}")
         Logger.info("Hot reloading: #{@watch ? "enabled" : "disabled"}")
         puts ""
 
@@ -120,15 +121,17 @@ module AzuCLI
         false
       end
 
+      # The environment added to the app's. HOST only when the user set it (ENV or --host).
+      def child_env : Hash(String, String)
+        env = {"PORT" => @port.to_s, "CRYSTAL_ENV" => @environment, "AZU_ENV" => @environment}
+        @host.try { |host| env["HOST"] = host }
+        env
+      end
+
       private def start_server
         stop_server if @server_process
 
-        env = {
-          "PORT"        => @port.to_s,
-          "HOST"        => @host,
-          "CRYSTAL_ENV" => @environment,
-          "AZU_ENV"     => @environment,
-        }
+        env = child_env
 
         binary_name = get_binary_name
         @server_process = Process.new(

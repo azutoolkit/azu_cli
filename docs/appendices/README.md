@@ -95,7 +95,8 @@ APP_SECRET=your-secret-key
 
 # Optional
 APP_ENV=development|test|production
-HOST=0.0.0.0
+# HOST defaults to 127.0.0.1 in development and 0.0.0.0 in other environments; set it only to override
+# HOST=0.0.0.0
 PORT=3000
 LOG_LEVEL=debug|info|warn|error
 ```
@@ -344,7 +345,7 @@ CMD ["./main"]
 export APP_ENV=production
 export DATABASE_URL=postgresql://user:pass@host/db
 export APP_SECRET=your-secret-key
-export HOST=0.0.0.0
+# export HOST=0.0.0.0   # the default outside development
 export PORT=3000
 ```
 

@@ -39,7 +39,7 @@ azu test [options]            # Run specs (alias: t)
 
 ### `azu dev` Options
 
-`--port PORT`, `--host HOST`, `--env NAME` (each only overrides what your environment or `.env` files say when given),
+`--port PORT`, `--host HOST`, `--env NAME` (each only overrides what your environment or `.env` files say when given; without `--host` or `HOST`, `azu serve` leaves the host to the app),
 `--debounce MS` (default 300), `--interval MS` (polling interval, default 250). `src/**`, `config/**`, `shard.yml` and
 `shard.lock` changes build and restart; `public/templates/**` changes neither build nor restart; `.env*` changes restart
 without a build. A failed build keeps the running app. See [docs/commands/dev.md](docs/commands/dev.md).
@@ -184,7 +184,7 @@ docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) my_app
 ## Environment Variables
 
 The CLI reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
-generated app reads `PORT`, `HOST` (the generated `.env` sets `127.0.0.1`; the production `Dockerfile` sets `0.0.0.0`; in a development container pass `-e HOST=0.0.0.0`), `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
+generated app reads `PORT`, `HOST` (the generated `.env` leaves it unset, so azu binds `127.0.0.1` in development and `0.0.0.0` elsewhere; `.env.example` has it commented; the production `Dockerfile` sets `0.0.0.0`; in a development container pass `-e HOST=0.0.0.0`), `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
 in production (`CRYSTAL_ENV=production`) it refuses to boot without the secrets.
 
 ---

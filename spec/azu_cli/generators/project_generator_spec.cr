@@ -281,7 +281,7 @@ describe AzuCLI::Generate::Project do
       env.should_not contain("DATABASE_URL")
       env.should_not match(/^\w+=$/m) # an empty value would replace a default once .env is loaded
       env.should_not contain("PERFORMANCE_MONITORING")
-      env.should match(/^HOST=127\.0\.0\.1$/m) # development listens on loopback only; containers set HOST=0.0.0.0 themselves
+      env.should_not match(/^\s*#?\s*HOST=/m) # azu binds loopback in development and 0.0.0.0 elsewhere; .env must not pin either
       File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=sqlite3://./db/myapp_development.db")
       File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=sqlite3://./db/myapp_test.db")
       example = File.read(File.join(test_dir, ".env.example"))
@@ -291,7 +291,8 @@ describe AzuCLI::Generate::Project do
         (AzuCLI::DotEnv.app_name?(name) || listed.includes?(name)).should be_true
         AzuCLI::DotEnv.unsafe_name?(name).should be_false
       end
-      example.should match(/^HOST=127\.0\.0\.1$/m)
+      example.should match(/^# HOST=127\.0\.0\.1 /m)
+      example.should_not match(/^HOST=/m)
       example.should match(/^CSRF_SECRET=$/m)
       example.should_not match(/[0-9a-f]{64}/)
 
@@ -348,6 +349,16 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf("./tmp_test_db_require")
     end
 
+    it "pins azu to the first release with the loopback default, start-once and the container warning" do
+      FileUtils.mkdir_p("./tmp_test_azu_pin")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_azu_pin")
+
+      shard = File.read("./tmp_test_azu_pin/shard.yml")
+      shard.should match(/github: azutoolkit\/azu\n\s+version: ~> 0\.5\.112\n/)
+      shard.should_not contain("0.5.69")
+      FileUtils.rm_rf("./tmp_test_azu_pin")
+    end
+
     it "requires azu/dev in web and api apps, where DevDashboard lives, and not in a cli app" do
       {"web" => true, "api" => true, "cli" => false}.each do |type, requires|
         dir = "./tmp_test_azu_dev_#{type}"
@@ -355,7 +366,7 @@ describe AzuCLI::Generate::Project do
         AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
 
         source = File.read("#{dir}/src/myapp.cr")
-        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.69).\nrequire "azu/dev"\n)).should eq(requires)
+        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.112).\nrequire "azu/dev"\n)).should eq(requires)
         FileUtils.rm_rf(dir)
       end
     end
@@ -374,6 +385,28 @@ describe AzuCLI::Generate::Project do
       source.should contain("    ] of HTTP::Handler\n")
 
       FileUtils.rm_rf(test_dir)
+    end
+  end
+
+  describe "static files" do
+    it "serves public/ from the handler chain, after the logger and before the router, not from a /* route" do
+      {"web" => true, "api" => false}.each do |type, serves|
+        dir = "./tmp_test_static_#{type}"
+        FileUtils.mkdir_p(dir)
+        AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
+
+        source = File.read("#{dir}/src/myapp.cr")
+        source.should_not contain(%(router.get "/*"))
+        source.should_not contain("Handler::Static.new\n  end") # the route in the configure block
+        source.includes?("      Azu::Handler::Logger.new,\n").should be_true
+        handlers = source[/def self\.handlers.*?\] of HTTP::Handler/m]
+        handlers.should contain("] of HTTP::Handler")
+        (handlers.includes?("      Azu::Handler::Static.new,\n")).should eq(serves)
+        if serves
+          (handlers.index("Handler::Logger.new") || 0).should be < (handlers.index("Handler::Static.new") || 0)
+        end
+        FileUtils.rm_rf(dir)
+      end
     end
   end
 
