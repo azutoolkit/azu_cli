@@ -34,8 +34,8 @@ USER app
 # pass them with `docker run -e`; they are deliberately not part of the image (.dockerignore keeps .env* out,
 # and real environment variables win over any .env file anyway).
 # TZ: Crystal cannot read the zone from /etc/localtime on this base image; override with `-e TZ=...`.
-ENV CRYSTAL_ENV=production HOST=0.0.0.0 PORT=4000 TZ=UTC
-EXPOSE 4000
+ENV CRYSTAL_ENV=production HOST=0.0.0.0 PORT=<%= port %> TZ=UTC
+EXPOSE <%= port %>
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1
 CMD ["./<%= binary_name %>"]

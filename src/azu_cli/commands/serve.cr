@@ -6,7 +6,7 @@ module AzuCLI
     # Development server with hot reloading
     class Serve < Base
       # The defaults come from the project's .env (loaded at startup); the flags below override them.
-      property port : Int32 = ENV["PORT"]?.try(&.to_i?) || 4000
+      property port : Int32 = ENV["PORT"]?.try(&.to_i?) || AzuCLI::Config::Ports::DEV_SERVER
       # nil leaves HOST to the app: azu binds 127.0.0.1 in development and 0.0.0.0 in other environments
       property host : String? = ENV["HOST"]?.presence
       property environment : String = ENV["CRYSTAL_ENV"]?.presence || "development"

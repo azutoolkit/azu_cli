@@ -200,7 +200,7 @@ Create a `.env` file in your project root:
 # .env
 AZU_LOG_LEVEL=debug
 AZU_DATABASE_URL=postgresql://localhost/myapp_dev
-AZU_SERVER_PORT=3000
+AZU_SERVER_PORT=4000
 AZU_ENDPOINT_AUTH_REQUIRED=false
 ```
 

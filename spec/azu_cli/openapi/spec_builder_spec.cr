@@ -58,7 +58,7 @@ describe AzuCLI::OpenAPI::SpecBuilder do
       servers = spec.servers
       servers.should_not be_nil
       servers.not_nil!.size.should be > 0
-      servers.not_nil![0].url.should eq("http://localhost:3000")
+      servers.not_nil![0].url.should eq("http://localhost:4000")
 
       Dir.delete("spec/fixtures/test_project")
     end

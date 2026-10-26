@@ -1,5 +1,12 @@
 # Changelog - Azu CLI
 
+## Unreleased - First run: db:migrate and the port
+
+- Fixed: `azu db:migrate` straight after `azu new` failed. On SQLite it now creates the database file when it is missing (as `azu db:create` does); a server database (PostgreSQL, MySQL) is never created by `db:migrate`, which still stops and says to run `azu db:create` or `azu db:setup`. A project without a migration yet is no longer an error: `db:migrate` (and so `db:setup`) answers "No migrations to run" with exit 0
+- Fixed: the next steps of `azu new` said `Visit: http://localhost:3000`; the app listens on 4000 (azu's default, the `PORT` of the generated `.env`). They now read cd, `azu db:setup`, `azu serve`, `http://localhost:4000` (a server database adds that it must be running), and the generated README, `config/openapi.yml`, `config/api.yml`, the mailer preview comment, `azu openapi:export`'s development server and the docs say 4000
+- Changed: the port lives in one place, `AzuCLI::Config::Ports::DEV_SERVER`: the project templates (`.env`, `.env.example`, `Dockerfile`, `config/azu.yml`, README), `azu serve`, `azu dev`, `azu doctor` and the hints read it
+- Changed: `scripts/e2e_generated_app.sh` checks that `azu new` points at the `PORT` of `.env` and, on SQLite, runs `azu db:migrate` right after `azu new`
+
 ## Unreleased - The development dashboard shows requests
 
 - Fixed: the development dashboard of a generated app (`/dev-dashboard`) never showed a request. `dev_handlers` mounted a `PerformanceMonitor.new` of its own, while `DevDashboard` reads `Azu::CONFIG.performance_monitor`, which is nil unless `PERFORMANCE_MONITORING=true`. `dev_handlers` now mounts `Azu::CONFIG.performance_monitor` when it exists, the generated `.env.development` sets `PERFORMANCE_MONITORING=true` and `.env.example` lists it

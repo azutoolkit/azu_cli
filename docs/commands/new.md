@@ -262,7 +262,7 @@ module MyApp
     config.debug = true
     config.log_level = :debug
     config.host = "localhost"
-    config.port = 3000
+    config.port = 4000
   end
 end
 ```

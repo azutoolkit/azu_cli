@@ -450,31 +450,31 @@ module AzuCLI
         end
       end
 
+      # What to run after `azu new`, in order. `azu db:setup` creates the database and runs the migrations, so it
+      # works on a fresh project; the app listens on azu's default port, the PORT of the generated .env.
+      def next_steps : Array(String)
+        return ["cd #{@project_name}", "crystal build src/#{@project_name}.cr", "./#{@project_name} --help"] if @project_type == "cli"
+
+        url = "http://localhost:#{AzuCLI::Config::Ports::DEV_SERVER}"
+        steps = ["cd #{@project_name}", "azu db:setup", "azu serve"]
+        steps << (@project_type == "api" ? "Test: curl #{url}/health" : "Visit: #{url}")
+        steps << "Start background workers: azu jobs:worker" if @include_joobq
+        steps
+      end
+
+      # A database with a server has to be running before `azu db:setup`; SQLite is a file the command creates
+      def database_hint : String?
+        return if @project_type == "cli" || @database.starts_with?("sqlite")
+        "azu db:setup needs a running #{@database} server: DATABASE_URL is in .env.development"
+      end
+
       private def show_success_message
         puts
         Logger.announce("🚀 Project '#{@project_name}' created successfully!")
 
         puts "Next steps:"
-        puts "  1. cd #{@project_name}"
-        puts "  2. Configure your database in src/initializers/cql_config.cr"
-
-        case @project_type
-        when "web"
-          puts "  3. Run: azu serve"
-          puts "  4. Visit: http://localhost:3000"
-          if @include_joobq
-            puts "  5. Start background workers: azu jobs:worker"
-          end
-        when "api"
-          puts "  3. Run: azu serve"
-          puts "  4. Test: curl http://localhost:3000/health"
-          if @include_joobq
-            puts "  5. Start background workers: azu jobs:worker"
-          end
-        when "cli"
-          puts "  3. Run: crystal build src/#{@project_name}.cr"
-          puts "  4. Run: ./#{@project_name} --help"
-        end
+        next_steps.each_with_index { |step, index| puts "  #{index + 1}. #{step}" }
+        database_hint.try { |hint| puts "  (#{hint})" }
 
         if @include_joobq && (@project_type == "web" || @project_type == "api")
           puts

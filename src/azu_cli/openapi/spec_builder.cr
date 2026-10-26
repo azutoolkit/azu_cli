@@ -45,7 +45,7 @@ module AzuCLI
 
       # Build servers section
       private def build_servers : Array(Server)
-        dev_server = Server.new("http://localhost:3000", "Development server")
+        dev_server = Server.new("http://localhost:#{AzuCLI::Config::Ports::DEV_SERVER}", "Development server")
         [dev_server]
       end
 
