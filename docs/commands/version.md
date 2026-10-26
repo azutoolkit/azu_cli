@@ -8,7 +8,7 @@ azu version
 
 ```
 Azu CLI v0.1.17
-Crystal 1.19.1
+Crystal 1.22.1
 Topia CLI Framework
 
 Plugins:

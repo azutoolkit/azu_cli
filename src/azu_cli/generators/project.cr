@@ -9,7 +9,7 @@ module AzuCLI
 
       # The Crystal release the generated project is built and tested with (`.tool-versions`, the
       # Dockerfile and the CI workflow); shard.yml allows newer ones.
-      CRYSTAL_VERSION = "1.19.1"
+      CRYSTAL_VERSION = "1.22.1"
       CI_SETUPS       = ["GitHub Actions", "None"]
 
       # Project configuration properties

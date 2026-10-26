@@ -331,7 +331,7 @@ scripts/e2e_generated_app.sh web      # or api; E2E_DB=postgresql only boots
 scripts/e2e_docker.sh web             # needs a docker daemon; builds and runs the generated Dockerfile
 ```
 
-Without Crystal on the host, run the first two inside `crystallang/crystal:1.19.1` (see CLAUDE.md). Extend the
+Without Crystal on the host, run the first two inside `crystallang/crystal:1.22.1` (see CLAUDE.md). Extend the
 script first with the assertion the change should satisfy, watch it fail, then change the generator.
 
 ## Phase 6: Documentation
