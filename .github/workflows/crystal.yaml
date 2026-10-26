@@ -17,9 +17,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 1.19.1 is the floor (shard.yml), 1.22.1 the version the repository and generated projects are pinned to
-        # (.tool-versions); latest catches language changes early. The release needs all of them.
-        crystal: ["1.19.1", "1.22.1", "latest"]
+        # 1.22.1 is the floor (shard.yml) and the version the repository and generated projects are pinned to
+        # (.tool-versions); latest catches language changes early. The release needs both.
+        crystal: ["1.22.1", "latest"]
     container:
       image: crystallang/crystal:${{ matrix.crystal }}
     steps:
@@ -29,7 +29,7 @@ jobs:
           apt-get update
           apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev
       - name: Install shards
-        run: shards install --ignore-crystal-version
+        run: shards install
       - name: Check formatting
         run: crystal tool format --check ./src
       # The integration specs run `bin/azu`.
@@ -47,7 +47,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { crystal: "1.19.1", db: sqlite, type: web }
           - { crystal: "1.22.1", db: sqlite, type: web }
           - { crystal: "1.22.1", db: sqlite, type: api }
           - { crystal: "latest", db: sqlite, type: web }
@@ -62,7 +61,7 @@ jobs:
           apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev sqlite3 curl
       - name: Build the CLI
         run: |
-          shards install --ignore-crystal-version
+          shards install
           mkdir -p bin
           crystal build src/azu_cli.cr -o bin/azu --no-debug
       # On SQLite the script also generates a Post scaffold (and, for web, a Chat channel and authentication), migrates it

@@ -507,7 +507,7 @@ crystal build --release --static src/main.cr
 
 ```dockerfile
 # Dockerfile
-FROM crystallang/crystal:1.16.0-alpine
+FROM crystallang/crystal:1.22.1-alpine
 
 WORKDIR /app
 

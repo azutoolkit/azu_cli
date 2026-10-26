@@ -313,6 +313,17 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf(test_dir)
     end
 
+    it "declares one Crystal floor, the version the project is pinned to, in the generated shard.yml and doctor reads it" do
+      test_dir = "./tmp_test_floor"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
+
+      File.read(File.join(test_dir, "shard.yml")).should contain("crystal: '>= #{AzuCLI::Generate::Project::CRYSTAL_VERSION}'\n")
+      File.read("./shard.yml").should contain("crystal: '>= #{AzuCLI::Generate::Project::CRYSTAL_VERSION}'\n")
+      checks = AzuCLI::Diagnostics::Checks.new(test_dir, ->(name : String) { ENV[name]? }, AzuCLI::Diagnostics::LocalSystem.new)
+      checks.crystal_floor.should eq AzuCLI::Generate::Project::CRYSTAL_VERSION
+    end
+
     it "uses the mysql and sqlite3 drivers in the initializer" do
       {"mysql" => "mysql", "sqlite3" => "sqlite3"}.each do |database, driver|
         generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database)
@@ -476,8 +487,13 @@ describe AzuCLI::Generate::Project do
       dockerfile = File.read("./tmp_test_docker/Dockerfile")
       dockerfile.should contain("FROM crystallang/crystal:#{AzuCLI::Generate::Project::CRYSTAL_VERSION} AS build")
       dockerfile.should contain("libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev")
-      dockerfile.should contain("shards install --ignore-crystal-version")
+      dockerfile.should contain("RUN shards install\n")
+      dockerfile.should_not contain("--ignore-crystal-version")
       dockerfile.should contain("mkdir -p bin && crystal build --release --no-debug src/server.cr -o bin/myapp")
+      # The crystallang/crystal:1.22.1 build stage is Ubuntu 26.04 (libxml2.so.16): the runtime stage must match it.
+      dockerfile.should contain("FROM ubuntu:26.04")
+      dockerfile.should contain("libxml2-16")
+      dockerfile.should_not contain("ubuntu:24.04")
       dockerfile.should contain("USER app")
       dockerfile.should contain("ENV CRYSTAL_ENV=production HOST=0.0.0.0 PORT=4000 TZ=UTC")
       File.exists?("./tmp_test_docker/docker-compose.yml").should be_false # the CLI generates no compose file
@@ -512,7 +528,8 @@ describe AzuCLI::Generate::Project do
 
       workflow = File.read("./tmp_test_ci/.github/workflows/ci.yml")
       workflow.should contain("image: crystallang/crystal:#{AzuCLI::Generate::Project::CRYSTAL_VERSION}")
-      workflow.should contain("shards install --ignore-crystal-version")
+      workflow.should contain("run: shards install\n")
+      workflow.should_not contain("--ignore-crystal-version")
       workflow.should contain("crystal tool format --check src spec")
       workflow.should contain("run: crystal spec")
       workflow.should contain("crystal build src/server.cr -o bin/myapp")

@@ -326,7 +326,7 @@ spec/
 
 ```bash
 # Build the CLI, then generate, compile, boot and drive a project
-shards build --ignore-crystal-version
+shards build
 scripts/e2e_generated_app.sh web      # or api; E2E_DB=postgresql only boots
 scripts/e2e_docker.sh web             # needs a docker daemon; builds and runs the generated Dockerfile
 ```

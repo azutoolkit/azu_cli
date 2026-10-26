@@ -4,7 +4,7 @@ require "../../support/command_helpers"
 include CommandHelpers
 
 private class StubSystem < AzuCLI::Diagnostics::System
-  def initialize(@crystal : String = "Crystal 1.19.1 [abc] (2026-01-20)", @check_status : Int32 = 0)
+  def initialize(@crystal : String = "Crystal 1.22.1 [abc] (2026-09-01)", @check_status : Int32 = 0)
   end
 
   def capture(command : String, args : Array(String), chdir : String) : {Int32, String}?

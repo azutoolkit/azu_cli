@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Azu CLI** is a feature-complete, production-ready command-line interface for the Azu Toolkit - a Rails-like framework for Crystal that provides database management, code generation, hot reloading, and comprehensive development tools.
 
-- **Language**: Crystal 1.19.1 or newer (CI tests 1.19.1, the floor, 1.22.1, the primary, and the latest release; the repository and the generated projects are pinned to 1.22.1)
+- **Language**: Crystal 1.22.1 or newer, one floor for the CLI and the generated projects (`crystal: '>= 1.22.1'` in `shard.yml` and the project template; azu 0.5.124+ needs it). CI tests 1.22.1, the primary, and the latest release; the repository and the generated projects are pinned to 1.22.1
 - **CLI Framework**: Topia (https://github.com/azutoolkit/topia)
 - **Target Frameworks**:
   - Azu Web Framework (https://github.com/azutoolkit/azu)
@@ -22,7 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 shards install
 
 # Build the CLI
-shards build --production --ignore-crystal-version
+shards build --production
 
 # Run the CLI directly during development
 crystal run src/azu_cli.cr -- [command] [args]
@@ -430,6 +430,6 @@ Running them locally with Docker (no Crystal on the host):
 ```bash
 docker run --rm -v "$PWD":/work -w /work crystallang/crystal:1.22.1 \
   sh -c 'apt-get update && apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev sqlite3 curl \
-         && shards install --ignore-crystal-version && shards build --ignore-crystal-version && scripts/e2e_generated_app.sh web'
+         && shards install && shards build && scripts/e2e_generated_app.sh web'
 scripts/e2e_docker.sh web      # on the host
 ```

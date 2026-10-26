@@ -24,7 +24,7 @@ The variables come from the environment `azu` runs in, which includes the projec
 ## Output
 
 ```text
-ok    crystal        Crystal 1.19.1 (the project needs 1.19.1 or newer)
+ok    crystal        Crystal 1.22.1 (the project needs 1.22.1 or newer)
 ok    shards         Shards 0.19.1
 ok    dependencies   installed and in sync with shard.lock
 warn  database       SQLite file ./db/blog_development.db does not exist yet

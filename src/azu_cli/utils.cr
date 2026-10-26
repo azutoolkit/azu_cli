@@ -656,32 +656,6 @@ module AzuCLI
     # Version Checking Utilities
     # ========================================
 
-    # Required minimum Crystal version
-    REQUIRED_CRYSTAL_VERSION = "1.16.0"
-
-    # Check if current Crystal version meets requirements
-    def check_crystal_version : Bool
-      current_version = Crystal::VERSION
-      compare_versions(current_version, REQUIRED_CRYSTAL_VERSION) >= 0
-    end
-
-    # Check Crystal version and exit if incompatible
-    def enforce_crystal_version!
-      unless check_crystal_version
-        Logger.error("Crystal #{REQUIRED_CRYSTAL_VERSION}+ required (current: #{Crystal::VERSION})")
-        Logger.error("Please upgrade Crystal: https://crystal-lang.org/install/")
-        exit(Config::EXIT_FAILURE)
-      end
-    end
-
-    # Get Crystal version info
-    def crystal_version_info : {version: String, compatible: Bool}
-      {
-        version:    Crystal::VERSION,
-        compatible: check_crystal_version,
-      }
-    end
-
     # Check if shard version is compatible
     def check_shard_version(shard_name : String, required_version : String) : Bool
       installed_version = dependency_version(shard_name)
