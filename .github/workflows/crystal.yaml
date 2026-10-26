@@ -17,8 +17,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The oldest supported version gates the release; latest catches language changes early.
-        crystal: ["1.19.1", "latest"]
+        # 1.19.1 is the floor (shard.yml), 1.22.1 the version the repository and generated projects are pinned to
+        # (.tool-versions); latest catches language changes early. The release needs all of them.
+        crystal: ["1.19.1", "1.22.1", "latest"]
     container:
       image: crystallang/crystal:${{ matrix.crystal }}
     steps:
@@ -47,9 +48,10 @@ jobs:
       matrix:
         include:
           - { crystal: "1.19.1", db: sqlite, type: web }
+          - { crystal: "1.22.1", db: sqlite, type: web }
+          - { crystal: "1.22.1", db: sqlite, type: api }
           - { crystal: "latest", db: sqlite, type: web }
           - { crystal: "latest", db: postgresql, type: web }
-          - { crystal: "latest", db: sqlite, type: api }
     container:
       image: crystallang/crystal:${{ matrix.crystal }}
     steps:
