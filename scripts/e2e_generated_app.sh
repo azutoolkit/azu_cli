@@ -640,6 +640,14 @@ grep -qi '^x-content-type-options: nosniff' "$WORK/headers" || fail "GET /health
 ! grep -qi '^strict-transport-security' "$WORK/headers" || fail "HSTS sent over plain http"
 echo "ok: security headers present, no HSTS over http"
 
+# The server runs in development (no CRYSTAL_ENV), where .env.development turns on PERFORMANCE_MONITORING: the
+# dashboard reads the monitor the app mounts, so the requests above show up on it.
+step "the development dashboard shows the requests"
+for _ in 1 2 3; do expect_status /health 200; done
+expect_status /dev-dashboard 200
+! grep -q 'No requests recorded yet' "$WORK/body" || fail "GET /dev-dashboard shows no requests: the monitor that records them is not the one it reads"
+echo "ok: /dev-dashboard lists the requests"
+
 if [ "$SCAFFOLD" = 1 ]; then
   step "check the Post scaffold"
   if [ "$TYPE" = web ]; then check_web_scaffold; else check_api_scaffold; fi

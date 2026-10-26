@@ -105,11 +105,17 @@ module <%= @module_name %>
   end
 
   # Development tooling (query dashboard, performance monitor); decided when the app boots, so a
-  # production process never serves it. This is the one place that wires it.
+  # production process never serves it. This is the one place that wires it. The dashboard reads the
+  # requests that Azu::CONFIG.performance_monitor records, which exists when PERFORMANCE_MONITORING=true
+  # (.env.development sets it); mounting that same monitor is what fills the dashboard.
   def self.dev_handlers : Array(HTTP::Handler)
     return [] of HTTP::Handler unless Azu::CONFIG.env.development?
 
-    [Azu::Handler::DevDashboard.new, Azu::Handler::PerformanceMonitor.new] of HTTP::Handler
+    handlers = [Azu::Handler::DevDashboard.new] of HTTP::Handler
+    if monitor = Azu::CONFIG.performance_monitor
+      handlers << monitor
+    end
+    handlers
   end
 end
 
