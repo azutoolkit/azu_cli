@@ -397,6 +397,22 @@ describe AzuCLI::Generate::Project do
 
       FileUtils.rm_rf(test_dir)
     end
+
+    it "feeds the dashboard from the monitor it mounts, which .env.development turns on" do
+      test_dir = "./tmp_test_dev_dashboard"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: "sqlite").render(test_dir)
+
+      # DevDashboard reads Azu::CONFIG.performance_monitor: a monitor of its own would record requests nobody shows
+      source = File.read(File.join(test_dir, "src", "myapp.cr"))
+      source.should_not contain("PerformanceMonitor.new")
+      source.should contain("if monitor = Azu::CONFIG.performance_monitor")
+      File.read(File.join(test_dir, ".env.development")).should match(/^PERFORMANCE_MONITORING=true$/m)
+      # not an application-looking name, so the CLI applies it only because .env.example lists it
+      File.read(File.join(test_dir, ".env.example")).should match(/^#\s*PERFORMANCE_MONITORING=/m)
+
+      FileUtils.rm_rf(test_dir)
+    end
   end
 
   describe "static files" do

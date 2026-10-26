@@ -384,7 +384,7 @@ Generators extend `Teeplate::FileTree`:
   untrusted checkout. `load_project_env` honours the command's `--env` (a value starting with `-` and anything after `--`
   are ignored; `test` = `test`) before loading, and `azu test` warns when a shell `DATABASE_URL` will win.
   `spec/fixtures/dotenv_corpus.json` must stay identical to azu's (both specs pin its SHA256)
-- Generated files: `.env` (git-ignored, chmod 0600, random secrets), `.env.development` / `.env.test` (committed, `DATABASE_URL` only),
+- Generated files: `.env` (git-ignored, chmod 0600, random secrets), `.env.development` / `.env.test` (committed, no secrets: `DATABASE_URL`, and `PERFORMANCE_MONITORING` in development),
   `.env.example` (committed, secrets blank), `.env.local` is git-ignored. Do not put empty values in `.env`: once it
   is loaded an empty `SSL_MODE=` replaces a default
 - `scripts/e2e_generated_app.sh` unsets the secrets and asserts the app boots from `.env` alone, keeps its CSRF key
@@ -397,7 +397,10 @@ Generators extend `Teeplate::FileTree`:
   lists in `Generate::Project#build_packages` / `#runtime_packages`; change a Crystal version in one place
 - Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there; the generated shard.yml requires `~> 0.5.118`, azu v0.5.111 is the first with the loopback default in development and `Azu::App#start`, v0.5.112 adds start-once and the container warning, v0.5.116 adds `Static`'s `except:`, v0.5.117 makes Static refuse unknown file types instead of raising a 500, v0.5.118 decides the types from its own table, not the host mime database (`azu/dev` is there since 0.5.69, `Azu::Env` since 0.5.99, the SQLite pragmas since 0.5.93); `E2E_AZU_BRANCH=<ref>` pins the generated project's azu to a branch in the e2e scripts, opt-in)
 - Development handlers (DevDashboard, PerformanceMonitor) are mounted by `def self.dev_handlers` in the generated app
-  file, guarded by `Azu::CONFIG.env.development?` at runtime, never by the environment at generation time
+  file, guarded by `Azu::CONFIG.env.development?` at runtime, never by the environment at generation time. The monitor
+  mounted is `Azu::CONFIG.performance_monitor` (non-nil with `PERFORMANCE_MONITORING=true`, which `.env.development`
+  sets and `.env.example` lists), never a `PerformanceMonitor.new`: the dashboard reads that one, so a monitor of its
+  own records requests the dashboard never shows. The e2e checks `/dev-dashboard` lists requests
 - The generated app's `handlers` is `Array(HTTP::Handler)` (literal `of HTTP::Handler`): an array of a union of handler classes passed as `Array(HTTP::Handler)` is corrupted in optimized builds (IndexError / SIGSEGV at boot). `scripts/e2e_generated_app.sh` builds unoptimized, so only `scripts/e2e_docker.sh` (a `--release` build) catches this class of bug
 - Generated web apps mount `Azu::Handler::SecurityHeaders` (HSTS only with `Azu::CONFIG.tls?`) and, last, `Azu::Handler::Static.new(except: ["/templates"])` (web only) so `public/templates/*.jinja` is never served (whole-segment, case-insensitive, decoded and dot-segment-resolved match; a refused path falls through to the router's negotiated 404; the `except:` entries are validated by azu and raise `ArgumentError` when degenerate). Routes of your own under `/templates` still work (only the static file is hidden; the old DenyTemplates blocked every method; generated resource names avoid `Templates` through `Resource::RESERVED_NAMES`). Projects generated before this have their own `src/middleware/deny_templates.cr`: delete it and use `except:`. The e2e probes the spellings
 - The app requires `./db/schema` only: `src/db/seed.cr` would run on every boot (`azu db:migrate` requires the migrations itself)
