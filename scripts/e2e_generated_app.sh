@@ -21,6 +21,8 @@ set -eu
 
 # The secrets come from the generated .env, which the app loads at boot: do not let the caller's shell supply them.
 unset CSRF_SECRET SESSION_SECRET DATABASE_URL
+# The app runs in development, and .env.development turns the request monitor on: the caller's shell must not decide.
+unset CRYSTAL_ENV PERFORMANCE_MONITORING
 
 TYPE="${1:-web}"
 DB="${E2E_DB:-sqlite}"
@@ -640,12 +642,14 @@ grep -qi '^x-content-type-options: nosniff' "$WORK/headers" || fail "GET /health
 ! grep -qi '^strict-transport-security' "$WORK/headers" || fail "HSTS sent over plain http"
 echo "ok: security headers present, no HSTS over http"
 
-# The server runs in development (no CRYSTAL_ENV), where .env.development turns on PERFORMANCE_MONITORING: the
-# dashboard reads the monitor the app mounts, so the requests above show up on it.
+# The server runs in development (CRYSTAL_ENV is unset above), where .env.development turns on PERFORMANCE_MONITORING:
+# the dashboard reads the monitor the app mounts, so the requests above show up on it.
 step "the development dashboard shows the requests"
 for _ in 1 2 3; do expect_status /health 200; done
 expect_status /dev-dashboard 200
-! grep -q 'No requests recorded yet' "$WORK/body" || fail "GET /dev-dashboard shows no requests: the monitor that records them is not the one it reads"
+grep -Eq '[1-9][0-9,]* requests' "$WORK/body" || fail "GET /dev-dashboard counts no request: the monitor that records them is not the one it reads"
+! grep -q 'No requests recorded yet' "$WORK/body" || fail "GET /dev-dashboard says no request was recorded"
+! grep -q 'has no performance monitor' "$WORK/server.log" || fail "DevDashboard warned that no performance monitor feeds it"
 echo "ok: /dev-dashboard lists the requests"
 
 if [ "$SCAFFOLD" = 1 ]; then

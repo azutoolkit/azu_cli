@@ -1,5 +1,11 @@
 # Changelog - Azu CLI
 
+## Unreleased - The development dashboard shows requests
+
+- Fixed: the development dashboard of a generated app (`/dev-dashboard`) never showed a request. `dev_handlers` mounted a `PerformanceMonitor.new` of its own, while `DevDashboard` reads `Azu::CONFIG.performance_monitor`, which is nil unless `PERFORMANCE_MONITORING=true`. `dev_handlers` now mounts `Azu::CONFIG.performance_monitor` when it exists, the generated `.env.development` sets `PERFORMANCE_MONITORING=true` and `.env.example` lists it
+- Changed: `scripts/e2e_generated_app.sh` checks that `/dev-dashboard` counts the requests sent before it, and unsets `CRYSTAL_ENV` and `PERFORMANCE_MONITORING` from the caller's shell
+- Migration for apps generated before: in `def self.dev_handlers`, replace `[Azu::Handler::DevDashboard.new, Azu::Handler::PerformanceMonitor.new] of HTTP::Handler` by building `[Azu::Handler::DevDashboard.new] of HTTP::Handler` and appending `Azu::CONFIG.performance_monitor` when it is not nil; add `PERFORMANCE_MONITORING=true` to `.env.development` and `# PERFORMANCE_MONITORING=true` to `.env.example`
+
 ## Unreleased - One Crystal floor: 1.22.1
 
 - Changed (floor): the CLI (`shard.yml`) and the generated projects (`crystal: '>= 1.22.1'` in the project template) now declare `crystal: '>= 1.22.1'`, replacing `>= 1.19.1`. azu 0.5.124 and newer (azutoolkit/azu#227) need Crystal 1.22.1 and generated apps resolve `azu ~> 0.5.118` to the newest 0.5.x, so the old floor held only because every install passed `--ignore-crystal-version`, and `azu doctor` printed OK on 1.19.1 while the azu dependency refused it. `azu doctor` reads the floor from the project's `shard.yml`, so it now fails below 1.22.1 and asks for an upgrade
