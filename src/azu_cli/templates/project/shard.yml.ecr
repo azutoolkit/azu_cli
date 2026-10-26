@@ -15,12 +15,13 @@ targets:
 
 dependencies:
   # The generated app requires "azu/env" and "azu/dev". v0.5.111 is the first release with the loopback default
-  # in development (HOST unset) and Azu::App#start; v0.5.112 adds start-once and the container warning; v0.5.117
-  # adds Azu::Handler::Static's `except:` (v0.5.116; the generated web app keeps public/templates unserved with it)
-  # and makes Static refuse a file of an unknown type instead of failing with a 500.
+  # in development (HOST unset) and Azu::App#start; v0.5.112 adds start-once and the container warning;
+  # v0.5.116 adds Azu::Handler::Static's `except:` (the generated web app keeps public/templates unserved with it);
+  # v0.5.117 makes Static refuse a file of an unknown type instead of failing with a 500; v0.5.118 decides the
+  # types from a table of its own, not the host's mime database.
   azu:
     github: azutoolkit/azu
-    version: ~> 0.5.117
+    version: ~> 0.5.118
 
   # Exact on purpose: cql 0.0.N releases have broken generated apps before (0.0.562). To bump, change this
   # version and run scripts/e2e_generated_app.sh web and api (and E2E_DB=postgresql web).

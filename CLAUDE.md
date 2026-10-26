@@ -395,7 +395,7 @@ Generators extend `Teeplate::FileTree`:
 - `azu new --docker` writes a multi-stage `Dockerfile` and `.dockerignore`; `--ci` (default `GitHub Actions`) writes
   `.github/workflows/ci.yml`. Both use `Generate::Project::CRYSTAL_VERSION` (also `.tool-versions`) and the package
   lists in `Generate::Project#build_packages` / `#runtime_packages`; change a Crystal version in one place
-- Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there; the generated shard.yml requires `~> 0.5.117`, azu v0.5.111 is the first with the loopback default in development and `Azu::App#start`, v0.5.112 adds start-once and the container warning, v0.5.116 adds `Static`'s `except:`, v0.5.117 makes Static refuse unknown file types instead of raising a 500 (`azu/dev` is there since 0.5.69, `Azu::Env` since 0.5.99, the SQLite pragmas since 0.5.93); `E2E_AZU_BRANCH=<ref>` pins the generated project's azu to a branch in the e2e scripts, opt-in)
+- Web and api apps `require "azu/dev"` (DevDashboard and PerformanceMonitor moved there; the generated shard.yml requires `~> 0.5.118`, azu v0.5.111 is the first with the loopback default in development and `Azu::App#start`, v0.5.112 adds start-once and the container warning, v0.5.116 adds `Static`'s `except:`, v0.5.117 makes Static refuse unknown file types instead of raising a 500, v0.5.118 decides the types from its own table, not the host mime database (`azu/dev` is there since 0.5.69, `Azu::Env` since 0.5.99, the SQLite pragmas since 0.5.93); `E2E_AZU_BRANCH=<ref>` pins the generated project's azu to a branch in the e2e scripts, opt-in)
 - Development handlers (DevDashboard, PerformanceMonitor) are mounted by `def self.dev_handlers` in the generated app
   file, guarded by `Azu::CONFIG.env.development?` at runtime, never by the environment at generation time
 - The generated app's `handlers` is `Array(HTTP::Handler)` (literal `of HTTP::Handler`): an array of a union of handler classes passed as `Array(HTTP::Handler)` is corrupted in optimized builds (IndexError / SIGSEGV at boot). `scripts/e2e_generated_app.sh` builds unoptimized, so only `scripts/e2e_docker.sh` (a `--release` build) catches this class of bug
@@ -409,7 +409,7 @@ Generators extend `Teeplate::FileTree`:
 - No hard-coded secrets in generated code: read them with `Azu::Env.secret("NAME")` (the environment value, a random
   one outside production, an error in production; never a per-file copy of that guard) and list a random value in
   the git-ignored `.env`. Azu reads `CRYSTAL_ENV` only
-- Escape template output (`| e`; Jinja `.jinja` files are not autoescaped); redirects after writes are 303
+- Escape template output (`| e` on user values; azu autoescapes `.jinja` files since azu#221, so HTML you build yourself, such as `csrf_tag` or `csrf_metatag`, is printed with `| safe`); redirects after writes are 303
 - Check what a generator would overwrite and refuse (`Auth.conflict`, duplicate migration class names)
 - Specs must be able to fail: write the failing assertion first; do not claim a review that did not happen
 - Do not document commands or flags that are not registered; `azu help` and `CLI_REFERENCE.md` list what exists

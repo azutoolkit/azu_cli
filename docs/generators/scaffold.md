@@ -174,7 +174,7 @@ end
 
 The `_form` partial carries the CSRF field (`csrf_tag`, the project enables `Azu::Handler::CSRF`) and
 the edit page adds `_method=patch`, which the router turns into a `PATCH`. Delete is a form on the show page
-with `_method=delete`. Values are escaped with `| e`: `.jinja` templates are not auto-escaped.
+with `_method=delete`. Values are escaped with `| e` (azu also autoescapes `.jinja` templates, so HTML a page builds itself, like `csrf_tag`, is printed with `| safe`).
 
 ## Attributes
 
