@@ -557,7 +557,7 @@ if [ "$SCAFFOLD" = 1 ] && [ "$TYPE" = web ]; then
 fi
 
 step "shards install"
-shards install --ignore-crystal-version
+shards install
 
 if [ "$SCAFFOLD" = 1 ]; then
   step "create and migrate the database (azu db:setup)"

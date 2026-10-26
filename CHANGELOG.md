@@ -1,5 +1,15 @@
 # Changelog - Azu CLI
 
+## Unreleased - One Crystal floor: 1.22.1
+
+- Changed (floor): the CLI (`shard.yml`) and the generated projects (`crystal: '>= 1.22.1'` in the project template) now declare `crystal: '>= 1.22.1'`, replacing `>= 1.19.1`. azu 0.5.124 and newer (azutoolkit/azu#227) need Crystal 1.22.1 and generated apps resolve `azu ~> 0.5.118` to the newest 0.5.x, so the old floor held only because every install passed `--ignore-crystal-version`, and `azu doctor` printed OK on 1.19.1 while the azu dependency refused it. `azu doctor` reads the floor from the project's `shard.yml`, so it now fails below 1.22.1 and asks for an upgrade
+- Changed: the generated `Dockerfile` and CI workflow, the CLI's Makefile and CI, and `scripts/e2e_generated_app.sh` run `shards install` without `--ignore-crystal-version`; the shards check passes with cql 0.0.604, pg/mysql/sqlite3 and crystal-db 0.15 on 1.22.1
+- Changed: the CI matrix drops the 1.19.1 build and generated-app legs and keeps 1.22.1 (primary) and latest
+- Fixed: the generated `Dockerfile` runtime stage is `ubuntu:26.04` with `libxml2-16` (was `ubuntu:24.04` with `libxml2`): the `crystallang/crystal:1.22.1` build stage is Ubuntu 26.04, so the binary needed `libxml2.so.16` and the container exited at start. Found by running `scripts/e2e_docker.sh web` for the first time since the move to 1.22.1
+- Removed: the unused `Utils::REQUIRED_CRYSTAL_VERSION` (1.16.0), `check_crystal_version`, `enforce_crystal_version!` and `crystal_version_info`; nothing called them
+- Docs: removed the pages for the `shard` and `readme` generators (`azu generate shard|readme` and `--crystal-version` are not registered commands) and the stale Crystal 1.15 to 1.19 mentions (Docker examples, compatibility table, contributing, doctor output)
+- Migration for apps generated before: set `crystal: '>= 1.22.1'` in `shard.yml` (azu 0.5.124+ requires it anyway) and drop `--ignore-crystal-version` from your Dockerfile and CI
+
 ## Unreleased - Crystal 1.22.1
 
 - Changed: `Generate::Project::CRYSTAL_VERSION` is 1.22.1: generated projects get `.tool-versions` `crystal 1.22.1`, a Dockerfile `FROM crystallang/crystal:1.22.1` and a CI workflow in that container. The generated `shard.yml` keeps `crystal: '>= 1.19.1'` (the floor of azu `~> 0.5.118`; cql 0.0.604 needs 1.12.2). This repository's `.tool-versions` is 1.22.1 too

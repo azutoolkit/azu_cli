@@ -49,7 +49,7 @@ module AzuCLI
         Check.fail("crystal", "Crystal #{installed} is older than the #{floor} the project needs (shard.yml)", "install Crystal #{floor} or newer")
       end
 
-      # The lower bound in shard.yml's `crystal:` (`1.19.1`, `>= 1.19.1`, `~> 1.19`, `< 2.0, >= 1.19`), or nil when it
+      # The lower bound in shard.yml's `crystal:` (`1.22.1`, `>= 1.22.1`, `~> 1.22`, `< 2.0, >= 1.22`), or nil when it
       # only has an upper bound.
       def crystal_floor : String?
         requirement = shard_yml.try(&.["crystal"]?).try(&.to_s)

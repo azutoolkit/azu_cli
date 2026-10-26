@@ -17,7 +17,7 @@ build: shard $(AZU)
 .PHONY: shard
 shard:
 	@echo "Building Azu CLI"
-	shards build --production --ignore-crystal-version
+	shards build --production
 
 $(AZU): $(AZU_SOURCES) | $(OUT_DIR)
 	crystal build -o $@ $(SOURCE_FILE) -p --no-debug

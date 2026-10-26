@@ -170,7 +170,7 @@ module AzuCLI
 
       # The shared libraries the release binary links against, and curl for the health check.
       def runtime_packages : String
-        packages = %w(ca-certificates curl tzdata libssl3t64 libyaml-0-2 libevent-2.1-7t64 libpcre2-8-0 libgc1 libxml2 libgmp10 zlib1g)
+        packages = %w(ca-certificates curl tzdata libssl3t64 libyaml-0-2 libevent-2.1-7t64 libpcre2-8-0 libgc1 libxml2-16 libgmp10 zlib1g)
         packages << "libsqlite3-0" if database_adapter == "sqlite3"
         packages.join(" ")
       end

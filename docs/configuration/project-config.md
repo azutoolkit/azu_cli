@@ -471,7 +471,7 @@ deployment:
   # Docker configuration
   docker:
     enabled: true
-    base_image: crystallang/crystal:1.16.0-alpine
+    base_image: crystallang/crystal:1.22.1-alpine
     multi_stage: true
     optimize_size: true
 

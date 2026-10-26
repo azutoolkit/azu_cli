@@ -8,7 +8,7 @@ Thank you for your interest in contributing to Azu CLI! This guide will help you
 
 Before contributing, ensure you have:
 
-- [Crystal](https://crystal-lang.org/install/) 1.19.1 or later (1.22.1 recommended, see `.tool-versions`)
+- [Crystal](https://crystal-lang.org/install/) 1.22.1 or later (see `.tool-versions`)
 - [Git](https://git-scm.com/) for version control
 - A GitHub account for submitting pull requests
 - Basic knowledge of Crystal programming language

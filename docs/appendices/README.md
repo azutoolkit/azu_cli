@@ -58,9 +58,10 @@ Definitions and explanations of terms used throughout the Azu CLI documentation.
 
 | Azu CLI Version | Crystal Version | Azu Framework | CQL ORM |
 | --------------- | --------------- | ------------- | ------- |
-| 0.0.1+13        | 1.16.0+         | 0.1.0+        | 0.1.0+  |
-| 0.0.1+12        | 1.15.0+         | 0.1.0+        | 0.1.0+  |
-| 0.0.1+11        | 1.14.0+         | 0.1.0+        | 0.1.0+  |
+| 0.1.x           | 1.22.1+         | ~> 0.5.118    | 0.0.604 |
+
+Generated projects declare `crystal: '>= 1.22.1'` (azu 0.5.124 and newer need it), so installing their shards
+does not need `--ignore-crystal-version`.
 
 ### Common Commands Quick Reference
 
@@ -325,7 +326,7 @@ crystal build --release --static src/main.cr
 
 ```dockerfile
 # Dockerfile
-FROM crystallang/crystal:1.16.0-alpine
+FROM crystallang/crystal:1.22.1-alpine
 
 WORKDIR /app
 

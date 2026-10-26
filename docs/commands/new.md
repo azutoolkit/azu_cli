@@ -222,7 +222,7 @@ Generates a multi-stage `Dockerfile` and a `.dockerignore`:
 
 - build stage `crystallang/crystal:<version of the template>` with the system packages the CI job installs,
   `shards install`, and a `crystal build --release` of `src/server.cr` (web) or `src/api.cr` (api);
-- runtime stage on `ubuntu:24.04` with only the shared libraries the binary links against, a non-root user,
+- runtime stage on `ubuntu:26.04` (the release of the build image) with only the shared libraries the binary links against, a non-root user,
   `CRYSTAL_ENV=production`, `HOST=0.0.0.0`, `PORT=4000` and a `HEALTHCHECK` on `/health`;
 - on SQLite, a `/data` volume and `DATABASE_URL=sqlite3:///data/<project>.db`.
 

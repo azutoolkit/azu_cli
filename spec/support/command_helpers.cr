@@ -6,7 +6,7 @@ module CommandHelpers
   SHARD_YML = <<-YAML
     name: blog
     version: 0.1.0
-    crystal: ">= 1.19.1"
+    crystal: ">= 1.22.1"
     dependencies:
       cql:
         github: azutoolkit/cql

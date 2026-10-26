@@ -32,7 +32,7 @@ private class FakeSystem < AzuCLI::Diagnostics::System
 end
 
 private GOOD_COMMANDS = {
-  "crystal --version"                 => {0, "Crystal 1.19.1 [a3178c32b] (2026-01-20)\n\nLLVM: 20.1.8\n"},
+  "crystal --version"                 => {0, "Crystal 1.22.1 [a3178c32b] (2026-09-01)\n\nLLVM: 20.1.8\n"},
   "shards --version"                  => {0, "Shards 0.19.1 (2025-01-01)\n"},
   "shards check"                      => {0, "Dependencies are satisfied\n"},
   "docker --version"                  => {0, "Docker version 27.0.0\n"},
@@ -51,36 +51,36 @@ describe AzuCLI::Diagnostics::Checks do
         check = checks(dir).crystal
 
         check.status.ok?.should be_true
-        check.message.should contain("1.19.1")
+        check.message.should contain("1.22.1")
         check.hint.should be_nil
       end
     end
 
     it "fails below the floor, naming both versions and a hint" do
       in_tmp_project do |dir|
-        system = FakeSystem.new(GOOD_COMMANDS.merge({"crystal --version" => {0, "Crystal 1.18.2 [abc] (2025-01-01)\n"}}))
+        system = FakeSystem.new(GOOD_COMMANDS.merge({"crystal --version" => {0, "Crystal 1.21.0 [abc] (2025-01-01)\n"}}))
         check = checks(dir, system: system).crystal
 
         check.status.fail?.should be_true
-        check.message.should contain("1.18.2")
-        check.message.should contain("1.19.1")
-        check.hint.to_s.should contain("install Crystal 1.19.1")
+        check.message.should contain("1.21.0")
+        check.message.should contain("1.22.1")
+        check.hint.to_s.should contain("install Crystal 1.22.1")
       end
     end
 
     it "reads floors written as a requirement, with two components, or not at all" do
-      {"'< 2.0, >= 1.19'" => "1.19", "'>= 1.19.1, < 2.0'" => "1.19.1", "'< 2.0'" => nil, "1.19.1" => "1.19.1"}.each do |requirement, floor|
+      {"'< 2.0, >= 1.22'" => "1.22", "'>= 1.22.1, < 2.0'" => "1.22.1", "'< 2.0'" => nil, "1.22.1" => "1.22.1"}.each do |requirement, floor|
         in_tmp_project(shard_yml: "name: blog\nversion: 0.1.0\ncrystal: #{requirement}\n") do |dir|
           checks(dir).crystal_floor.should eq floor
         end
       end
-      in_tmp_project(shard_yml: "name: blog\nversion: 0.1.0\ncrystal: '~> 1.19'\n") do |dir|
-        checks(dir).crystal_floor.should eq "1.19"
+      in_tmp_project(shard_yml: "name: blog\nversion: 0.1.0\ncrystal: '~> 1.22'\n") do |dir|
+        checks(dir).crystal_floor.should eq "1.22"
         checks(dir).crystal.status.ok?.should be_true
       end
       in_tmp_project(shard_yml: "name: blog\nversion: 0.1.0\n") do |dir|
         checks(dir).crystal_floor.should be_nil
-        checks(dir).crystal.message.should eq "Crystal 1.19.1"
+        checks(dir).crystal.message.should eq "Crystal 1.22.1"
       end
     end
 

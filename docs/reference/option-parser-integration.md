@@ -4,7 +4,7 @@ This document explains how the Azu CLI uses Crystal's built-in `OptionParser` fo
 
 ## Overview
 
-The Azu CLI has been enhanced to use Crystal's `OptionParser` class ([API documentation](https://crystal-lang.org/api/1.16.3/OptionParser.html)) for standardized and powerful option parsing. This provides:
+The Azu CLI has been enhanced to use Crystal's `OptionParser` class ([API documentation](https://crystal-lang.org/api/1.22.1/OptionParser.html)) for standardized and powerful option parsing. This provides:
 
 - **Automatic help generation**: Rich help messages with proper formatting
 - **Type validation**: Built-in validation for different argument types
@@ -344,6 +344,6 @@ See the following commands for complete examples:
 
 ## Resources
 
-- [Crystal OptionParser API](https://crystal-lang.org/api/1.16.3/OptionParser.html)
+- [Crystal OptionParser API](https://crystal-lang.org/api/1.22.1/OptionParser.html)
 - [GNU-style command-line options](https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html)
-- [Crystal CLI best practices](https://crystal-lang.org/reference/1.16/guides/cli.html)
+- [Crystal CLI best practices](https://crystal-lang.org/reference/1.22/guides/cli.html)

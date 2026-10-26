@@ -5,12 +5,12 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY shard.yml shard.lock* ./
-RUN shards install --ignore-crystal-version
+RUN shards install
 COPY . .
 RUN mkdir -p bin && crystal build --release --no-debug src/<%= main_file %> -o bin/<%= binary_name %>
 
 # Runtime stage: only the shared libraries the binary links against.
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 RUN apt-get update \
  && apt-get install -y --no-install-recommends <%= runtime_packages %> \
  && rm -rf /var/lib/apt/lists/* \

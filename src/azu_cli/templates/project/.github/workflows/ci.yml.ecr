@@ -20,7 +20,7 @@ jobs:
           apt-get update
           apt-get install -y <%= build_packages %>
       - name: Install shards
-        run: shards install --ignore-crystal-version
+        run: shards install
       - name: Check formatting
         run: crystal tool format --check src spec
       - name: Run specs
