@@ -96,7 +96,7 @@ fi
 if [ -n "${E2E_DOCKER_CA:-}" ]; then
   [ -f "$E2E_DOCKER_CA" ] || fail "E2E_DOCKER_CA is not a file: $E2E_DOCKER_CA"
   cp "$E2E_DOCKER_CA" e2e-extra-ca.crt
-  awk '{ print } /^FROM / { print "COPY e2e-extra-ca.crt /usr/local/share/ca-certificates/e2e-extra-ca.crt"; print "RUN update-ca-certificates 2>/dev/null || cat /usr/local/share/ca-certificates/e2e-extra-ca.crt >> /etc/ssl/certs/ca-certificates.crt" }' Dockerfile >Dockerfile.new && mv Dockerfile.new Dockerfile
+  awk '{ print } /^FROM / { print "COPY e2e-extra-ca.crt /usr/local/share/ca-certificates/e2e-extra-ca.crt"; print "RUN update-ca-certificates 2>/dev/null || (mkdir -p /etc/ssl/certs && cat /usr/local/share/ca-certificates/e2e-extra-ca.crt >> /etc/ssl/certs/ca-certificates.crt)" }' Dockerfile >Dockerfile.new && mv Dockerfile.new Dockerfile
   echo "extra CA $E2E_DOCKER_CA trusted in the build"
 fi
 
