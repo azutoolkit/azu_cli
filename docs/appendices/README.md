@@ -60,8 +60,10 @@ Definitions and explanations of terms used throughout the Azu CLI documentation.
 | --------------- | --------------- | ------------- | ------- |
 | 0.1.x           | 1.22.1+         | ~> 0.5.118    | 0.0.604 |
 
-Generated projects declare `crystal: '>= 1.22.1'` (azu 0.5.124 and newer need it), so installing their shards
-does not need `--ignore-crystal-version`.
+Generated projects declare `crystal: '>= 1.22.1'`, which is what azu 0.5.124 and newer are built and tested on, so
+installing their shards does not need `--ignore-crystal-version`. Shards only warns (`may be incompatible with
+Crystal`) about a dependency's `crystal:` line and never enforces the root shard's own; `azu doctor` is the check that
+fails below 1.22.1.
 
 ### Common Commands Quick Reference
 
@@ -338,6 +340,10 @@ RUN crystal build --release src/main.cr
 
 CMD ["./main"]
 ```
+
+The `1.22.1-alpine` tag exists (checked with `docker manifest inspect`) and suits the `--static` build above. It is
+not what `azu new --docker` generates: that Dockerfile builds on the Ubuntu-based `crystallang/crystal:1.22.1` and runs
+on `ubuntu:26.04`.
 
 ### Environment Setup
 
