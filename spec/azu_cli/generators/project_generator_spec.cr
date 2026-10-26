@@ -408,6 +408,7 @@ describe AzuCLI::Generate::Project do
       source.should_not contain("PerformanceMonitor.new")
       source.should contain("if monitor = Azu::CONFIG.performance_monitor")
       File.read(File.join(test_dir, ".env.development")).should match(/^PERFORMANCE_MONITORING=true$/m)
+      File.read(File.join(test_dir, ".env.test")).should_not contain("PERFORMANCE_MONITORING")
       # not an application-looking name, so the CLI applies it only because .env.example lists it
       File.read(File.join(test_dir, ".env.example")).should match(/^#\s*PERFORMANCE_MONITORING=/m)
 

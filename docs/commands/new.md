@@ -314,7 +314,8 @@ except `new`) loads them at boot; precedence, highest first: variables already i
 overridden), `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`.
 
 - `.env` is git-ignored: random `CSRF_SECRET` (and `SESSION_SECRET` after `azu generate auth`), `PORT`, `HOST`, log settings
-- `.env.development` / `.env.test` are committed: only the `DATABASE_URL` of that environment
+- `.env.development` / `.env.test` are committed: the `DATABASE_URL` of that environment, and in development
+  `PERFORMANCE_MONITORING=true`, which records the requests the development dashboard (`/dev-dashboard`) shows
 - `.env.example` is committed: every variable the app reads, with the secrets left blank
 - `.env.local` (git-ignored) is yours for machine-specific overrides
 
