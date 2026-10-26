@@ -349,12 +349,12 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf("./tmp_test_db_require")
     end
 
-    it "pins azu to the first release with the loopback default, start-once, the container warning and Static's except:" do
+    it "pins azu to the first release with the loopback default, start-once, the container warning, Static's except:, unknown-type refusal and the host-independent type table" do
       FileUtils.mkdir_p("./tmp_test_azu_pin")
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_azu_pin")
 
       shard = File.read("./tmp_test_azu_pin/shard.yml")
-      shard.should match(/github: azutoolkit\/azu\n\s+version: ~> 0\.5\.116\n/)
+      shard.should match(/github: azutoolkit\/azu\n\s+version: ~> 0\.5\.118\n/)
       shard.should_not contain("0.5.69")
       FileUtils.rm_rf("./tmp_test_azu_pin")
     end
@@ -366,7 +366,7 @@ describe AzuCLI::Generate::Project do
         AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
 
         source = File.read("#{dir}/src/myapp.cr")
-        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.116).\nrequire "azu/dev"\n)).should eq(requires)
+        source.includes?(%(require "azu"\n# The development dashboard and performance monitor live behind azu/dev (needs azu >= 0.5.118).\nrequire "azu/dev"\n)).should eq(requires)
         FileUtils.rm_rf(dir)
       end
     end
@@ -446,6 +446,17 @@ describe AzuCLI::Generate::Project do
       FileUtils.mkdir_p(api)
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "api").render(api)
       handler_block.call(api).should_not contain("Static")
+    end
+  end
+
+  describe "welcome page" do
+    it "prints the CSRF meta tag as HTML (| safe), as the autoescaping .jinja templates need" do
+      web = "./tmp_test_welcome_safe"
+      FileUtils.mkdir_p(web)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "web").render(web)
+      page = File.read("#{web}/public/templates/myapp/welcome/index_page.jinja")
+      page.should contain("{{ csrf_metatag | safe }}")
+      page.should_not contain("{{ csrf_metatag }}")
     end
   end
 

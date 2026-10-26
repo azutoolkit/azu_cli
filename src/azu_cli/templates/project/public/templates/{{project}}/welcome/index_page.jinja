@@ -2,7 +2,7 @@
 
 {% block title %}Welcome to {{ project_title }}{% endblock %}
 {% block description %}Your new Azu application is running. Typed request and response contracts with real-time built in.{% endblock %}
-{% block head %}{{ csrf_metatag }}{% endblock %}
+{% block head %}{{ csrf_metatag | safe }}{% endblock %}
 
 {% block content %}
 <section class="hero" aria-labelledby="hero-title">
