@@ -11,6 +11,9 @@
 # Usage: scripts/e2e_docker.sh [web|api]      (default: web)
 # Env:   AZU_BIN             path to the azu binary to test (default: <repo>/bin/azu)
 #        DOCKER_BUILD_ARGS   extra `docker build` arguments (a proxy, --network host, ...)
+#        E2E_DOCKER_CA       path to a CA certificate (PEM) to trust inside the build, for a network behind a TLS-intercepting
+#                            proxy; unset (the default) leaves the generated Dockerfile untouched. Combine with
+#                            DOCKER_BUILD_ARGS="--build-arg HTTPS_PROXY=..." if the proxy must be named too
 #        KEEP_TMP            set to 1 to keep the temp dir for debugging
 #        E2E_AZU_BRANCH      pin the generated project's azu dependency to this branch (e.g. master)
 #        KEEP_IMAGE          set to 1 to keep the built image
@@ -87,6 +90,14 @@ done
 echo "ok: Dockerfile, .dockerignore and .github/workflows/ci.yml exist"
 if [ "$TYPE" = web ]; then
   "$AZU_BIN" generate auth >/dev/null
+fi
+
+# Opt-in: trust an extra CA in every stage of the image under test (only this temp copy of the Dockerfile changes).
+if [ -n "${E2E_DOCKER_CA:-}" ]; then
+  [ -f "$E2E_DOCKER_CA" ] || fail "E2E_DOCKER_CA is not a file: $E2E_DOCKER_CA"
+  cp "$E2E_DOCKER_CA" e2e-extra-ca.crt
+  awk '{ print } /^FROM / { print "COPY e2e-extra-ca.crt /usr/local/share/ca-certificates/e2e-extra-ca.crt"; print "RUN update-ca-certificates 2>/dev/null || (mkdir -p /etc/ssl/certs && cat /usr/local/share/ca-certificates/e2e-extra-ca.crt >> /etc/ssl/certs/ca-certificates.crt)" }' Dockerfile >Dockerfile.new && mv Dockerfile.new Dockerfile
+  echo "extra CA $E2E_DOCKER_CA trusted in the build"
 fi
 
 step "docker build"

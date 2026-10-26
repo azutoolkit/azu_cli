@@ -171,7 +171,7 @@ module AzuCLI
         Logger.step(5, 9, "License: #{@license}")
 
         # Project type
-        @project_type = prompt_choice("Project type", ["web", "api", "cli"], @project_type)
+        @project_type = prompt_choice("Project type", PROJECT_TYPES, @project_type)
         Logger.step(6, 9, "Project type: #{@project_type}")
 
         # Database
@@ -324,7 +324,12 @@ module AzuCLI
         puts
       end
 
+      PROJECT_TYPES = ["web", "api", "cli"]
+
       private def delivery_error : String?
+        unless PROJECT_TYPES.includes?(@project_type)
+          return "Unknown project type '#{@project_type}'. Choose one of: #{PROJECT_TYPES.join(", ")}."
+        end
         unless AzuCLI::Generate::Project::CI_SETUPS.includes?(@ci_setup)
           return "Unknown CI setup '#{@ci_setup}'. Choose one of: #{AzuCLI::Generate::Project::CI_SETUPS.join(", ")}."
         end

@@ -520,6 +520,10 @@ RUN crystal build --release src/main.cr
 CMD ["./main"]
 ```
 
+The `1.22.1-alpine` tag exists (checked with `docker manifest inspect`) and suits the `--static` build above. It is
+not what `azu new --docker` generates: that Dockerfile builds on the Ubuntu-based `crystallang/crystal:1.22.1` and runs
+on `ubuntu:26.04`.
+
 ### Environment Setup
 
 ```bash

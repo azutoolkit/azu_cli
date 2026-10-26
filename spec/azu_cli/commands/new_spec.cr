@@ -244,6 +244,38 @@ describe AzuCLI::Commands::New do
       end
     end
 
+    it "creates a cli project with --db sqlite --yes" do
+      TestHelpers::TestSetup.with_temp_project("cli_sqlite_test") do |temp_project|
+        Dir.cd(temp_project.path) do
+          cli = AzuCLI::Commands::New.new
+          cli.parse_args(["--yes", "--type", "cli", "--db", "sqlite", "--no-git", "tool_app"])
+          TestHelpers::TestSetup.with_captured_output do |_|
+            cli.execute.success?.should be_true
+          end
+
+          File.exists?("tool_app/src/tool_app.cr").should be_true
+          File.read("tool_app/shard.yml").should contain("sqlite3")
+        end
+      end
+    end
+
+    it "refuses a project type that is not web, api or cli" do
+      TestHelpers::TestSetup.with_temp_project("bad_type_test") do |temp_project|
+        Dir.cd(temp_project.path) do
+          cli = AzuCLI::Commands::New.new
+          cli.parse_args(["--yes", "--type", "worker", "--no-git", "tool_app"])
+          TestHelpers::TestSetup.with_captured_output do |_|
+            result = cli.execute
+            result.success?.should be_false
+            result.error.should contain("Unknown project type 'worker'")
+            result.error.should contain("web, api, cli")
+          end
+
+          Dir.exists?("tool_app").should be_false
+        end
+      end
+    end
+
     it "refuses --docker for a cli project and an unknown CI setup" do
       TestHelpers::TestSetup.with_temp_project("bad_delivery_test") do |temp_project|
         Dir.cd(temp_project.path) do
