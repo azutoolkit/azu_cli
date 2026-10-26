@@ -30,14 +30,17 @@ module AzuCLI
           db_name = @database_name || infer_database_name
 
           unless database_exists?(db_name)
-            return error("Database '#{db_name}' does not exist. Run 'azu db:create' first.")
+            # A SQLite database is a file: create it, as `azu db:create` would. A server database is never created here.
+            return error("Database '#{db_name}' does not exist. Run 'azu db:create' first (or 'azu db:setup' to create and migrate).") unless sqlite?
+            create_sqlite_database(db_name)
+            Logger.info("Created database file #{sqlite_path(db_name)}")
           end
 
           ensure_migrations_dir
 
-          # Check if migrations exist
           unless has_migrations?
-            return error("No migration files found. Create migrations using 'azu generate migration NAME'")
+            Logger.info("No migrations to run yet: 'azu generate model NAME field:type' or 'azu generate migration NAME' creates one")
+            return success("No migrations to run")
           end
 
           # Validate migrations unless skipped

@@ -83,6 +83,24 @@ ensure
     })
   end
 
+  # `azu new` then `azu db:migrate`: the database file does not exist yet and there is no migration
+  it "migrates a fresh project: creates the database file, and no migration is not an error" do
+    with_sqlite_project.call(sqlite_shards, -> {
+      result = AzuCLI::Commands::DB::Migrate.new.execute
+      result.success?.should be_true
+      File.exists?("db/blog_test.db").should be_true
+
+      AzuCLI::Commands::DB::Migrate.new.execute.success?.should be_true
+    })
+  end
+
+  it "sets up a fresh project that has no migration yet" do
+    with_sqlite_project.call(sqlite_shards, -> {
+      AzuCLI::Commands::DB::Setup.new.execute.success?.should be_true
+      File.exists?("db/blog_test.db").should be_true
+    })
+  end
+
   it "refuses an in-memory database, whichever way the URL spells it, in every command that looks for the file" do
     ["sqlite3::memory:", "sqlite3:///:memory:", "sqlite3://:memory:", "sqlite3:"].each do |url|
       with_sqlite_project.call(sqlite_shards, -> {
