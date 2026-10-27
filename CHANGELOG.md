@@ -5,6 +5,18 @@
 - Fixed: `azu new` with an unknown `--type`, an unknown `--ci` or `--docker` for a cli project exits with 2 (invalid usage), like the other usage errors; it exited with 1
 - Fixed: `scripts/e2e_docker.sh` resolves a relative `E2E_DOCKER_CA` before it changes directory; a relative path failed with "E2E_DOCKER_CA is not a file"
 
+## Unreleased - `session:setup` writes code that compiles
+
+- Fixed: `azu session:setup` generated an initializer against an API the session shard does not have
+  (`Session::Session.new`, `Session::Middleware`, `Session::DatabaseStore`, `Azu.use`) with a random secret written into
+  the source as a fallback. It now writes the same shape `azu generate auth` does: `UserSession`, `Session.use_store`,
+  `config.secret = Azu::Env.secret("SESSION_SECRET")`, mounts `Session::SessionHandler` after `RequestId` and appends
+  `SESSION_SECRET` to `.env`
+- Changed: `--backend` is `cookie` (new default), `redis` or `memory`; anything else, `database` included, is a usage
+  error (exit 2). The sessions migration is gone, and `session:clear` no longer has a database path; for cookie
+  sessions it explains that changing `SESSION_SECRET` ends them
+- Docs: `docs/commands/session.md` rewritten to what the commands do
+
 ## Unreleased - The development dashboard shows requests
 
 - Fixed: the development dashboard of a generated app (`/dev-dashboard`) never showed a request. `dev_handlers` mounted a `PerformanceMonitor.new` of its own, while `DevDashboard` reads `Azu::CONFIG.performance_monitor`, which is nil unless `PERFORMANCE_MONITORING=true`. `dev_handlers` now mounts `Azu::CONFIG.performance_monitor` when it exists, the generated `.env.development` sets `PERFORMANCE_MONITORING=true` and `.env.example` lists it
