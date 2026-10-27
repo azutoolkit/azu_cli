@@ -47,7 +47,7 @@ The first of these that is set wins:
 | `AZU_DB_ADAPTER`                                             | The adapter. Without it, the driver in `shard.yml` decides (`pg`, then `sqlite3` or `mysql`) |
 | `AZU_DB_POOL_SIZE`, `AZU_DB_POOL_TIMEOUT`, `AZU_DB_CHECKOUT_TIMEOUT` | Pool size (10) and timeouts in seconds (5)   |
 
-Without a name, the database is `<project>_<environment>`, from the name of the current directory. The environment is `AZU_ENV`, then `CRYSTAL_ENV`, then `development`. Before the command starts, the CLI loads the project's `.env` files for that environment; see [environment files](../configuration/environment.md). A variable already set in the shell wins over them.
+Without a name, the database is `<project>_<environment>`, from the name of the current directory. The environment is `AZU_ENV`, then `CRYSTAL_ENV`, then `development`. Before the command starts, the CLI loads the project's `.env` files for that environment. A variable already set in the shell wins over them.
 
 ### azu db:create
 
@@ -195,7 +195,7 @@ Lists every migration with its version, name and applied time, or `pending`. On 
 
 </details>
 
-To write a migration, use [`azu generate migration`](../generators/migration.md). For the connection settings in full, see [database configuration](../configuration/database-config.md).
+To write a migration, use [`azu generate migration`](../generators/migration.md).
 
 ## Realistic output
 

@@ -6,7 +6,7 @@ description: Create a new Azu project with the wizard or flags, covering project
 
 ## Overview & visual demo
 
-`azu new` creates a project from scratch. On a terminal it opens a wizard, shows a flight plan and the equivalent command line, and writes nothing until you press Enter. With `--yes` it skips the questions and takes the defaults: a web app on SQLite, which runs without a database server. The concise version is [azu new](../command-reference/azu-new.md).
+`azu new` creates a project from scratch: on a terminal it opens a wizard that shows a flight plan and writes nothing until you press Enter, and `--yes` takes the defaults instead. The defaults are a web app on SQLite, which runs without a database server. The concise version is [azu new](../command-reference/azu-new.md).
 
 <figure><img src="../assets/terminal-ui/03-new-review.png" alt="The azu new review screen with the flight plan, the next steps and the equivalent command line"><figcaption><p>The review screen. Enter writes the project and Esc quits without writing anything. The "as a command" line is the same choice written as flags.</p></figcaption></figure>
 
@@ -120,7 +120,7 @@ ERROR: Directory 'blog' already exists. Choose a different name.
 ```
 {% endcode %}
 
-*The name is checked before anything is written. The exit code is 1.*
+*Checked before anything is written; the exit code is 1.*
 
 {% code title="terminal: azu new blog, the compilation card after Enter" %}
 ```text
@@ -133,7 +133,7 @@ Compilation Progress
 ```
 {% endcode %}
 
-*The card from the run in the screenshot above, with the text as it reads on screen. Shards and the type-check take most of the time.*
+*The card from the run in the screenshot above, with its text as it reads on screen.*
 
 {% code title="terminal: azu new blog, the next steps card" %}
 ```text
@@ -153,7 +153,7 @@ Docs https://azutoolkit.org · Support https://github.com/azutoolkit/azu
 ```
 {% endcode %}
 
-*The last card of a successful run with JoobQ on. The "Visit" and "Start background workers" lines are the steps the command prints; the card has a border that is left out here.*
+*The last card of a successful run with JoobQ on; the border is left out here.*
 
 ## Do's and don'ts
 

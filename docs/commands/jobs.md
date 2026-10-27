@@ -1,596 +1,179 @@
-# Jobs Commands
-
-Background job processing commands for managing JoobQ workers and queues.
-
-## Overview
-
-The Azu CLI provides comprehensive commands for managing background jobs using the JoobQ framework. These commands handle worker processes, monitor queue status, retry failed jobs, and provide a web interface for job management.
-
-## Prerequisites
-
-Before using job commands, ensure:
-
-1. **JoobQ is installed** in your project:
-   ```bash
-   azu generate joobq
-   ```
-
-2. **Redis is running**:
-   ```bash
-   redis-server
-   ```
-
-3. **Redis URL is configured**:
-   ```bash
-   export REDIS_URL="redis://localhost:6379"
-   ```
-
-## Commands
-
-### `azu jobs:worker`
-
-Start background job worker processes to execute queued jobs.
-
-#### Synopsis
-
-```bash
-azu jobs:worker [options]
-```
-
-#### Description
-
-Starts one or more worker processes that poll the job queue and execute background jobs. Workers run continuously until stopped with `Ctrl+C`.
-
-#### Options
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--workers <n>` | `-w` | Number of worker processes | 1 |
-| `--queues <list>` | `-q` | Comma-separated queue names | `default` |
-| `--daemon` | `-d` | Run as daemon process | `false` |
-| `--verbose` | `-v` | Verbose output | `false` |
-
-#### Examples
-
-```bash
-# Start single worker
-azu jobs:worker
-
-# Start multiple workers
-azu jobs:worker --workers 4
-
-# Process specific queues
-azu jobs:worker --queues critical,default,low
-
-# Start workers with all options
-azu jobs:worker --workers 4 --queues critical,default --verbose
-
-# Run as daemon
-azu jobs:worker --daemon
-```
-
-#### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
-| `JOOBQ_REDIS_URL` | JoobQ-specific Redis URL | Falls back to `REDIS_URL` |
-| `JOOBQ_QUEUE` | Default queue name | `default` |
-| `JOOBQ_WORKERS` | Number of workers | `1` |
-
-#### Worker Requirements
-
-The workers expect a `src/worker.cr` file in your project:
-
-```crystal
-require "./my_app" # the app, whose src/initializers/joobq.cr configures JoobQ and its queues
-
-# Starts the queues of JoobQ.config.queue_configs (see src/initializers/joobq.cr) and blocks
-JoobQ.forge
-```
-
-`azu new` generates this file and the initializer (JoobQ `~> 0.4.2`). JoobQ's Redis store takes a host, a port and
-a password (`REDIS_HOST`, `REDIS_PORT`, `REDIS_PASS`); the generated initializer fills those from `REDIS_URL`, which
-`azu jobs:worker` sets, before JoobQ builds its store.
-
+---
+description: Run JoobQ workers and inspect, retry, clear or browse the background job queues in Redis with the jobs:* commands.
 ---
 
-### `azu jobs:status`
+# Background jobs commands
 
-Display current status and statistics for all job queues.
+The `jobs:*` commands drive a JoobQ project: they start the worker process and read or change the queues kept in Redis. The jobs themselves, and the queues they go to, are defined in your project's code; these commands only operate on them.
 
-#### Synopsis
+## Overview & visual demo
+
+Start `jobs:worker` next to the app, check `jobs:status` when a queue grows, and use `jobs:retry` and `jobs:clear` on failed work. The commands connect to Redis with `REDIS_URL`, which defaults to `redis://localhost:6379`.
+
+<figure><img src="../assets/terminal-ui/07-dev-dashboard.png" alt="azu dev dashboard with a Workers JoobQ panel reporting Redis unreachable at redis://localhost:6379"><figcaption><p>The Workers panel of <code>azu dev</code> shows what JoobQ sees. Here Redis is unreachable at the default URL, so the queues cannot be read.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu jobs:worker"] -->|"REDIS_URL, JOOBQ_QUEUES, JOOBQ_WORKERS"| B["crystal run src/worker.cr -- --worker"]
+  B --> C["JoobQ.forge runs the queues of src/initializers/joobq.cr"]
+  C --> D["Redis joobq:* keys"]
+  E["jobs:status, jobs:retry, jobs:clear"] --> D
+  F["jobs:ui"] -->|"needs JoobQUI"| D
+```
+
+## Quickstart & command syntax
+
+```bash
+azu jobs:worker
+azu jobs:status
+azu jobs:retry --all
+azu jobs:clear --failed --force
+azu jobs:ui --port 5000
+```
+
+Before you start, the project needs JoobQ (`azu generate joobq`, or the default of `azu new`), a running Redis, and `REDIS_URL` if the default is not your Redis. The generated `src/worker.cr` is the entry point the worker runs.
+
+### azu jobs:worker
+
+```bash
+azu jobs:worker
+azu jobs:worker --verbose
+```
+
+| Option            | Short | Meaning                                                                 | Default   |
+| ----------------- | ----- | ----------------------------------------------------------------------- | --------- |
+| `--workers N`     | `-w`  | Passed to the worker as `JOOBQ_WORKERS`. One process is started either way | `1`    |
+| `--queues LIST`   | `-q`  | Passed to the worker as `JOOBQ_QUEUES` (comma-separated). See the warning below | `default` |
+| `--daemon`        | `-d`  | Sets a flag that is printed. The worker still runs in the foreground    | off       |
+| `--verbose`       | `-v`  | Show the worker's own output instead of hiding it                       | off       |
+
+It runs `crystal run src/worker.cr -- --worker` with the Redis URL in `REDIS_URL`, and waits for it. The generated initializer turns `REDIS_URL` into the host, port and password that JoobQ's store reads. The generated worker runs the queues configured in `src/initializers/joobq.cr`. Stop it with Ctrl+C.
+
+### azu jobs:status
 
 ```bash
 azu jobs:status
 ```
 
-#### Description
+No options. It prints the Redis URL and the default queue, then one row per queue: pending jobs, jobs being processed, and failed jobs, with a `Total` row. The counts come from the `joobq:queue:*`, `joobq:processing:*` and `joobq:failed:*` keys. With no queues in Redis it prints `No queues found`. If Redis cannot be reached it exits with `1`.
 
-Connects to Redis and displays real-time statistics for all JoobQ queues, including pending, processing, and failed job counts.
+### azu jobs:retry
 
-#### Output Format
-
+```bash
+azu jobs:retry
+azu jobs:retry --all
+azu jobs:retry --limit 10 --queue critical
 ```
-Job Queue Status
-================================================================================
-Redis: redis://localhost:6379
-Queue: default
 
+| Option          | Short | Meaning                                                                | Default   |
+| --------------- | ----- | ---------------------------------------------------------------------- | --------- |
+| `--all`         |       | Retry every failed job of the queue                                    | off       |
+| `--limit N`     | `-l`  | Retry at most `N` failed jobs. Wins over `--all`                       | `1`       |
+| `--queue NAME`  | `-q`  | The queue whose failed jobs are retried                                | `default` |
+| `--verbose`     | `-v`  | Accepted; it changes nothing                                           | off       |
+
+A retried job is moved from the queue's failed list back onto its pending list, with its stored data unchanged.
+
+### azu jobs:clear
+
+```bash
+azu jobs:clear
+azu jobs:clear --queue mailers
+azu jobs:clear --failed
+azu jobs:clear --all --force
+```
+
+| Option          | Short | Meaning                                                                 | Default   |
+| --------------- | ----- | ----------------------------------------------------------------------- | --------- |
+| `--queue NAME`  | `-q`  | The queue to clear. Deletes its pending and processing jobs             | `default` |
+| `--all`         |       | Delete the pending jobs of every queue                                  | off       |
+| `--failed`      |       | Delete the failed jobs of every queue. `--queue` is ignored             | off       |
+| `--force`       | `-f`  | Do not ask first                                                        | off       |
+
+Without `--force` it asks `Are you sure you want to clear queue '<name>'? [y/N]:` (or the same question for all queues or all failed jobs). The answer must start with `y`.
+
+### azu jobs:ui
+
+```bash
+azu jobs:ui
+azu jobs:ui --port 5000 --host 0.0.0.0
+```
+
+| Option         | Short | Meaning                                              | Default     |
+| -------------- | ----- | ---------------------------------------------------- | ----------- |
+| `--port PORT`  | `-p`  | The port of the UI                                   | `4000`      |
+| `--host HOST`  | `-h`  | The host of the UI. Here `-h` is the host, not help  | `localhost` |
+| `--verbose`    | `-v`  | Show the UI process's own output                     | off         |
+
+The web interface is JoobQUI, a separate shard. The command looks for it in `lib/joobqui` or `../joobqui`, and runs `lib/joobqui/src/joobqui.cr` with `REDIS_URL`, `JOOBQUI_PORT` and `JOOBQUI_HOST` set. Without it, the command prints a warning with the `shard.yml` lines to add, starts nothing, and exits `0`.
+
+<details>
+
+<summary>Environment variables read by the jobs:* commands</summary>
+
+| Variable          | Used for                                                       | Default                    |
+| ----------------- | -------------------------------------------------------------- | -------------------------- |
+| `REDIS_URL`       | The Redis connection of every command                          | `redis://localhost:6379`   |
+| `JOOBQ_REDIS_URL` | Used when `REDIS_URL` is not set                               | the default above          |
+| `JOOBQ_QUEUE`     | The default queue of the commands that take `--queue`          | `default`                  |
+
+`JOOBQ_QUEUES` and `JOOBQ_WORKERS` are set by `jobs:worker` for the process it starts. The CLI does not read them, and the generated project does not either.
+
+</details>
+
+## Realistic output
+
+{% code title="terminal: azu jobs:status (the header, then one row per queue)" %}
+```text
 Queue                |    Pending |   Processing |     Failed
 ================================================================================
-critical             |          5 |            2 |          0
-default              |         23 |            4 |          1
-low                  |         12 |            1 |          0
-mailers              |          8 |            0 |          0
+<queue>              |  <pending> | <processing> |   <failed>
+...
 ================================================================================
-Total                |         48 |            7 |          1
+Total                |  <pending> | <processing> |   <failed>
 ```
+{% endcode %}
 
-#### Examples
+*The column layout is exact. The numbers depend on Redis, so they are shown as placeholders. The log lines above the table carry a timestamp in plain mode.*
 
-```bash
-# Show status for all queues
-azu jobs:status
-
-# Show status with custom Redis URL
-REDIS_URL="redis://localhost:6380" azu jobs:status
+{% code title="terminal: azu jobs:clear (without --force)" %}
+```text
+Are you sure you want to clear queue 'default'? [y/N]: 
 ```
+{% endcode %}
 
-#### Queue States
+*The question waits on the same line. Anything that does not start with `y` cancels.*
 
-- **Pending**: Jobs waiting to be processed
-- **Processing**: Jobs currently being executed by workers
-- **Failed**: Jobs that encountered errors during execution
-
----
-
-### `azu jobs:clear`
-
-Clear jobs from queues.
-
-#### Synopsis
-
-```bash
-azu jobs:clear [options]
+{% code title="terminal: azu jobs:ui (JoobQUI not installed)" %}
+```text
+WARNING: JoobQUI not found in dependencies
 ```
+{% endcode %}
 
-#### Description
+*The warning is followed by the `shard.yml` lines to add. The command then exits `0` without starting a server.*
 
-Remove jobs from specified queues. Use with caution as this operation is irreversible.
+## Do's and don'ts
 
-#### Options
+{% hint style="info" %}
+**Pro tip:** while workers run, `watch -n 2 azu jobs:status` in a spare pane shows the queues drain, or stall.
+{% endhint %}
 
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--queue <name>` | `-q` | Specific queue to clear (default: `default`) |
-| `--all` | | Clear all queues |
-| `--failed` | | Clear only failed jobs |
-| `--force` | `-f` | Skip confirmation prompt |
+{% hint style="success" %}
+In production, run `azu jobs:worker` under a process manager such as systemd, Foreman or a container's restart policy. The command runs in the foreground and does not restart a worker that exits.
+{% endhint %}
 
-#### Examples
+{% hint style="warning" %}
+`--workers` and `--queues` do not change the generated worker. It runs one process, and its queues come from `src/initializers/joobq.cr`. Set the worker count and queues there, or run more processes yourself.
+{% endhint %}
 
-```bash
-# Clear default queue (with confirmation)
-azu jobs:clear
+{% hint style="warning" %}
+`jobs:worker` reports success when the worker exits, whatever the worker's exit code was. Look at the worker's logs or your process manager's status when a deploy looks wrong.
+{% endhint %}
 
-# Clear specific queue
-azu jobs:clear --queue mailers
+{% hint style="danger" %}
+`jobs:clear --failed` ignores `--queue`: `azu jobs:clear --queue mailers --failed` clears the failed jobs of every queue. `jobs:clear --all` leaves the failed and processing lists alone, so check each one you care about.
+{% endhint %}
 
-# Clear failed jobs only
-azu jobs:clear --failed
-
-# Clear all queues without confirmation
-azu jobs:clear --all --force
-
-# Clear failed jobs in specific queue
-azu jobs:clear --queue default --failed
-```
-
-#### Confirmation Prompt
-
-Unless `--force` is specified, you'll be prompted to confirm:
-
-```
-⚠️  This will permanently delete jobs from the queue.
-Are you sure? (y/N):
-```
-
----
-
-### `azu jobs:retry`
-
-Retry failed jobs.
-
-#### Synopsis
-
-```bash
-azu jobs:retry [options]
-```
-
-#### Description
-
-Re-queue failed jobs for another execution attempt. Useful for recovering from temporary failures like network issues or external service downtime.
-
-#### Options
-
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--queue <name>` | `-q` | Specific queue (default: `default`) |
-| `--all` | | Retry all failed jobs |
-| `--limit <n>` | `-l` | Maximum number of jobs to retry |
-
-#### Examples
-
-```bash
-# Retry all failed jobs in default queue
-azu jobs:retry
-
-# Retry all failed jobs across all queues
-azu jobs:retry --all
-
-# Retry limited number of failed jobs
-azu jobs:retry --limit 10
-
-# Retry failed jobs in specific queue
-azu jobs:retry --queue critical --all
-```
-
-#### Retry Behavior
-
-- Jobs are moved from failed queue to pending queue
-- Original job parameters and metadata are preserved
-- Retry count is incremented
-- Jobs exceeding max retries are not re-queued
-
----
-
-### `azu jobs:ui`
-
-Launch the JoobQUI web interface for visual job management.
-
-#### Synopsis
-
-```bash
-azu jobs:ui [options]
-```
-
-#### Description
-
-Starts a web server providing a graphical interface to monitor and manage background jobs. The UI displays real-time statistics, job details, and allows manual job management.
-
-#### Options
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--port <port>` | `-p` | UI server port | `4000` |
-| `--host <host>` | `-h` | UI server host | `localhost` |
-| `--verbose` | `-v` | Verbose output | `false` |
-
-#### Examples
-
-```bash
-# Start UI on default port
-azu jobs:ui
-
-# Start on custom port
-azu jobs:ui --port 5000
-
-# Make accessible from network
-azu jobs:ui --host 0.0.0.0 --port 8080
-
-# Start with verbose logging
-azu jobs:ui --verbose
-```
-
-#### Web Interface Features
-
-The JoobQUI provides:
-
-- **Dashboard**: Overview of all queues and statistics
-- **Job List**: Browse pending, processing, and failed jobs
-- **Job Details**: View job parameters, status, and error messages
-- **Retry Controls**: Manually retry individual failed jobs
-- **Queue Management**: Pause, resume, or clear queues
-- **Real-time Updates**: Live statistics and job status
-
-#### Accessing the UI
-
-Once started, open your browser to:
-
-```
-http://localhost:4000
-```
-
-Or with custom host/port:
-
-```
-http://your-host:your-port
-```
-
----
-
-## Common Workflows
-
-### Development Setup
-
-```bash
-# Terminal 1: Start application server
-azu serve
-
-# Terminal 2: Start job workers
-azu jobs:worker --verbose
-
-# Terminal 3: Monitor job status
-watch -n 1 azu jobs:status
-```
-
-### Production Deployment
-
-```bash
-# Start multiple workers for high throughput
-azu jobs:worker --workers 8 --queues critical,default,low
-
-# Or use process manager like systemd
-# /etc/systemd/system/myapp-workers.service
-```
-
-### Queue Monitoring
-
-```bash
-# Check queue status
-azu jobs:status
-
-# Launch web UI for detailed monitoring
-azu jobs:ui --port 5000
-```
-
-### Handling Failed Jobs
-
-```bash
-# Check for failed jobs
-azu jobs:status
-
-# Review failures in web UI
-azu jobs:ui
-
-# Retry all failed jobs
-azu jobs:retry --all
-
-# Or retry limited batch
-azu jobs:retry --limit 10
-```
-
-### Queue Maintenance
-
-```bash
-# Clear old failed jobs
-azu jobs:clear --failed --force
-
-# Clear test queue
-azu jobs:clear --queue test
-
-# Clear all queues (caution!)
-azu jobs:clear --all --force
-```
-
-## Best Practices
-
-### 1. Use Multiple Queues
-
-Prioritize jobs by using separate queues:
-
-```bash
-# High priority workers
-azu jobs:worker --queues critical --workers 4
-
-# General purpose workers
-azu jobs:worker --queues default --workers 8
-
-# Low priority workers
-azu jobs:worker --queues low --workers 2
-```
-
-### 2. Monitor Queue Health
-
-Regularly check queue status:
-
-```bash
-# Add to cron or monitoring system
-*/5 * * * * azu jobs:status | mail -s "Job Status" admin@example.com
-```
-
-### 3. Set Up Alerting
-
-Monitor for stuck or growing queues:
-
-```bash
-# Script to check queue depth
-#!/bin/bash
-pending=$(azu jobs:status | grep default | awk '{print $2}')
-if [ "$pending" -gt 1000 ]; then
-  echo "WARNING: Queue depth is $pending"
-fi
-```
-
-### 4. Handle Failed Jobs Promptly
-
-Review and retry or clear failed jobs regularly:
-
-```bash
-# Daily cleanup of old failures
-0 2 * * * azu jobs:clear --failed
-```
-
-### 5. Scale Workers Based on Load
-
-Adjust worker count based on queue depth:
-
-```bash
-# Light load
-azu jobs:worker --workers 2
-
-# Heavy load
-azu jobs:worker --workers 16
-```
-
-## Process Management
-
-### Using Systemd (Linux)
-
-Create `/etc/systemd/system/myapp-workers.service`:
-
-```ini
-[Unit]
-Description=MyApp Background Workers
-After=network.target redis.service
-
-[Service]
-Type=simple
-User=myapp
-WorkingDirectory=/var/www/myapp
-Environment=REDIS_URL=redis://localhost:6379
-Environment=JOOBQ_WORKERS=4
-ExecStart=/usr/local/bin/azu jobs:worker --workers 4
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start:
-
-```bash
-sudo systemctl enable myapp-workers
-sudo systemctl start myapp-workers
-sudo systemctl status myapp-workers
-```
-
-### Using Docker
-
-```dockerfile
-# Worker container
-FROM crystallang/crystal:latest
-
-WORKDIR /app
-COPY . .
-RUN shards install
-RUN shards build
-
-CMD ["azu", "jobs:worker", "--workers", "4"]
-```
-
-Docker Compose:
-
-```yaml
-version: '3'
-services:
-  worker:
-    build: .
-    command: azu jobs:worker --workers 4 --queues critical,default
-    environment:
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      - redis
-```
-
-### Using Foreman
-
-Create `Procfile`:
-
-```
-web: azu serve
-worker: azu jobs:worker --workers 4
-```
-
-Start all services:
-
-```bash
-foreman start
-```
-
-## Troubleshooting
-
-### Workers Not Processing Jobs
-
-Check worker is running:
-
-```bash
-ps aux | grep "jobs:worker"
-```
-
-Verify Redis connection:
-
-```bash
-redis-cli ping
-# Should return: PONG
-```
-
-Check queue status:
-
-```bash
-azu jobs:status
-```
-
-### Redis Connection Errors
-
-Verify Redis URL:
-
-```bash
-echo $REDIS_URL
-# Should be: redis://localhost:6379
-```
-
-Test connection:
-
-```bash
-redis-cli -u $REDIS_URL ping
-```
-
-### Jobs Stuck in Processing
-
-Failed workers may leave jobs in processing state. Clear and retry:
-
-```bash
-# Restart workers
-pkill -f jobs:worker
-azu jobs:worker --workers 4 &
-
-# Clear stuck jobs (if needed)
-azu jobs:clear --force
-```
-
-### High Memory Usage
-
-Reduce worker count:
-
-```bash
-azu jobs:worker --workers 2
-```
-
-Or implement job batching in your application.
-
-## Environment Variables
-
-All job commands respect these variables:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `REDIS_URL` | Primary Redis connection URL | `redis://localhost:6379` |
-| `JOOBQ_REDIS_URL` | JoobQ-specific Redis URL | Falls back to `REDIS_URL` |
-| `JOOBQ_QUEUE` | Default queue name | `default` |
-| `JOOBQ_WORKERS` | Default number of workers | `1` |
-
-## Related Commands
-
-- [`azu generate joobq`](../generators/joobq.md) - Set up JoobQ infrastructure
-- [`azu generate job`](../generators/joobq.md#job-generator) - Create new job classes
-- [`azu serve`](serve.md) - Development server
-
-## See Also
-
-- [JoobQ Documentation](https://github.com/azutoolkit/joobq)
-- [Background Jobs Guide](../guides/background-jobs.md)
-- [Production Deployment](../deployment/production.md)
-
+{% hint style="danger" %}
+`jobs:status` prints `REDIS_URL` in full, password included. Redact it before you paste the output into a ticket.
+{% endhint %}

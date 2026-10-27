@@ -60,7 +60,7 @@ Stop it with Ctrl+C. Exit codes: `0` when it stops normally, `1` when the first 
 ```
 {% endcode %}
 
-*The startup lines. `n.n` and `n` stand for the build time and the process id, which differ on every run. The emoji the command prints before some of these lines are left out.*
+*Startup lines outside a terminal; `n` stands for the build time and the process id, and the emoji are left out.*
 
 {% code title="terminal: azu serve (a change that does not compile)" %}
 ```text
@@ -76,7 +76,7 @@ WARNING: Keeping previous version running due to compilation errors
 ```
 {% endcode %}
 
-*The compiler output sits between the rules. The server that was running keeps running, and the next save tries again. The emoji the command prints are left out here.*
+*The compiler output sits between the rules, and the server that was running keeps running; the emoji are left out.*
 
 ## Do's and don'ts
 

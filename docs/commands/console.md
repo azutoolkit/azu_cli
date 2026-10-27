@@ -46,7 +46,7 @@ ERROR: this Crystal has no interpreter (crystal i), so 'azu console' cannot open
 ```
 {% endcode %}
 
-*The three hints go to stdout as log lines, and the error to stderr. `hh:mm:ss` stands for the time. The exit code is 2.*
+*The three hints go to stdout and the error to stderr; the exit code is 2.*
 
 {% code title="scratch file that azu console writes for the blog project" %}
 ```crystal
@@ -57,7 +57,7 @@ debugger
 ```
 {% endcode %}
 
-*The script the command runs with `crystal i`. It is written with an exclusive, owner-only name (`.azu_console_<random>.cr`) and deleted when the command ends.*
+*The script `azu console` runs with `crystal i`; it is deleted when the command ends.*
 
 {% code title="terminal: azu console (outside a project)" %}
 ```text
@@ -65,7 +65,7 @@ ERROR: ./src/blog.cr not found: run 'azu console' in the root of an Azu project
 ```
 {% endcode %}
 
-*The command needs `src/<project>.cr` in the current directory. The exit code is 1.*
+*The command needs `src/<project>.cr` in the current directory; the exit code is 1.*
 
 ## Do's and don'ts
 

@@ -68,7 +68,7 @@ Exit codes: `0` stopped by Ctrl-C or SIGTERM, `1` no `shard.yml` in the current 
 ```
 {% endcode %}
 
-*The plain lines at startup. `hh:mm:ss` stands for the time, and the pid and build time vary per run.*
+*The startup lines; `hh:mm:ss` is the time, and the pid and build time differ on every run.*
 
 {% code title="terminal: azu dev --ui plain (a failed build)" %}
 ```text
@@ -78,7 +78,7 @@ ERROR: Build failed after 5.5s. The previous build keeps running (pid 1195); sav
 ```
 {% endcode %}
 
-*The compiler's own output is printed above the error line. The failed build keeps the app on port 4000 running.*
+*The compiler output is printed above the error line, and the app on port 4000 keeps running.*
 
 {% code title="terminal: azu dev, the dashboard after a failed build" %}
 ```text
@@ -97,7 +97,7 @@ cli 16.5 MB · ~/code/demo_app · master                        watching src, co
 ```
 {% endcode %}
 
-*The failed-build card of the dashboard, transcribed from a real run. The app keeps serving the previous build until a good one replaces it.*
+*The dashboard's failed-build card, transcribed from a real run; the app keeps serving the previous build.*
 
 ## Do's and don'ts
 

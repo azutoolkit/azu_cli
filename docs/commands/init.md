@@ -57,7 +57,7 @@ dependencies:
 ```
 {% endcode %}
 
-*The log lines as the logger writes them without a terminal; `hh:mm:ss` stands for the time. The emoji the command prints before the last line is left out. A second run prints no `Created` line, because the file exists.*
+*Log lines as the logger writes them outside a terminal; `hh:mm:ss` is the time, and the emoji on the last line is left out.*
 
 {% code title="terminal: azu init (no shard.yml here)" %}
 ```text
@@ -65,7 +65,7 @@ ERROR: Not in a valid Crystal project directory. Run this command from your proj
 ```
 {% endcode %}
 
-*Nothing is written when there is no `shard.yml`. The exit code is 1.*
+*Nothing is written without a `shard.yml`; the exit code is 1.*
 
 ## Do's and don'ts
 

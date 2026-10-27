@@ -10,7 +10,7 @@ description: Print the command overview, or the detailed help for one command or
 
 Use it to find a command you half remember, or the flags of one you do not. The output is plain text from the CLI itself, so it matches the build you have installed.
 
-<figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing the generators"><figcaption><p>Not <code>azu help</code>'s output. This is the generator menu <code>azu g</code> shows with no arguments. <code>azu help</code> prints plain text.</p></figcaption></figure>
+<figure><img src="../assets/terminal-ui/05-new-done.png" alt="azu new's ready card listing the next commands to run"><figcaption><p>Not <code>azu help</code>'s output. This is the ready card <code>azu new</code> ends with, listing the next commands. <code>azu help</code> prints plain text.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR

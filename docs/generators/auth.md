@@ -1,95 +1,257 @@
-# Authentication Generator
+---
+description: Generate sign up, sign in, sign out and a protected account page for a web app, with an encrypted session cookie and login throttling.
+---
 
-Generates sign up, sign in, sign out and a protected page for a **web** project. The signed-in user lives in an
-encrypted session cookie (the [`session`](https://github.com/azutoolkit/session) shard), passwords are stored as
-bcrypt digests (`Crypto::Bcrypt`, no extra shard).
+# Authentication
+
+`azu g auth` writes a complete session-cookie login for a web project: a `User` model and its migration, registration, sign in, sign out and an `/account` page that needs a signed-in user. Passwords are bcrypt digests and the session is an encrypted cookie, so there is no extra service to run. Sign-in and sign-up are throttled by code the generator writes. API projects are refused.
+
+## Overview & visual demo
+
+<figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing auth as session authentication and joobq as JoobQ setup"><figcaption><p><code>azu g</code> lists <code>auth</code> as session authentication. The command takes no name.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["GET /register"] --> B["POST /register"]
+  B --> C["GET /login"]
+  C --> D["POST /login (throttled)"]
+  D -->|valid| E["Session cookie, new id"]
+  D -->|invalid| C
+  E --> F["GET /account"]
+  F --> G["DELETE /logout"]
+  G --> C
+```
+
+## Quickstart & command syntax
 
 ```bash
-azu generate auth
-azu db:migrate          # creates the users table
-# SESSION_SECRET is already in the git-ignored .env, which the app loads at boot
+azu g auth
+azu db:migrate
 azu serve
 ```
 
-API projects have no generated authentication yet (no JWT or OAuth), and `--strategy` only accepts `session`.
+{% tabs %}
+{% tab title="Run" %}
+```bash
+azu g auth
+```
 
-## What it generates
+Takes no name. It writes the files listed below and wires the session handler into the app file.
+{% endtab %}
 
-| Route            | Constant                          | File                                   |
-| ---------------- | --------------------------------- | -------------------------------------- |
-| `GET /register`  | `Blog::Registrations::NewEndpoint`    | `src/endpoints/registrations/new_endpoint.cr` |
-| `POST /register` | `Blog::Registrations::CreateEndpoint` | `src/endpoints/registrations/create_endpoint.cr` |
-| `GET /login`     | `Blog::Sessions::NewEndpoint`     | `src/endpoints/sessions/new_endpoint.cr` |
-| `POST /login`    | `Blog::Sessions::CreateEndpoint`  | `src/endpoints/sessions/create_endpoint.cr` |
-| `DELETE /logout` | `Blog::Sessions::DestroyEndpoint` | `src/endpoints/sessions/destroy_endpoint.cr` |
-| `GET /account`   | `Blog::Account::ShowEndpoint`     | `src/endpoints/account/show_endpoint.cr` (needs a signed-in user) |
+{% tab title="Run again" %}
+```bash
+azu g auth      # refused: the files it would write already exist
+```
 
-Also: the `User` model and its migration (`email` unique, `password_digest`), `src/initializers/session.cr`
-(`UserSession`, the cookie store), `src/middleware/authentication.cr` (`current_user`, `authenticate`),
-requests, pages and Jinja templates under `public/templates/<app>/`. The generator adds
-`Session::SessionHandler(UserSession)` to `Blog.handlers` and a random `SESSION_SECRET` to `.env`.
+It refuses to run when a `User` model, `src/initializers/session.cr`, the auth endpoints or a `create_users` migration already exist (a scaffold named `User` counts). Remove those, or add the handler by hand.
+{% endtab %}
+{% endtabs %}
 
-## Behaviour
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `--strategy session` | The only accepted strategy. Any other value is refused | `session` |
+| `--dry-run` | List the files, write nothing | off |
+| `--yes` | Write without asking (a terminal still shows the preview) | off |
 
-- Forms carry the CSRF field; writes redirect with `303`; a failed sign in redirects back to `/login` with a flash message.
-- Signing in gives the session a new id (no session fixation); signing out discards it.
-- The email is stripped and downcased; an unknown email costs the same bcrypt check as a wrong password.
-- Visiting `/account` signed out answers `303` to `/login`. To protect another page, `include Authentication` in its endpoint and do the same with `current_user`.
-- `SESSION_SECRET` comes from the environment or the git-ignored `.env` (`Azu::Env.secret`); development falls back to a random key per process, production
-  (`CRYSTAL_ENV=production`) refuses to boot without it.
+Once it has run, the routes are:
 
-- Passwords are limited to 72 bytes (bcrypt's limit; a multi-byte character counts for each of its bytes). The contracts answer `422` for longer ones instead of failing.
-- The session cookie is `Secure`, `HttpOnly` and `SameSite=Strict` (the session shard sets these) and expires after
-  `config.timeout` (8 hours). It is a cookie store: signing out clears the browser's cookie, but a copy of it stays
-  valid until it expires. For server-side revocation shorten the timeout or switch to `Session::RedisStore`.
-- Registration looks the email up, then inserts; two simultaneous sign-ups for one email end in one account and one "email taken" answer. The "email taken" answer does reveal which emails are registered.
+| Route | Endpoint | Note |
+| --- | --- | --- |
+| `GET /register` | `Registrations::NewEndpoint` | sign-up form |
+| `POST /register` | `Registrations::CreateEndpoint` | throttled, `303` back to `/login` |
+| `GET /login` | `Sessions::NewEndpoint` | sign-in form |
+| `POST /login` | `Sessions::CreateEndpoint` | throttled, `303` to `/account` |
+| `DELETE /logout` | `Sessions::DestroyEndpoint` | clears the session |
+| `GET /account` | `Account::ShowEndpoint` | signed out: `303` to `/login` |
 
-## Running it again, and other generators
+The endpoints live in your app's module, so `Blog::Sessions::CreateEndpoint` in an app called `blog`.
 
-`azu generate auth` refuses to run when a `User` model, `src/initializers/session.cr`, the session/registration/account
-endpoints or a `create_users` migration exist already (a scaffold named `User` counts), and when the app file has no
-`Azu::Handler::RequestId.new,` line to put the session handler after. Remove what it names, or add the handler by hand.
-Do not combine it with `azu session:setup`: both define the session initializer and handler.
+## Realistic output
 
-## Brute force: throttling
+{% code title="generated files for azu g auth in a blog project" %}
+```text
+.env                                  changed: SESSION_SECRET line added (git-ignored)
+src/blog.cr                           changed: session handler added after RequestId
+src/db/migrations/<version>_create_users.cr
+src/db/schema.cr                      changed: adds the users table
+src/endpoints/account/                show_endpoint.cr
+src/endpoints/registrations/          new_endpoint.cr, create_endpoint.cr
+src/endpoints/sessions/               new_endpoint.cr, create_endpoint.cr, destroy_endpoint.cr
+src/initializers/session.cr
+src/middleware/authentication.cr
+src/models/user.cr
+src/pages/account/, registrations/, sessions/
+src/requests/account/, registrations/, sessions/, bytesize_predicate.cr
+src/services/auth_throttle.cr
+spec/services/auth_throttle_spec.cr
+public/templates/blog/account/, registrations/, sessions/   (.jinja)
+```
+{% endcode %}
 
-Sign-in and sign-up are throttled by `Blog::AuthThrottle` (`src/services/auth_throttle.cr`, with a spec in
-`spec/services/auth_throttle_spec.cr`): a fixed-window counter per key, in memory. An attempt over the limit answers
-**429** with a **`Retry-After`** header (seconds) and is not processed. Defaults, per window of 60 seconds:
+*The layout of a generated login. The file names follow the same `Blog::<Plural>::<Action><Layer>` scheme as the scaffold.*
 
-| Setting                     | Default | Key                                                           |
-| --------------------------- | ------- | ------------------------------------------------------------- |
-| `AUTH_THROTTLE_LOGIN`       | 5       | client address and email (sign-in)                            |
-| `AUTH_THROTTLE_ADDRESS`     | 20      | client address, any email (sign-in), against one address trying many accounts |
-| `AUTH_THROTTLE_REGISTER`    | 5       | client address (sign-up)                                      |
-| `AUTH_THROTTLE_WINDOW`      | 60      | seconds in a window                                           |
-| `AUTH_THROTTLE_TRUST_PROXY` | unset   | `true`: the client address is the last `X-Forwarded-For` entry (exactly one trusted hop; spoofable when the app can also be reached directly, so firewall it to the proxy) |
+{% code title="src/models/user.cr" %}
+```crystal
+require "cql"
 
-- Attempts are counted before the password is checked, so a right and a wrong password cost the same; requests that fail
-  validation (`422`) or the CSRF check (`403`) never reach the endpoint and are not counted.
-- There is no counter per email alone: one would let anyone lock a known account out by failing sign-ins for it from
-  their own address. Each source address has its own budget per account (`AUTH_THROTTLE_LOGIN`) and an overall
-  budget for trying many accounts (`AUTH_THROTTLE_ADDRESS`). Guessing spread over many addresses is not stopped by
-  this; use a shared store, a CAPTCHA or an account lock the owner can clear.
-- At most 10,000 counters are kept (an attacker can invent keys). When the table is full the counter whose window ends
-  first is dropped: an expired one if there is any, otherwise a live one. Memory and the time per attempt stay bounded;
-  a flood from 10,000 distinct addresses inside one window can still reset other clients' counts. The per-address
-  counter is checked before the per-email one, so an address that is already blocked adds no per-email keys.
-- The limits are per client address. Several users behind one address (an office, a campus, carrier-grade NAT) share
-  the `AUTH_THROTTLE_ADDRESS` and `AUTH_THROTTLE_REGISTER` budgets, so raise them for such audiences. An IPv6 client is
-  keyed by its full address, and a /64 holds as many addresses as an attacker cares to use, so the address limits do not
-  stop an IPv6 client that rotates addresses.
-- The counters live in the process: several processes or hosts each allow the limit, and a restart forgets them. Count
-  in a shared store (Redis) when that matters.
-- The client address is the peer of the connection. Behind a reverse proxy that is the proxy's address, so every client
-  shares the sign-up limit and only the email part of the sign-in key tells users apart; set
-  `AUTH_THROTTLE_TRUST_PROXY=true` only when exactly one proxy you run sits in front of the app and appends the real
-  address to `X-Forwarded-For`: the last entry is used, so a second proxy hop would make every client share the proxy's
-  address (the header is client-controlled otherwise).
-- It is generated code rather than `Azu::Handler::Throttle` because that handler keys by client address only, counts every
-  request on every path, and blocks the address for its whole `duration` once over the threshold; a per-account,
-  per-path limit needs a key the handler cannot see.
+class User
+  include CQL::ActiveRecord::Model(Int64)
+  db_context BlogDB, :users
 
-## Not generated
+  property email : String
+  property password_digest : String
+  property created_at : Time?
+  property updated_at : Time?
 
-JWT or OAuth (Authly), roles and permissions, password reset, email confirmation.
+  def initialize(@email : String, @password_digest : String)
+  end
+end
+```
+{% endcode %}
+
+*The user has an email and a bcrypt digest. There is no password column.*
+
+{% code title="src/db/migrations/20261027210012_create_users.cr" %}
+```crystal
+require "cql"
+
+# Migration to create users table
+# Generated at 2026-10-27 21:00:12 UTC
+class CreateUsers < CQL::Migration(20261027210012_i64)
+  def up
+    schema.table :users do
+      primary :id, Int64, auto_increment: true
+      text :email, unique: true
+      text :password_digest
+      timestamps
+    end
+    schema.users.create!
+  end
+
+  def down
+    # Drop users table
+    schema.users.drop!
+  end
+end
+```
+{% endcode %}
+
+*The email is unique. The table is also appended to `src/db/schema.cr`.*
+
+{% code title="src/initializers/session.cr" %}
+```crystal
+# Written by `azu generate auth`: `azu session:setup` leaves this file alone.
+require "session"
+
+# The session lives in an encrypted cookie, so it works behind any number of processes.
+class UserSession < Session::Base
+  property user_id : Int64? = nil
+
+  def authenticated? : Bool
+    !user_id.nil?
+  end
+end
+
+Session.use_store(Session::CookieStore(UserSession))
+
+Session.configure do |config|
+  # SESSION_SECRET comes from the environment or the git-ignored .env. Development falls back to a random key
+  # per process, which signs users out on every restart; production refuses to boot without it.
+  config.secret = Azu::Env.secret("SESSION_SECRET")
+  config.session_key = "blog_session"
+
+  # The session shard sets the cookie flags itself: Secure, HttpOnly, SameSite=Strict (browsers keep a
+  # Secure cookie over plain http only on localhost). It expires with the session timeout.
+  # The cookie store keeps the session in the browser: signing out clears that cookie, but a copy of
+  # it stays valid until it expires. Shorten the timeout, or switch to Session::RedisStore, if you
+  # need server-side revocation.
+  config.timeout = 8.hours
+  config.store = Session::CookieStore(UserSession).new
+end
+```
+{% endcode %}
+
+*The cookie store and its settings. The secret is read from the environment or `.env`, never written here.*
+
+{% code title="src/endpoints/sessions/create_endpoint.cr" %}
+```crystal
+module Blog
+  struct Sessions::CreateEndpoint
+    include Azu::Endpoint(Sessions::CreateRequest, Azu::Response::Empty)
+    include Authentication
+
+    post "/login"
+
+    def call : Azu::Response::Empty
+      email = create_request.email.strip.downcase
+      throttle_login!(email)
+      unless user = authenticate(email, create_request.password)
+        Session.session.flash["error"] = "Invalid email or password"
+        return redirect to: "/login", status: 303
+      end
+
+      Session.session.current_session.user_id = user.id
+      Session.session.regenerate_id # a new session id, so a planted one is worthless (session fixation)
+      redirect to: "/account", status: 303
+    end
+  end
+end
+```
+{% endcode %}
+
+*Sign in throttles first, then checks the password. A wrong email and a wrong password get the same answer.*
+
+<details>
+
+<summary>Throttling: limits and settings</summary>
+
+Sign-in and sign-up count attempts in `Blog::AuthThrottle` (`src/services/auth_throttle.cr`): a fixed window per key, kept in memory. An attempt over the limit answers `429` with a `Retry-After` header and is not processed.
+
+| Environment variable | Default | Counts |
+| --- | --- | --- |
+| `AUTH_THROTTLE_LOGIN` | 5 | sign-in per client address and email |
+| `AUTH_THROTTLE_ADDRESS` | 20 | sign-in per client address, any email |
+| `AUTH_THROTTLE_REGISTER` | 5 | sign-up per client address |
+| `AUTH_THROTTLE_WINDOW` | 60 | seconds in a window |
+| `AUTH_THROTTLE_TRUST_PROXY` | unset | `true` takes the client address from the last `X-Forwarded-For` entry |
+
+- There is no counter per email alone. Otherwise anyone could lock a known account out by failing from their own address.
+- Behind a reverse proxy every client shares the sign-up limit unless `AUTH_THROTTLE_TRUST_PROXY=true`. Set it only when exactly one proxy you run sits in front of the app.
+- Counters are per process and reset on restart.
+
+</details>
+
+<details>
+
+<summary>Passwords, sessions and what is not generated</summary>
+
+- Sign-up accepts 8 to 72 characters and at most 72 bytes. Sign-in rejects more than 72 bytes. bcrypt reads no more than 72.
+- Signing in gives the session a new id. Signing out discards it.
+- The email is stripped and downcased. An unknown email costs the same bcrypt check as a wrong password.
+- `SESSION_SECRET` is generated into the git-ignored `.env`. Production refuses to boot without it.
+- Not generated: JWT or OAuth, roles and permissions, password reset, email confirmation.
+
+</details>
+
+## Do's and don'ts
+
+{% hint style="success" %}
+Run `azu db:migrate` and then `azu serve` straight after generating. The `SESSION_SECRET` is already in `.env`, so the app boots without more setup.
+{% endhint %}
+
+{% hint style="info" %}
+**Pro tip:** protect another page by including `Authentication` in its endpoint and calling `current_user`. Copy the `/account` endpoint's guard.
+{% endhint %}
+
+{% hint style="warning" %}
+The cookie store keeps the session in the browser. Signing out clears that cookie, but a copy taken earlier stays valid until the 8-hour timeout. For server-side revocation, shorten the timeout or move to `Session::RedisStore`.
+{% endhint %}
+
+{% hint style="warning" %}
+The throttle counts live in the process. Several processes each allow the limit, and a restart forgets the counts. Share a store if that matters for your deployment.
+{% endhint %}
+
+{% hint style="danger" %}
+Don't commit `.env`, and don't put `SESSION_SECRET` in code. Set it in your host's environment for production. A leaked secret lets anyone forge a session.
+{% endhint %}

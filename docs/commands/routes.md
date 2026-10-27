@@ -54,7 +54,7 @@ DELETE  /posts/:id  Blog::Posts::DestroyEndpoint  Blog::Posts::DestroyRequest  A
 ```
 {% endcode %}
 
-*The plain table, sorted by path and then method. A pipe, `NO_COLOR` and CI print this table too.*
+*The plain table, sorted by path and then method; a pipe, `NO_COLOR` and CI print this table too.*
 
 {% code title="terminal: azu routes --method POST --format json" %}
 ```json
@@ -70,7 +70,7 @@ DELETE  /posts/:id  Blog::Posts::DestroyEndpoint  Blog::Posts::DestroyRequest  A
 ```
 {% endcode %}
 
-*With `--format json`, stdout holds only the array. The command adds no log lines, so the output can go straight into a parser. `Azu::Response::Empty` is the redirect a write answers with.*
+*With `--format json`, stdout holds only the array, so the output goes straight into a parser.*
 
 {% code title="terminal: azu routes --method FETCH" %}
 ```text
@@ -78,7 +78,7 @@ ERROR: Unknown HTTP method 'FETCH': use one of CONNECT, DELETE, GET, HEAD, OPTIO
 ```
 {% endcode %}
 
-*A method Azu does not know is refused before the app is compiled. The exit code is 2.*
+*A method Azu does not know is refused before the app is compiled; the exit code is 2.*
 
 ## Do's and don'ts
 

@@ -106,7 +106,7 @@ handler), 2 invalid usage.
 ## Do's and don'ts
 
 {% hint style="info" %}
-**Pro tip:** `azu session:setup --help` lists the exit codes. Exit `1` means a refusal with nothing written, so a script can tell it apart from a real failure.
+**Pro tip:** `azu session:setup --help` lists the exit codes. Exit `1` is a refusal with nothing written, and exit `2` is invalid usage, so a script can tell a bad flag from a refused setup.
 {% endhint %}
 
 {% hint style="success" %}

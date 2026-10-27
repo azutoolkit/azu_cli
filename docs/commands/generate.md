@@ -134,7 +134,7 @@ The generator type is the first argument. Attributes follow the name as `name:ty
 ```
 {% endcode %}
 
-*The end of the file list for a scaffold, as the card shows it. Files are listed with their line counts; the changed `src/db/schema.cr` is listed with `changed`.*
+*The end of the file list after Enter; the changed `src/db/schema.cr` is listed with `changed`.*
 
 {% code title="terminal: azu undo (after the scaffold above)" %}
 ```text
@@ -149,7 +149,7 @@ Undid: azu generate scaffold comment body:text post_id:int64        2026-10-27T1
 ```
 {% endcode %}
 
-*Created files are deleted and the changed file is restored. The list is cut short here; the card shows every file. A file you edited since the generate is left alone and listed.*
+*Created files are deleted and changed files restored; the list is cut short here, and a file you edited since is left alone and listed.*
 
 ## Do's and don'ts
 
@@ -215,7 +215,7 @@ For a model `Post` in the project `blog`, the layers share one scheme:
 
 Names must be valid Crystal identifiers. The generator refuses a resource name that is a reserved word or that clashes with a constant of Azu or CQL (`Status`, `Request`, `Response` and others), and it refuses a second `create_*` migration whose class already exists.
 
-The generator detects an API project and switches to API components (JSON responses, no `new` or `edit`). `--web-only` overrides that.
+The generator detects an API project and switches to API components. For a scaffold that means JSON responses and no `new` or `edit` actions. `--web-only` overrides the detection.
 
 </details>
 
