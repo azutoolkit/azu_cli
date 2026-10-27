@@ -132,8 +132,8 @@ does not pay for a cold compile. A run shows the compiler's progress. Snippets t
 runs with the next compile`) and all go into the next compile, each answering its own `=> value`; one that fails to
 compile or crashes fails alone and the others run again. While the console compiles, the Commands panel holds its
 next command. Expect 10 to 20 s a run for a mid-size app on a 4-core machine: Crystal type-checks and generates the
-whole program for every compile, and has no incremental mode. An expression answers `=> value` (its `inspect`); what it prints comes
-before. Declarations (`def`, `class`, `module`, `struct`, `macro`, ...) are kept and come before every later snippet.
+whole program for every compile, and has no incremental mode. An expression answers `=> value`, pretty-printed (`pretty_inspect` at the console's width: a record's
+`@ivars` one per line, nested arrays and hashes indented) and colored like irb; what it prints comes before. Declarations (`def`, `class`, `module`, `struct`, `macro`, ...) are kept and come before every later snippet.
 A local assignment (`post = Post.first`) is kept too and runs again before each snippet, so its locals carry over;
 one that would write if run again (`create`, `save`, `update`, `delete`, `destroy`, a `!` method, ...) is not kept,
 and the transcript says so. `locals` and `declarations` list what is kept, `forget` drops it, `help` explains, `exit`

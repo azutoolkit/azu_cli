@@ -24,6 +24,8 @@
   subprocesses, one at a time and not during a build, again when what they read changes (a build, a migration, `.env`
   or `shard.yml`), and shows each one's outcome and output; `db:migrate` and `session:clear` run only after `y`, and
   `w` re-runs the tests after each build. The overview has a one-line summary. Panels are numbered `1`-`7` now (Log is `7`)
+- Added: the console pretty-prints values (`pretty_inspect` at its width: a record's `@ivars` one per line, nested
+  arrays and hashes indented) and colors them like irb (strings, numbers and times, constants, symbols, `@ivars`)
 - Added: the console warms the compiler up after the app's first build, shows the compiler's progress, and lets you
   type ahead: snippets typed while one compiles go together into the next compile (each with its own `=> value`; a
   failing one fails alone). The Commands panel holds its next command while the console compiles

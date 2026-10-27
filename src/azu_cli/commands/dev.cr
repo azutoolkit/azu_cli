@@ -80,7 +80,7 @@ module AzuCLI
           "watching src, config · poll #{@interval.total_milliseconds.to_i} ms", on_rebuild: -> { @rebuild_requested = true; nil }, branch: git_branch,
           on_control: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command); nil },
           history: AzuCLI::DevServer::Console::History.for_project,
-          on_eval: ->(snippets : Array(AzuCLI::DevServer::Console::Snippet), prelude : Array(String), kept : Array(String)) { evaluator.evaluate(snippets, prelude, kept); nil },
+          on_eval: ->(snippets : Array(AzuCLI::DevServer::Console::Snippet), prelude : Array(String), kept : Array(String), width : Int32) { evaluator.evaluate(snippets, prelude, kept, width); nil },
           on_prewarm: -> { evaluator.prewarm; nil },
           on_cancel_eval: -> { evaluator.cancel; nil },
           on_interpreter: ->(prelude : Array(String)) { run_interpreter(app_file, prelude); nil })

@@ -12,10 +12,13 @@ module AzuCLI
     # together into the next compile. `crystal i` (Ctrl-O) cannot load azu or CQL with Crystal 1.22.1.
     module Console
       MARKER = "AZU_CONSOLE_VALUE:"
+      # A value is printed pretty (`pretty_inspect`) between these, so it can take several lines.
+      VALUE     = "AZU_CONSOLE_PRETTY:"
+      VALUE_END = "AZU_CONSOLE_PRETTY_END:"
+      # Most lines of a value shown; the rest is counted.
+      VALUE_LINES = 200
       # Printed after the kept assignments ran again: what the snippet prints comes after it.
       START = "AZU_CONSOLE_START"
-      # Longest `inspect` of a value shown.
-      VALUE_LIMIT = 4000
 
       DECLARATION = /\A\s*(def|class|module|struct|enum|lib|macro|annotation|alias|require|include|extend|record|abstract\s+(class|struct|def)|private\s+def)\b/
 
@@ -48,7 +51,7 @@ module AzuCLI
       # One script for a batch of snippets: the app, the declarations kept so far and the batch's own, the kept
       # assignments, then each expression in turn, each printing its own value. Locals of an earlier snippet in the
       # batch are visible to a later one, as they are at a prompt.
-      def self.script(app_file : String, prelude : Array(String), kept : Array(String), snippets : Array(Snippet)) : {String, Ranges}
+      def self.script(app_file : String, prelude : Array(String), kept : Array(String), snippets : Array(Snippet), width : Int32 = 80) : {String, Ranges}
         ranges = Ranges.new
         lines = ["require #{app_file.inspect}"]
         add = ->(code : String) { lines.concat(code.split('\n')) }
@@ -71,7 +74,9 @@ module AzuCLI
           add.call(snippet.code)
           ranges << {snippet.id, first..lines.size}
           lines << "end"
-          lines << "puts \"\\n#{MARKER}#{snippet.id}:\#{__azu_console_value_#{snippet.id}.inspect[0, #{VALUE_LIMIT}]}\""
+          lines << "puts #{"\n#{VALUE}#{snippet.id}".inspect}"
+          lines << "puts __azu_console_value_#{snippet.id}.pretty_inspect(#{Math.max(20, width)})"
+          lines << "puts #{"#{VALUE_END}#{snippet.id}".inspect}"
         end
         {lines.join('\n') + "\n", ranges}
       end
@@ -90,8 +95,21 @@ module AzuCLI
 
         current = nil
         printed = [] of String
+        pretty_lines = nil
         lines[start + 1..].each do |line|
-          if line.starts_with?(BEGIN)
+          if pretty = pretty_lines
+            if line == "#{VALUE_END}#{current}"
+              printed = printed[0, (printed.rindex { |text| !text.empty? } || -1) + 1]
+              current.try { |done| result[done] = Outcome.new(true, printed, Console.clip(pretty), nil) }
+              current = nil
+              pretty_lines = nil
+              printed = [] of String
+            else
+              pretty << line
+            end
+          elsif line.starts_with?(VALUE)
+            pretty_lines = [] of String
+          elsif line.starts_with?(BEGIN)
             current = line.lchop(BEGIN).to_i?
             printed = [] of String
           elsif line.starts_with?(MARKER)
@@ -113,6 +131,41 @@ module AzuCLI
           result[id] = id == current ? Outcome.new(false, printed.reject(&.empty?), nil, exit_code == 0 ? "the program exited" : "stopped (exit #{exit_code})") : nil
         end
         result
+      end
+
+      # The value's lines, at most VALUE_LINES of them.
+      def self.clip(lines : Array(String)) : String
+        return lines.join('\n') if lines.size <= VALUE_LINES
+        (lines.first(VALUE_LINES) + ["… #{lines.size - VALUE_LINES} more lines"]).join('\n')
+      end
+
+      # The tokens of an `inspect` line, for color: strings, numbers, nil/true/false, symbols, constants, @ivars.
+      HIGHLIGHT = /(?<string>"(?:\\.|[^"\\])*")|(?<ivar>@[a-z_]\w*)|(?<symbol>:[a-z_]\w*[?!]?)|(?<constant>#?<?\b[A-Z]\w*(?:::[A-Z]\w*)*)|(?<number>\b\d{4}-\d\d-\d\d(?: \d\d:\d\d:\d\d(?:\.\d+)?(?: ?(?:Z|[+-]\d\d:?\d\d))?)?|-?\b\d[\d_]*(?:\.\d+)?(?:e[+-]?\d+)?(?:_?[iuf]\d+)?\b)|(?<keyword>\b(?:nil|true|false)\b)/
+
+      enum Token
+        Plain
+        String
+        Ivar
+        Symbol
+        Constant
+        Number
+        Keyword
+      end
+
+      # {text, kind} pieces of a line of a value.
+      def self.tokens(line : String) : Array({String, Token})
+        pieces = [] of {String, Token}
+        position = 0
+        line.scan(HIGHLIGHT) do |match|
+          start = match.begin(0)
+          pieces << {line[position...start], Token::Plain} if start > position
+          kind = {"string" => Token::String, "ivar" => Token::Ivar, "symbol" => Token::Symbol, "constant" => Token::Constant,
+                  "number" => Token::Number, "keyword" => Token::Keyword}.find { |(name, _)| match[name]? }.try(&.[1]) || Token::Plain
+          pieces << {match[0], kind}
+          position = match.end(0)
+        end
+        pieces << {line[position..], Token::Plain} if position < line.size
+        pieces
       end
 
       private def self.compile_failure(lines : Array(String), script_name : String, ranges : Ranges, ids : Array(Int32), exit_code : Int32) : Hash(Int32, Outcome?)
@@ -155,8 +208,8 @@ module AzuCLI
           !@process.nil?
         end
 
-        def evaluate(snippets : Array(Snippet), prelude : Array(String), kept : Array(String)) : Nil
-          script, ranges = Console.script(@app_file, prelude, kept, snippets)
+        def evaluate(snippets : Array(Snippet), prelude : Array(String), kept : Array(String), width : Int32 = 80) : Nil
+          script, ranges = Console.script(@app_file, prelude, kept, snippets, width)
           spawn do
             exit_code, output, seconds = compile_and_run(script)
             @report.call(Events::ConsoleFinished.new(snippets.map(&.id), exit_code, output, seconds, ranges))

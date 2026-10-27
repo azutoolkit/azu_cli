@@ -17,7 +17,7 @@ end
 private def console_hud(evaluations : Array(Evaluation), history = Console::History.new(nil), interpreter_runs = [] of Array(String))
   screen = AzuCLI::DevServer::Hud.new("blog", "4000", "development", "watching src", directory: "/work/blog", commands: [] of AzuCLI::DevServer::Control::Command,
     history: history,
-    on_eval: ->(snippets : Array(Console::Snippet), prelude : Array(String), kept : Array(String)) { evaluations << Evaluation.new(snippets, prelude, kept); nil },
+    on_eval: ->(snippets : Array(Console::Snippet), prelude : Array(String), kept : Array(String), _width : Int32) { evaluations << Evaluation.new(snippets, prelude, kept); nil },
     on_interpreter: ->(prelude : Array(String)) { interpreter_runs << prelude; nil })
   screen.update(TUI::Key.new(TUI::KeyCode::Char, '3'))
   screen
@@ -33,7 +33,7 @@ end
 
 # What a batch of one snippet prints when it runs: its value line after the start marker.
 private def finished(id : Int32, value : String)
-  Ev::ConsoleFinished.new([id], 0, "#{Console::START}\n#{Console::BEGIN}#{id}\n\n#{Console::MARKER}#{id}:#{value}\n", 1.5, Console::Ranges.new)
+  Ev::ConsoleFinished.new([id], 0, "#{Console::START}\n#{Console::BEGIN}#{id}\n\n#{Console::VALUE}#{id}\n#{value}\n#{Console::VALUE_END}#{id}\n", 1.5, Console::Ranges.new)
 end
 
 private def render(screen, width = 110, height = 30) : String
@@ -75,6 +75,27 @@ describe AzuCLI::DevServer::Console do
     outcomes[1].should eq Console::Outcome.new(true, ["hello"], "42", nil)
     outcomes[2].not_nil!.value.should eq "declared"
     outcomes[3].not_nil!.value.should eq "\"x\""
+  end
+
+  it "reads a pretty-printed value over several lines, and clips a very long one" do
+    pretty = "#<Post:0x1\n @id=1,\n @title=\"Hello\">"
+    output = "#{Console::START}\n#{Console::BEGIN}1\nhi\n\n#{Console::VALUE}1\n#{pretty}\n#{Console::VALUE_END}1\n"
+    Console.outcomes(0, output, Console::SCRIPT, Console::Ranges.new, [1])[1].should eq Console::Outcome.new(true, ["hi"], pretty, nil)
+    script, _ = Console.script("./src/blog.cr", [] of String, [] of String, [Console::Snippet.new(1, "Post.first", false)], 60)
+    script.should contain "__azu_console_value_1.pretty_inspect(60)"
+    Console.clip((1..205).map(&.to_s)).lines.last.should eq "… 5 more lines"
+  end
+
+  it "splits a value line into colored tokens" do
+    Console.tokens("@created_at=2026-10-27 19:53:15Z,").should eq [{"@created_at", Console::Token::Ivar}, {"=", Console::Token::Plain},
+                                                                   {"2026-10-27 19:53:15Z", Console::Token::Number}, {",", Console::Token::Plain}]
+    Console.tokens(%(#<Post @id=1, @title="Hi", @draft=false, @tag=:news>)).should eq [
+      {"#<Post", Console::Token::Constant}, {" ", Console::Token::Plain}, {"@id", Console::Token::Ivar}, {"=", Console::Token::Plain},
+      {"1", Console::Token::Number}, {", ", Console::Token::Plain}, {"@title", Console::Token::Ivar}, {"=", Console::Token::Plain},
+      {"\"Hi\"", Console::Token::String}, {", ", Console::Token::Plain}, {"@draft", Console::Token::Ivar}, {"=", Console::Token::Plain},
+      {"false", Console::Token::Keyword}, {", ", Console::Token::Plain}, {"@tag", Console::Token::Ivar}, {"=", Console::Token::Plain},
+      {":news", Console::Token::Symbol}, {">", Console::Token::Plain},
+    ]
   end
 
   it "fails the snippet that crashed and runs the ones after it again" do
@@ -252,7 +273,7 @@ describe "AzuCLI::DevServer::Hud console queue" do
     evaluations = [] of Evaluation
     cancelled = false
     screen = AzuCLI::DevServer::Hud.new("blog", "4000", "development", "watching src", directory: "/work/blog", commands: [] of AzuCLI::DevServer::Control::Command,
-      on_eval: ->(snippets : Array(Console::Snippet), prelude : Array(String), kept : Array(String)) { evaluations << Evaluation.new(snippets, prelude, kept); nil },
+      on_eval: ->(snippets : Array(Console::Snippet), prelude : Array(String), kept : Array(String), _width : Int32) { evaluations << Evaluation.new(snippets, prelude, kept); nil },
       on_cancel_eval: -> { cancelled = true; nil })
     screen.update(TUI::Key.new(TUI::KeyCode::Char, '3'))
     type(screen, "Post.count")

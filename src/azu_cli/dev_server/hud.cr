@@ -79,7 +79,7 @@ module AzuCLI
       def initialize(@project : String, @port : String, @environment : String, @watching : String, @on_rebuild : Proc(Nil) = -> { }, @clock : Proc(Time::Instant) = -> { Time.instant }, @directory : String = Dir.current, @branch : String? = nil,
                      @commands : Array(Control::Command) = Control.catalog, @on_control : Proc(Control::Command, Nil) = ->(_command : Control::Command) { },
                      @history : Console::History = Console::History.new(nil),
-                     @on_eval : Proc(Array(Console::Snippet), Array(String), Array(String), Nil) = ->(_snippets : Array(Console::Snippet), _prelude : Array(String), _kept : Array(String)) { },
+                     @on_eval : Proc(Array(Console::Snippet), Array(String), Array(String), Int32, Nil) = ->(_snippets : Array(Console::Snippet), _prelude : Array(String), _kept : Array(String), _width : Int32) { },
                      @on_cancel_eval : Proc(Nil) = -> { },
                      @on_prewarm : Proc(Nil) = -> { },
                      @on_interpreter : Proc(Array(String), Nil) = ->(_prelude : Array(String)) { })
@@ -330,7 +330,7 @@ module AzuCLI
         @compiling = true
         @console_progress = nil
         @compile_started = @clock.call
-        @on_eval.call(waiting.map { |entry| Console::Snippet.new(entry.id, entry.code, entry.declaration?) }, prelude.dup, kept.dup)
+        @on_eval.call(waiting.map { |entry| Console::Snippet.new(entry.id, entry.code, entry.declaration?) }, prelude.dup, kept.dup, @value_width)
       end
 
       # Esc while snippets run or wait: the running compile is stopped, and the waiting ones are dropped with it.
@@ -347,6 +347,8 @@ module AzuCLI
       end
 
       @cancel_requested = false
+      # How wide a value may print: the transcript's width less the "=> ", as last drawn
+      @value_width = 80
 
       # After the app's first build, compile it once for the console, so the first snippet is as quick as the next.
       private def prewarm : Nil
@@ -631,6 +633,7 @@ module AzuCLI
         inner = frame.card(rect, "Console #{g.dot} #{@environment}", "#{kept.size} kept #{g.dot} #{prelude.size} declared #{g.dot} #{mode}")
         return if inner.empty?
 
+        @value_width = Math.max(40, inner.w - 3)
         rows = console_rows(frame)
         visible = inner.h
         @scroll = @scroll.clamp(0, Math.max(0, rows.size - visible))
@@ -661,7 +664,16 @@ module AzuCLI
           when .running?
             rows << compile_row(g)
           when .ok?
-            rows << (entry.declaration? ? [Seg["#{g.ok} declared: kept for the next snippets", Token::Green], Seg[time, Token::Faint]] : [Seg["=> ", Token::Muted], Seg[entry.value || "nil", Token::Cyan], Seg[time, Token::Faint]])
+            if entry.declaration?
+              rows << [Seg["#{g.ok} declared: kept for the next snippets", Token::Green], Seg[time, Token::Faint]]
+            else
+              lines = (entry.value || "nil").split('\n')
+              lines.each_with_index do |line, index|
+                row = [Seg[index == 0 ? "=> " : "   ", Token::Muted]] + value_segs(line)
+                row << Seg[time, Token::Faint] if index == lines.size - 1
+                rows << row
+              end
+            end
             entry.kept.try { |kept_note| rows << [Seg["#{kept_note.includes?("not kept") ? g.warn : g.pointer} #{kept_note}", kept_note.includes?("not kept") ? Token::Amber : Token::Muted]] }
           when .fail?
             rows << [Seg["#{g.fail} #{entry.error}", Token::Red], Seg[time, Token::Faint]]
@@ -674,6 +686,15 @@ module AzuCLI
 
       private def module_name : String
         @module_name ||= (Utils.project_module_name rescue @project.camelcase)
+      end
+
+      VALUE_COLORS = {Console::Token::Plain => Token::Text, Console::Token::String => Token::Green, Console::Token::Ivar => Token::Muted,
+                      Console::Token::Symbol => Token::Amber, Console::Token::Constant => Token::Blue, Console::Token::Number => Token::Purple,
+                      Console::Token::Keyword => Token::Amber}
+
+      # A line of a value, colored like irb: strings green, numbers purple, constants blue, @ivars muted.
+      private def value_segs(line : String) : Array(Seg)
+        Console.tokens(line).map { |(text, kind)| Seg[text, VALUE_COLORS[kind]] }
       end
 
       # "⠋ compiling [9/13] Codegen (bc+obj) ▰▰▰▰▱▱  6.2s"
