@@ -7,9 +7,9 @@ describe AzuCLI::UI::Reporter do
     TUI::Reporter.build(nil, IO::Memory.new).should be_a TUI::Plain
     TUI::Reporter.build("json", IO::Memory.new).should be_a TUI::Json
     TUI::Reporter.build(nil, IO::Memory.new, env: {"AZU_UI" => "json"}).should be_a TUI::Json
-    TUI::Reporter.build(nil, IO::Memory.new, TUI::Terminal.fake(depth: TUI::ColorDepth::Basic16)).should be_a TUI::Rich
+    TUI::Reporter.build(nil, IO::Memory.new, TUI::Terminal.fake(depth: TUI::ColorDepth::Basic16), env: {} of String => String).should be_a TUI::Rich
     TUI::Reporter.build(nil, IO::Memory.new, TUI::Terminal.fake(depth: TUI::ColorDepth::Basic16), env: {"CI" => "true"}).should be_a TUI::Plain
-    TUI::Reporter.build(nil, IO::Memory.new, TUI::Terminal.fake(depth: TUI::ColorDepth::None)).should be_a TUI::Plain
+    TUI::Reporter.build(nil, IO::Memory.new, TUI::Terminal.fake(depth: TUI::ColorDepth::None), env: {} of String => String).should be_a TUI::Plain
   end
 
   it "plain: one line per finished task, failures marked, no escape codes" do
