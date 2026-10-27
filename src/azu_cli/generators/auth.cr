@@ -1,5 +1,6 @@
 require "teeplate"
 require "./model"
+require "./session_wiring"
 
 module AzuCLI
   module Generate
@@ -15,7 +16,7 @@ module AzuCLI
       directory "#{__DIR__}/../templates/auth"
       OUTPUT_DIR      = "."
       USER_ATTRIBUTES = {"email" => "string:unique", "password_digest" => "string"}
-      SESSION_HANDLER = "Session::SessionHandler(UserSession).new(Session.session),"
+      SESSION_HANDLER = SessionWiring::HANDLER
 
       getter app_module : String
       getter app_dir : String
@@ -42,7 +43,7 @@ module AzuCLI
 
       # The handler list line the session handler goes after; a commented-out line does not count.
       def self.handler_anchor : Regex
-        /^( *)Azu::Handler::RequestId\.new,/m
+        SessionWiring::ANCHOR
       end
 
       def initialize
@@ -54,32 +55,8 @@ module AzuCLI
       def render(out_dir : String, force : Bool = false, interactive : Bool = true, list : Bool = false, color : Bool = false)
         super
         Model.new("User", USER_ATTRIBUTES).render(File.join(out_dir, "src", "models"), force: force, interactive: interactive, list: list, color: color)
-        add_session_handler(self.class.app_file_path(out_dir))
-        add_session_secret(File.join(out_dir, ".env"))
-      end
-
-      private def add_session_handler(app_file : String)
-        return unless File.exists?(app_file)
-
-        source = File.read(app_file)
-        return if source.includes?("Session::SessionHandler")
-
-        File.write(app_file, source.sub(self.class.handler_anchor) { "#{$1}Azu::Handler::RequestId.new,\n#{$1}#{SESSION_HANDLER}" })
-      end
-
-      # The .env (created if missing) lists a random secret and is git-ignored; the app loads it at boot (`Azu::Env.load_all`).
-      private def add_session_secret(env_file : String)
-        if File.symlink?(env_file)
-          Logger.warn("#{env_file} is a symlink: SESSION_SECRET was not written; set it in your environment")
-          return
-        end
-
-        content = File.exists?(env_file) ? File.read(env_file) : ""
-        return if content.includes?("SESSION_SECRET=")
-
-        separator = content.empty? || content.ends_with?("\n") ? "" : "\n"
-        File.write(env_file, "#{content}#{separator}SESSION_SECRET=#{Random::Secure.hex(32)}\n", perm: 0o600) # a new file is never readable by others
-        File.chmod(env_file, 0o600)                                                                           # nor an existing one
+        SessionWiring.add_handler(self.class.app_file_path(out_dir))
+        SessionWiring.add_secret(File.join(out_dir, ".env"))
       end
     end
   end

@@ -276,11 +276,9 @@ Configures session management.
 **Quick Examples:**
 
 ```bash
-# Setup with Redis
+# Cookie sessions (default), or --backend redis / memory
+azu session:setup
 azu session:setup --backend redis
-
-# Setup with database
-azu session:setup --backend database
 ```
 
 #### `azu session:clear`

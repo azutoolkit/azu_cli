@@ -274,7 +274,7 @@ module AzuCLI
         puts "  session:clear            Clear all sessions"
         puts
         puts "Options:"
-        puts "  --backend, -b TYPE       Session backend (redis, memory, database)"
+        puts "  --backend, -b TYPE       Session backend (cookie, redis, memory)"
         puts "  --force, -f              Overwrite existing configuration (setup) / skip confirmation (clear)"
         puts
         puts "Examples:"
