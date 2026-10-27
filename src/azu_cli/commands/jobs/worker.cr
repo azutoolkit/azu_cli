@@ -68,7 +68,7 @@ module AzuCLI
           # This assumes the application has a worker entry point
           process = Process.new(
             "crystal",
-            ["run", "src/worker.cr"],
+            ["run", "src/worker.cr", "--", "--worker"], # --worker: the generated initializer turns the REST API off
             env: env,
             output: @verbose ? Process::Redirect::Inherit : Process::Redirect::Pipe,
             error: @verbose ? Process::Redirect::Inherit : Process::Redirect::Pipe

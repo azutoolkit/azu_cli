@@ -477,12 +477,28 @@ describe AzuCLI::Generate::Project do
     end
   end
 
+  describe "port" do
+    it "names the port the app listens on (azu's default, the .env's PORT) wherever a file gives its URL" do
+      ["web", "api"].each do |type|
+        dir = "./tmp_test_port_#{type}"
+        FileUtils.mkdir_p(dir)
+        AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: type).render(dir)
+        File.read("#{dir}/.env").should contain("PORT=#{AzuCLI::Config::Ports::DEV_SERVER}\n")
+        File.read("#{dir}/README.md").should contain("http://localhost:4000/")
+        Dir.glob("#{dir}/**/*", match: File::MatchOptions::DotFiles).each do |file|
+          next unless File.file?(file) && !file.ends_with?(".map") && !file.ends_with?(".css") && !file.ends_with?(".js")
+          File.read(file).should_not match(/localhost:3000/)
+        end
+      end
+    end
+  end
+
   describe "welcome page" do
     it "prints the CSRF meta tag as HTML (| safe), as the autoescaping .jinja templates need" do
       web = "./tmp_test_welcome_safe"
       FileUtils.mkdir_p(web)
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "web").render(web)
-      page = File.read("#{web}/public/templates/myapp/welcome/index_page.jinja")
+      page = File.read("#{web}/public/templates/my_app/welcome/index_page.jinja")
       page.should contain("{{ csrf_metatag | safe }}")
       page.should_not contain("{{ csrf_metatag }}")
     end

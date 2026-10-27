@@ -49,7 +49,7 @@ class <%=camel_case_name%>Mailer < Carbon::Email
   end
 
   # Preview emails in development
-  # Access at: http://localhost:3000/dev/emails/<%=snake_case_name%>/preview
+  # Access at: http://localhost:4000/dev/emails/<%=snake_case_name%>/preview
   def self.preview(method_name : String)
     mailer = new
     case method_name

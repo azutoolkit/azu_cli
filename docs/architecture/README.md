@@ -110,7 +110,7 @@ database:
 
 server:
   host: <%= ENV["HOST"] || "0.0.0.0" %>
-  port: <%= ENV["PORT"] || 3000 %>
+  port: <%= ENV["PORT"] || 4000 %>
 ```
 
 ### 5. Logging System

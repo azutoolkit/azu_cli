@@ -8,9 +8,9 @@ module AzuCLI
     # Runs the app and keeps it current: rebuilds (non-release) when sources change and restarts the app.
     class Dev < Base
       OPTIONS             = ["port", "host", "env", "debounce", "interval"]
-      DEFAULT_PORT        = 4000
-      DEFAULT_DEBOUNCE_MS =  300
-      DEFAULT_INTERVAL_MS =  250
+      DEFAULT_PORT        = AzuCLI::Config::Ports::DEV_SERVER
+      DEFAULT_DEBOUNCE_MS = 300
+      DEFAULT_INTERVAL_MS = 250
 
       alias Child = AzuCLI::DevServer::Child
 

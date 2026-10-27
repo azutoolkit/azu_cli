@@ -63,10 +63,7 @@ module AzuCLI
           when "mysql"
             execute_on_server("CREATE DATABASE #{db_name}")
           when "sqlite", "sqlite3"
-            # An empty file is an empty SQLite database
-            path = sqlite_path(db_name)
-            Dir.mkdir_p(File.dirname(path))
-            File.touch(path)
+            create_sqlite_database(db_name)
           else
             raise "Unsupported adapter: #{@adapter}"
           end

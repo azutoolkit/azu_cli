@@ -38,7 +38,7 @@ module AzuCLI
       private def validate_server_configuration
         config = Config.instance
         if config.dev_server_port < 1 || config.dev_server_port > 65535
-          Logger.warn("Invalid server port: #{config.dev_server_port}. Using default port 3000.")
+          Logger.warn("Invalid server port: #{config.dev_server_port}. Using default port #{Config::Ports::DEV_SERVER}.")
         end
       end
     end

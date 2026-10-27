@@ -7,8 +7,8 @@
 # To enqueue this job:
 #   <%= @example_job_name rescue "ExampleJob" %>.enqueue(message: "Hello, JoobQ!")
 #
-# To schedule this job:
-#   <%= @example_job_name rescue "ExampleJob" %>.schedule(in: 5.minutes, message: "Hello, JoobQ!")
+# To run it in 5 minutes:
+#   <%= @example_job_name rescue "ExampleJob" %>.delay(for: 5.minutes, message: "Hello, JoobQ!")
 
 struct <%= @example_job_name rescue "ExampleJob" %>
   include JoobQ::Job
@@ -17,8 +17,8 @@ struct <%= @example_job_name rescue "ExampleJob" %>
   @queue   = "<%= @default_queue rescue "default" %>"
   # Number of retries on failure
   @retries = 3
-  # Job expiration time
-  @expires = 1.hour.total_seconds.to_i
+  # A job not run within an hour expires (JoobQ stores the Unix time in milliseconds)
+  @expires = 1.hour.from_now.to_unix_ms
 
   # Job parameters
   property message : String

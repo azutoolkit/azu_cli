@@ -5,8 +5,8 @@
 # To enqueue this job:
 #   <%=camel_case_name%>MailerJob.enqueue(action: "welcome", to: "user@example.com", params: {...})
 #
-# To schedule this job:
-#   <%=camel_case_name%>MailerJob.schedule(in: 5.minutes, action: "welcome", to: "user@example.com", params: {...})
+# To run it in 5 minutes:
+#   <%=camel_case_name%>MailerJob.delay(for: 5.minutes, action: "welcome", to: "user@example.com", params: {...})
 
 require "../mailers/<%=snake_case_name%>_mailer"
 
@@ -17,8 +17,8 @@ struct <%=camel_case_name%>MailerJob
   @queue = "mailers"
   # Retry failed emails up to 3 times
   @retries = 3
-  # Expire after 1 hour
-  @expires = 1.hour.total_seconds.to_i
+  # Expire after 1 hour (JoobQ stores the Unix time in milliseconds)
+  @expires = 1.hour.from_now.to_unix_ms
 
   # Job parameters
   property action : String

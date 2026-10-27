@@ -28,7 +28,7 @@ describe "JoobQ Generator E2E" do
 
       worker_content = read_file(project_path, "src/worker.cr").not_nil!
       worker_content.should contain("JoobQ")
-      worker_content.should contain("Worker")
+      worker_content.should contain("JoobQ.forge")
     end
   end
 
