@@ -42,10 +42,12 @@ Where to look:
 | Plugins    | `src/azu_cli/plugins/`    | Three built-in hook sets: generator, database, development             |
 | UI engine  | `src/azu_cli/ui/`         | See [Terminal UI](terminal-ui.md)                                      |
 
-```crystal title="src/azu_cli/cli.cr (shape of a registration)"
+{% code title="src/azu_cli/cli.cr (shape of a registration)" %}
+```crystal
 register_command("generate", Commands::Generate)
 register_command("g", Commands::Generate) # alias
 ```
+{% endcode %}
 
 | Exit code | Meaning        |
 | --------- | -------------- |
@@ -57,13 +59,15 @@ Aliases: `g` for `generate`, `s` and `server` for `serve`, `t` for `test`.
 
 ## Realistic output
 
-```text title="terminal"
+{% code title="terminal" %}
+```text
 $ azu nope
 Unknown command: nope
 Run 'azu help' to see available commands
 $ echo $?
 1
 ```
+{% endcode %}
 
 *An unknown command exits 1 and points at `azu help`.*
 

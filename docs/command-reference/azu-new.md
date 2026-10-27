@@ -51,12 +51,14 @@ azu new shop --docker --db postgresql --yes
 ```bash
 azu new blog --yes
 ```
-```text title="blog/"
+{% code title="blog/" %}
+```text
 src/        blog.cr  server.cr  endpoints/ requests/ pages/ services/ models/
             jobs/ channels/ middleware/ initializers/ db/{migrations,schema.cr,seed.cr}
 public/templates/    # Jinja templates, never served as static files
 spec/  config/  .env  .env.example  .env.development  .env.test  shard.yml
 ```
+{% endcode %}
 {% endtab %}
 
 {% tab title="api" %}
@@ -81,13 +83,15 @@ An `OptionParser` program with `--help` and `--version`. No server, database, jo
 
 <figure><img src="../assets/terminal-ui/04-new-progress.png" alt="The progress card with a spinner on the shards step"><figcaption><p>Mid-run: a spinner and live timer on <code>shards install</code>, with the last line it printed.</p></figcaption></figure>
 
-```text title="terminal: azu new blog --yes --ui plain"
+{% code title="terminal: azu new blog --yes --ui plain" %}
+```text
 ✔ Files       63 written into ./blog
 ✔ Secrets     .env (0600) · CSRF_SECRET
 ✔ Git         init + 1 commit
 ✔ Shards      15 installed
 ✔ Type-check  src/server.cr
 ```
+{% endcode %}
 
 *One line per step. Exit code 0 means every step passed.*
 

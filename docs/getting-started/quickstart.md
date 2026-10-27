@@ -55,7 +55,7 @@ azu dev
 
 Open <http://localhost:4000>.
 
-<figure><img src="../assets/landing-page/landing-dark-1280.png#gh-dark-mode-only" alt="The welcome page of a new Azu app, dark theme"><img src="../assets/landing-page/landing-light-1280.png#gh-light-mode-only" alt="The welcome page of a new Azu app, light theme"><figcaption><p>The page a new app serves at <code>/</code>. It lists the next three commands.</p></figcaption></figure>
+<figure><img src="../assets/landing-page/landing-dark-1280.png" alt="The welcome page of a new Azu app"><figcaption><p>The page a new app serves at <code>/</code>. It lists the next three commands.</p></figcaption></figure>
 
 Save a file under `src/` and the app rebuilds and restarts. Save a template under `public/templates/` and it reloads with no build.
 
@@ -99,7 +99,8 @@ azu undo         # take the last generate back
 
 ## Realistic output
 
-```text title="terminal: azu new blog --ui plain (steps)"
+{% code title="terminal: azu new blog --ui plain (steps)" %}
+```text
 ✔ Files       63 written into ./blog
 ✔ Secrets     .env (0600) · CSRF_SECRET
 ✔ Git         init + 1 commit
@@ -112,6 +113,7 @@ blog is ready
   $ azu serve
   Visit: http://localhost:4000
 ```
+{% endcode %}
 
 *Counts and timings are from a real run and vary by machine. The card also suggests `azu serve`; use `azu dev` while developing.*
 

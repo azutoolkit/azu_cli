@@ -58,7 +58,8 @@ docker run -p 4000:4000 \
 
 ## Realistic output
 
-```dockerfile title="Dockerfile (generated, abridged)"
+{% code title="Dockerfile (generated, abridged)" %}
+```dockerfile
 FROM crystallang/crystal:1.22.1 AS build
 ...
 RUN mkdir -p bin && crystal build --release --no-debug src/server.cr -o bin/shop
@@ -71,13 +72,16 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1
 CMD ["./shop"]
 ```
+{% endcode %}
 
 *Two stages: a release build, then a runtime image with only the binary, `public/` and `config/`, running as user `app`
 (uid 10001). A SQLite project also gets a `/data` volume.*
 
-```text title="terminal: container started without CSRF_SECRET"
+{% code title="terminal: container started without CSRF_SECRET" %}
+```text
 the app exits with an error naming the missing CSRF_SECRET
 ```
+{% endcode %}
 
 *That's the guard working. Generated apps refuse to boot in production without it.*
 

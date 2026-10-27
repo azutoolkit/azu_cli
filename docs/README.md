@@ -7,6 +7,8 @@ description: Scaffold, run and ship Azu apps from your terminal.
 Azu CLI is the command line for the [Azu Toolkit](https://github.com/azutoolkit/azu). It creates projects, generates the
 code you would have written anyway, rebuilds your app when you save, and tells you what's wrong with your setup.
 
+## Overview
+
 {% tabs %}
 {% tab title="azu new" %}
 <figure><img src="assets/terminal-ui/05-new-done.png" alt="azu new blog finishing: flight plan, progress card and next steps"><figcaption><p>A reviewed plan, a live progress card, and the commands to run next. 63 files, git, shards and a type-check in 18 seconds.</p></figcaption></figure>
@@ -57,7 +59,8 @@ azu db:migrate
 
 ## Realistic output
 
-```text title="terminal"
+{% code title="terminal" %}
+```text
 $ azu doctor --ui plain
 ok    crystal        Crystal 1.22.1 (the project needs 1.22.1 or newer)
 ok    shards         Shards 0.20.0
@@ -67,6 +70,7 @@ ok    database       SQLite file ./db/blog_development.db is writable
 
 9 ok, 0 warnings, 0 failures
 ```
+{% endcode %}
 
 *Every rich screen has a plain twin, so this is what CI and pipes see.*
 

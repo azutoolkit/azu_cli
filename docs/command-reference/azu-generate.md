@@ -93,7 +93,8 @@ Names follow `Blog::<Plural>::<Action><Layer>` and files follow `src/<layer>s/<p
 
 {% tabs %}
 {% tab title="Model" %}
-```crystal title="src/models/post.cr"
+{% code title="src/models/post.cr" %}
+```crystal
 require "cql"
 
 class Post
@@ -109,10 +110,12 @@ class Post
   end
 end
 ```
+{% endcode %}
 {% endtab %}
 
 {% tab title="Migration" %}
-```crystal title="src/db/migrations/<version>_create_posts.cr"
+{% code title="src/db/migrations/<version>_create_posts.cr" %}
+```crystal
 class CreatePosts < CQL::Migration(20261023111721)
   def up
     schema.table :posts do
@@ -129,10 +132,12 @@ class CreatePosts < CQL::Migration(20261023111721)
   end
 end
 ```
+{% endcode %}
 {% endtab %}
 
 {% tab title="Endpoint" %}
-```crystal title="src/endpoints/posts/create_endpoint.cr"
+{% code title="src/endpoints/posts/create_endpoint.cr" %}
+```crystal
 module Blog
   struct Posts::CreateEndpoint
     include Azu::Endpoint(Posts::CreateRequest, Azu::Response::Empty)
@@ -146,6 +151,7 @@ module Blog
   end
 end
 ```
+{% endcode %}
 {% endtab %}
 {% endtabs %}
 

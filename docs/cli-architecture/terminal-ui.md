@@ -73,13 +73,15 @@ Keys:
 
 The same `doctor` result in plain mode:
 
-```text title="terminal: azu doctor --ui plain"
+{% code title="terminal: azu doctor --ui plain" %}
+```text
 ok    crystal        Crystal 1.22.1 (the project needs 1.22.1 or newer)
 warn  database       SQLite file ./db/blog_development.db does not exist yet
                      hint: run 'azu db:setup'
 
 8 ok, 1 warnings, 0 failures
 ```
+{% endcode %}
 
 *A warning prints its hint on the next line. Exit code stays 0; a failed check exits 1.*
 

@@ -1,3 +1,7 @@
+---
+description: How the CLI finds its settings, what azu.yml can hold and which environment variables win.
+---
+
 # Configuration
 
 How the CLI finds its settings, what `azu.yml` can hold and which environment variables win.
@@ -101,11 +105,13 @@ In production the CLI turns debug mode off and stops watching and rebuilding.
 
 ## Realistic output
 
-```bash title="terminal"
+{% code title="terminal" %}
+```bash
 azu config:show --section database --format json
 azu config:validate
 azu config:env --list
 ```
+{% endcode %}
 
 `config:show` prints the settings the CLI actually resolved (`--format yaml|json|table`, `--section`, `--env`),
 `config:validate` checks them, and `config:env` lists, sets and unsets the Azu environment variables.

@@ -1,3 +1,7 @@
+---
+description: Run your own tasks in a project, or add a generator or command to the CLI itself.
+---
+
 # Custom tasks and extensions
 
 Two different things share this name: tasks your project runs, and changes to the CLI itself.
@@ -92,11 +96,13 @@ crystal spec spec/azu_cli/integration/
 
 ## Realistic output
 
-```text title="terminal"
+{% code title="terminal" %}
+```text
 $ bin/tasks --list
 hello
 cleanup
 ```
+{% endcode %}
 
 *Illustrative: the exact listing format comes from Topia and may include dependencies and descriptions.*
 

@@ -40,16 +40,19 @@ azu routes --format json | jq '.[].path'
 
 {% tabs %}
 {% tab title="Table (plain)" %}
-```text title="terminal: azu routes --ui plain"
+{% code title="terminal: azu routes --ui plain" %}
+```text
 METHOD  PATH             ENDPOINT                        REQUEST                        RESPONSE                  HELPERS
 GET     /posts           Blog::Posts::IndexEndpoint      Blog::Posts::IndexRequest      Blog::Posts::IndexPage    link_to_get_posts_index
 POST    /posts           Blog::Posts::CreateEndpoint     Blog::Posts::CreateRequest     Azu::Response::Empty      link_to_post_posts_create, form_for_post_posts_create
 DELETE  /posts/:id       Blog::Posts::DestroyEndpoint    Blog::Posts::DestroyRequest    Azu::Response::Empty      link_to_delete_posts_destroy, ...
 ```
+{% endcode %}
 {% endtab %}
 
 {% tab title="JSON" %}
-```json title="terminal: azu routes --format json"
+{% code title="terminal: azu routes --format json" %}
+```json
 [
   {
     "method": "POST",
@@ -60,6 +63,7 @@ DELETE  /posts/:id       Blog::Posts::DestroyEndpoint    Blog::Posts::DestroyReq
   }
 ]
 ```
+{% endcode %}
 {% endtab %}
 {% endtabs %}
 
