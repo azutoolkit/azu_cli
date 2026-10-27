@@ -67,7 +67,7 @@ module AzuCLI
           # Create a temporary migration runner script
           runner_script = create_migration_runner_script("down", version, steps)
 
-          Logger.info("Rolling back #{@steps} migration(s)...")
+          Logger.info("Rolling back #{@steps} migration(s)...") unless rich?
           show_database_info if @verbose
 
           # Execute the runner script
@@ -77,7 +77,7 @@ module AzuCLI
           File.delete(runner_script) if File.exists?(runner_script)
 
           if result
-            Logger.info("✓ Rollback completed successfully")
+            Logger.info("✓ Rollback completed successfully") unless rich?
             success("Rollback completed")
           else
             error("Rollback failed")
@@ -154,8 +154,7 @@ module AzuCLI
 
         # Execute the migration runner script
         private def execute_runner_script(script_path : String) : Bool
-          status = Process.run("crystal", ["run", script_path], output: STDOUT, error: STDERR)
-          status.success?
+          run_crystal_script(script_path, "Rollback")
         end
 
         # Execute dry-run mode

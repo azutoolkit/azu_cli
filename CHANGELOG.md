@@ -31,6 +31,13 @@
   (rendered in a copy of the project), type-checks in the background and writes on Enter exactly what was shown;
   `--dry-run`, `--check`, `--yes`; no arguments open a menu. `azu undo` reverts the last write (`--dry-run`, `--list`),
   leaving files edited since
+- Added: the other commands in the same style. `azu doctor`, `azu routes`, `azu db:status` and `azu version` draw
+  cards on a color terminal; `db:migrate`, `db:rollback`, `db:seed` and `db:data:migrate` show their `crystal run` as a
+  live task card that ends with the migrations applied or rolled back (the app's log noise is dropped, its warnings
+  kept, the whole output shown on failure). `--ui plain`, pipes, `NO_COLOR` and CI print what they printed before
+- Changed: the CLI's log lines use the theme's glyphs and colors (`▸` info, `✔` done, `▲` warning, `✖` error, `+`/`~`
+  for files) instead of emoji, and print above a live card instead of through it. "Executing command" and "Command
+  completed" are debug lines now (`--debug`), and the success summary is not repeated after a card
 - Changed: the CLI's log output is synchronous, so a log line is never written in the middle of a live card
 
 ## Unreleased - `azu new` defaults to SQLite

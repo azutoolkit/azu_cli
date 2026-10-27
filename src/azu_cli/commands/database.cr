@@ -307,8 +307,88 @@ module AzuCLI
         Dir.mkdir_p(migrations_dir) unless Dir.exists?(migrations_dir)
       end
 
+      # What a migration or seed script printed, sorted for a card: the migrations CQL's table lists, the log lines of
+      # the app it loads (`2026-10-27T17:59:41Z  INFO - ...`), and anything else it printed.
+      class ScriptOutput
+        LOG_LINE      = /\A\d{4}-\d\d-\d\dT[\d:.]+Z\s+([A-Z]+) - (.*)\z/
+        MIGRATION_ROW = /\A\s*│\s*(✔|✗)\s*│\s*(\S+)\s*│\s*(\d+)\s*│/
+        BOX           = /\A\s*[┌├└│]/
+
+        getter migrations = [] of {Bool, String, String}
+        getter warnings = [] of String
+        getter printed = [] of String
+
+        def initialize(lines : Array(String))
+          lines.each do |line|
+            next if line.blank?
+            if row = MIGRATION_ROW.match(line)
+              migrations << {row[1] == "✔", row[2], row[3]}
+            elsif log = LOG_LINE.match(line)
+              warnings << log[2] if {"WARN", "ERROR", "FATAL"}.includes?(log[1])
+            elsif !line.matches?(BOX)
+              printed << line.rstrip
+            end
+          end
+        end
+
+        # "applied CreatePosts, AddTagsToPosts", "rolled back CreatePosts", or "done".
+        def summary : String
+          return "done" if migrations.empty?
+          applied, rolled_back = migrations.partition(&.[0])
+          [{"applied", applied}, {"rolled back", rolled_back}].reject(&.[1].empty?).join("; ") do |(verb, rows)|
+            "#{verb} #{rows.map(&.[1]).join(", ")}"
+          end
+        end
+
+        # The line a running task shows: a log line's message, without its time and level.
+        def self.note(line : String) : String
+          LOG_LINE.match(line).try(&.[2]) || line.strip
+        end
+      end
+
+      # Runs `crystal run script`. On a terminal it is a task of a card that lists the migrations the script applied
+      # or rolled back; warnings and what the script printed follow the card, and all of its output, on stderr, when
+      # it failed. Elsewhere the output passes through.
+      protected def run_crystal_script(script : String, task_name : String, env : Hash(String, String)? = nil) : Bool
+        return Process.run("crystal", ["run", script], env: env, output: STDOUT, error: STDERR).success? unless rich?
+
+        lines = [] of String
+        ok = false
+        g = ui.as(UI::Rich).terminal.glyphs
+        ui.group("#{task_name} #{g.dot} #{@database_name || infer_database_name}") do
+          ui.task(task_name, "compiling") do |task|
+            reader, writer = IO.pipe
+            process = Process.new("crystal", ["run", script], env: env, output: writer, error: writer)
+            writer.close
+            reader.each_line do |line|
+              lines << line
+              next if line.blank?
+              task.detail = "running" if task.detail == "compiling"
+              task.note = ScriptOutput.note(line)
+            end
+            ok = process.wait.success?
+            next task.fail("crystal run failed") unless ok
+
+            output = ScriptOutput.new(lines)
+            task.finish(detail: output.summary)
+          end
+        end
+        return ok.tap { lines.each { |line| STDERR.puts line } } unless ok
+
+        output = ScriptOutput.new(lines)
+        output.warnings.each { |warning| ui.warn(warning) }
+        output.printed.first(40).each { |line| ui.note("  #{line}") }
+        ok
+      end
+
       # Display database info
       protected def show_database_info
+        if rich?
+          g = ui.as(UI::Rich).terminal.glyphs
+          where = sqlite? ? (sqlite_path(@database_name || infer_database_name) rescue "memory") : "#{@host}:#{@port}"
+          ui.note("#{g.pointer} #{@database_name || infer_database_name} #{g.dot} #{@adapter} #{g.dot} #{where} #{g.dot} #{@environment}")
+          return
+        end
         Logger.info("Database: #{@database_name || infer_database_name}")
         Logger.info("Adapter: #{@adapter}")
         Logger.info("Host: #{@host}:#{@port}")

@@ -45,6 +45,7 @@ module AzuCLI
             drop_cmd.force = true
             drop_cmd.database_name = @database_name
             drop_cmd.environment = @environment
+            drop_cmd.ui = ui
             result = drop_cmd.execute
             return result unless result.success?
           end
@@ -54,6 +55,7 @@ module AzuCLI
           create_cmd = Create.new
           create_cmd.database_name = @database_name
           create_cmd.environment = @environment
+          create_cmd.ui = ui
           result = create_cmd.execute
           return result unless result.success?
 
@@ -62,6 +64,7 @@ module AzuCLI
           migrate_cmd = Migrate.new
           migrate_cmd.database_name = @database_name
           migrate_cmd.environment = @environment
+          migrate_cmd.ui = ui
           result = migrate_cmd.execute
           return result unless result.success?
 
@@ -71,6 +74,7 @@ module AzuCLI
             seed_cmd = Seed.new
             seed_cmd.database_name = @database_name
             seed_cmd.environment = @environment
+            seed_cmd.ui = ui
             seed_cmd.execute
             # Don't fail if seeding fails
           end

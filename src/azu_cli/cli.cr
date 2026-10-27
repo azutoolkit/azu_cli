@@ -151,7 +151,7 @@ module AzuCLI
         @plugins.each(&.after_command(command, result))
 
         # Handle result
-        handle_result(result)
+        handle_result(result, command)
       rescue ex : Exception
         # Run middleware on error
         @middleware.each(&.error(command, ex))
@@ -163,9 +163,10 @@ module AzuCLI
     end
 
     # Handle command result
-    private def handle_result(result : Commands::Result) : Int32
+    private def handle_result(result : Commands::Result, command : Commands::Base) : Int32
       if result.success?
-        Logger.info(result.message) unless result.message.empty?
+        # A command that drew a card has shown its outcome; the summary line would repeat it
+        Logger.info(result.message) unless result.message.empty? || command.drew_card?
         0
       else
         Logger.error(result.error) unless result.error.empty?

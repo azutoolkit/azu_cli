@@ -3,7 +3,7 @@
 Lists the routes of the application in the current directory.
 
 ```bash
-azu routes [--format table|json] [--method METHOD] [--path TEXT]
+azu routes [--format table|json] [--method METHOD] [--path TEXT] [--ui rich|plain]
 ```
 
 The application's code is compiled and loaded (its server is **not** started) by a small script the command writes to
@@ -24,11 +24,16 @@ project has it).
 | `--format FORMAT`   | `table` (default) or `json`                                                                          |
 | `--method METHOD`   | Only routes of this HTTP method, any case. The `HEAD` and `OPTIONS` routes Azu adds for the routes you declare are hidden unless you ask for that method |
 | `--path TEXT`       | Only routes whose path contains `TEXT`                                                               |
+| `--ui MODE`         | `rich` (a card, the default on a color terminal) or `plain` (the table below)                        |
 | `--help`            | Show the help                                                                                        |
 
 With `--format json` stdout is only the JSON array (`method`, `path`, `endpoint`, `request`, `response`); the CLI adds no log lines.
 
 ## Output
+
+On a color terminal (not CI) the routes are a card: the verb colored, the endpoint and its `request ▸ response`
+without the namespace every endpoint shares (named under the table), and no helpers column. `--ui plain`, a pipe,
+`NO_COLOR` and CI print the table:
 
 ```text
 METHOD  PATH             ENDPOINT                        REQUEST                        RESPONSE                  HELPERS

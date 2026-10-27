@@ -1,4 +1,5 @@
 require "option_parser"
+require "../ui"
 
 module AzuCLI
   module Commands
@@ -45,6 +46,28 @@ module AzuCLI
 
       # Abstract method that all commands must implement
       abstract def execute : Result
+
+      @ui : UI::Reporter?
+
+      # How the command shows progress and results: cards on a terminal, lines on a pipe, NDJSON with `--ui json`
+      # (`--ui` or AZU_UI pick one). Specs set it, or get plain lines because their stdout is not a terminal.
+      def ui : UI::Reporter
+        @ui ||= UI::Reporter.build(value_option("ui").presence, stdout)
+      end
+
+      def ui=(reporter : UI::Reporter)
+        @ui = reporter
+      end
+
+      # Whether the command has drawn a card (its outcome is on the screen).
+      def drew_card? : Bool
+        @ui.as?(UI::Rich).try(&.drawn?) || false
+      end
+
+      # Whether the command draws cards (a color terminal, not CI, not --ui plain/json).
+      def rich? : Bool
+        ui.rich?
+      end
 
       # Whether stdout carries the command's data (a table, JSON): then the CLI adds no log lines of its own to it.
       def machine_output? : Bool

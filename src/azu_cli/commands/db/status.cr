@@ -24,8 +24,10 @@ module AzuCLI
             return error("Database '#{db_name}' does not exist. Run 'azu db:create' first.")
           end
 
-          show_database_info
-          puts ""
+          unless rich?
+            show_database_info
+            puts ""
+          end
 
           # Use MigrationValidator for better migration handling
           validator = AzuCLI::Validators::MigrationValidator.new(migrations_dir)
@@ -38,6 +40,8 @@ module AzuCLI
             Logger.info("No migrations found in #{migrations_dir}")
             return success("No migrations")
           end
+
+          return show_card(db_name, all_migrations, applied_versions, validator) if rich?
 
           puts "Migration Status:"
           puts "#{"-" * 100}"
@@ -77,6 +81,27 @@ module AzuCLI
             validator.warnings.each { |warning| Logger.info("  - #{warning}") }
           end
 
+          success("Status displayed")
+        end
+
+        # The migrations as a card: applied ones with their time, pending ones marked, the database in the title.
+        private def show_card(db_name : String, migrations : Array(String), applied : Array(Int64), validator) : Result
+          g = ui.as(UI::Rich).terminal.glyphs
+          rows = migrations.map do |migration|
+            version = migration.split("_").first
+            done = applied.includes?(version.to_i64)
+            name = migration.split("_", 2).last.gsub("_", " ").capitalize
+            [done ? UI::Seg[g.ok, UI::Token::Green] : UI::Seg[g.off, UI::Token::Amber], UI::Seg[version, UI::Token::Muted],
+             UI::Seg[name], done ? UI::Seg[get_migration_applied_at(version.to_i64), UI::Token::Muted] : UI::Seg["pending", UI::Token::Amber]]
+          end
+          lines = UI::Table.new(["", "VERSION", "MIGRATION", "APPLIED"], rows).lines(ui.as(UI::Rich).inner_width)
+          lines << [] of UI::Seg
+          lines << [UI::Seg["#{@adapter} #{g.dot} #{@environment}", UI::Token::Muted]]
+          pending = migrations.size - applied.size
+          badge = "#{applied.size} applied #{g.dot} #{pending} pending"
+          ui.panel("Migrations #{g.dot} #{db_name}", lines, badge, pending > 0 ? UI::Token::Amber : UI::Token::Purple)
+          validator.errors.each { |problem| ui.warn(problem) } unless validator.valid?
+          validator.warnings.each { |warning| ui.note(warning) }
           success("Status displayed")
         end
 

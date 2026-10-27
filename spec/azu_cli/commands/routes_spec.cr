@@ -114,3 +114,29 @@ describe AzuCLI::Commands::Routes do
     end
   end
 end
+
+describe "AzuCLI::Commands::Routes on a terminal" do
+  it "draws the routes as a card, without the namespace every endpoint shares" do
+    in_tmp_project(files: {"src/blog.cr" => ""}) do
+      with_loader do
+        card = IO::Memory.new
+        command = AzuCLI::Commands::Routes.new
+        command.ui = AzuCLI::UI::Rich.new(AzuCLI::UI::Terminal.fake(card, columns: 100))
+        result, _ = run_command(command, [] of String)
+
+        result.success?.should be_true
+        text = card.to_s
+        text.should contain "2 routes"
+        text.should contain "POST    /posts  Posts::CreateEndpoint  Posts::CreateRequest ▸ Azu::Response::Empty"
+        text.should contain "names under Blog"
+        text.should_not contain "HEAD"
+      end
+    end
+  end
+
+  it "finds the namespace all endpoints share" do
+    AzuCLI::Commands::Routes.shared_namespace(["Blog::A", "Blog::B::C"]).should eq "Blog::"
+    AzuCLI::Commands::Routes.shared_namespace(["Blog::A", "Chat"]).should eq ""
+    AzuCLI::Commands::Routes.shared_namespace([] of String).should eq ""
+  end
+end

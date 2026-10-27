@@ -143,6 +143,11 @@ module AzuCLI
           # Set environment variable for seed file to use
           ENV["DATABASE_URL"] = database_connection_url
 
+          if rich?
+            raise "crystal run #{path} failed" unless run_crystal_script(path, "Seed")
+            return
+          end
+
           # Execute the seed file
           output = IO::Memory.new
           error = IO::Memory.new
