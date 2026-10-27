@@ -12,6 +12,11 @@ module AzuCLI
       CRYSTAL_VERSION = "1.22.1"
       CI_SETUPS       = ["GitHub Actions", "None"]
 
+      # The port the generated app listens on (its .env, Dockerfile, README and config files)
+      def port : Int32
+        AzuCLI::Config::Ports::DEV_SERVER
+      end
+
       # Project configuration properties
       property project : String
       property module_name : String

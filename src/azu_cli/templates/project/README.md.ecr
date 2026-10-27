@@ -38,11 +38,11 @@ To develop your CLI application:
 To start your Azu server:
 
 1. Install dependencies with `shards install`
-2. Configure your database in `src/initializers/cql_config.cr`
-3. Create and migrate your database with `azu db:create` and `azu db:migrate`
+2. Check `DATABASE_URL` in `.env.development` (a SQLite file needs no server)
+3. Create and migrate your database with `azu db:setup`
 4. Start the development server with `azu serve`
 
-Now you can visit http://localhost:3000/ from your browser.
+Now you can visit http://localhost:<%= port %>/ from your browser.
 
 In development the server listens on `127.0.0.1` only (azu's default; `.env` does not set `HOST`). To reach it from
 another machine or from inside a container, set `HOST=0.0.0.0` in the environment (a real environment variable wins
@@ -82,12 +82,12 @@ crystal run spec/test_helper.cr
 ## Docker
 
 The `Dockerfile` builds a release binary and runs it as a non-root user in production mode
-(`CRYSTAL_ENV=production`), listening on `HOST` (`0.0.0.0` in the image) and `PORT` (4000). To run the app
+(`CRYSTAL_ENV=production`), listening on `HOST` (`0.0.0.0` in the image) and `PORT` (<%= port %>). To run the app
 in development inside a container, pass `-e HOST=0.0.0.0` (azu's development default `127.0.0.1` is unreachable from the host). The secrets are not in the image: pass them in.
 
 ```bash
 docker build -t <%= @project %> .
-docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) -e SESSION_SECRET=$(openssl rand -hex 32) <%= @project %>
+docker run -p <%= port %>:<%= port %> -e CSRF_SECRET=$(openssl rand -hex 32) -e SESSION_SECRET=$(openssl rand -hex 32) <%= @project %>
 ```
 
 Without `CSRF_SECRET` the container exits with `CSRF_SECRET is not set`. `SESSION_SECRET` is only needed once you

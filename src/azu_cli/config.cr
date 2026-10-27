@@ -70,7 +70,7 @@ module AzuCLI
 
     # Default ports for various services
     module Ports
-      DEV_SERVER     = 4000
+      DEV_SERVER     = 4000 # azu's default PORT: the generated app, `azu serve`/`dev`/`doctor`, the hints
       TEST_SERVER    = 4001
       PREVIEW_SERVER = 4002
       DATABASE_PG    = 5432

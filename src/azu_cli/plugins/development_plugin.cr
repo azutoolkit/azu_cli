@@ -44,7 +44,7 @@ module AzuCLI
 
         # Validate port configuration
         if config.dev_server_port < 1024 || config.dev_server_port > 65535
-          Logger.warn("Invalid port number: #{config.dev_server_port}. Using default port 3000.")
+          Logger.warn("Invalid port number: #{config.dev_server_port}. Using default port #{Config::Ports::DEV_SERVER}.")
         end
 
         # Validate host configuration

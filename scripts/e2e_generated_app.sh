@@ -549,8 +549,22 @@ check_dev() {
 step "generate a $TYPE project ($DB) with $AZU_BIN"
 cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
-  --type "$TYPE" --db "$DB" --no-git --no-docker --ci "GitHub Actions"
+  --type "$TYPE" --db "$DB" --no-git --no-docker --ci "GitHub Actions" >"$WORK/new.log" 2>&1 ||
+  { cat "$WORK/new.log"; fail "azu new failed"; }
+cat "$WORK/new.log"
 cd "$NAME"
+
+step "the next steps name the port the app listens on"
+env_port="$(sed -n 's/^PORT=//p' .env)"
+[ -n "$env_port" ] || fail ".env sets no PORT"
+grep -q "http://localhost:$env_port" "$WORK/new.log" || fail "azu new does not point at the PORT of .env ($env_port)"
+! grep -q "localhost:3000" "$WORK/new.log" || fail "azu new still points at port 3000"
+
+if [ "$DB" = sqlite ]; then
+  step "azu db:migrate right after azu new (no database file, no migration yet)"
+  "$AZU_BIN" db:migrate || fail "azu db:migrate fails on a fresh project"
+  ls db/*_development.db >/dev/null 2>&1 || fail "azu db:migrate did not create the SQLite database file"
+fi
 
 step "the generated .env lists the secrets, .env.example and the per-environment files exist"
 if [ "$TYPE" = web ]; then
