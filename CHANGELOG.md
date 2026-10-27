@@ -1,5 +1,10 @@
 # Changelog - Azu CLI
 
+## Unreleased - CI runs the JoobQ round trip
+
+- Changed: the `generated-app` CI job has a `redis:7` service and sets `E2E_REDIS_URL`, so
+  `scripts/e2e_generated_app.sh` runs a generated job through a worker in CI; before, CI only type-checked it
+
 ## Unreleased - `session:setup` refuses what would break the app; `session:clear` honours `--backend`
 
 - Fixed: `azu session:setup` run again replaced nothing but reported success; with `--force` after `azu generate auth`
