@@ -442,15 +442,12 @@ azu openapi:generate openapi.yaml --verbose
 
 #### Export Issues
 
+`azu openapi:export` compiles your app, so a compile error stops it (its last lines are shown). Check that the app
+builds and that azu is 0.5.72 or newer:
+
 ```bash
-# Check if endpoints exist
-ls -la src/endpoints/
-
-# Verify model definitions
-ls -la src/models/
-
-# Check for compilation errors
-crystal build src/main.cr
+crystal build src/<project>.cr --no-codegen
+shards list | grep azu
 ```
 
 ### File Permission Issues

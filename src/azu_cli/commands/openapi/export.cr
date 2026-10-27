@@ -44,11 +44,18 @@ module AzuCLI
 
           title = @project_name.empty? ? Utils.project_name : @project_name
           document = JSON.parse(self.class.loader.call(app_file, title, @version))
-          File.write(@output_path, @format == "json" ? document.to_pretty_json + "\n" : document.to_yaml)
+          write(document)
           stdout.puts "OpenAPI document written to #{@output_path}"
           success
         rescue ex : AzuCLI::OpenAPI::Exporter::Error
           Result.error(ex.message.to_s)
+        end
+
+        private def write(document : JSON::Any) : Nil
+          Dir.mkdir_p(File.dirname(@output_path))
+          File.write(@output_path, @format == "json" ? document.to_pretty_json + "\n" : document.to_yaml)
+        rescue ex : File::Error
+          raise AzuCLI::OpenAPI::Exporter::Error.new("cannot write #{@output_path}: #{ex.message}")
         end
 
         private def parse_arguments
@@ -61,7 +68,7 @@ module AzuCLI
             end
             parser.on("--project NAME", "API title") { |name| @project_name = name }
             parser.on("--version VERSION", "API version") { |version| @version = version }
-            parser.on("--help", "Show help") { @help = true }
+            parser.on("-h", "--help", "Show help") { @help = true }
             parser.invalid_option { |option| @usage_problem = "Unknown option #{option}. Run 'azu openapi:export --help'" }
             parser.missing_option { |option| @usage_problem = "#{option} needs a value" }
           end
