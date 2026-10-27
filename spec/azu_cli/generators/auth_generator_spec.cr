@@ -27,6 +27,19 @@ describe AzuCLI::Generate::Auth do
     end
   end
 
+  # Negotiable sets the Content-Type; a plain Azu::Response sets none, and with nosniff a browser shows the page as text
+  it "answers its pages as negotiated HTML" do
+    in_generated_project do
+      render.call(".")
+
+      %w(registrations/new sessions/new account/show).each do |page|
+        source = File.read("src/pages/#{page}_page.cr")
+        source.should contain("include Azu::Response::Negotiable\n")
+        source.should contain("def render_html : String\n")
+      end
+    end
+  end
+
   it "stores a bcrypt digest of the password for a unique email" do
     in_generated_project do
       render.call(".")

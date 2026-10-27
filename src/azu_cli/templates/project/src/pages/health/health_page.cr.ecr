@@ -2,7 +2,7 @@ require "json"
 
 module <%= @module_name %>::Health
   struct HealthPage
-    include Azu::Response
+    include Azu::Response::Negotiable
     include Azu::Templates::Renderable
     include JSON::Serializable
 
@@ -13,7 +13,7 @@ module <%= @module_name %>::Health
     def initialize(@status : String, @version : String, @timestamp : Time)
     end
 
-    def render : String
+    def render_json : String
       to_json
     end
   end

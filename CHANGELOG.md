@@ -15,6 +15,13 @@
 - Changed: `scripts/e2e_generated_app.sh` passes no `--db` when `E2E_DB` is unset, so it tests the default (and
   checks it is SQLite); `E2E_DB=sqlite|postgresql|mysql` still passes `--db`
 
+## Unreleased - Generated pages render in the browser
+
+- Fixed: every page of a generated app (`/`, the scaffold pages, `/login`, `/register`, `/account`) showed in the browser as HTML source. The pages included a plain `Azu::Response`, whose `write_to` writes the body and no Content-Type, and the generated app mounts `Azu::Handler::SecurityHeaders`, whose `X-Content-Type-Options: nosniff` stops the browser from guessing. The generated pages now include `Azu::Response::Negotiable` and define `render_html`, the JSON answers (`/health`, the API scaffold's responses, the `azu openapi:generate` responses) define `render_json`: Negotiable sets `text/html; charset=utf-8` or `application/json` and `Vary: Accept`
+- Changed (behaviour): a request that accepts none of a response's formats answers 406 before `call` runs, e.g. `Accept: application/json` (or `?format=json`) for an HTML page. Browsers, `curl` and a missing `Accept` get the page as before
+- Changed: `scripts/e2e_generated_app.sh` checks the Content-Type of `/`, `/health`, the scaffold pages (web: HTML, api: JSON), `/login` and `/register`
+- Migration for apps generated before: in `src/pages` and `src/responses`, replace `include Azu::Response` by `include Azu::Response::Negotiable`, and `def render` by `def render_html : String` (a page) or `def render_json : String` (a JSON answer). From the project directory, on macOS or Linux: `files=$(grep -rlx '    include Azu::Response' src/pages src/responses 2>/dev/null); [ -n "$files" ] && perl -0pi -e 'my $fmt = /to_json/ ? "json" : "html"; s/^    include Azu::Response\n/    include Azu::Response::Negotiable\n/m; s/^    def render( : String)?\n/    def render_$fmt : String\n/m' $files`, then rebuild
+
 ## Unreleased - `session:setup` refuses what would break the app; `session:clear` honours `--backend`
 
 - Fixed: `azu session:setup` run again replaced nothing but reported success; with `--force` after `azu generate auth`
