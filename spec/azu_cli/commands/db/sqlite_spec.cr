@@ -94,6 +94,32 @@ ensure
     })
   end
 
+  it "does not create the file on a dry run" do
+    with_sqlite_project.call(sqlite_shards, -> {
+      migrate = AzuCLI::Commands::DB::Migrate.new
+      migrate.parse_args(["--dry-run"])
+      migrate.execute.success?.should be_true
+      File.exists?("db/blog_test.db").should be_false
+    })
+  end
+
+  it "never creates a server database: db:migrate stops and points at db:create / db:setup" do
+    ["postgres://u:p@127.0.0.1:1/blog_test", "mysql://u:p@127.0.0.1:1/blog_test"].each do |url|
+      with_sqlite_project.call(sqlite_shards, -> {
+        ENV["DATABASE_URL"] = url
+        begin
+          result = AzuCLI::Commands::DB::Migrate.new.execute
+          result.success?.should be_false
+          result.message.should contain("db:create")
+          result.message.should contain("db:setup")
+          Dir.exists?("db").should be_false
+        ensure
+          ENV.delete("DATABASE_URL")
+        end
+      })
+    end
+  end
+
   it "sets up a fresh project that has no migration yet" do
     with_sqlite_project.call(sqlite_shards, -> {
       AzuCLI::Commands::DB::Setup.new.execute.success?.should be_true

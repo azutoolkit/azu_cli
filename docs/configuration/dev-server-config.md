@@ -104,7 +104,7 @@ development:
     # CORS (for API development)
     cors:
       enabled: true
-      origins: ["http://localhost:3000", "http://localhost:3001"]
+      origins: ["http://localhost:4000", "http://localhost:3001"]
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
       headers: ["Content-Type", "Authorization"]
 ```

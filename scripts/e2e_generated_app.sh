@@ -533,7 +533,9 @@ cat "$WORK/new.log"
 cd "$NAME"
 
 step "the next steps name the port the app listens on"
-grep -q "http://localhost:$(sed -n 's/^PORT=//p' .env)" "$WORK/new.log" || fail "azu new does not point at the PORT of .env"
+app_port=$(sed -n 's/^PORT=//p' .env)
+[ -n "$app_port" ] || fail ".env has no PORT"
+grep -q "http://localhost:$app_port" "$WORK/new.log" || fail "azu new does not point at the PORT of .env"
 ! grep -q "localhost:3000" "$WORK/new.log" || fail "azu new still points at port 3000"
 
 if [ "$DB" = sqlite ]; then

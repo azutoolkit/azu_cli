@@ -32,6 +32,10 @@ module AzuCLI
           unless database_exists?(db_name)
             # A SQLite database is a file: create it, as `azu db:create` would. A server database is never created here.
             return error("Database '#{db_name}' does not exist. Run 'azu db:create' first (or 'azu db:setup' to create and migrate).") unless sqlite?
+            if @dry_run
+              Logger.info("Dry run: would create database file #{sqlite_path(db_name)}")
+              return success("Dry run: nothing created")
+            end
             create_sqlite_database(db_name)
             Logger.info("Created database file #{sqlite_path(db_name)}")
           end
