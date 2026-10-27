@@ -137,21 +137,22 @@ Command-line applications and tools.
 
 **Features:**
 
-- Command-line interface
-- No web server or database (unless added)
-- Focused on CLI development
+- An `OptionParser` program with `--help`, `--version` (and, with the example, `--hello NAME`)
+- No web server, database, background jobs, `.env` or assets; no dependencies in `shard.yml` (`--db` is ignored)
+- `shards build` builds `bin/<name>`
 
 **Generated Structure:**
 
 ```
 my_cli_tool/
 ├── src/
-│   ├── my_cli_tool.cr         # Main application
-│   ├── commands/              # CLI commands
-│   ├── services/              # Business logic
-│   └── utils/                 # Utilities
-├── spec/                      # Test files
-└── bin/                       # Executable
+│   └── my_cli_tool.cr         # The program (MyCliTool.run)
+├── spec/
+│   ├── spec_helper.cr
+│   └── my_cli_tool_spec.cr
+├── shard.yml                  # target my_cli_tool: src/my_cli_tool.cr
+├── README.md, LICENSE, .gitignore, .editorconfig, .tool-versions
+└── .github/workflows/ci.yml   # unless --no-ci
 ```
 
 ## Database Options
@@ -445,7 +446,7 @@ azu new file_processor --type cli
 cd file_processor
 
 # Build and run
-crystal build src/file_processor.cr -o bin/file_processor
+shards build
 ./bin/file_processor --help
 ```
 

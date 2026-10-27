@@ -173,7 +173,7 @@ module AzuCLI
       # Packages the build needs: what the e2e CI job installs, plus the SQLite headers on SQLite.
       def build_packages : String
         packages = %w(libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev)
-        packages << "libsqlite3-dev" if database_adapter == "sqlite3"
+        packages << "libsqlite3-dev" if database_adapter == "sqlite3" && !cli_project?
         packages.join(" ")
       end
 
@@ -253,55 +253,22 @@ module AzuCLI
         @project.downcase + "_db"
       end
 
-      # Teeplate renders these: the delivery files only when asked for. (`filter` below is not called by
-      # Teeplate; it is left as it was, because turning it on would drop files the generated apps use.)
+      # Teeplate renders these (it never calls a `filter`): a cli project gets only CLI_FILES, the
+      # delivery files only when asked for.
       def rendered_file_entries
-        file_entries.reject do |entry|
+        file_entries.select do |entry|
           path = entry.path.to_s
-          (!@docker_support && (path.ends_with?("Dockerfile") || path.ends_with?(".dockerignore"))) ||
-            (!has_ci? && path.includes?(".github/"))
+          next false if cli_project? && !cli_files.includes?(path)
+          !((!@docker_support && (path.ends_with?("Dockerfile") || path.ends_with?(".dockerignore"))) ||
+            (!has_ci? && path.includes?(".github/")))
         end
       end
 
-      # Override filter method to conditionally exclude files based on project type
-      def filter(entries)
-        entries.reject do |entry|
-          path = entry.path.to_s
+      # A cli project: the program, its specs and the project files; no server, database, jobs or assets.
+      CLI_FILES = %w(.editorconfig .gitignore .tool-versions LICENSE README.md shard.yml spec/spec_helper.cr .github/workflows/ci.yml)
 
-          # Skip JoobQ-related files if not included
-          if !has_joobq?
-            next true if path.ends_with?("jobs.yml.ecr") ||
-                         path.ends_with?("joobq.cr.ecr") ||
-                         path.ends_with?("worker.cr.ecr") ||
-                         path.ends_with?(".gitkeep.ecr")
-          end
-
-          # Skip web-specific files for API projects
-          if api_project?
-            next true if path.includes?("public/templates/") && !path.includes?("swagger-ui.html")
-            next true if path.ends_with?("server.cr.ecr")
-            next true if path.includes?("pages/welcome/")
-            next true if path.includes?("public/assets/css/") && !path.ends_with?("cover.css")
-            next true if path.includes?("public/assets/js/")
-          end
-
-          # Skip API-specific files for web/cli projects
-          if !api_project?
-            next true if path.includes?("endpoints/health/")
-            next true if path.includes?("endpoints/api/")
-            next true if path.includes?("public/api/")
-            next true if path.ends_with?("openapi.yml.ecr")
-            next true if path.ends_with?("api.yml.ecr")
-            next true if path.ends_with?("api.cr.ecr")
-          end
-
-          # Skip server.cr for API projects (they use api.cr instead)
-          if api_project? && path.ends_with?("server.cr.ecr")
-            next true
-          end
-
-          false
-        end
+      private def cli_files : Array(String)
+        CLI_FILES + ["src/#{@project}.cr", "spec/#{@project}_spec.cr"]
       end
     end
   end

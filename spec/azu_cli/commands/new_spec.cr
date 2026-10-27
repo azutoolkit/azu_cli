@@ -244,7 +244,7 @@ describe AzuCLI::Commands::New do
       end
     end
 
-    it "creates a cli project with --db sqlite --yes" do
+    it "creates a cli project without a database, also with --db sqlite --yes" do
       TestHelpers::TestSetup.with_temp_project("cli_sqlite_test") do |temp_project|
         Dir.cd(temp_project.path) do
           cli = AzuCLI::Commands::New.new
@@ -254,9 +254,18 @@ describe AzuCLI::Commands::New do
           end
 
           File.exists?("tool_app/src/tool_app.cr").should be_true
-          File.read("tool_app/shard.yml").should contain("sqlite3")
+          File.read("tool_app/shard.yml").should_not contain("sqlite3")
+          File.exists?("tool_app/src/server.cr").should be_false
+          File.exists?("tool_app/.env").should be_false
         end
       end
+    end
+
+    it "tells a cli project to build with shards and run bin/<name>" do
+      command = AzuCLI::Commands::New.new
+      command.project_name = "my-tool"
+      command.project_type = "cli"
+      command.next_steps.should eq ["cd my-tool", "shards build", "./bin/my_tool --help"]
     end
 
     it "refuses a project type that is not web, api or cli" do

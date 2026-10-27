@@ -53,6 +53,10 @@ jobs:
           - { crystal: "latest", db: postgresql, type: web }
     container:
       image: crystallang/crystal:${{ matrix.crystal }}
+    # The Redis the e2e runs a generated JoobQ job through (E2E_REDIS_URL); the job container reaches it as `redis`.
+    services:
+      redis:
+        image: redis:7
     steps:
       - uses: actions/checkout@v4
       - name: Install system dependencies
@@ -67,6 +71,8 @@ jobs:
       # On SQLite the script also generates a Post scaffold (and, for web, a Chat channel and authentication), migrates it
       # with `azu db:setup` and exercises them.
       - name: Generate, build, boot and request a new project and its scaffold
+        env:
+          E2E_REDIS_URL: redis://redis:6379
         run: E2E_DB=${{ matrix.db }} scripts/e2e_generated_app.sh ${{ matrix.type }}
   release:
     runs-on: ubuntu-latest

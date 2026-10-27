@@ -175,9 +175,11 @@ module AzuCLI
         @project_type = prompt_choice("Project type", PROJECT_TYPES, @project_type)
         Logger.step(6, 9, "Project type: #{@project_type}")
 
-        # Database
-        @database = prompt_choice("Database adapter", ["postgresql", "mysql", "sqlite"], @database)
-        Logger.step(7, 9, "Database: #{@database}")
+        # Database (a cli project has none)
+        unless @project_type == "cli"
+          @database = prompt_choice("Database adapter", ["postgresql", "mysql", "sqlite"], @database)
+          Logger.step(7, 9, "Database: #{@database}")
+        end
 
         # Test framework
         @test_framework = prompt_choice("Test framework", ["spec", "minitest"], @test_framework)
@@ -315,7 +317,7 @@ module AzuCLI
         puts "  Author:           #{@author} <#{@email}>"
         puts "  License:          #{@license}"
         puts "  Project type:     #{@project_type}"
-        puts "  Database:         #{@database}"
+        puts "  Database:         #{@database}" unless @project_type == "cli"
         puts "  Test framework:   #{@test_framework}"
         puts "  CI setup:         #{@ci_setup}"
         puts "  Docker support:   #{@docker_support ? "Yes" : "No"}"
@@ -333,7 +335,7 @@ module AzuCLI
         unless PROJECT_TYPES.includes?(@project_type)
           return "Unknown project type '#{@project_type}'. Choose one of: #{PROJECT_TYPES.join(", ")}."
         end
-        unless DATABASES.includes?(@database)
+        unless @project_type == "cli" || DATABASES.includes?(@database)
           return "Unknown database adapter '#{@database}'. Choose one of: sqlite, postgresql, mysql."
         end
         unless AzuCLI::Generate::Project::CI_SETUPS.includes?(@ci_setup)
@@ -459,7 +461,7 @@ module AzuCLI
       # What to run after `azu new`, in order. `azu db:setup` creates the database and runs the migrations, so it
       # works on a fresh project; the app listens on azu's default port, the PORT of the generated .env.
       def next_steps : Array(String)
-        return ["cd #{@project_name}", "crystal build src/#{@project_name}.cr", "./#{@project_name} --help"] if @project_type == "cli"
+        return ["cd #{@project_name}", "shards build", "./bin/#{@project_name.downcase.gsub(/[^a-z0-9_]/, "_")} --help"] if @project_type == "cli"
 
         url = "http://localhost:#{AzuCLI::Config::Ports::DEV_SERVER}"
         steps = ["cd #{@project_name}", "azu db:setup", "azu serve"]

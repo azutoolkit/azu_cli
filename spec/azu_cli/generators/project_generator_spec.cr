@@ -635,4 +635,39 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf("./tmp_test_noci")
     end
   end
+
+  describe "files per project type" do
+    rendered = ->(type : String, dir : String) do
+      FileUtils.mkdir_p(dir)
+      AzuCLI::Generate::Project.new("mytool", "MyTool", "John Doe", "john@example.com", project_type: type).render(dir)
+      Dir.glob("#{dir}/**/*", match: :dot_files).select { |path| File.file?(path) }.map(&.lchop("#{dir}/")).sort
+    end
+
+    it "gives a cli project only the program, its specs and the project files: no server, database, jobs or assets" do
+      rendered.call("cli", "./tmp_test_files_cli").should eq [
+        ".editorconfig", ".github/workflows/ci.yml", ".gitignore", ".tool-versions", "LICENSE", "README.md",
+        "shard.yml", "spec/mytool_spec.cr", "spec/spec_helper.cr", "src/mytool.cr",
+      ]
+    end
+
+    it "gives a cli project a shard.yml without azu, cql, a database driver or the tasks target" do
+      rendered.call("cli", "./tmp_test_shard_cli")
+      shard = File.read("./tmp_test_shard_cli/shard.yml")
+      shard.should contain("targets:\n  mytool:\n    main: src/mytool.cr\n")
+      %w(azutoolkit/azu azutoolkit/cql crystal-pg crystal-sqlite3 crystal-mysql joobq topia tasks:).each do |name|
+        shard.should_not contain(name)
+      end
+      File.read("./tmp_test_shard_cli/.github/workflows/ci.yml").should_not contain("libsqlite3-dev")
+    end
+
+    it "keeps the server, database, jobs and assets of web and api projects" do
+      {"web" => "src/server.cr", "api" => "src/api.cr"}.each do |type, entry|
+        files = rendered.call(type, "./tmp_test_files_#{type}")
+        [entry, "src/mytool.cr", "src/worker.cr", "src/db/schema.cr", "src/initializers/cql_config.cr", "config/azu.yml",
+         ".env", ".env.development", "src/endpoints/welcome/index_endpoint.cr", "public/assets/app.css"].each do |file|
+          files.should contain(file)
+        end
+      end
+    end
+  end
 end
