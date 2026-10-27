@@ -3,9 +3,21 @@
 ## Unreleased - First run: db:migrate and the port
 
 - Fixed: `azu db:migrate` straight after `azu new` failed. On SQLite it now creates the database file when it is missing (as `azu db:create` does); a server database (PostgreSQL, MySQL) is never created by `db:migrate`, which still stops and says to run `azu db:create` or `azu db:setup`. A project without a migration yet is no longer an error: `db:migrate` (and so `db:setup`) answers "No migrations to run" with exit 0
-- Fixed: the next steps of `azu new` said `Visit: http://localhost:3000`; the app listens on 4000 (azu's default, the `PORT` of the generated `.env`). They now read cd, `azu db:setup`, `azu serve`, `http://localhost:4000` (a server database adds that it must be running), and the generated README, `config/openapi.yml`, `config/api.yml`, the mailer preview comment, `azu openapi:export`'s development server and the docs say 4000
+- Fixed: the next steps of `azu new` said `Visit: http://localhost:3000`; the app listens on 4000 (azu's default, the `PORT` of the generated `.env`). They now read cd, `azu db:setup`, `azu serve`, `http://localhost:4000` (a server database adds that it must be running), and the generated README, `config/openapi.yml`, `config/api.yml`, the mailer preview comment and the docs say 4000
 - Changed: the port lives in one place, `AzuCLI::Config::Ports::DEV_SERVER`: the project templates (`.env`, `.env.example`, `Dockerfile`, `config/azu.yml`, README), `azu serve`, `azu dev`, `azu doctor` and the hints read it
 - Changed: `scripts/e2e_generated_app.sh` checks that `azu new` points at the `PORT` of `.env` and, on SQLite, runs `azu db:migrate` right after `azu new`
+
+## Unreleased - `session:setup` writes code that compiles
+
+- Fixed: `azu session:setup` generated an initializer against an API the session shard does not have
+  (`Session::Session.new`, `Session::Middleware`, `Session::DatabaseStore`, `Azu.use`) with a random secret written into
+  the source as a fallback. It now writes the same shape `azu generate auth` does: `UserSession`, `Session.use_store`,
+  `config.secret = Azu::Env.secret("SESSION_SECRET")`, mounts `Session::SessionHandler` after `RequestId` and appends
+  `SESSION_SECRET` to `.env`
+- Changed: `--backend` is `cookie` (new default), `redis` or `memory`; anything else, `database` included, is a usage
+  error (exit 2). The sessions migration is gone, and `session:clear` no longer has a database path; for cookie
+  sessions it explains that changing `SESSION_SECRET` ends them
+- Docs: `docs/commands/session.md` rewritten to what the commands do
 
 ## Unreleased - The development dashboard shows requests
 

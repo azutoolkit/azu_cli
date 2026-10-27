@@ -6,7 +6,7 @@
 # A web project also gets a Chat channel (two WebSocket clients) and authentication (sign up, sign in,
 # a protected page, sign out; the password is stored as a bcrypt digest).
 #
-# It also drives the CLI's own development commands against the project: `azu routes`, `azu doctor`, and
+# It also drives the CLI's own development commands against the project: `azu routes`, `azu openapi:export`, `azu doctor`, and
 # `azu dev` (rebuild and restart on a source change, no rebuild for a template, a failed build keeps the old app).
 #
 # Usage: scripts/e2e_generated_app.sh [web|api]      (default: web)
@@ -379,6 +379,28 @@ check_routes() {
   echo "ok: azu routes rejects an unknown format with exit 2"
 }
 
+# `azu openapi:export`: the document Azu::OpenAPI builds from the compiled app, as JSON and as YAML.
+check_openapi() {
+  "$AZU_BIN" openapi:export --output "$WORK/openapi.json" || fail "azu openapi:export failed"
+  grep -q '"openapi": "3.1.0"' "$WORK/openapi.json" || fail "openapi.json is not an OpenAPI 3.1 document"
+  grep -q "\"operationId\": \"$MODULE.Health.HealthEndpoint\"" "$WORK/openapi.json" || fail "openapi.json lacks the health endpoint"
+  if [ "$SCAFFOLD" = 1 ]; then
+    grep -q '"/posts/{id}"' "$WORK/openapi.json" || fail "openapi.json lacks /posts/{id} (path parameters must be {id}, not :id)"
+    grep -q "\"operationId\": \"$MODULE.Posts.CreateEndpoint\"" "$WORK/openapi.json" || fail "openapi.json lacks the create endpoint"
+  fi
+  echo "ok: azu openapi:export writes the app's OpenAPI document as JSON"
+
+  "$AZU_BIN" openapi:export --output "$WORK/openapi.yaml" --project "E2E API" --version 9.9.9 || fail "azu openapi:export (yaml) failed"
+  grep -Eq '^openapi: "?3\.1\.0' "$WORK/openapi.yaml" || fail "openapi.yaml is not an OpenAPI 3.1 document"
+  grep -q 'title: E2E API' "$WORK/openapi.yaml" || fail "openapi.yaml lacks the --project title"
+  echo "ok: azu openapi:export writes YAML with the given title"
+
+  code=0
+  "$AZU_BIN" openapi:export --format xml >/dev/null 2>&1 || code=$?
+  [ "$code" = 2 ] || fail "azu openapi:export --format xml exited $code, expected 2"
+  echo "ok: azu openapi:export rejects an unknown format with exit 2"
+}
+
 # doctor_status ID: the status of a check in $WORK/doctor.json (the JSON puts the id before the status).
 doctor_status() {
   grep -A1 "\"id\": \"$1\"" "$WORK/doctor.json" | sed -n 's/.*"status": "\([a-z]*\)".*/\1/p'
@@ -586,6 +608,9 @@ crystal build "$ENTRY" -o "bin/$NAME"
 
 step "azu routes"
 check_routes
+
+step "azu openapi:export"
+check_openapi
 
 # The generated CI workflow must pass on a fresh project: run the commands it runs (the Crystal
 # version is the one this script runs with, the workflow pins another).
