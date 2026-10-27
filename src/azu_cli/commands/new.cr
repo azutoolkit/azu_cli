@@ -1,6 +1,7 @@
 require "./base"
 require "option_parser"
 require "readline"
+require "../ui"
 
 module AzuCLI
   module Commands
@@ -21,6 +22,10 @@ module AzuCLI
       property include_example : Bool = true
       property include_joobq : Bool = true
       property non_interactive : Bool = false
+      # rich, plain or json; nil decides from the terminal (`AZU_UI` is the same as an environment variable).
+      property ui_mode : String? = nil
+      @ui : UI::Reporter?
+      @wizard_ran = false
 
       def initialize
         super("new", "Create a new Azu project")
@@ -34,6 +39,9 @@ module AzuCLI
 
       def execute : Result
         parse_arguments
+        if (mode = @ui_mode) && !UI::Reporter::MODES.includes?(mode)
+          return usage_error("--ui must be one of: #{UI::Reporter::MODES.join(", ")}")
+        end
 
         # Set project name from argument if not set by flag
         if @project_name.empty?
@@ -61,11 +69,13 @@ module AzuCLI
           return error("Directory '#{@project_name}' already exists. Choose a different name.")
         end
 
-        # Show welcome message
-        Logger.announce("Creating new Azu project: #{@project_name}")
+        # Show welcome message (the wizard has its own title bar; JSON output carries events only)
+        Logger.announce("Creating new Azu project: #{@project_name}") if plain_output? && !wizard?
 
         # Gather configuration (interactive or from flags)
-        gather_configuration
+        unless gather_configuration
+          return Result.error("Cancelled: nothing was written")
+        end
 
         if message = delivery_error
           return usage_error(message)
@@ -74,11 +84,10 @@ module AzuCLI
         # Show configuration summary
         show_configuration_summary
 
-        # Generate the project
-        generate_project
-
-        # Post-generation tasks
-        post_generation_tasks
+        ui.group("Compilation Progress") do
+          generate_project
+          post_generation_tasks
+        end
 
         # Show success message
         show_success_message
@@ -110,6 +119,7 @@ module AzuCLI
           parser.on("--joobq", "Include JoobQ for background jobs") { @include_joobq = true }
           parser.on("--no-joobq", "Skip JoobQ integration") { @include_joobq = false }
           parser.on("--yes", "Non-interactive mode (use defaults)") { @non_interactive = true }
+          parser.on("--ui MODE", "Output: rich, plain or json (default: rich on a terminal)") { |mode| @ui_mode = mode }
           parser.on("--help", "Show help") {
             puts parser
             exit(0)
@@ -117,10 +127,13 @@ module AzuCLI
         end
       end
 
-      private def gather_configuration
+      # False when the wizard was cancelled.
+      private def gather_configuration : Bool
         if @non_interactive
           # Use defaults or provided flags
           set_defaults
+        elsif wizard?
+          return false unless run_wizard
         else
           # Interactive prompts
           interactive_configuration
@@ -128,8 +141,46 @@ module AzuCLI
 
         # Set module name if not provided
         if @module_name.empty?
-          @module_name = @project_name.split(/[-_]/).map(&.capitalize).join
+          @module_name = self.class.module_name_for(@project_name)
         end
+        true
+      end
+
+      def self.module_name_for(project_name : String) : String
+        project_name.split(/[-_]/).map(&.capitalize).join
+      end
+
+      def self.git_config(key : String) : String?
+        new.get_git_config(key)
+      end
+
+      # The progress reporter: a live card on a terminal, lines on a pipe, NDJSON with --ui json.
+      def ui : UI::Reporter
+        @ui ||= UI::Reporter.build(@ui_mode, stdout)
+      end
+
+      def ui=(reporter : UI::Reporter)
+        @ui = reporter
+      end
+
+      private def plain_output? : Bool
+        ui.is_a?(UI::Plain)
+      end
+
+      # The wizard runs when the prompts would: rich output and a keyboard on the other end.
+      private def wizard? : Bool
+        !@non_interactive && ui.rich? && STDIN.tty? && ui.as(UI::Rich).terminal.interactive?
+      end
+
+      private def run_wizard : Bool
+        wizard = NewWizard.new(self)
+        terminal = ui.as(UI::Rich).terminal
+        UI::Program.new(wizard.screen, terminal, UI::InlineRenderer.new(terminal.output, terminal.theme.color?)).run
+        return false unless wizard.screen.outcome.confirmed?
+
+        wizard.apply
+        @wizard_ran = true
+        true
       end
 
       private def set_defaults
@@ -256,7 +307,7 @@ module AzuCLI
         end
       end
 
-      private def get_git_config(key : String) : String?
+      def get_git_config(key : String) : String?
         # Validate key to prevent shell injection - only allow safe git config keys
         unless key.matches?(/^[a-z][a-z0-9.\-]*$/i)
           Logger.debug("Invalid git config key format: #{key}")
@@ -306,22 +357,22 @@ module AzuCLI
       end
 
       private def show_configuration_summary
-        puts
-        Logger.announce("Project Configuration Summary")
+        return if @wizard_ran # its review screen is the summary, and it stays on screen
 
-        puts "  Project name:     #{@project_name}"
-        puts "  Module name:      #{@module_name}"
-        puts "  Author:           #{@author} <#{@email}>"
-        puts "  License:          #{@license}"
-        puts "  Project type:     #{@project_type}"
-        puts "  Database:         #{@database}"
-        puts "  Test framework:   #{@test_framework}"
-        puts "  CI setup:         #{@ci_setup}"
-        puts "  Docker support:   #{@docker_support ? "Yes" : "No"}"
-        puts "  Git repository:   #{@git_init ? "Yes" : "No"}"
-        puts "  Include example:  #{@include_example ? "Yes" : "No"}"
-        puts "  Background jobs:  #{@include_joobq ? "Yes (JoobQ)" : "No"}" unless @project_type == "cli"
-        puts
+        rows = [
+          {"Project", "#{@project_name} · module #{@module_name}"},
+          {"Author", "#{@author} <#{@email}>"},
+          {"License", @license},
+          {"Type", @project_type},
+          {"Database", @database},
+          {"Tests", @test_framework},
+          {"CI", @ci_setup},
+          {"Docker", @docker_support ? "yes" : "no"},
+          {"Git", @git_init ? "init + first commit" : "no"},
+          {"Example", @include_example ? "yes" : "no"},
+        ]
+        rows << {"Jobs", @include_joobq ? "JoobQ" : "none"} unless @project_type == "cli"
+        ui.panel("Project", rows.map { |(label, value)| [UI::Seg[label.ljust(10), UI::Token::Muted], UI::Seg[value]] })
       end
 
       PROJECT_TYPES = ["web", "api", "cli"]
@@ -337,9 +388,7 @@ module AzuCLI
       end
 
       private def generate_project
-        Logger.progress_start("Generating project files")
-
-        begin
+        ui.task("Files") do |task|
           # Create the generator
           generator = AzuCLI::Generate::Project.new(
             project: @project_name,
@@ -364,20 +413,26 @@ module AzuCLI
           Dir.mkdir_p(@project_name, 0o700)
           generator.render(@project_name, force: false, interactive: false, list: false, color: true)
           File.chmod(@project_name, 0o755)
-          env_file = File.join(@project_name, ".env")
-          File.chmod(env_file, 0o600) if File.exists?(env_file) # it holds the generated secrets
 
           # Remove JoobQ files if not included
           unless @include_joobq
             remove_joobq_files
           end
-
-          Logger.progress_done(true)
-        rescue ex : Exception
-          Logger.progress_done(false)
-          Logger.exception(ex, "Failed to generate project files")
-          raise ex
+          task.finish(detail: "#{count_files(@project_name)} written into ./#{@project_name}")
         end
+
+        env_file = File.join(@project_name, ".env")
+        if File.exists?(env_file)
+          ui.task("Secrets") do |task|
+            File.chmod(env_file, 0o600) # it holds the generated secrets
+            names = File.read_lines(env_file).compact_map { |line| line.split('=', 2).first.strip if line.includes?("_SECRET=") }
+            task.finish(detail: ".env (0600)#{names.empty? ? "" : " · #{names.join(", ")}"}")
+          end
+        end
+      end
+
+      private def count_files(directory : String) : Int32
+        Dir.glob(File.join(directory, "**", "*"), match: File::MatchOptions::DotFiles).count { |path| File.file?(path) }
       end
 
       private def remove_joobq_files
@@ -405,39 +460,71 @@ module AzuCLI
 
       private def post_generation_tasks
         Dir.cd(@project_name) do
-          # Initialize Git repository
-          if @git_init
-            Logger.progress_start("Initializing Git repository")
-            if system("git init > /dev/null 2>&1")
-              system("git add . > /dev/null 2>&1")
-              system("git commit -m \"Initial commit\" > /dev/null 2>&1")
-              Logger.progress_done(true)
+          ui.task("Git", "init + first commit") do |task|
+            next task.skip("--no-git") unless @git_init
+            next task.fail("git not found on PATH") unless Process.find_executable("git")
+
+            ok = run_quiet("git", ["init"]) && run_quiet("git", ["add", "."]) &&
+                 run_quiet("git", ["commit", "-m", "Initial commit"])
+            ok ? task.finish(detail: "init + 1 commit") : task.fail("git commit failed (is user.name set?)")
+          end
+
+          shards_ok = ui.task("Shards", "install") { |task| install_shards(task) }
+          ui.warn("Failed to install dependencies. Run 'shards install' manually.") unless shards_ok
+
+          ui.task("Type-check", "crystal build --no-codegen") do |task|
+            next task.skip("needs the shards") unless shards_ok
+
+            output = IO::Memory.new
+            status = Process.run("crystal", ["build", "src/#{main_file}", "--no-codegen"], output: output, error: output)
+            if status.success?
+              task.finish(detail: "src/#{main_file}")
             else
-              Logger.progress_done(false)
+              task.fail("src/#{main_file} does not compile")
+              ui.warn("Project may have compilation issues. Check with 'crystal build'.")
+              output.to_s.lines.last(8).each { |line| ui.note("  #{line}") }
             end
-          end
-
-          # Install dependencies
-          Logger.progress_start("Installing dependencies")
-          if system("shards install > /dev/null 2>&1")
-            Logger.progress_done(true)
-          else
-            Logger.progress_done(false)
-            Logger.warn("Failed to install dependencies. Run 'shards install' manually.")
-          end
-
-          # Verify project compiles
-          Logger.progress_start("Verifying project compiles")
-          if system("crystal build src/#{main_filename} --no-codegen > /dev/null 2>&1")
-            Logger.progress_done(true)
-          else
-            Logger.progress_done(false)
-            Logger.warn("Project may have compilation issues. Check with 'crystal build'.")
+          rescue IO::Error
+            task.fail("crystal not found on PATH")
           end
         end
       end
 
-      private def main_filename : String
+      # `shards install`, counting the shards as they install; true when it succeeds.
+      private def install_shards(task : UI::Task) : Bool
+        reader, writer = IO.pipe
+        process = Process.new("shards", ["install"], output: writer, error: writer)
+        writer.close
+        installed = 0
+        tail = [] of String
+        reader.each_line do |line|
+          tail = (tail << line).last(8)
+          if line.includes?("Installing")
+            installed += 1
+            task.progress(installed)
+          end
+          task.note = line.sub(/\AI: /, "").strip if line.starts_with?("I: ") || line.includes?("Fetching")
+        end
+        status = process.wait
+        if status.success?
+          task.finish(detail: "#{installed} installed")
+        else
+          task.fail("shards install failed")
+          tail.each { |line| ui.note("  #{line}") }
+        end
+        status.success?
+      rescue IO::Error
+        task.fail("shards not found on PATH")
+        false
+      end
+
+      private def run_quiet(command : String, args : Array(String)) : Bool
+        Process.run(command, args, output: Process::Redirect::Close, error: Process::Redirect::Close).success?
+      rescue IO::Error
+        false
+      end
+
+      def main_file : String
         case @project_type
         when "web"
           "server.cr"
@@ -469,26 +556,29 @@ module AzuCLI
       end
 
       private def show_success_message
-        puts
-        Logger.announce("🚀 Project '#{@project_name}' created successfully!")
-
-        puts "Next steps:"
-        next_steps.each_with_index { |step, index| puts "  #{index + 1}. #{step}" }
-        database_hint.try { |hint| puts "  (#{hint})" }
+        lines = [] of Array(UI::Seg)
+        next_steps.each do |step|
+          if step.includes?(": ")
+            label, value = step.split(": ", 2)
+            lines << [UI::Seg["  #{label}: ", UI::Token::Muted], UI::Seg[value, UI::Token::Blue]]
+          else
+            lines << [UI::Seg["  $ ", UI::Token::Muted], UI::Seg[step]]
+          end
+        end
+        database_hint.try { |hint| lines << [UI::Seg["  ▲ #{hint}", UI::Token::Amber]] }
 
         if @include_joobq && (@project_type == "web" || @project_type == "api")
-          puts
-          Logger.info("📦 JoobQ Integration:")
-          puts "  - Configuration: config/jobs.yml"
-          puts "  - Initializer: src/initializers/joobq.cr"
-          puts "  - Worker: src/worker.cr"
-          puts "  - Generate jobs: azu generate job <name> [params]"
+          lines << [] of UI::Seg
+          lines << [UI::Seg["JoobQ  ", UI::Token::Purple], UI::Seg["config/jobs.yml · src/initializers/joobq.cr · src/worker.cr", UI::Token::Muted]]
+          lines << [UI::Seg["       azu generate job <name> [params]", UI::Token::Muted]]
         end
-
-        puts
-        puts "Documentation: https://azutoolkit.org"
-        puts "Support: https://github.com/azutoolkit/azu"
-        puts
+        unless @project_type == "cli"
+          lines << [] of UI::Seg
+          lines << [UI::Seg["▸ ", UI::Token::Purple], UI::Seg["Try  ", UI::Token::Muted], UI::Seg["azu g scaffold post title:string body:text", UI::Token::Text],
+                    UI::Seg["  then watch azu dev rebuild", UI::Token::Muted]]
+        end
+        lines << [UI::Seg["Docs https://azutoolkit.org · Support https://github.com/azutoolkit/azu", UI::Token::Muted]]
+        ui.panel("#{@project_name} is ready", lines, badge: "✔", tone: UI::Token::Green)
       end
 
       def show_help
@@ -517,10 +607,11 @@ module AzuCLI
         puts "  --joobq                   Include JoobQ for background jobs [default]"
         puts "  --no-joobq                Skip JoobQ integration"
         puts "  --yes                     Non-interactive mode (use defaults)"
+        puts "  --ui MODE                 Output: rich (live cards, the default on a terminal), plain or json"
         puts "  --help                    Show this help message"
         puts
         puts "Interactive Examples:"
-        puts "  azu new my_app            # Interactive prompts"
+        puts "  azu new my_app            # The wizard (prompts when the terminal cannot run it)"
         puts "  azu new my_blog --type web"
         puts
         puts "Non-interactive Examples:"
