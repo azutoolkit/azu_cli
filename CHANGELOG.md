@@ -1,5 +1,20 @@
 # Changelog - Azu CLI
 
+## Unreleased - `azu new` defaults to SQLite
+
+- Changed (visible default): `azu new` uses SQLite instead of PostgreSQL when `--db` is not given (also the default
+  of the interactive prompt and of `Generate::Project`). A new project depends on `sqlite3 ~> 0.24.0` instead of
+  `pg`, its `.env.development` / `.env.test` point at `db/<project>_development.db` / `db/<project>_test.db`, the
+  generated CI workflow installs `libsqlite3-dev` and needs no database service, and `--docker` adds the `/data`
+  volume. `azu new blog && cd blog && azu db:setup && azu serve` works without a database server. Pass
+  `--db postgresql` (or `--db mysql`) for the previous behaviour; projects generated before are unaffected
+- Fixed: the generated `config/azu.yml` named `postgresql` (port 5432) whatever `--db` was; it names the chosen
+  adapter, and has no server settings on SQLite
+- Fixed: the generated README listed `azu db create`-style commands that do not exist; it lists `azu db:setup`,
+  `azu db:migrate`, `azu db:seed`, `azu db:reset`
+- Changed: `scripts/e2e_generated_app.sh` passes no `--db` when `E2E_DB` is unset, so it tests the default (and
+  checks it is SQLite); `E2E_DB=sqlite|postgresql|mysql` still passes `--db`
+
 ## Unreleased - `session:setup` refuses what would break the app; `session:clear` honours `--backend`
 
 - Fixed: `azu session:setup` run again replaced nothing but reported success; with `--force` after `azu generate auth`

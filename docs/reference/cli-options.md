@@ -23,7 +23,7 @@ azu test [options]            # Run specs (alias: t)
 | ------------------------------ | ----------------------------------------------------------- |
 | `--type TYPE`                  | `web` (default), `api` or `cli`                             |
 | `--api`                        | Shorthand for `--type api`                                  |
-| `--db DATABASE`                | `postgresql` (default), `mysql` or `sqlite`                 |
+| `--db DATABASE`                | `sqlite` (default, no server), `postgresql` or `mysql`      |
 | `--test TEST`                  | `spec` (default) or `minitest`                              |
 | `--docker` / `--no-docker`     | Generate a `Dockerfile` and `.dockerignore` (web and api)   |
 | `--ci CI` / `--no-ci`          | `GitHub Actions` (default) or `None`                        |
