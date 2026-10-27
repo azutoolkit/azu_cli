@@ -45,7 +45,7 @@ azu serve
 This will:
 
 1. Build your application
-2. Start the application server on `http://localhost:3000`
+2. Start the application server on `http://localhost:4000`
 3. Start the hot reload WebSocket server on port `35729`
 4. Begin watching for file changes
 
@@ -56,7 +56,7 @@ azu serve [options]
 
 Options:
   --host HOST               Host to bind to (default: localhost)
-  --port PORT               Port to run on (default: 3000)
+  --port PORT               Port to run on (default: 4000)
   --hot-reload-port PORT    Hot reload WebSocket port (default: 35729)
   --no-watch                Disable file watching
   --verbose                 Enable verbose output
@@ -161,7 +161,7 @@ environment: development
 
 server:
   host: "localhost"
-  port: 3000
+  port: 4000
   watch: true
   rebuild: true
 
@@ -264,13 +264,13 @@ This will show:
 To access the development server from other devices:
 
 ```bash
-azu serve --host 0.0.0.0 --port 3000
+azu serve --host 0.0.0.0 --port 4000
 ```
 
 Then access from other devices using your machine's IP:
 
 ```
-http://192.168.1.100:3000
+http://192.168.1.100:4000
 ```
 
 **Note:** Hot reload WebSocket connections require the same host, so ensure your device can connect to the hot reload port (35729) as well.

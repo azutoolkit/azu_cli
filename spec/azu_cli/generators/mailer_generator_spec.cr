@@ -76,7 +76,8 @@ describe AzuCLI::Generate::Mailer do
 
       async = generator.async_methods
       async.should contain("def welcome_later")
-      async.should contain("perform_later")
+      async.should contain("UserMailerMailerJob.enqueue(") # the job the mailer template defines: <Name>MailerJob
+      async.should_not contain("perform_later")
     end
 
     it "returns empty string when async is disabled" do

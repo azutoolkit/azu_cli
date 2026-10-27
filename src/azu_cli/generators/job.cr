@@ -100,23 +100,18 @@ module AzuCLI
         end
       end
 
-      # Get expiration time in seconds
-      def expiration_seconds : String
+      # The `@expires` value: JoobQ stores when a job expires as a Unix time in milliseconds
+      def expiration_time : String
+        "#{expiration_span}.from_now.to_unix_ms"
+      end
+
+      private def expiration_span : String
         case @expires.downcase
-        when "30.minutes"
-          "30.minutes.total_seconds.to_i"
-        when "1.hour", "1.hours"
-          "1.hour.total_seconds.to_i"
-        when "6.hours"
-          "6.hours.total_seconds.to_i"
-        when "1.day", "1.days"
-          "1.days.total_seconds.to_i"
-        when "7.days", "1.week"
-          "7.days.total_seconds.to_i"
-        when "30.days", "1.month"
-          "30.days.total_seconds.to_i"
-        when /\A(\d+)\.(minute|hour|day|week)s?\z/
-          "#{$1}.#{$2}s.total_seconds.to_i"
+        when "1.hour", "1.hours"                   then "1.hour"
+        when "1.day", "1.days"                     then "1.days"
+        when "7.days", "1.week"                    then "7.days"
+        when "30.days", "1.month"                  then "30.days"
+        when /\A(\d+)\.(minute|hour|day|week)s?\z/ then "#{$1}.#{$2}s"
         else
           raise ArgumentError.new("Unsupported expiry '#{@expires}'")
         end

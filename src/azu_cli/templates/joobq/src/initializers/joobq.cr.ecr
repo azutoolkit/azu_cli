@@ -1,48 +1,44 @@
-require "joobq"
-# Optional: Uncomment if using JoobQPro
-# require "joobq_pro"
+# JoobQ's Redis store reads REDIS_HOST, REDIS_PORT and REDIS_PASS (they also override the YAML's redis section).
+# REDIS_URL (`azu jobs:worker` sets it) supplies the ones that are not set; this runs before JoobQ builds a store, so
+# enqueue, delay and the workers share one Redis.
+redis = URI.parse(ENV["REDIS_URL"]? || <%= @redis_url.inspect %>)
+ENV["REDIS_HOST"] ||= redis.host || "localhost"
+redis.port.try { |port| ENV["REDIS_PORT"] ||= port.to_s }
+redis.password.try { |password| ENV["REDIS_PASS"] ||= password }
 
-# Require all job classes
+require "joobq"
 require "../jobs/**"
 
-# Register job types with QueueFactory before loading configuration
+# Queues name their job classes (config/joobq.<CRYSTAL_ENV>.yml, or the queue_configs below): register each one.
 <% if @create_example_job -%>
 JoobQ::QueueFactory.register_job_type(<%= @example_job_name %>)
 <% end -%>
-# Add your job classes here as you create them
-# Example:
 # JoobQ::QueueFactory.register_job_type(EmailJob)
-# JoobQ::QueueFactory.register_job_type(TestJob)
 
-# Initialize JoobQ configuration from YAML file
-# This will load the configuration from config/joobq.yml based on the environment
-environment = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
+environment = ENV["CRYSTAL_ENV"]? || "development"
 config_file = "config/joobq.#{environment}.yml"
 
 if File.exists?(config_file)
   JoobQ.initialize_config_with(:file, config_file)
-  Log.info { "JoobQ initialized with config: #{config_file}" }
 else
   Log.warn { "JoobQ config file not found: #{config_file}, using defaults" }
 
-  # Fallback to manual configuration if no config file exists
   JoobQ.configure do |config|
-    config.redis_url = ENV["REDIS_URL"]? || "<%= @redis_url rescue "redis://localhost:6379" %>"
-    config.default_queue = "<%= @default_queue rescue "default" %>"
+    config.default_queue = <%= @default_queue.inspect %>
     config.retries = 5
     config.timeout = 30.seconds
-    config.timezone = Time::Location.load("UTC")
+    config.time_location = "UTC"
     config.worker_batch_size = 50
     config.rest_api_enabled = true
   end
+<% if @create_example_job -%>
+  # JoobQ.forge starts the queues listed in queue_configs
+  JoobQ.config.queue_configs[<%= @default_queue.inspect %>] = {job_class_name: "<%= @example_job_name %>", workers: <%= @workers %>, throttle: nil}
+<% end -%>
 end
-
-# Optional: Add JoobQPro middleware for enhanced features
-# JoobQ.config.middlewares << JoobQPro::Middleware::Metrics.instance
 
 # Disable REST API for worker processes
 if ARGV.includes?("--worker")
   JoobQ.config.rest_api_enabled = false
   Log.info { "JoobQ REST API disabled for worker process" }
 end
-

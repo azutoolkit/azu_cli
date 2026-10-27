@@ -269,6 +269,7 @@ describe AzuCLI::Commands::New do
             result.success?.should be_false
             result.error.should contain("Unknown project type 'worker'")
             result.error.should contain("web, api, cli")
+            result.exit_code.should eq(2) # invalid usage
           end
 
           Dir.exists?("tool_app").should be_false
@@ -285,6 +286,7 @@ describe AzuCLI::Commands::New do
             result = cli.execute
             result.success?.should be_false
             result.error.should contain("--docker is for web and api projects")
+            result.exit_code.should eq(2)
           end
 
           gitlab = AzuCLI::Commands::New.new
@@ -293,6 +295,7 @@ describe AzuCLI::Commands::New do
             result = gitlab.execute
             result.success?.should be_false
             result.error.should contain("Unknown CI setup 'GitLab CI'")
+            result.exit_code.should eq(2)
           end
           Dir.exists?("tool_app").should be_false
           Dir.exists?("lab_app").should be_false
@@ -713,6 +716,42 @@ describe AzuCLI::Commands::New do
           capture.stdout.should contain("Project 'test_project' created successfully!")
         end
       end
+    end
+  end
+  # The hints printed after `azu new`: the app listens on 4000 (azu's default, the generated .env's PORT), and
+  # `azu db:setup` creates the database before migrating, so it is the step that works on a fresh project.
+  describe "#next_steps" do
+    it "points a web project at the port it listens on, after setting up the database" do
+      command = AzuCLI::Commands::New.new
+      command.project_name = "blog"
+      steps = command.next_steps
+      steps.should contain("cd blog")
+      steps.should contain("azu db:setup")
+      steps.should contain("azu serve")
+      steps.should contain("Visit: http://localhost:#{AzuCLI::Config::Ports::DEV_SERVER}")
+      steps.index!("azu db:setup").should be < steps.index!("azu serve")
+      steps.join("\n").should_not contain("3000")
+      AzuCLI::Config::Ports::DEV_SERVER.should eq(4000)
+    end
+
+    it "points an api project at its health check on the same port" do
+      command = AzuCLI::Commands::New.new
+      command.project_name = "svc"
+      command.project_type = "api"
+      command.next_steps.should contain("Test: curl http://localhost:4000/health")
+    end
+
+    it "tells a server-backed database to be running and has no database step for a cli" do
+      command = AzuCLI::Commands::New.new
+      command.project_name = "tool"
+      command.database = "postgresql"
+      command.database_hint.not_nil!.should contain("DATABASE_URL")
+      command.database = "sqlite"
+      command.database_hint.should be_nil
+      command.database = "postgresql"
+      command.project_type = "cli"
+      command.database_hint.should be_nil
+      command.next_steps.should_not contain("azu db:setup")
     end
   end
 end

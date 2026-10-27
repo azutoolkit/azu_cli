@@ -309,7 +309,7 @@ ls -la src/db/migrations/
 
 ```bash
 # Check what's using the port
-lsof -i :3000
+lsof -i :4000
 
 # Kill the process
 kill -9 <PID>

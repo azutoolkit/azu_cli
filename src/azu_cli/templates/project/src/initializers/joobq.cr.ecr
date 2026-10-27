@@ -1,20 +1,16 @@
+# JoobQ's Redis store reads REDIS_HOST, REDIS_PORT and REDIS_PASS. REDIS_URL (`azu jobs:worker` sets it) supplies the
+# ones that are not set; this runs before JoobQ builds a store, so enqueue, delay and the workers share one Redis.
+if redis_url = ENV["REDIS_URL"]?
+  redis = URI.parse(redis_url)
+  ENV["REDIS_HOST"] ||= redis.host || "localhost"
+  redis.port.try { |port| ENV["REDIS_PORT"] ||= port.to_s }
+  redis.password.try { |password| ENV["REDIS_PASS"] ||= password }
+end
+
 require "joobq"
-# Optional: Uncomment if using JoobQPro
-# require "joobq_pro"
+# Every job in src/jobs (`azu generate job SendEmail to:string` creates one there)
+require "../jobs/**"
 
-# Require all job classes (uncomment when you have jobs)
-# The jobs directory is created when you generate your first job
-# Example: azu generate job SendEmail to:string subject:string
-# require "../jobs/**"
-
-# Register job types with QueueFactory before loading configuration
-# Uncomment and add your job classes here as you create them
-# Example:
-# JoobQ::QueueFactory.register_job_type(EmailJob)
-# JoobQ::QueueFactory.register_job_type(TestJob)
-
-# Initialize JoobQ configuration
-# Configure JoobQ for background job processing
 JoobQ.configure do |config|
   # Queue settings
   config.default_queue = "default"
@@ -29,10 +25,10 @@ JoobQ.configure do |config|
   config.stats_enabled = true
 end
 
-Log.info { "JoobQ initialized successfully" }
-
-# Optional: Add JoobQPro middleware for enhanced features
-# JoobQ.config.middlewares << JoobQPro::Middleware::Metrics.instance
+# The queues a worker (src/worker.cr, `azu jobs:worker`) runs: register the job class, then name its queue and
+# its number of workers. JoobQ.forge starts the queues listed in queue_configs.
+# JoobQ::QueueFactory.register_job_type(SendEmailJob)
+# JoobQ.config.queue_configs["default"] = {job_class_name: "SendEmailJob", workers: 2, throttle: nil}
 
 # Disable REST API for worker processes
 if ARGV.includes?("--worker")

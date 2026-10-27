@@ -383,8 +383,9 @@ module AzuCLI
 
         Logger.info("")
         Logger.info("Next steps:")
-        Logger.info("  1. Register job in src/initializers/joobq.cr:")
+        Logger.info("  1. Give it a queue that the worker runs, in src/initializers/joobq.cr:")
         Logger.info("     JoobQ::QueueFactory.register_job_type(#{job_name})")
+        Logger.info("     JoobQ.config.queue_configs[\"#{generator.queue}\"] = {job_class_name: \"#{job_name}\", workers: 2, throttle: nil}")
         Logger.info("  2. Implement job logic in the perform method")
         Logger.info("  3. Start worker: azu jobs:worker")
         Logger.info("")
@@ -399,6 +400,9 @@ module AzuCLI
         # Get project name from current directory or options
         project_name = @options["project"]? || Dir.current.split("/").last
         redis_url = @options["redis"]? || "redis://localhost:6379"
+        if message = Generators::JoobQ.redis_url_error(redis_url)
+          return usage_error(message)
+        end
         create_example = !@options.has_key?("no-example")
 
         generator = Generators::JoobQ.new(
@@ -427,6 +431,7 @@ module AzuCLI
         Logger.info("   dependencies:")
         Logger.info("     joobq:")
         Logger.info("       github: azutoolkit/joobq")
+        Logger.info("       version: ~> 0.4.2")
         Logger.info("     redis:")
         Logger.info("       github: stefanwille/crystal-redis")
         Logger.info("")

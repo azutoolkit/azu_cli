@@ -100,7 +100,7 @@ APP_SECRET=your-secret-key
 APP_ENV=development|test|production
 # HOST defaults to 127.0.0.1 in development and 0.0.0.0 in other environments; set it only to override
 # HOST=0.0.0.0
-PORT=3000
+PORT=4000
 LOG_LEVEL=debug|info|warn|error
 ```
 
@@ -119,7 +119,7 @@ database:
 
 server:
   host: <%= ENV["HOST"] || "0.0.0.0" %>
-  port: <%= ENV["PORT"] || 3000 %>
+  port: <%= ENV["PORT"] || 4000 %>
 ```
 
 ## Troubleshooting Quick Reference
@@ -353,7 +353,7 @@ export APP_ENV=production
 export DATABASE_URL=postgresql://user:pass@host/db
 export APP_SECRET=your-secret-key
 # export HOST=0.0.0.0   # the default outside development
-export PORT=3000
+export PORT=4000
 ```
 
 ## Community Resources
