@@ -174,3 +174,27 @@ describe AzuCLI::DevServer::Control::Runner do
     finished.first.exit_code.should eq 0
   end
 end
+
+describe "AzuCLI::DevServer::Control::Runner while the console compiles" do
+  it "holds the next command until it is no longer paused" do
+    events = Channel(AzuCLI::UI::Message).new(64)
+    runner = Control::Runner.new(->(message : AzuCLI::UI::Message) { events.send(message); nil }, executable: "/bin/echo")
+    runner.paused = true
+    runner.start
+    runner.enqueue(Control::Command.new("c0", "G", ["hello"]))
+    events.receive.should be_a Ev::ControlQueued
+    select
+    when message = events.receive
+      fail "ran while paused: #{message}"
+    when timeout(600.milliseconds)
+    end
+    runner.paused = false
+    select
+    when message = events.receive
+      message.should be_a Ev::ControlStarted
+    when timeout(3.seconds)
+      fail "did not run once resumed"
+    end
+    runner.stop
+  end
+end

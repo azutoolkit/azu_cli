@@ -79,8 +79,9 @@ module AzuCLI
       def initialize(@project : String, @port : String, @environment : String, @watching : String, @on_rebuild : Proc(Nil) = -> { }, @clock : Proc(Time::Instant) = -> { Time.instant }, @directory : String = Dir.current, @branch : String? = nil,
                      @commands : Array(Control::Command) = Control.catalog, @on_control : Proc(Control::Command, Nil) = ->(_command : Control::Command) { },
                      @history : Console::History = Console::History.new(nil),
-                     @on_eval : Proc(Int32, String, Array(String), Bool, Array(String), Nil) = ->(_id : Int32, _code : String, _prelude : Array(String), _declaration : Bool, _kept : Array(String)) { },
+                     @on_eval : Proc(Array(Console::Snippet), Array(String), Array(String), Nil) = ->(_snippets : Array(Console::Snippet), _prelude : Array(String), _kept : Array(String)) { },
                      @on_cancel_eval : Proc(Nil) = -> { },
+                     @on_prewarm : Proc(Nil) = -> { },
                      @on_interpreter : Proc(Array(String), Nil) = ->(_prelude : Array(String)) { })
       end
 
@@ -89,12 +90,27 @@ module AzuCLI
       end
 
       def animating? : Bool
-        state.building? || state.starting? || statuses.values.any?(&.busy?) || evaluating?
+        state.building? || state.starting? || statuses.values.any?(&.busy?) || evaluating? || @warm.running?
       end
 
       def evaluating? : Bool
-        transcript.any?(&.status.running?)
+        transcript.any? { |entry| entry.status.running? || entry.status.queued? }
       end
+
+      # The warm-up compile of the console, which starts after the app's first build.
+      enum WarmUp
+        Waiting
+        Running
+        Ready
+        Failed
+      end
+
+      getter warm = WarmUp::Waiting
+      @warm_error : String?
+      # A compile (a batch or the warm-up) is running: snippets typed meanwhile wait for the next one
+      @compiling = false
+      @console_progress : CompilerProgress?
+      @compile_started : Time::Instant?
 
       def commands : Array(Control::Command)
         @commands
@@ -205,9 +221,9 @@ module AzuCLI
       private def console_key(key : Key) : UI::Action
         case key.code
         when .esc?
-          evaluating? ? @on_cancel_eval.call : (@console_focus = false)
+          evaluating? ? cancel_runs : (@console_focus = false)
         when .ctrl_c?
-          evaluating? ? @on_cancel_eval.call : editor.clear
+          evaluating? ? cancel_runs : editor.clear
           @history_index = nil
         when .enter?
           text = editor.text
@@ -256,7 +272,7 @@ module AzuCLI
 
       private def submit : Nil
         code = editor.text.strip
-        return if code.empty? || evaluating?
+        return if code.empty?
         @history.add(code)
         @history_index = nil
         editor.clear
@@ -280,9 +296,8 @@ module AzuCLI
           kept.clear
           prelude.clear
         else
-          declaration = Console.declaration?(code)
-          transcript << Console::Entry.new(@console_ids, code, declaration)
-          @on_eval.call(@console_ids, code, prelude.dup, declaration, kept.dup)
+          transcript << Console::Entry.new(@console_ids, code, Console.declaration?(code))
+          dispatch
         end
       end
 
@@ -290,7 +305,8 @@ module AzuCLI
                      "post = Post.first keeps post for the next snippets (the assignment runs again before each one; one that writes is not kept).\n" \
                      "def, class, module, ... are kept too. locals and declarations list them, forget drops them.\n" \
                      "Enter runs finished code, Alt-Enter adds a line, ↑/↓ history, Ctrl-L clears, Esc cancels a run or leaves.\n" \
-                     "Ctrl-O opens crystal i with the app and your declarations: a live session, when this Crystal has it. exit leaves."
+                     "Snippets typed while one compiles wait and go together into the next compile (one compile, each its own => value).\n" \
+                     "Ctrl-O opens crystal i with the app, when this Crystal has it; Crystal 1.22.1's interpreter cannot load azu or CQL yet. exit leaves."
 
       # An assignment that ran is kept (its locals carry over), unless running it again would write something.
       private def keep(entry : Console::Entry) : Nil
@@ -302,6 +318,69 @@ module AzuCLI
           kept << entry.code
           entry.kept = "#{names.join(", ")} kept for the next snippets"
         end
+      end
+
+      # Sends every waiting snippet in one compile, unless one is already running (they go with the next).
+      private def dispatch : Nil
+        return if @compiling
+        waiting = transcript.select(&.status.queued?)
+        return if waiting.empty?
+
+        waiting.each { |entry| entry.status = Console::Entry::Status::Running }
+        @compiling = true
+        @console_progress = nil
+        @compile_started = @clock.call
+        @on_eval.call(waiting.map { |entry| Console::Snippet.new(entry.id, entry.code, entry.declaration?) }, prelude.dup, kept.dup)
+      end
+
+      # Esc while snippets run or wait: the running compile is stopped, and the waiting ones are dropped with it.
+      private def cancel_runs : Nil
+        transcript.each do |entry|
+          next unless entry.status.queued?
+          entry.status = Console::Entry::Status::Fail
+          entry.error = "cancelled"
+        end
+        if @compiling
+          @cancel_requested = true
+          @on_cancel_eval.call
+        end
+      end
+
+      @cancel_requested = false
+
+      # After the app's first build, compile it once for the console, so the first snippet is as quick as the next.
+      private def prewarm : Nil
+        return unless @warm.waiting?
+        @warm = WarmUp::Running
+        @compiling = true
+        @compile_started = @clock.call
+        @on_prewarm.call
+      end
+
+      private def finished(event : Events::ConsoleFinished) : Nil
+        outcomes = Console.outcomes(event.exit_code, event.output, Console::SCRIPT, event.ranges, event.ids)
+        event.ids.each do |id|
+          entry = transcript.find { |candidate| candidate.id == id } || next
+          outcome = outcomes[id]?
+          if outcome.nil?
+            entry.status = Console::Entry::Status::Queued # another snippet of the batch failed first: runs again
+            next
+          end
+          entry.status = outcome.ok ? Console::Entry::Status::Ok : Console::Entry::Status::Fail
+          entry.printed = outcome.printed
+          entry.value = outcome.value
+          entry.error = @cancel_requested && !outcome.ok ? "cancelled" : outcome.error
+          entry.seconds = event.seconds
+          prelude << entry.code if outcome.ok && entry.declaration?
+          keep(entry) if outcome.ok && !entry.declaration?
+        end
+        if @cancel_requested # a cancelled batch is not run again
+          transcript.each { |entry| (entry.status = Console::Entry::Status::Fail; entry.error = "cancelled") if entry.status.queued? && event.ids.includes?(entry.id) }
+        end
+        @cancel_requested = false
+        @compiling = false
+        @warm = WarmUp::Ready if @warm.waiting? || @warm.running?
+        dispatch
       end
 
       private def note(code : String, text : String) : Nil
@@ -337,16 +416,15 @@ module AzuCLI
       private def message(event : Message) : UI::Action
         case event
         when Events::ConsoleFinished
-          transcript.find { |entry| entry.id == event.id }.try do |entry|
-            outcome = Console.outcome(event.exit_code, event.output, event.script_name, event.offset)
-            entry.status = outcome.ok ? Console::Entry::Status::Ok : Console::Entry::Status::Fail
-            entry.printed = outcome.printed
-            entry.value = outcome.value
-            entry.error = outcome.error
-            entry.seconds = event.seconds
-            prelude << entry.code if outcome.ok && entry.declaration?
-            keep(entry) if outcome.ok && !entry.declaration?
-          end
+          finished(event)
+        when Events::ConsoleProgress
+          @console_progress = event.progress
+        when Events::ConsoleWarm
+          @warm = event.ok ? WarmUp::Ready : WarmUp::Failed
+          @warm_error = event.error
+          @compiling = false
+          @console_progress = nil
+          dispatch
         when Events::InterpreterProbe
           @interpreter = event.available
         when Events::ControlQueued
@@ -373,6 +451,7 @@ module AzuCLI
           @progress = nil
           if event.success
             trigger(Control::Trigger::Build)
+            prewarm
             @build_history = (@build_history << event.seconds).last(10)
             @error = nil
             @state = @pid ? State::Running : State::Starting
@@ -445,7 +524,7 @@ module AzuCLI
           end
         end
         keys = if tab.console? && console_focus?
-                 evaluating? ? [{"Esc", "Cancel the run"}] : [{"Enter", "Run"}, {"Alt-Enter", "New line"}, {"↑/↓", "History"}, {"Ctrl-L", "Clear"}, {"Ctrl-O", "crystal i"}, {"Esc", "Panels"}]
+                 evaluating? ? [{"Enter", "Queue another"}, {"Esc", "Cancel the run"}] : [{"Enter", "Run"}, {"Alt-Enter", "New line"}, {"↑/↓", "History"}, {"Ctrl-L", "Clear"}, {"Ctrl-O", "crystal i"}, {"Esc", "Panels"}]
                elsif tab.console?
                  [{"Enter", "Type"}, {"i", "crystal i"}, {"1-7", "Panels"}, {"q", "Quit"}]
                elsif failed_card?
@@ -543,7 +622,12 @@ module AzuCLI
 
       private def console_transcript(frame : Frame, rect : Rect) : Nil
         g = frame.glyphs
-        mode = interpreter ? "Ctrl-O: crystal i" : "compiled snippets"
+        mode = case @warm
+               in .running? then "warming up"
+               in .failed?  then "app does not compile"
+               in .ready?   then "ready"
+               in .waiting? then "waits for the first build"
+               end
         inner = frame.card(rect, "Console #{g.dot} #{@environment}", "#{kept.size} kept #{g.dot} #{prelude.size} declared #{g.dot} #{mode}")
         return if inner.empty?
 
@@ -559,6 +643,8 @@ module AzuCLI
         rows = [] of Array(Seg)
         if transcript.empty?
           rows << [Seg["Loading #{@environment} environment: the app is compiled with each snippet (#{Hud::CONSOLE_NOTE})", Token::Muted]]
+          rows << [Seg["#{g.warn} warm-up failed: #{@warm_error}", Token::Amber]] if @warm.failed?
+          rows << [Seg["#{Widgets.spinner(g, @clock.call)} warming up: compiling the app once so each snippet takes seconds, not twice as long", Token::Cyan]] if @warm.running?
           rows << [Seg["Try ", Token::Muted], Seg["#{module_name}::VERSION", Token::Cyan], Seg[" or a model query; ", Token::Muted], Seg["help", Token::Cyan], Seg[" lists what works", Token::Muted]]
           return rows
         end
@@ -570,8 +656,10 @@ module AzuCLI
           entry.printed.each { |line| rows << [Seg[line, entry.status.note? ? Token::Muted : Token::Text]] }
           time = entry.seconds.try { |seconds| "  #{Widgets.duration(seconds)}" } || ""
           case entry.status
+          when .queued?
+            rows << [Seg["#{g.dot} waits: runs with the next compile", Token::Muted], Seg["  Esc cancels", Token::Faint]]
           when .running?
-            rows << [Seg["#{Widgets.spinner(g, @clock.call)} compiling with the app", Token::Cyan], Seg["  Esc cancels", Token::Faint]]
+            rows << compile_row(g)
           when .ok?
             rows << (entry.declaration? ? [Seg["#{g.ok} declared: kept for the next snippets", Token::Green], Seg[time, Token::Faint]] : [Seg["=> ", Token::Muted], Seg[entry.value || "nil", Token::Cyan], Seg[time, Token::Faint]])
             entry.kept.try { |kept_note| rows << [Seg["#{kept_note.includes?("not kept") ? g.warn : g.pointer} #{kept_note}", kept_note.includes?("not kept") ? Token::Amber : Token::Muted]] }
@@ -586,6 +674,19 @@ module AzuCLI
 
       private def module_name : String
         @module_name ||= (Utils.project_module_name rescue @project.camelcase)
+      end
+
+      # "⠋ compiling [9/13] Codegen (bc+obj) ▰▰▰▰▱▱  6.2s"
+      private def compile_row(g : Glyphs) : Array(Seg)
+        elapsed = Widgets.duration((@clock.call - (@compile_started || @clock.call)).total_seconds)
+        row = [Seg["#{Widgets.spinner(g, @clock.call)} ", Token::Cyan]]
+        if progress = @console_progress
+          full, empty = Widgets.meter(progress.fraction, 12, g.bar_full, g.bar_empty)
+          row << Seg["#{progress.phase} ", Token::Cyan] << Seg[full, Token::Cyan] << Seg[empty, Token::Faint] << Seg[" #{progress.stage}", Token::Muted]
+        else
+          row << Seg["compiling with the app", Token::Cyan]
+        end
+        row << Seg["  #{elapsed}", Token::Faint] << Seg["  Esc cancels", Token::Faint]
       end
 
       CONSOLE_NOTE = "assignments and declarations carry over; help, exit"

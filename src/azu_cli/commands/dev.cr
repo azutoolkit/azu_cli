@@ -74,12 +74,14 @@ module AzuCLI
         control = AzuCLI::DevServer::Control::Runner.new(->(message : UI::Message) { emit(message) })
         @control = control
         app_file = "./src/#{Utils.project_name}.cr"
-        evaluator = AzuCLI::DevServer::Console::Evaluator.new(->(message : UI::Message) { emit(message) }, app_file)
+        evaluator = AzuCLI::DevServer::Console::Evaluator.new(->(message : UI::Message) { emit(message) }, app_file,
+          on_busy: ->(busy : Bool) { control.paused = busy; nil })
         screen = AzuCLI::DevServer::Hud.new(target, (@port || ENV["PORT"]? || DEFAULT_PORT).to_s, @environment || ENV["CRYSTAL_ENV"]? || "development",
           "watching src, config · poll #{@interval.total_milliseconds.to_i} ms", on_rebuild: -> { @rebuild_requested = true; nil }, branch: git_branch,
           on_control: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command); nil },
           history: AzuCLI::DevServer::Console::History.for_project,
-          on_eval: ->(id : Int32, code : String, prelude : Array(String), declaration : Bool, kept : Array(String)) { evaluator.evaluate(id, code, prelude, declaration, kept); nil },
+          on_eval: ->(snippets : Array(AzuCLI::DevServer::Console::Snippet), prelude : Array(String), kept : Array(String)) { evaluator.evaluate(snippets, prelude, kept); nil },
+          on_prewarm: -> { evaluator.prewarm; nil },
           on_cancel_eval: -> { evaluator.cancel; nil },
           on_interpreter: ->(prelude : Array(String)) { run_interpreter(app_file, prelude); nil })
         program = UI::Program.new(screen, terminal, UI::FullScreenRenderer.new(terminal.output))

@@ -117,6 +117,8 @@ module AzuCLI
       class Runner
         getter queue = Deque(Command).new
         property? building = false
+        # The console is compiling: it goes first, the next command waits
+        property? paused = false
         @running : Command?
         @wake = ::Channel(Nil).new(1)
         @stopped = false
@@ -137,7 +139,7 @@ module AzuCLI
           spawn do
             until @stopped
               @wake.receive if queue.empty?
-              while building? && !@stopped
+              while (building? || paused?) && !@stopped
                 sleep 200.milliseconds
               end
               command = queue.shift?

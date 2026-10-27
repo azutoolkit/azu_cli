@@ -2,13 +2,14 @@ require "json"
 require "../ui"
 require "../scratch_file"
 require "../process_tree"
+require "./telemetry"
 
 module AzuCLI
   module DevServer
-    # The Console panel of `azu dev`: Crystal code run with the application loaded, like `rails console`. Without an
-    # interpreter each run compiles the snippet with the app (`crystal run`): an expression answers `=> value`, and a
-    # declaration (`def`, `class`, ...) is kept and comes before every later snippet. Locals do not carry over between
-    # runs; `crystal i` (Ctrl-O, when the compiler has it) is a live session.
+    # The Console panel of `azu dev`: Crystal code run with the application loaded, like `rails console`. Each run
+    # compiles the snippets with the app (`crystal run`): an expression answers `=> value`; a declaration (`def`,
+    # `class`, ...) and a local assignment are kept for later snippets. Snippets typed while one compiles wait, and go
+    # together into the next compile. `crystal i` (Ctrl-O) cannot load azu or CQL with Crystal 1.22.1.
     module Console
       MARKER = "AZU_CONSOLE_VALUE:"
       # Printed after the kept assignments ran again: what the snippet prints comes after it.
@@ -38,91 +39,177 @@ module AzuCLI
         code.matches?(WRITES)
       end
 
-      # The script, and the number of lines before the snippet (to give compile errors the snippet's line numbers).
-      def self.script(app_file : String, prelude : Array(String), code : String, declaration : Bool, kept : Array(String) = [] of String) : {String, Int32}
-        head = String.build do |io|
-          io << "require " << app_file.inspect << '\n'
-          prelude.each { |declared| io << declared << '\n' }
-          kept.each { |assignment| io << assignment << '\n' }
-          io << "puts " << START.inspect << '\n'
+      # A snippet to run: its transcript id, its code, and whether it declares something.
+      record Snippet, id : Int32, code : String, declaration : Bool
 
-          io << "__azu_console_value = begin\n" unless declaration
+      # Where each snippet's code sits in the script (script lines, 1-based), to put compile errors on the snippet.
+      alias Ranges = Array({Int32, Range(Int32, Int32)})
+
+      # One script for a batch of snippets: the app, the declarations kept so far and the batch's own, the kept
+      # assignments, then each expression in turn, each printing its own value. Locals of an earlier snippet in the
+      # batch are visible to a later one, as they are at a prompt.
+      def self.script(app_file : String, prelude : Array(String), kept : Array(String), snippets : Array(Snippet)) : {String, Ranges}
+        ranges = Ranges.new
+        lines = ["require #{app_file.inspect}"]
+        add = ->(code : String) { lines.concat(code.split('\n')) }
+        prelude.each { |declared| add.call(declared) }
+        snippets.select(&.declaration).each do |snippet|
+          first = lines.size + 1
+          add.call(snippet.code)
+          ranges << {snippet.id, first..lines.size}
         end
-        tail = declaration ? "\nputs #{(MARKER + "declared").inspect}\n" : "\nend\nputs \"\\n#{MARKER}\#{__azu_console_value.inspect[0, #{VALUE_LIMIT}]}\"\n"
-        {head + code + tail, head.count('\n')}
+        kept.each { |assignment| add.call(assignment) }
+        lines << "puts #{START.inspect}"
+        snippets.each do |snippet|
+          if snippet.declaration
+            lines << "puts #{"#{MARKER}#{snippet.id}:declared".inspect}"
+            next
+          end
+          lines << "puts #{"#{BEGIN}#{snippet.id}".inspect}"
+          lines << "__azu_console_value_#{snippet.id} = begin"
+          first = lines.size + 1
+          add.call(snippet.code)
+          ranges << {snippet.id, first..lines.size}
+          lines << "end"
+          lines << "puts \"\\n#{MARKER}#{snippet.id}:\#{__azu_console_value_#{snippet.id}.inspect[0, #{VALUE_LIMIT}]}\""
+        end
+        {lines.join('\n') + "\n", ranges}
       end
 
-      # How a run went: what it printed, its value (or "declared"), or why it failed.
+      # How a snippet went: what it printed, its value (or "declared"), or why it failed.
       record Outcome, ok : Bool, printed : Array(String), value : String?, error : String?
 
-      def self.outcome(exit_code : Int32, output : String, script_name : String, offset : Int32) : Outcome
+      # Each snippet's outcome; nil for a snippet that did not get to run (another snippet of the batch failed to
+      # compile, or crashed before it): it is run again with the next batch.
+      def self.outcomes(exit_code : Int32, output : String, script_name : String, ranges : Ranges, ids : Array(Int32)) : Hash(Int32, Outcome?)
         lines = output.lines.map(&.rstrip)
-        lines = lines[(lines.index(START) || -1) + 1..]
-        if exit_code == 0 && (index = lines.rindex(&.starts_with?(MARKER)))
-          printed = lines[0, index]
-          printed = printed[0, (printed.rindex { |line| !line.empty? } || -1) + 1]
-          return Outcome.new(true, printed, lines[index].lchop(MARKER), nil)
+        result = {} of Int32 => Outcome?
+        unless start = lines.index(START)
+          return compile_failure(lines, script_name, ranges, ids, exit_code)
         end
-        if (crash = lines.index(&.starts_with?("Unhandled exception")))
-          return Outcome.new(false, lines[0, crash].reject(&.empty?), nil, lines[crash].sub(/\AUnhandled exception: /, ""))
+
+        current = nil
+        printed = [] of String
+        lines[start + 1..].each do |line|
+          if line.starts_with?(BEGIN)
+            current = line.lchop(BEGIN).to_i?
+            printed = [] of String
+          elsif line.starts_with?(MARKER)
+            id, _, value = line.lchop(MARKER).partition(':')
+            printed = printed[0, (printed.rindex { |text| !text.empty? } || -1) + 1]
+            id.to_i?.try { |done| result[done] = Outcome.new(true, printed, value, nil) }
+            current = nil
+            printed = [] of String
+          elsif line.starts_with?("Unhandled exception")
+            current.try { |failed| result[failed] = Outcome.new(false, printed.reject(&.empty?), nil, line.sub(/\AUnhandled exception: /, "")) }
+            break
+          else
+            printed << line
+          end
         end
-        Outcome.new(false, [] of String, nil, compile_error(lines, script_name, offset))
+        ids.each do |id|
+          next if result.has_key?(id)
+          # Killed or exited mid-snippet: that one failed; the ones after it did not run
+          result[id] = id == current ? Outcome.new(false, printed.reject(&.empty?), nil, exit_code == 0 ? "the program exited" : "stopped (exit #{exit_code})") : nil
+        end
+        result
       end
 
-      # "line 2: undefined local variable or method 'foo'" for the snippet, "src/models/post.cr:12: ..." for the app.
-      def self.compile_error(lines : Array(String), script_name : String, offset : Int32) : String
-        message = lines.find(&.starts_with?("Error: ")).try(&.lchop("Error: ")) || lines.reject(&.blank?).last? || "failed"
-        location = lines.reverse.find { |line| line.starts_with?("In ") }
-        return message unless location && (match = location.match(/\AIn (\S+?):(\d+):\d+/))
-
-        if File.basename(match[1]) == script_name
-          line = match[2].to_i - offset
-          line >= 1 ? "line #{line}: #{message}" : "in the kept code (forget drops it): #{message}"
-        else
-          "#{match[1].lchop("./")}:#{match[2]}: #{message}"
+      private def self.compile_failure(lines : Array(String), script_name : String, ranges : Ranges, ids : Array(Int32), exit_code : Int32) : Hash(Int32, Outcome?)
+        message = lines.find(&.starts_with?("Error: ")).try(&.lchop("Error: ")) || lines.reject(&.blank?).last? || "failed (exit #{exit_code})"
+        location = lines.reverse.find(&.starts_with?("In ")).try(&.match(/\AIn (\S+?):(\d+):\d+/))
+        culprit = nil
+        error = message
+        if location && File.basename(location[1]) == script_name
+          line = location[2].to_i
+          if found = ranges.find { |(_, range)| range.includes?(line) }
+            culprit = found[0]
+            error = "line #{line - found[1].begin + 1}: #{message}"
+          else
+            error = "in the kept code (forget drops it): #{message}"
+          end
+        elsif location
+          error = "#{location[1].lchop("./")}:#{location[2]}: #{message}"
         end
+        result = {} of Int32 => Outcome?
+        # The snippet the error is in fails, the others run again; an error outside the snippets fails them all
+        ids.each { |id| result[id] = culprit.nil? || culprit == id ? Outcome.new(false, [] of String, nil, error) : nil }
+        result
       end
 
       # The file every snippet is written to. One name: the compiler keys its object cache on the main file's path, so
       # a run after the first reuses the app's object files (about half the time of a fresh build).
       SCRIPT = ".azu_console.cr"
+      BEGIN  = "AZU_CONSOLE_BEGIN:"
 
-      # Runs one snippet at a time with the app, in a fiber; `cancel` stops it.
+      # Compiles and runs one batch at a time, in a fiber, and reports the compiler's progress; `cancel` stops it.
       class Evaluator
         @process : Process?
 
-        def initialize(@report : Proc(UI::Message, Nil), @app_file : String, @directory : String = Dir.current, @compiler : String = "crystal")
+        # `on_busy` hears when a compile starts and ends (azu dev pauses its other compiles meanwhile).
+        def initialize(@report : Proc(UI::Message, Nil), @app_file : String, @directory : String = Dir.current, @compiler : String = "crystal",
+                       @on_busy : Proc(Bool, Nil) = ->(_busy : Bool) { })
         end
 
         def running? : Bool
           !@process.nil?
         end
 
-        def evaluate(id : Int32, code : String, prelude : Array(String), declaration : Bool, kept : Array(String) = [] of String) : Nil
+        def evaluate(snippets : Array(Snippet), prelude : Array(String), kept : Array(String)) : Nil
+          script, ranges = Console.script(@app_file, prelude, kept, snippets)
           spawn do
-            script, offset = Console.script(@app_file, prelude, code, declaration, kept)
-            started = Time.instant
-            output = IO::Memory.new
-            path = File.join(@directory, SCRIPT)
-            exit_code = begin
-              File.write(path, script, perm: 0o600)
-              process = Process.new(@compiler, ["run", "--no-debug", path], chdir: @directory, input: Process::Redirect::Close, output: output, error: output)
-              @process = process
-              process.wait.exit_code? || -1
-            rescue ex : IO::Error | File::Error
-              output << "Error: " << ex.message
-              127
-            ensure
-              File.delete?(path)
-            end
-            @process = nil
-            @report.call(Events::ConsoleFinished.new(id, exit_code, output.to_s, (Time.instant - started).total_seconds, SCRIPT, offset))
+            exit_code, output, seconds = compile_and_run(script)
+            @report.call(Events::ConsoleFinished.new(snippets.map(&.id), exit_code, output, seconds, ranges))
+          end
+        end
+
+        # Compiles the app once with an empty snippet, so the compiler's cache holds the app's objects before the
+        # first snippet: that one then takes as long as any later one.
+        def prewarm : Nil
+          script, _ = Console.script(@app_file, [] of String, [] of String, [] of Snippet)
+          spawn do
+            exit_code, output, seconds = compile_and_run(script)
+            @report.call(Events::ConsoleWarm.new(exit_code == 0, seconds, exit_code == 0 ? nil : Console.compile_error_line(output)))
           end
         end
 
         def cancel : Nil
           @process.try { |process| ProcessTree.terminate(process) rescue nil }
         end
+
+        private def compile_and_run(script : String) : {Int32, String, Float64}
+          @on_busy.call(true)
+          started = Time.instant
+          output = IO::Memory.new
+          path = File.join(@directory, SCRIPT)
+          sink = LineSink.new do |line|
+            if progress = CompilerProgress.parse(line)
+              @report.call(Events::ConsoleProgress.new(progress, (Time.instant - started).total_seconds))
+            else
+              output.puts(line)
+            end
+          end
+          exit_code = begin
+            File.write(path, script, perm: 0o600)
+            process = Process.new(@compiler, ["run", "--no-debug", "--progress", path], chdir: @directory, input: Process::Redirect::Close, output: sink, error: sink)
+            @process = process
+            process.wait.exit_code? || -1
+          rescue ex : IO::Error | File::Error
+            output.puts "Error: #{ex.message}"
+            127
+          ensure
+            File.delete?(path)
+            @process = nil
+            @on_busy.call(false)
+          end
+          sink.flush_line
+          {exit_code, output.to_s, (Time.instant - started).total_seconds}
+        end
+      end
+
+      # The error line of a failed warm-up ("src/models/post.cr:12: undefined method"), for the console's title.
+      def self.compile_error_line(output : String) : String
+        compile_failure(output.lines.map(&.rstrip), SCRIPT, Ranges.new, [0], 1)[0].try(&.error) || "failed"
       end
 
       # What was typed, kept between sessions in $XDG_STATE_HOME/azu/<project>/console_history (JSON lines).
@@ -163,6 +250,7 @@ module AzuCLI
       # One snippet in the transcript.
       class Entry
         enum Status
+          Queued
           Running
           Ok
           Fail
@@ -180,21 +268,40 @@ module AzuCLI
         # Whether its locals carry over, for an assignment
         property kept : String?
 
-        def initialize(@id : Int32, @code : String, @declaration : Bool, @status : Status = Status::Running)
+        def initialize(@id : Int32, @code : String, @declaration : Bool, @status : Status = Status::Queued)
         end
       end
     end
 
     module Events
+      # A batch of snippets ran (or failed to compile): their ids, and what the compiler and the program printed.
       struct ConsoleFinished < UI::Message
-        getter id : Int32
+        getter ids : Array(Int32)
         getter exit_code : Int32
         getter output : String
         getter seconds : Float64
-        getter script_name : String
-        getter offset : Int32
+        getter ranges : Console::Ranges
 
-        def initialize(@id : Int32, @exit_code : Int32, @output : String, @seconds : Float64, @script_name : String, @offset : Int32)
+        def initialize(@ids : Array(Int32), @exit_code : Int32, @output : String, @seconds : Float64, @ranges : Console::Ranges)
+        end
+      end
+
+      # Where the compiler is with the running batch.
+      struct ConsoleProgress < UI::Message
+        getter progress : CompilerProgress
+        getter seconds : Float64
+
+        def initialize(@progress : CompilerProgress, @seconds : Float64)
+        end
+      end
+
+      # The warm-up compile ended.
+      struct ConsoleWarm < UI::Message
+        getter ok : Bool
+        getter seconds : Float64
+        getter error : String?
+
+        def initialize(@ok : Bool, @seconds : Float64, @error : String?)
         end
       end
 

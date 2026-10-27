@@ -125,9 +125,14 @@ demo_app(dev)> titles(5)
 => ["Hello", "World"]
 ```
 
-How it runs: without an interpreter each snippet is compiled with the app (`crystal run` of `.azu_console.cr` in the
-project root, removed after the run; one file name, so later runs reuse the app's object files: about 10 s for a
-mid-size app, against 20 s for the first). An expression answers `=> value` (its `inspect`); what it prints comes
+How it runs: each snippet is compiled with the app (`crystal run --progress` of `.azu_console.cr` in the project
+root, removed after the run; one file name, so later runs reuse the app's object files). After the app's first build
+the console compiles the app once in the background (the title says `warming up`, then `ready`), so the first snippet
+does not pay for a cold compile. A run shows the compiler's progress. Snippets typed while one compiles wait (`waits:
+runs with the next compile`) and all go into the next compile, each answering its own `=> value`; one that fails to
+compile or crashes fails alone and the others run again. While the console compiles, the Commands panel holds its
+next command. Expect 10 to 20 s a run for a mid-size app on a 4-core machine: Crystal type-checks and generates the
+whole program for every compile, and has no incremental mode. An expression answers `=> value` (its `inspect`); what it prints comes
 before. Declarations (`def`, `class`, `module`, `struct`, `macro`, ...) are kept and come before every later snippet.
 A local assignment (`post = Post.first`) is kept too and runs again before each snippet, so its locals carry over;
 one that would write if run again (`create`, `save`, `update`, `delete`, `destroy`, a `!` method, ...) is not kept,
@@ -136,5 +141,7 @@ leaves the console. Snippets run against the database `DATABASE_URL` points at.
 
 With a Crystal that has the interpreter (`crystal i --help` works; Homebrew and the crystal-lang.org packages have it,
 the official Docker images and Linux tarballs do not), Ctrl-O (or `i` when the panels have the keyboard) leaves the
-terminal to `crystal i` with the app and your declarations loaded: a live session where every local stays, `debugger`
-works, and `exit` brings the dashboard back.
+terminal to `crystal i` with the app and your declarations loaded, and `exit` brings the dashboard back. Crystal
+1.22.1's interpreter cannot load an Azu app yet: it stops with a compiler bug in Crinja (azu's templates: "doesn't
+implement instance_vars") and another in CQL's PostgreSQL session ("has no type"). Its REPL answers in a fraction of
+a second, so the console will use it once those are fixed.
