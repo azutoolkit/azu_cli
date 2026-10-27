@@ -269,6 +269,7 @@ describe AzuCLI::Commands::New do
             result.success?.should be_false
             result.error.should contain("Unknown project type 'worker'")
             result.error.should contain("web, api, cli")
+            result.exit_code.should eq(2) # invalid usage
           end
 
           Dir.exists?("tool_app").should be_false
@@ -285,6 +286,7 @@ describe AzuCLI::Commands::New do
             result = cli.execute
             result.success?.should be_false
             result.error.should contain("--docker is for web and api projects")
+            result.exit_code.should eq(2)
           end
 
           gitlab = AzuCLI::Commands::New.new
@@ -293,6 +295,7 @@ describe AzuCLI::Commands::New do
             result = gitlab.execute
             result.success?.should be_false
             result.error.should contain("Unknown CI setup 'GitLab CI'")
+            result.exit_code.should eq(2)
           end
           Dir.exists?("tool_app").should be_false
           Dir.exists?("lab_app").should be_false

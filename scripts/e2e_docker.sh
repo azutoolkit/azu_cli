@@ -25,6 +25,10 @@ IMAGE="azu-e2e-$NAME:$$"
 CONTAINER="azu-e2e-$NAME-$$"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AZU_BIN="${AZU_BIN:-$REPO_ROOT/bin/azu}"
+# The script changes directory before it reads the CA: make a relative path absolute now.
+if [ -n "${E2E_DOCKER_CA:-}" ] && [ -f "$E2E_DOCKER_CA" ]; then
+  E2E_DOCKER_CA="$(cd "$(dirname "$E2E_DOCKER_CA")" && pwd)/$(basename "$E2E_DOCKER_CA")"
+fi
 
 command -v docker >/dev/null || { echo "docker is required" >&2; exit 2; }
 command -v curl >/dev/null || { echo "curl is required" >&2; exit 2; }

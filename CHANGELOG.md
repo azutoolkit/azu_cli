@@ -1,5 +1,10 @@
 # Changelog - Azu CLI
 
+## Unreleased - azu new usage errors, e2e_docker CA path
+
+- Fixed: `azu new` with an unknown `--type`, an unknown `--ci` or `--docker` for a cli project exits with 2 (invalid usage), like the other usage errors; it exited with 1
+- Fixed: `scripts/e2e_docker.sh` resolves a relative `E2E_DOCKER_CA` before it changes directory; a relative path failed with "E2E_DOCKER_CA is not a file"
+
 ## Unreleased - The development dashboard shows requests
 
 - Fixed: the development dashboard of a generated app (`/dev-dashboard`) never showed a request. `dev_handlers` mounted a `PerformanceMonitor.new` of its own, while `DevDashboard` reads `Azu::CONFIG.performance_monitor`, which is nil unless `PERFORMANCE_MONITORING=true`. `dev_handlers` now mounts `Azu::CONFIG.performance_monitor` when it exists, the generated `.env.development` sets `PERFORMANCE_MONITORING=true` and `.env.example` lists it

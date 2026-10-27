@@ -68,7 +68,7 @@ module AzuCLI
         gather_configuration
 
         if message = delivery_error
-          return error(message)
+          return usage_error(message)
         end
 
         # Show configuration summary
