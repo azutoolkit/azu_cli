@@ -54,6 +54,7 @@ module AzuCLI
       register_command("dev", Commands::Dev)
       register_command("routes", Commands::Routes)
       register_command("console", Commands::Console)
+      register_command("config", Commands::Config)
       register_command("doctor", Commands::Doctor)
 
       # Job queue commands
@@ -74,11 +75,6 @@ module AzuCLI
       # OpenAPI commands
       register_command("openapi:generate", Commands::OpenAPI::Generate)
       register_command("openapi:export", Commands::OpenAPI::Export)
-
-      # Config commands
-      register_command("config:show", Commands::Config::Show)
-      register_command("config:validate", Commands::Config::Validate)
-      register_command("config:env", Commands::Config::Env)
 
       # Completion command
       register_command("completion", Commands::Completion)

@@ -13,6 +13,7 @@ azu undo [--dry-run|--list]   # Revert the files of the last azu generate
 azu serve [options]           # Start the development server (aliases: server, s)
 azu dev [options]             # Run the app; rebuild (not a release build) and restart when the code changes
 azu routes [options]          # List the routes: method, path, endpoint, request/response types, helpers
+azu config [options]          # Show the effective configuration of the app (secrets masked)
 azu console                   # Crystal's interpreter (crystal i) with the app loaded
 azu doctor [--json]           # Check Crystal, shards, database, env, secrets, port, docker, .env
 azu test [options]            # Run specs (alias: t)
@@ -51,21 +52,28 @@ at least 60x16 (not CI) `azu dev` opens a dashboard: build with compiler stages,
 memory), requests and SQL from the app (azu's `Dev::Telemetry` over `AZU_TELEMETRY_SOCKET`), JoobQ queues, the app's
 log; keys `1`-`5` panels, `r` rebuild, `l` log, `c` clear log, `q` quit. `--ui plain` keeps the line output. `src/**`, `config/**`, `shard.yml` and
 `shard.lock` changes build and restart; `public/templates/**` changes neither build nor restart; `.env*` changes restart
-without a build. A failed build keeps the running app. See [docs/command-reference/azu-dev.md](docs/commands/dev.md).
+without a build. A failed build keeps the running app. See [docs/command-reference/azu-dev.md](docs/command-reference/azu-dev.md).
 
 ### `azu routes` Options
 
 `--format table|json` (default `table`), `--method METHOD`, `--path TEXT` (substring), `--ui rich|plain` (a card on a
 color terminal by default). Exit 0, 1 (the app could not
-be loaded), 2 (invalid usage). See [docs/command-reference/azu-routes.md](docs/commands/routes.md).
+be loaded), 2 (invalid usage). See [docs/command-reference/azu-routes.md](docs/command-reference/azu-routes.md).
+
+### `azu config` Options
+
+`--format table|json` (default `table`), `--section NAME` (`server`, `tls`, `templates`, `errors`, `session`, `secrets`,
+`database`, `limits`, `uploads`, `websocket`, `i18n`, `assets`), `--ui rich|plain`. It compiles and loads the app like
+`azu routes` does, and prints no secret. Exit 0, 1 (the app could not be loaded), 2 (invalid usage). See
+[docs/command-reference/azu-config.md](docs/command-reference/azu-config.md).
 
 ### `azu doctor` Options
 
-`--json`, `--ui rich|plain` (a card on a color terminal by default). Exit 0 (warnings allowed) or 1 (a check failed). See [docs/command-reference/azu-doctor.md](docs/commands/doctor.md).
+`--json`, `--ui rich|plain` (a card on a color terminal by default). Exit 0 (warnings allowed) or 1 (a check failed). See [docs/command-reference/azu-doctor.md](docs/command-reference/azu-doctor.md).
 
 ### `azu console`
 
-No options. Needs a Crystal built with the interpreter, else exits 2. See [docs/command-reference/azu-console.md](docs/commands/console.md).
+No options. Needs a Crystal built with the interpreter, else exits 2. See [docs/command-reference/azu-console.md](docs/command-reference/azu-console.md).
 
 ### `azu test` Options
 
@@ -152,14 +160,6 @@ azu session:clear [--backend TYPE] [--force]
 ```bash
 azu openapi:export [--output FILE] [--format yaml|json] [--project NAME] [--version V]
 azu openapi:generate <spec> [--force] [--models-only] [--endpoints-only]
-```
-
-## Configuration Commands
-
-```bash
-azu config:show [--format yaml|json|table] [--env ENV] [--section NAME]
-azu config:validate [--env ENV]
-azu config:env [--list|--show|--set K=V|--unset K]
 ```
 
 ## Other

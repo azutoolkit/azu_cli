@@ -141,7 +141,7 @@ Register the handler in `def self.handlers` in `src/<app>.cr`. The generator doe
 {% endhint %}
 
 {% hint style="warning" %}
-The `logging` skeleton, and any type the generator doesn't know, calls `call_next` twice: once in its logic and again at the end of `call`. The rest of the chain then runs twice. Remove one call before you use it. `--type auth` is not a type; it gets this custom skeleton, though older help text lists it.
+A type the generator doesn't know, including `auth`, gets the custom skeleton. It wraps `call_next` in a `begin`/`rescue` and answers 500 on an error, so replace the TODO with your own logic. The five types are `authentication`, `authorization`, `logging`, `cors` and `rate_limiting`.
 {% endhint %}
 
 {% hint style="danger" %}

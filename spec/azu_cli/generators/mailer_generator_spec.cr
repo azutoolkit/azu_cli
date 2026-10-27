@@ -137,4 +137,32 @@ describe AzuCLI::Generate::Mailer do
       generator.dependencies.should eq("carbon")
     end
   end
+
+  describe "rendering" do
+    it "writes the mailer and its job when async is enabled" do
+      dir = File.join(Dir.tempdir, "mailer_render_#{Random::Secure.hex(8)}")
+      Dir.mkdir_p(dir)
+      begin
+        AzuCLI::Generate::Mailer.new("UserMailer", ["welcome"], true).render(dir)
+
+        File.exists?(File.join(dir, "src/mailers/user_mailer_mailer.cr")).should be_true
+        File.exists?(File.join(dir, "src/jobs/user_mailer_job.cr")).should be_true
+      ensure
+        FileUtils.rm_rf(dir)
+      end
+    end
+
+    it "writes no job file when async is disabled (--skip job)" do
+      dir = File.join(Dir.tempdir, "mailer_render_#{Random::Secure.hex(8)}")
+      Dir.mkdir_p(dir)
+      begin
+        AzuCLI::Generate::Mailer.new("UserMailer", ["welcome"], false).render(dir)
+
+        File.exists?(File.join(dir, "src/mailers/user_mailer_mailer.cr")).should be_true
+        Dir.glob(File.join(dir, "src/jobs/*")).should be_empty
+      ensure
+        FileUtils.rm_rf(dir)
+      end
+    end
+  end
 end

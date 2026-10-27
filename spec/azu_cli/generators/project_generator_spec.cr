@@ -105,23 +105,6 @@ describe AzuCLI::Generate::Project do
     end
   end
 
-  describe "#database_adapter_uri_prefix" do
-    it "returns postgresql for postgresql" do
-      generator = AzuCLI::Generate::Project.new("app", "App", "Author", "email", database: "postgresql")
-      generator.database_adapter_uri_prefix.should eq("postgresql")
-    end
-
-    it "returns mysql for mysql" do
-      generator = AzuCLI::Generate::Project.new("app", "App", "Author", "email", database: "mysql")
-      generator.database_adapter_uri_prefix.should eq("mysql")
-    end
-
-    it "returns sqlite3 for sqlite" do
-      generator = AzuCLI::Generate::Project.new("app", "App", "Author", "email", database: "sqlite")
-      generator.database_adapter_uri_prefix.should eq("sqlite3")
-    end
-  end
-
   describe "#database_env_url" do
     it "includes project name in database URL" do
       generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "Author", "email")
@@ -341,19 +324,14 @@ describe AzuCLI::Generate::Project do
       workflow.should_not contain("services:")
     end
 
-    it "names the chosen adapter in config/azu.yml, with a server port only for a server database" do
-      {"sqlite" => {"sqlite3", nil}, "postgresql" => {"postgresql", 5432}, "mysql" => {"mysql", 3306}}.each do |database, (adapter, port)|
-        test_dir = "./tmp_test_azu_yml_#{database}"
+    it "does not write a config/azu.yml, whatever the database" do
+      %w(sqlite postgresql mysql).each do |database|
+        test_dir = "./tmp_test_no_azu_yml_#{database}"
         FileUtils.mkdir_p(test_dir)
         AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database).render(test_dir)
 
-        yaml = File.read(File.join(test_dir, "config", "azu.yml"))
-        yaml.should contain(%(  adapter: "#{adapter}"\n))
-        if port
-          yaml.should contain("  port: #{port}\n  database:")
-        else
-          yaml.should_not contain("username:")
-        end
+        File.exists?(File.join(test_dir, "config", "azu.yml")).should be_false
+        File.exists?(File.join(test_dir, "config", "jobs.yml")).should be_true
       end
     end
 
@@ -664,7 +642,7 @@ describe AzuCLI::Generate::Project do
     it "keeps the server, database, jobs and assets of web and api projects" do
       {"web" => "src/server.cr", "api" => "src/api.cr"}.each do |type, entry|
         files = rendered.call(type, "./tmp_test_files_#{type}")
-        [entry, "src/mytool.cr", "src/worker.cr", "src/db/schema.cr", "src/initializers/cql_config.cr", "config/azu.yml",
+        [entry, "src/mytool.cr", "src/worker.cr", "src/db/schema.cr", "src/initializers/cql_config.cr",
          ".env", ".env.development", "src/endpoints/welcome/index_endpoint.cr", "public/assets/app.css"].each do |file|
           files.should contain(file)
         end

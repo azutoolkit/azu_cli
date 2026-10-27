@@ -48,6 +48,7 @@ module AzuCLI
         puts "  dev                    Run the app, rebuilding and restarting it when the code changes"
         puts "  serve                  Compile and run the app with a --production build (alias: s)"
         puts "  routes                 List the routes: method, path, endpoint, request/response, helpers"
+        puts "  config                 Show the configuration of the application (secrets masked)"
         puts "  console                Open Crystal's interpreter with the app loaded (needs `crystal i`)"
         puts "  doctor                 Check Crystal, shards, database, env, secrets and port"
         puts "  test                   Run application tests (alias: t)"
@@ -67,11 +68,6 @@ module AzuCLI
         puts "  openapi:export        Export an OpenAPI 3.1 spec from the code"
         puts "  openapi:generate      Generate code from an OpenAPI 3.1 spec"
         puts
-        puts "Configuration Commands:"
-        puts "  config:show            Show the CLI configuration"
-        puts "  config:validate        Validate the CLI configuration"
-        puts "  config:env             List or change environment variables"
-        puts
         puts "Other Commands:"
         puts "  completion <shell>     Print a shell completion script (bash, zsh, fish)"
         puts "  version                Show version information"
@@ -89,6 +85,7 @@ module AzuCLI
         puts "  azu db:migrate"
         puts "  azu dev"
         puts "  azu routes --method POST"
+        puts "  azu config --section database"
         puts "  azu doctor"
         puts "  azu test --watch"
         puts "  azu jobs:worker --workers 4"
@@ -108,6 +105,8 @@ module AzuCLI
           Dev.new.show_help
         when "routes"
           Routes.new.show_help
+        when "config"
+          Config.new.show_help
         when "console"
           Console.new.show_help
         when "doctor"

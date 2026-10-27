@@ -1,12 +1,12 @@
 ---
-description: Prepare an existing Crystal project for the Azu CLI by writing config/azu.yml and the directories the generators use.
+description: Prepare an existing Crystal project for the Azu CLI by creating the directories the generators write to.
 ---
 
 # azu init
 
 ## Overview & visual demo
 
-`azu init` turns an existing Crystal project, one with a `shard.yml` in the current directory, into one the Azu CLI can work in. It writes `config/azu.yml` if it is missing and creates the directories the generators write to. It writes no application code and does not touch `shard.yml`. To start a project from scratch, use [azu new](azu-new.md).
+`azu init` turns an existing Crystal project, one with a `shard.yml` in the current directory, into one the Azu CLI can work in. It creates the directories the generators write to. It writes no application code and does not touch `shard.yml`. To start a project from scratch, use [azu new](azu-new.md).
 
 <figure><img src="../assets/terminal-ui/04-new-progress.png" alt="The azu new progress card, with a spinner on the step that is running"><figcaption><p>The progress card of <code>azu new</code>. <code>azu init</code> has no card: it prints the plain lines shown under Realistic output.</p></figcaption></figure>
 
@@ -14,8 +14,7 @@ description: Prepare an existing Crystal project for the Azu CLI by writing conf
 flowchart LR
   A["cd my_crystal_app"] --> B{"shard.yml in this directory?"}
   B -->|no| C["Error: not a valid project directory"]
-  B -->|yes| D["Write config/azu.yml if it is missing"]
-  D --> E["Create the generator directories"]
+  B -->|yes| E["Create the generator directories"]
   E --> F["Add azu, cql and a driver to shard.yml yourself"]
 ```
 
@@ -50,8 +49,6 @@ dependencies:
 {% code title="terminal: azu init (stdout is not a terminal)" %}
 ```text
 [hh:mm:ss] [INFO ] Initializing Azu in current project...
-[hh:mm:ss] [INFO ] Creating Azu configuration...
-[hh:mm:ss] [INFO ] Created config/azu.yml
 [hh:mm:ss] [INFO ] Creating project structure...
 [hh:mm:ss] [INFO ] Azu initialized successfully!
 ```
@@ -74,7 +71,7 @@ ERROR: Not in a valid Crystal project directory. Run this command from your proj
 {% endhint %}
 
 {% hint style="success" %}
-Commit `config/azu.yml`. `azu init` never overwrites an existing one, so your edits survive a second run.
+Run it again whenever you like. It only creates directories that are missing and never touches existing files.
 {% endhint %}
 
 {% hint style="warning" %}
@@ -82,14 +79,12 @@ Commit `config/azu.yml`. `azu init` never overwrites an existing one, so your ed
 {% endhint %}
 
 {% hint style="danger" %}
-Don't expect `azu init` to scaffold an app. It creates empty directories and a config file. Use [azu new](azu-new.md) for a project that runs.
+Don't expect `azu init` to scaffold an app. It creates empty directories. Use [azu new](azu-new.md) for a project that runs.
 {% endhint %}
 
 <details>
 
 <summary>What it creates</summary>
-
-`config/azu.yml`, unless it exists. The file holds the CLI settings: the project name and type, the database (the default adapter in the file is PostgreSQL, so edit it for your project), the server host and port (`localhost`, port 4000), the generator paths and a `plugins` map. The CLI reads it first from `./config/azu.yml`, then `./azu.yml`, `~/.config/azu/config.yml` and `~/.azu.yml`.
 
 These directories, created if missing:
 

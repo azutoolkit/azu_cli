@@ -1,4 +1,3 @@
-require "yaml"
 require "log"
 
 module AzuCLI
@@ -12,14 +11,6 @@ module AzuCLI
     EXIT_FAILURE       = 1
     EXIT_INVALID_USAGE = 2
     EXIT_NOT_FOUND     = 3
-
-    # Default configuration file paths (searched in order)
-    DEFAULT_CONFIG_PATHS = [
-      "./config/azu.yml",
-      "./azu.yml",
-      "~/.config/azu/config.yml",
-      "~/.azu.yml",
-    ]
 
     # Standard project directory structure
     module Paths
@@ -163,7 +154,6 @@ module AzuCLI
     property debug_mode : Bool = false
     property verbose : Bool = false
     property quiet : Bool = false
-    property config_file_path : String?
     property environment : String = ENV["AZU_ENV"]?.presence || ENV["CRYSTAL_ENV"]?.presence || "development"
 
     # Project configuration
@@ -202,60 +192,17 @@ module AzuCLI
       INSTANCE
     end
 
-    def self.load!(config_path : String? = nil)
-      instance.load!(config_path)
+    def self.load!
+      instance.load!
     end
 
-    def load!(config_path : String? = nil)
-      # Load configuration from file if exists
-      config_file = find_config_file(config_path)
-      load_from_file(config_file) if config_file
-
-      # Override with environment variables
+    # The CLI is configured by environment variables only (the AZU_* ones, DATABASE_URL and CRYSTAL_ENV).
+    def load!
       load_from_environment
 
       # Set derived configuration
       configure_logging
       configure_environment
-    end
-
-    # Load configuration from YAML file
-    private def load_from_file(file_path : String)
-      return unless File.exists?(file_path)
-
-      begin
-        yaml_content = File.read(file_path)
-        config_data = YAML.parse(yaml_content)
-
-        # Ensure the config_data is a Hash-like structure
-        unless config_data.as_h?
-          # If it's not a hash, skip this file (it might be shard.yml or another type of YAML)
-          return
-        end
-
-        # Load environment-specific configuration
-        env_config = config_data[environment]? || config_data
-
-        # Parse configuration sections
-        load_global_config(env_config)
-        load_general_config(env_config)
-        load_filesystem_config(env_config)
-        load_database_config(env_config)
-        load_server_config(env_config)
-        load_logging_config(env_config)
-
-        @config_file_path = file_path
-      rescue ex : YAML::ParseException
-        # Skip files that aren't valid YAML or aren't Azu config files
-        return
-      rescue ex : Exception
-        # Only raise for actual Azu config files, not other YAML files
-        if file_path.includes?("azu")
-          raise "Failed to load configuration from #{file_path}: #{ex.message}"
-        end
-        # Otherwise, just skip the file
-        return
-      end
     end
 
     # Load configuration from environment variables
@@ -276,95 +223,6 @@ module AzuCLI
 
       @templates_path = ENV["AZU_TEMPLATES_PATH"]? || @templates_path
       @output_path = ENV["AZU_OUTPUT_PATH"]? || @output_path
-    end
-
-    # Find configuration file from default paths or specified path
-    private def find_config_file(specified_path : String? = nil) : String?
-      if specified_path
-        return specified_path if File.exists?(specified_path)
-        return nil
-      end
-
-      DEFAULT_CONFIG_PATHS.find { |path| File.exists?(expand_path(path)) }
-        .try { |path| expand_path(path) }
-    end
-
-    # Expand tilde in file paths
-    private def expand_path(path : String) : String
-      if path.starts_with?("~/")
-        home_dir = ENV["HOME"]? || ENV["USERPROFILE"]? || "."
-        path.gsub(/^~/, home_dir)
-      else
-        path
-      end
-    end
-
-    # Load global configuration section
-    private def load_global_config(config : YAML::Any)
-      if global = config["global"]?
-        @debug_mode = global["debug_mode"]?.try(&.as_bool) || @debug_mode
-        @verbose = global["verbose"]?.try(&.as_bool) || @verbose
-        @quiet = global["quiet"]?.try(&.as_bool) || @quiet
-        @show_help_on_empty = global["show_help_on_empty"]?.try(&.as_bool) || @show_help_on_empty
-      end
-    end
-
-    # Load general configuration section
-    private def load_general_config(config : YAML::Any)
-      if general = config["general"]?
-        @project_name = general["project_name"]?.try(&.as_s) || @project_name
-        @project_path = general["project_path"]?.try(&.as_s) || @project_path
-        @database_adapter = general["database_adapter"]?.try(&.as_s) || @database_adapter
-        @template_engine = general["template_engine"]?.try(&.as_s) || @template_engine
-        @colored_output = general["colored_output"]?.try(&.as_bool) || @colored_output
-      end
-    end
-
-    # Load file system configuration section
-    private def load_filesystem_config(config : YAML::Any)
-      if filesystem = config["filesystem"]?
-        @templates_path = filesystem["templates_path"]?.try(&.as_s) || @templates_path
-        @output_path = filesystem["output_path"]?.try(&.as_s) || @output_path
-      end
-    end
-
-    # Load database configuration section
-    private def load_database_config(config : YAML::Any)
-      if database = config["database"]?
-        @database_url = database["url"]?.try(&.as_s) || @database_url
-        @database_name = database["name"]?.try(&.as_s) || @database_name
-        @database_host = database["host"]?.try(&.as_s) || @database_host
-        @database_port = database["port"]?.try(&.as_i) || @database_port
-        @database_user = database["user"]?.try(&.as_s) || @database_user
-        @database_password = database["password"]?.try(&.as_s) || @database_password
-      end
-    end
-
-    # Load development server configuration section
-    private def load_server_config(config : YAML::Any)
-      if server = config["server"]?
-        @dev_server_host = server["host"]?.try(&.as_s) || @dev_server_host
-        @dev_server_port = server["port"]?.try(&.as_i) || @dev_server_port
-        @dev_server_watch = server["watch"]?.try(&.as_bool) != false
-        @dev_server_rebuild = server["rebuild"]?.try(&.as_bool) != false
-      end
-    end
-
-    # Load logging configuration section
-    private def load_logging_config(config : YAML::Any)
-      if logging = config["logging"]?
-        if level_str = logging["level"]?.try(&.as_s)
-          @log_level = case level_str.downcase
-                       when "debug"           then Log::Severity::Debug
-                       when "info"            then Log::Severity::Info
-                       when "warn", "warning" then Log::Severity::Warn
-                       when "error"           then Log::Severity::Error
-                       when "fatal"           then Log::Severity::Fatal
-                       else                        Log::Severity::Info
-                       end
-        end
-        @log_format = logging["format"]?.try(&.as_s) || @log_format
-      end
     end
 
     # Configure logging based on current settings
@@ -467,116 +325,6 @@ module AzuCLI
       unless errors.empty?
         raise "Configuration validation failed:\n  #{errors.join("\n  ")}"
       end
-    end
-
-    # Generate sample configuration file
-    def self.generate_sample_config(path : String = "./azu.yml")
-      config_content = <<-YAML
-      # Azu CLI Configuration File
-      # This file configures the Azu CLI tool for your project
-      #
-      # Configuration is loaded in this order:
-      # 1. Default values (defined in code)
-      # 2. Configuration file (this file)
-      # 3. Environment variables (override file values)
-      #
-      # Environment variables take precedence over file configuration.
-      # See the Environment Variables section below for available options.
-
-      # Environment: development, test, production
-      # Can be overridden with AZU_ENV environment variable
-      environment: development
-
-      # Global configuration
-      # These settings affect CLI behavior globally
-      global:
-        debug_mode: false     # Enable debug output (AZU_DEBUG)
-        verbose: false        # Enable verbose output (AZU_VERBOSE)
-        quiet: false          # Suppress non-error output (AZU_QUIET)
-        show_help_on_empty: true  # Show help when no command provided
-
-      # General project configuration
-      general:
-        project_name: "my_azu_project"
-        project_path: "."                    # Project root directory
-        database_adapter: "postgresql"       # postgresql, mysql, sqlite
-        template_engine: "jinja"             # jinja, ecr
-        colored_output: true                 # Enable colored terminal output
-
-      # File system configuration
-      filesystem:
-        templates_path: "./src/azu_cli/templates"  # Path to template files (AZU_TEMPLATES_PATH)
-        output_path: "."                            # Default output directory (AZU_OUTPUT_PATH)
-
-      # Database configuration
-      database:
-        host: "localhost"                    # Database host (AZU_DB_HOST)
-        port: 5432                          # Database port (AZU_DB_PORT)
-        user: "postgres"                    # Database user (AZU_DB_USER)
-        password: ""                        # Database password (AZU_DB_PASSWORD)
-        name: "my_azu_project_development"  # Database name (AZU_DB_NAME)
-        # Alternatively, use a full URL (overrides individual settings):
-        # url: "postgresql://user:password@localhost:5432/database"  # (DATABASE_URL)
-
-      # Development server configuration
-      server:
-        host: "localhost"    # Server host (AZU_HOST)
-        port: 4000          # Server port (AZU_PORT)
-        watch: true         # Watch for file changes
-        rebuild: true       # Rebuild on changes
-
-      # Logging configuration
-      logging:
-        level: "info"       # Log level: debug, info, warn, error, fatal
-        format: "default"   # Log format
-
-      # Environment-specific overrides
-      # These sections override the base configuration for specific environments
-
-      test:
-        global:
-          quiet: true
-        database:
-          name: "my_azu_project_test"
-        logging:
-          level: "warn"
-
-      production:
-        global:
-          debug_mode: false
-        server:
-          watch: false
-          rebuild: false
-        logging:
-          level: "info"
-
-      # Environment Variables Reference
-      # The following environment variables can be used to override configuration:
-      #
-      # Global Settings:
-      #   AZU_ENV          - Set environment (development, test, production)
-      #   AZU_DEBUG        - Enable debug mode (any value)
-      #   AZU_VERBOSE      - Enable verbose output (any value)
-      #   AZU_QUIET        - Suppress output (any value)
-      #
-      # Database Settings:
-      #   DATABASE_URL     - Full database connection URL
-      #   AZU_DB_HOST      - Database host
-      #   AZU_DB_PORT      - Database port
-      #   AZU_DB_USER      - Database user
-      #   AZU_DB_PASSWORD  - Database password
-      #   AZU_DB_NAME      - Database name
-      #
-      # Server Settings:
-      #   AZU_HOST         - Server host
-      #   AZU_PORT         - Server port
-      #
-      # File System Settings:
-      #   AZU_TEMPLATES_PATH - Path to template files
-      #   AZU_OUTPUT_PATH    - Default output directory
-      YAML
-
-      File.write(path, config_content)
     end
   end
 end

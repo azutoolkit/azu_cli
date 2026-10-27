@@ -1,7 +1,7 @@
 require "yaml"
 
 module AzuCLI
-  # Detects project type from structure and configuration
+  # Detects the project type (web, api or cli) from the files of the project
   class ProjectDetector
     @cached_type : String?
 
@@ -12,8 +12,9 @@ module AzuCLI
     def detect_type : String
       return @cached_type.not_nil! if @cached_type
 
-      # Try to detect from config file first
-      if type = type_from_config
+      # A generated project names its type in the main target of shard.yml: web and api projects have the
+      # same files (src/server.cr and src/api.cr are in both), so the files cannot tell them apart.
+      if type = type_from_shard
         @cached_type = type
         return type
       end
@@ -44,20 +45,18 @@ module AzuCLI
       detect_type == "cli"
     end
 
-    # Detect type from azu.yml config
-    private def type_from_config : String?
-      config_path = File.join(@project_path, "config/azu.yml")
-      return nil unless File.exists?(config_path)
+    # The type from the main target of shard.yml: src/api.cr is an API, src/server.cr a web app.
+    private def type_from_shard : String?
+      path = File.join(@project_path, "shard.yml")
+      return nil unless File.exists?(path)
 
-      config = YAML.parse(File.read(config_path))
-      if project_config = config["project"]?
-        if type = project_config["type"]?
-          return type.as_s
-        end
-      end
+      targets = YAML.parse(File.read(path))["targets"]?.try(&.as_h?) || return nil
+      mains = targets.values.compact_map { |target| target.as_h?.try(&.[YAML::Any.new("main")]?).try(&.as_s?) }
+      return "api" if mains.includes?("src/api.cr")
+      return "web" if mains.includes?("src/server.cr")
 
       nil
-    rescue
+    rescue YAML::ParseException
       nil
     end
 
@@ -68,16 +67,14 @@ module AzuCLI
       has_pages = Dir.exists?(File.join(@project_path, "src/pages"))
       has_server = File.exists?(File.join(@project_path, "src/server.cr"))
 
-      # Check for API-specific files
+      # Without a shard.yml target to go by: src/api.cr on its own is an API
       has_api_file = File.exists?(File.join(@project_path, "src/api.cr"))
-      has_openapi_config = File.exists?(File.join(@project_path, "config/openapi.yml"))
-      has_api_config = File.exists?(File.join(@project_path, "config/api.yml"))
 
       # Check for CLI-specific files
       has_cli_file = File.exists?(File.join(@project_path, "src/cli.cr"))
 
       # Decision logic
-      if has_api_file || (has_openapi_config && has_api_config)
+      if has_api_file && !has_server
         return "api"
       elsif has_cli_file && !has_server
         return "cli"
@@ -86,40 +83,6 @@ module AzuCLI
       end
 
       nil
-    end
-
-    # Get API version from config
-    def api_version : String
-      config_path = File.join(@project_path, "config/azu.yml")
-      return "v1" unless File.exists?(config_path)
-
-      config = YAML.parse(File.read(config_path))
-      if project_config = config["project"]?
-        if version = project_config["api_version"]?
-          return version.as_s
-        end
-      end
-
-      "v1"
-    rescue
-      "v1"
-    end
-
-    # Check if OpenAPI is enabled
-    def openapi_enabled? : Bool
-      config_path = File.join(@project_path, "config/azu.yml")
-      return false unless File.exists?(config_path)
-
-      config = YAML.parse(File.read(config_path))
-      if project_config = config["project"]?
-        if enabled = project_config["openapi_enabled"]?
-          return enabled.as_bool
-        end
-      end
-
-      false
-    rescue
-      false
     end
   end
 end

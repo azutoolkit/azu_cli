@@ -1,142 +1,130 @@
 ---
-description: Show the resolved CLI settings, validate the configuration, and list or change the environment variables in .env.
+description: Show the effective configuration of your app: server, TLS, templates, database, limits and more, with secrets masked.
 ---
 
-# Configuration commands
-
-Three commands look after the configuration: `azu config:show` prints the settings the CLI resolved, `azu config:validate` checks them, and `azu config:env` lists the known environment variables or edits `.env`.
+# azu config
 
 ## Overview & visual demo
 
-Run `config:validate --strict` in CI before a deploy, and `config:show` when a value is not what you expected. Secrets are masked in `config:show`; `config:env --show` is the exception, as the danger note below explains.
+`azu config` shows what your application is actually configured with. It compiles the project, loads it without starting the server, and prints the settings Azu holds once your initializers and `.env` files have been applied: the server, TLS, templates, database, limits, uploads, WebSocket, i18n and asset settings. Use it when a value isn't what you expected, or to attach to a bug report. Nothing secret is printed.
 
-<figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor card with nine green checks"><figcaption><p>Not a config command's output. <code>azu doctor</code> is the environment check to run next to <code>config:validate</code>. The <code>config:*</code> commands print plain text.</p></figcaption></figure>
+<figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor, a sibling command that checks the same environment and prints a card"><figcaption><p>No screenshot of <code>azu config</code> yet; this is its sibling <code>azu doctor</code>, which checks the same environment. On a color terminal <code>azu config</code> draws a card the same way, with a heading per section.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
-  A["azu config:*"] --> B{"which command?"}
-  B -->|show| C["print settings by section"]
-  B -->|validate| D["check paths, database, server"]
-  D --> E{"errors, or warnings with --strict?"}
-  E -->|yes| F["exit 1"]
-  E -->|no| G["exit 0"]
-  B -->|env| H["list, show, set or unset names in .env"]
+  A["azu config"] --> B["Write tmp_config_*.cr"]
+  B --> C["crystal run: require src/blog.cr"]
+  C --> D["Read Azu::CONFIG"]
+  D --> E["Mask the database password, report secrets as set or not set"]
+  E --> F{"--format"}
+  F -->|table| G["Card on a color terminal, text otherwise"]
+  F -->|json| H["JSON object of sections on stdout"]
+  C --> I["Delete tmp_config_*.cr"]
 ```
 
 ## Quickstart & command syntax
 
 ```bash
-azu config:show
-azu config:show --format json --section database
-azu config:validate --strict
-azu config:env --list
-azu config:env --set AZU_PORT=4000
-azu config:env --unset AZU_PORT
+azu config
+azu config --section database
+azu config --format json
+CRYSTAL_ENV=production azu config --section server
 ```
 
-### azu config:show
+| Option             | Meaning                                                                  | Default             |
+| ------------------ | ------------------------------------------------------------------------ | ------------------- |
+| `--format FORMAT`  | `table` or `json`                                                        | `table`             |
+| `--section NAME`   | One section: `server`, `tls`, `templates`, `errors`, `session`, `secrets`, `database`, `limits`, `uploads`, `websocket`, `i18n` or `assets` | all |
+| `--ui MODE`        | `rich` (a card) or `plain` (text)                                        | rich on a terminal  |
+| `--help`           | Show the help                                                            |                     |
 
-| Option                    | Meaning                                                          | Default    |
-| ------------------------- | ---------------------------------------------------------------- | ---------- |
-| `--format FORMAT`, `-f`   | `yaml` (also `yml`), `json` or `table`                           | `yaml`     |
-| `--section NAME`, `-s`    | One section: `global`, `project`, `server`, `database`, `paths`, `logging` | all |
-| `--env NAME`, `-e`        | Changes the heading only. The values are the ones the command resolved | current |
-
-The password and `DATABASE_URL` print as `********` when they are set.
-
-### azu config:validate
-
-| Option               | Meaning                                                              | Default |
-| -------------------- | -------------------------------------------------------------------- | ------- |
-| `--strict`, `-s`     | Treat warnings as errors                                             | off     |
-| `--config PATH`, `-c`| The configuration file to read                                       | the one the CLI finds |
-| `--env NAME`, `-e`   | Accepted, but not used: the check reads the current configuration   | current |
-
-It checks the YAML syntax of the configuration file, whether the templates and output paths exist, and in a project whether `src/`, `spec/` and `config/` exist. It also checks the database adapter (`postgresql`, `mysql`, `sqlite`, `sqlite3`), that the database and server ports are 1 to 65535, that a server port below 1024 is flagged as privileged, and whether the server host is a standard one. Errors exit `1`. Warnings alone exit `0`, unless `--strict` is set.
-
-### azu config:env
-
-| Option            | Meaning                                                                              | Default |
-| ----------------- | ------------------------------------------------------------------------------------ | ------- |
-| `--list`, `-l`    | List the known variables and what they do                                            | the default when no other flag is given |
-| `--show`, `-s`    | List the known variables with their current values                                   | off     |
-| `--set VAR=VALUE` | Write `VAR=VALUE` into `.env` in the current directory, replacing an existing line    | off     |
-| `--unset VAR`     | Remove `VAR` from `.env`                                                             | off     |
-
-The known variables are the ones `--list` prints:
-
-| Variable             | Description                                       |
-| -------------------- | ------------------------------------------------- |
-| `AZU_ENV`            | Environment name (development, test, production)  |
-| `AZU_DEBUG`          | Enable debug mode                                 |
-| `AZU_VERBOSE`        | Enable verbose output                             |
-| `AZU_QUIET`          | Suppress non-error output                         |
-| `AZU_HOST`           | Development server host                           |
-| `AZU_PORT`           | Development server port                           |
-| `AZU_DB_HOST`        | Database host                                     |
-| `AZU_DB_PORT`        | Database port                                     |
-| `AZU_DB_USER`        | Database user                                     |
-| `AZU_DB_PASSWORD`    | Database password                                 |
-| `AZU_DB_NAME`        | Database name                                     |
-| `DATABASE_URL`       | Full database connection URL                      |
-| `AZU_TEMPLATES_PATH` | Path to template files                            |
-| `AZU_OUTPUT_PATH`    | Default output directory                          |
+The values come from the environment your app would start in: the process environment first, then `.env.local`, `.env.<CRYSTAL_ENV>` and `.env`. To see another environment, set `CRYSTAL_ENV` for the command.
 
 ## Realistic output
 
-{% code title="terminal: azu config:env --list" %}
+{% code title="terminal: azu config --ui plain (abridged)" %}
 ```text
-Variable                 Description
-------------------------------------------------------------
-AZU_ENV                  Environment name (development, test, production)
-AZU_DEBUG                Enable debug mode
-AZU_VERBOSE              Enable verbose output
-AZU_QUIET                Suppress non-error output
-AZU_HOST                 Development server host
-AZU_PORT                 Development server port
-AZU_DB_HOST              Database host
-AZU_DB_PORT              Database port
-AZU_DB_USER              Database user
-AZU_DB_PASSWORD          Database password
-AZU_DB_NAME              Database name
-DATABASE_URL             Full database connection URL
-AZU_TEMPLATES_PATH       Path to template files
-AZU_OUTPUT_PATH          Default output directory
+SERVER
+  environment         development
+  host                127.0.0.1
+  port                4000
+  loopback only       true
+  port reuse          true
+  container           false
+  shutdown timeout    30s
 
-Use --show to see current values
-Use --set VAR=VALUE to set a variable
-Use --unset VAR to unset a variable
+TLS
+  enabled             false
+  mode                none
+
+SECRETS
+  CSRF_SECRET         set
+  SESSION_SECRET      not set
+
+DATABASE
+  url                 sqlite3://./db/cfgapp_development.db
+  lazy connect        true
+  slow query          50.0ms
+  n+1 threshold       3
+
+LIMITS
+  read timeout        30s
+  write timeout       60s
+  max connections     10000
 ```
 {% endcode %}
 
-*The table as the command prints it. Its heading line is a log line with a timestamp in plain mode, and it is left out here.*
+*A new web project, run from its root. Host `127.0.0.1` means the app is only reachable from this machine, which is Azu's default outside production and containers. `SESSION_SECRET` is "not set" until you run `azu g auth` or `azu session:setup`.*
 
-{% code title="terminal: azu config:env --set AZU_FOO=1" %}
-```text
-WARNING: 'AZU_FOO' is not a known Azu environment variable
+{% code title="terminal: PORT=8080 DATABASE_URL=postgres://admin:s3cr3t@db.internal:5432/app azu config --section database --format json" %}
+```json
+{
+  "database": {
+    "url": "postgres://admin:***@db.internal:5432/app",
+    "driver": "-",
+    "lazy connect": "true",
+    "slow query": "50.0ms",
+    "n+1 threshold": "3",
+    "playground": "true"
+  }
+}
 ```
 {% endcode %}
 
-*A name outside the list is still written to `.env`; the warning is the only sign.*
+*The password is masked, whatever it was. Every value in the JSON is a string, as it was printed. Exit codes: `0` success, `1` the app could not be loaded or this isn't a project, `2` invalid usage.*
+
+{% code title="terminal: azu config --section nope" %}
+```text
+ERROR: Unknown section 'nope': use server, tls, templates, errors, session, secrets, database, limits, uploads, websocket, i18n, assets
+```
+{% endcode %}
+
+*The error lists the sections the app reported; the exit code is 2.*
 
 ## Do's and don'ts
 
 {% hint style="info" %}
-**Pro tip:** `azu config:show --section database --format json` gives one section for a bug report, with the password already masked.
+**Pro tip:** `azu config --format json | jq '.limits'` gives one section for a script or a bug report. The output is safe to paste: secrets are masked or reported only as set.
 {% endhint %}
 
 {% hint style="success" %}
-Run `azu config:validate --strict` in CI before a deploy. With `--strict` a warning fails the job, so a missing directory or a port below 1024 stops the pipeline.
+Run `azu config` and `azu doctor` together when a deploy misbehaves: `doctor` says what's wrong with the environment, `config` shows what the app ends up using.
 {% endhint %}
 
 {% hint style="warning" %}
-`--env` on `config:show` changes only the heading. The values come from the environment the command runs in.
-{% endhint %}
-
-{% hint style="warning" %}
-`config:env --set` writes to `.env` in the current directory, as given, with no quoting, and it does not touch `.env.local`. Check the file after you set a value with spaces in it.
+The first run takes about as long as a build, because it compiles the app. It also runs your project's top-level code (initializers, `.env` loading, database connections); only the server start is skipped.
 {% endhint %}
 
 {% hint style="danger" %}
-`config:env --show` prints `DATABASE_URL` in full, password included. Only names that contain `PASSWORD` or `SECRET` are masked. Don't run it in a shared terminal or paste its output into a ticket.
+Don't point it at production. Loading the app there connects to the real database and runs real initializers. Use a copy of the production environment variables with a test database instead.
 {% endhint %}
+
+<details>
+
+<summary>What it does not show</summary>
+
+It shows Azu's settings, not your own constants or the values you read yourself with `ENV[...]`. The handlers list is built when the server starts, so it isn't included. `CSRF_SECRET` and `SESSION_SECRET` are reported as set or not set and never printed. The CLI's own variables (`AZU_DEBUG`, `AZU_UI`, ...) are in [Configuration](../advanced/configuration.md).
+
+If the app can't be loaded, the last lines of the compiler's output are shown. A scratch file `tmp_config_*.cr` is deleted when the command ends, also on Ctrl-C; after a crash delete it by hand. Generated projects git-ignore it.
+
+</details>
