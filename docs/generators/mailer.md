@@ -146,7 +146,7 @@ class UserMailer < BaseMailer
 
   # Deliver welcome email asynchronously
   def welcome_later(to email : Carbon::Address, **params)
-    UserMailerJob.perform_later(
+    UserMailerJob.enqueue(
       action: "welcome",
       to: email.to_s,
       params: params.to_h
@@ -155,7 +155,7 @@ class UserMailer < BaseMailer
 
   # Deliver password reset email asynchronously
   def password_reset_later(to email : Carbon::Address, **params)
-    UserMailerJob.perform_later(
+    UserMailerJob.enqueue(
       action: "password_reset",
       to: email.to_s,
       params: params.to_h

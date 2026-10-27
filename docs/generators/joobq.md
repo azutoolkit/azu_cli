@@ -120,8 +120,14 @@ JoobQ::QueueFactory.register_job_type(ExampleJob)
 JoobQ::QueueFactory.register_job_type(EmailJob)
 
 # Initialize from YAML config
-environment = ENV["AZU_ENV"]? || "development"
+environment = ENV["CRYSTAL_ENV"]? || "development"
 JoobQ.initialize_config_with(:file, "config/joobq.#{environment}.yml")
+
+# REDIS_URL (`azu jobs:worker` sets it) becomes JoobQ's Redis store
+if redis_url = ENV["REDIS_URL"]?
+  redis = URI.parse(redis_url)
+  JoobQ.config.store = JoobQ::RedisStore.new(host: redis.host || "localhost", port: redis.port || 6379, password: redis.password)
+end
 
 # Disable REST API for worker processes
 if ARGV.includes?("--worker")
@@ -139,7 +145,7 @@ struct SendEmailJob
   # Queue configuration
   @queue   = "mailers"
   @retries = 3
-  @expires = 1.hour.total_seconds.to_i
+  @expires = 1.hour.from_now.to_unix_ms # a Unix time in milliseconds, as JoobQ stores it
 
   # Job parameters
   property to : String
@@ -176,30 +182,31 @@ SendEmailJob.enqueue(
   body: "Thanks for signing up"
 )
 
-# Schedule for later
-SendEmailJob.schedule(
-  in: 5.minutes,
+# Run it in 5 minutes
+SendEmailJob.delay(
+  for: 5.minutes,
   to: "user@example.com",
   subject: "Welcome!",
   body: "Thanks for signing up"
 )
 
-# Schedule at specific time
+# Run it every hour (JoobQ's recurring scheduler)
 SendEmailJob.schedule(
-  at: Time.utc(2025, 10, 12, 10, 0, 0),
-  to: "user@example.com",
-  subject: "Reminder",
-  body: "Don't forget!"
+  every: 1.hour,
+  to: "team@example.com",
+  subject: "Hourly report",
+  body: "..."
 )
+```
 
-# Enqueue with custom options
-SendEmailJob.enqueue(
-  to: "user@example.com",
-  subject: "Important",
-  body: "This is important",
-  queue: "critical",
-  retries: 5
-)
+`enqueue` and `delay` pass their arguments to the job's `initialize`; the queue, retries and expiry are the
+job's `@queue`, `@retries` and `@expires`. A worker runs a job once a queue does:
+
+```crystal
+# src/initializers/joobq.cr
+JoobQ.configure do |config|
+  queue "mailers", 2, SendEmailJob
+end
 ```
 
 ### Start Workers
@@ -366,8 +373,8 @@ class User < CQL::Model(Int64)
 
   def after_create
     # Schedule job after user is created
-    SendWelcomeEmailJob.schedule(
-      in: 5.minutes,
+    SendWelcomeEmailJob.delay(
+      for: 5.minutes,
       user_id: self.id.not_nil!
     )
   end

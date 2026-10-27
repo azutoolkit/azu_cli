@@ -1,5 +1,13 @@
 # Changelog - Azu CLI
 
+## Unreleased - JoobQ code that compiles against joobq 0.4.2
+
+- Fixed: the JoobQ code azu writes called API that joobq 0.4.2 does not have, so it did not compile. Jobs (`azu generate job`, the example job of `azu generate joobq`, the mailer job) set `@expires` to a number of seconds (`Int32`), while JoobQ's `expires` is the `Int64` Unix time in milliseconds when the job expires: they now write `<span>.from_now.to_unix_ms`. The worker of `azu generate joobq` called `JoobQ::Worker.start` and the one of `azu new` logged `JoobQ.config.redis_url`; both now start the queues with `JoobQ.forge`. The initializers no longer set `config.redis_url` / `config.timezone`: `REDIS_URL` (which `azu jobs:worker` sets) becomes a `JoobQ::RedisStore` with its host, port and password
+- Fixed: comments, next steps and docs pointed at `schedule(in:)`, `perform_later`, `perform_async`, `JoobQ.start` and `register_job_type` for queue-less jobs; they now say `delay(for: 5.minutes, ...)`, `enqueue`, `JoobQ.forge` and `queue "default", 2, SendEmailJob` in `JoobQ.configure`. The mailer's `*_later` methods enqueue `<Name>MailerJob`, the job the mailer template defines (they named a `<Name>Job` that does not exist)
+- Changed: the generated `shard.yml` pins `joobq ~> 0.4.2`; the `azu new` initializer requires `src/jobs/**`, so the app can enqueue the generated jobs; `azu jobs:worker` passes `--worker` to `src/worker.cr` (the initializer turns the REST API off for workers)
+- Changed: `scripts/e2e_generated_app.sh` generates a job with a queue and type-checks (`crystal build --no-codegen`) the worker of `azu new`, then the files of `azu generate joobq --force`
+- Migration for apps generated before: in jobs, replace `@expires = N.<unit>.total_seconds.to_i` by `@expires = N.<unit>.from_now.to_unix_ms`; in `src/worker.cr` replace `JoobQ::Worker.start` or the `JoobQ.config.redis_url` line by `JoobQ.forge`; remove `config.redis_url = ...` and build `config.store = JoobQ::RedisStore.new(host:, port:, password:)` from your Redis URL instead
+
 ## Unreleased - The development dashboard shows requests
 
 - Fixed: the development dashboard of a generated app (`/dev-dashboard`) never showed a request. `dev_handlers` mounted a `PerformanceMonitor.new` of its own, while `DevDashboard` reads `Azu::CONFIG.performance_monitor`, which is nil unless `PERFORMANCE_MONITORING=true`. `dev_handlers` now mounts `Azu::CONFIG.performance_monitor` when it exists, the generated `.env.development` sets `PERFORMANCE_MONITORING=true` and `.env.example` lists it

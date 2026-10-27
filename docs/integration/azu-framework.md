@@ -152,9 +152,6 @@ Azu.configure do |config|
   config.auth.provider = :authly
   config.auth.secret_key = ENV["AZU_AUTH_SECRET"]
 
-  # Background jobs
-  config.jobs.provider = :joobq
-  config.jobs.redis_url = ENV["AZU_REDIS_URL"]
 end
 ```
 
@@ -404,26 +401,30 @@ end
 
 ### JoobQ Integration
 
-```crystal
-# Background jobs configuration
-Azu.configure do |config|
-  config.jobs do |jobs|
-    jobs.provider = :joobq
-    jobs.redis_url = ENV["AZU_REDIS_URL"]
-    jobs.workers = 4
-  end
-end
+Azu has no job configuration of its own: JoobQ is configured in `src/initializers/joobq.cr` (see
+`azu generate job` and `docs/commands/jobs.md`).
 
-# Job definition
-class SendWelcomeEmailJob < Azu::Job
-  def perform(user_id : UUID)
-    user = User.find(user_id)
+```crystal
+# src/jobs/send_welcome_email_job.cr (azu generate job SendWelcomeEmail user_id:int64)
+struct SendWelcomeEmailJob
+  include JoobQ::Job
+
+  property user_id : Int64
+
+  def initialize(@user_id : Int64)
+  end
+
+  def perform
+    user = User.find!(@user_id)
     EmailService.send_welcome_email(user)
   end
 end
 
-# Enqueue job
-SendWelcomeEmailJob.perform_async(user.id)
+# src/initializers/joobq.cr, inside JoobQ.configure: a worker runs this queue
+#   queue "default", 2, SendWelcomeEmailJob
+
+# Enqueue it
+SendWelcomeEmailJob.enqueue(user_id: user.id.not_nil!)
 ```
 
 ## Deployment

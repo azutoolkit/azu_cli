@@ -83,18 +83,14 @@ azu jobs:worker --daemon
 The workers expect a `src/worker.cr` file in your project:
 
 ```crystal
-require "./app"
-require "joobq"
+require "./my_app" # the app, whose src/initializers/joobq.cr configures JoobQ and its queues
 
-# Configure JoobQ
-JoobQ.configure do |config|
-  config.redis_url = ENV["REDIS_URL"]
-  config.queues = ENV["JOOBQ_QUEUES"]?.try(&.split(",")) || ["default"]
-end
-
-# Start processing jobs
-JoobQ.start
+# Starts the queues configured with `queue "default", 2, SendEmailJob` and blocks
+JoobQ.forge
 ```
+
+`azu new` generates this file and the initializer (JoobQ `~> 0.4.2`). JoobQ's Redis store takes a host, a port and
+a password; the generated initializer builds it from `REDIS_URL`, which `azu jobs:worker` sets.
 
 ---
 
