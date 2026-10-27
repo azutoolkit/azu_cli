@@ -3,10 +3,31 @@
 ## Overview
 
 - [Introduction](README.md)
+
+## Getting Started
+
 - [Installation](getting-started/installation.md)
-- [Quick Start](getting-started/quick-start.md)
+- [Quickstart](getting-started/quickstart.md)
 - [Project Structure](getting-started/project-structure.md)
-- Configuration
+
+## CLI Architecture
+
+- [Overview](cli-architecture/overview.md)
+- [Terminal UI](cli-architecture/terminal-ui.md)
+
+## Command Guides
+
+- [azu new](command-reference/azu-new.md)
+- [azu dev](command-reference/azu-dev.md)
+- [azu generate](command-reference/azu-generate.md)
+- [azu routes](command-reference/azu-routes.md)
+- [Production builds](command-reference/building-for-production.md)
+
+## Advanced
+
+- [Configuration (azu.yml)](advanced/configuration.md)
+- [Custom tasks and extensions](advanced/custom-tasks.md)
+- Configuration reference
   - [Configuration Overview](configuration/README.md)
   - [Project Configuration](configuration/project-config.md)
   - [Database Configuration](configuration/database-config.md)
@@ -14,7 +35,7 @@
   - [Generator Configuration](configuration/generator-config.md)
   - [Environment Variables](configuration/environment.md)
 
-## Command Reference
+## Full Command Reference
 
 - [Command Overview](commands/README.md)
 - [azu new](commands/new.md)

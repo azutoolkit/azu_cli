@@ -1,424 +1,151 @@
 # Installation
 
-This guide will help you install Azu CLI on your development machine. Azu CLI is distributed as a single binary and works on macOS, Linux, and Windows.
+Azu CLI is one binary, built from source with Crystal. There is no Homebrew formula and no prebuilt release binary yet.
 
-## Prerequisites
+## Overview
 
-Before installing Azu CLI, ensure you have the following prerequisites:
+You need Crystal and `shards`, then `make install`. A SQLite library is enough for the default database; PostgreSQL and
+MySQL need a server only if you pick them.
 
-### Crystal Language
-
-Azu CLI requires Crystal 1.6.0 or higher.
-
-**macOS (using Homebrew):**
-
-```bash
-brew install crystal
+```mermaid
+flowchart LR
+  A["Install Crystal 1.22.1+"] --> B["git clone azu_cli"]
+  B --> C["shards install"]
+  C --> D["make install"]
+  D --> E["azu version"]
 ```
 
-**Ubuntu/Debian:**
+## Quickstart
+
+### 1. Crystal
+
+{% tabs %}
+{% tab title="macOS" %}
+```bash
+brew install crystal sqlite
+```
+{% endtab %}
+
+{% tab title="Ubuntu / Debian" %}
+Follow the [official instructions](https://crystal-lang.org/install/), then:
 
 ```bash
-curl -fsSL https://packagecloud.io/84codes/crystal/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/84codes-crystal.gpg
-echo "deb [signed-by=/usr/share/keyrings/84codes-crystal.gpg] https://packagecloud.io/84codes/crystal/ubuntu/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/84codes-crystal.list
-sudo apt update
-sudo apt install crystal
+sudo apt install libsqlite3-dev libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev
 ```
+{% endtab %}
 
-**Arch Linux:**
-
+{% tab title="Arch" %}
 ```bash
-sudo pacman -S crystal
+sudo pacman -S crystal shards sqlite
 ```
+{% endtab %}
+{% endtabs %}
 
-**From Source:**
+### 2. The CLI
 
+{% tabs %}
+{% tab title="System-wide" %}
 ```bash
-git clone https://github.com/crystal-lang/crystal.git
-cd crystal
-make clean crystal
+git clone https://github.com/azutoolkit/azu_cli.git
+cd azu_cli
+shards install
+sudo make install      # builds a release binary, copies it to /usr/local/bin/azu, installs the man page
 ```
+{% endtab %}
 
-### Database (Optional)
-
-`azu new` uses SQLite by default, which needs only the SQLite library (`libsqlite3-dev` on Ubuntu/Debian, `sqlite`
-with Homebrew) and no server. For `--db postgresql` or `--db mysql`, install that server:
-
-**PostgreSQL:**
-
+{% tab title="Your home directory" %}
 ```bash
-# macOS
-brew install postgresql
-
-# Ubuntu/Debian
-sudo apt install postgresql postgresql-contrib
-
-# Arch Linux
-sudo pacman -S postgresql
+git clone https://github.com/azutoolkit/azu_cli.git
+cd azu_cli
+shards install
+make build             # bin/azu
+install -m 755 bin/azu ~/.local/bin/azu
 ```
+{% endtab %}
+{% endtabs %}
 
-**MySQL:**
-
-```bash
-# macOS
-brew install mysql
-
-# Ubuntu/Debian
-sudo apt install mysql-server
-
-# Arch Linux
-sudo pacman -S mysql
-```
-
-**SQLite:**
-
-```bash
-# Usually comes pre-installed on most systems
-# macOS
-brew install sqlite
-
-# Ubuntu/Debian
-sudo apt install sqlite3
-
-# Arch Linux
-sudo pacman -S sqlite
-```
-
-## Installation Methods
-
-### Method 1: From Source (Recommended)
-
-This is the most reliable method and ensures you get the latest version.
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/azutoolkit/azu_cli.git
-   cd azu_cli
-   ```
-
-2. **Install dependencies:**
-
-   ```bash
-   shards install
-   ```
-
-3. **Build and install:**
-
-   ```bash
-   make install
-   ```
-
-   This will:
-
-   - Compile the binary in release mode
-   - Install it to `/usr/local/bin/azu` (may require `sudo`)
-   - Make it available system-wide
-
-4. **Verify installation:**
-
-   ```bash
-   azu version
-   ```
-
-### Method 2: Using Make (Alternative)
-
-If you prefer to build manually:
-
-1. **Clone and build:**
-
-   ```bash
-   git clone https://github.com/azutoolkit/azu_cli.git
-   cd azu_cli
-   make build
-   ```
-
-2. **Install manually:**
-
-   ```bash
-   sudo make install
-   ```
-
-### Method 3: Symlink Installation (Development)
-
-For development work where you want changes to be reflected immediately:
-
-1. **Clone and build:**
-
-   ```bash
-   git clone https://github.com/azutoolkit/azu_cli.git
-   cd azu_cli
-   make build
-   ```
-
-2. **Create symlink:**
-
-   ```bash
-   sudo make link
-   # Or force overwrite existing symlink
-   sudo make force_link
-   ```
-
-This creates a symlink from the built binary to `/usr/local/bin/azu`, so any changes you make to the source will be reflected immediately after rebuilding.
-
-### Method 4: Development Installation
-
-For development or if you want to modify Azu CLI:
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/azutoolkit/azu_cli.git
-   cd azu_cli
-   ```
-
-2. **Install dependencies:**
-
-   ```bash
-   shards install
-   ```
-
-3. **Build in development mode:**
-
-   ```bash
-   crystal build src/azu_cli.cr -o bin/azu
-   ```
-
-4. **Add to PATH (optional):**
-
-   ```bash
-   export PATH="$PWD/bin:$PATH"
-   # Add to your shell profile for persistence
-   echo 'export PATH="$PWD/bin:$PATH"' >> ~/.bashrc  # or ~/.zshrc
-   ```
-
-## Post-Installation Setup
-
-### 1. Verify Installation
+### 3. Check it
 
 ```bash
 azu version
-# Should output: Azu CLI v0.0.1+13
-
-azu help
-# Should display the help menu
 ```
 
-### 2. Configure Global Settings (Optional)
+| Make target        | What it does                                         |
+| ------------------ | ---------------------------------------------------- |
+| `make build`       | `shards build --production`, binary at `bin/azu`     |
+| `make install`     | build, then copy to `$(PREFIX)/bin` (default `/usr/local`) and install the man page |
+| `make install-man` | the man page only                                    |
+| `make clean`       | uninstall                                            |
 
-Create a global configuration file:
+## Shell completion
 
+{% tabs %}
+{% tab title="bash" %}
 ```bash
-mkdir -p ~/.config/azu
-cat > ~/.config/azu/config.yml << EOF
-# Global Azu CLI configuration
-default_template: web
-editor: code  # or vim, nano, etc.
-git_auto_init: true
-EOF
+echo 'eval "$(azu completion bash)"' >> ~/.bashrc
 ```
+{% endtab %}
 
-### 3. Set Up Database
-
-If you're planning to use databases, ensure your database server is running:
-
-**PostgreSQL:**
-
+{% tab title="zsh" %}
 ```bash
-# macOS (Homebrew)
-brew services start postgresql
-
-# Linux (systemd)
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# Create a user (optional)
-createuser -s $USER
+echo 'eval "$(azu completion zsh)"' >> ~/.zshrc
 ```
+{% endtab %}
 
-**MySQL:**
-
+{% tab title="fish" %}
 ```bash
-# macOS (Homebrew)
-brew services start mysql
+azu completion fish > ~/.config/fish/completions/azu.fish
+```
+{% endtab %}
+{% endtabs %}
 
-# Linux (systemd)
-sudo systemctl start mysql
-sudo systemctl enable mysql
+`azu completion` with no shell argument guesses from `$SHELL`; `--shell NAME` forces one.
+
+## Output
+
+```text
+$ azu version
+Azu CLI v0.1.46
+Crystal 1.22.1
+Topia CLI Framework
+
+Plugins:
+  - Generator Plugin v1.0.0
+  - Database Plugin v1.0.0
+  - Development Plugin v1.0.0
 ```
 
-## Troubleshooting
+On a color terminal inside a project the same command is a card that also lists the `azu`, `cql` and `joobq`
+versions from `shard.lock` (`--ui plain` for the text above).
 
-### Common Issues
+<figure><img src="../assets/terminal-ui/18-version.png" alt="azu version card"><figcaption><p><code>azu version</code> on a color terminal.</p></figcaption></figure>
 
-#### 1. "azu: command not found"
+## Do's and don'ts
 
-**Solution 1:** Check if the binary is in your PATH:
+{% hint style="success" %}
+Run `azu doctor` in a project after installing. It checks Crystal, shards, dependencies, database, ports and secrets, and
+changes nothing.
+{% endhint %}
 
-```bash
-which azu
-echo $PATH
-```
+{% hint style="warning" %}
+`azu --version` is not understood (it reports an unknown command). Use `azu version`.
+{% endhint %}
 
-**Solution 2:** Reinstall with proper permissions:
+{% hint style="danger" %}
+Do not run the CLI inside a checkout you do not trust. It loads the project's `.env*` files and compiles and runs the
+project's own code.
+{% endhint %}
 
-```bash
-sudo make install
-```
+<details>
 
-**Solution 3:** Add to PATH manually:
+<summary>Troubleshooting</summary>
 
-```bash
-export PATH="/usr/local/bin:$PATH"
-```
+**`crystal: command not found`**: the Crystal bin directory is not on `PATH`; open a new shell or check the installer output.
 
-#### 2. Permission Denied During Installation
+**`Error: Package ... not found` during `shards install`**: network access to GitHub is required to fetch dependencies.
 
-```bash
-# Use sudo for system-wide installation
-sudo make install
+**Linker errors about `sqlite3`, `ssl` or `yaml`**: install the development packages from the Ubuntu tab above.
 
-# Or install to user directory
-make install PREFIX=$HOME/.local
-export PATH="$HOME/.local/bin:$PATH"
-```
+**Permission denied on `make install`**: use `sudo`, or the "Your home directory" tab.
 
-#### 3. Crystal Not Found
-
-Ensure Crystal is properly installed and in your PATH:
-
-```bash
-crystal version
-# Should output Crystal version information
-```
-
-#### 4. Compilation Errors
-
-Update your Crystal installation:
-
-```bash
-# macOS
-brew upgrade crystal
-
-# Linux - follow Crystal installation guide for your distribution
-```
-
-Clear shards cache and reinstall:
-
-```bash
-rm -rf lib/ shard.lock
-shards install
-```
-
-#### 5. Database Connection Issues
-
-Ensure your database service is running:
-
-```bash
-# PostgreSQL
-sudo systemctl status postgresql
-
-# MySQL
-sudo systemctl status mysql
-
-# Or check processes
-ps aux | grep postgres
-ps aux | grep mysql
-```
-
-### Getting Help
-
-If you encounter issues during installation:
-
-1. **Check the logs** during compilation for specific errors
-2. **Verify prerequisites** are properly installed
-3. **Update Crystal** to the latest version
-4. **Clear build cache**: `make clean && make build`
-5. **Create an issue** on [GitHub](https://github.com/azutoolkit/azu_cli/issues) with:
-   - Your operating system and version
-   - Crystal version (`crystal version`)
-   - Full error output
-   - Installation method used
-
-## Available Makefile Targets
-
-The Azu CLI Makefile provides several useful targets:
-
-| Target               | Description                                |
-| -------------------- | ------------------------------------------ |
-| `make` or `make all` | Build and create symlink (default)         |
-| `make build`         | Build the binary only                      |
-| `make shard`         | Install dependencies and build             |
-| `make install`       | Build and install binary to system         |
-| `make link`          | Create symlink to built binary             |
-| `make force_link`    | Force create symlink (overwrites existing) |
-| `make run`           | Run the built binary                       |
-| `make clean`         | Remove built binary                        |
-| `make distclean`     | Remove binary and all build artifacts      |
-
-### Examples
-
-```bash
-# Build only
-make build
-
-# Install system-wide
-sudo make install
-
-# Create development symlink
-sudo make link
-
-# Run without installing
-make run
-
-# Clean up
-make clean
-```
-
-## Updating Azu CLI
-
-To update to the latest version:
-
-```bash
-cd /path/to/azu_cli
-git pull origin master
-shards install
-make clean
-make install
-```
-
-## Uninstalling
-
-To remove Azu CLI:
-
-### If installed with `make install`
-
-```bash
-sudo rm /usr/local/bin/azu
-rm -rf ~/.config/azu  # Remove configuration (optional)
-```
-
-### If installed with `make link`
-
-```bash
-sudo rm /usr/local/bin/azu  # Remove symlink
-# The source binary in bin/azu will remain
-```
-
-### Complete cleanup
-
-```bash
-# Remove binary and all build artifacts
-make distclean
-
-# Remove configuration
-rm -rf ~/.config/azu
-```
-
----
-
-**Next Steps:**
-
-- [Quick Start Guide](quick-start.md) - Create your first Azu application
-- [Project Structure](project-structure.md) - Understand Azu project organization
-- [Command Reference](../commands/README.md) - Learn all available commands
+</details>
