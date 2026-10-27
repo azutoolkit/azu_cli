@@ -94,6 +94,34 @@ ensure
     })
   end
 
+  it "creates nothing on a dry run" do
+    with_sqlite_project.call(sqlite_shards, -> {
+      migrate = AzuCLI::Commands::DB::Migrate.new
+      migrate.parse_args(["--dry-run"])
+      migrate.execute.success?.should be_true
+      File.exists?("db/blog_test.db").should be_false
+    })
+  end
+
+  # A server database is never created by db:migrate: it stops and names the commands that create one
+  it "leaves a missing PostgreSQL or MySQL database alone and points at db:create / db:setup" do
+    {"  pg:\n    github: will/crystal-pg\n"               => "postgres://127.0.0.1:1/blog_test",
+     "  mysql:\n    github: crystal-lang/crystal-mysql\n" => "mysql://root@127.0.0.1:1/blog_test"}.each do |shards, url|
+      with_sqlite_project.call(shards, -> {
+        ENV["DATABASE_URL"] = url
+        begin
+          result = AzuCLI::Commands::DB::Migrate.new.execute
+          result.success?.should be_false
+          result.error.should contain("azu db:create")
+          result.error.should contain("azu db:setup")
+          Dir.exists?("db").should be_false
+        ensure
+          ENV.delete("DATABASE_URL")
+        end
+      })
+    end
+  end
+
   it "sets up a fresh project that has no migration yet" do
     with_sqlite_project.call(sqlite_shards, -> {
       AzuCLI::Commands::DB::Setup.new.execute.success?.should be_true

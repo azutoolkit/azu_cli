@@ -13,6 +13,8 @@ module AzuCLI
         property steps : Int32?
         property test_rollback : Bool = false
         property skip_validation : Bool = false
+        # A dry run on a SQLite project whose database file is not there yet: nothing is applied, nothing is created
+        @missing_database = false
 
         def initialize
           super("db:migrate", "Run pending database migrations")
@@ -32,8 +34,13 @@ module AzuCLI
           unless database_exists?(db_name)
             # A SQLite database is a file: create it, as `azu db:create` would. A server database is never created here.
             return error("Database '#{db_name}' does not exist. Run 'azu db:create' first (or 'azu db:setup' to create and migrate).") unless sqlite?
-            create_sqlite_database(db_name)
-            Logger.info("Created database file #{sqlite_path(db_name)}")
+            if @dry_run
+              @missing_database = true
+              Logger.info("Would create database file #{sqlite_path(db_name)}")
+            else
+              create_sqlite_database(db_name)
+              Logger.info("Created database file #{sqlite_path(db_name)}")
+            end
           end
 
           ensure_migrations_dir
@@ -174,7 +181,7 @@ module AzuCLI
           validator.validate_all
 
           # Get applied migrations
-          applied_versions = applied_migration_versions
+          applied_versions = @missing_database ? [] of Int64 : applied_migration_versions
           pending_versions = validator.pending_migrations(applied_versions)
 
           if pending_versions.empty?
