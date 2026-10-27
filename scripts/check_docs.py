@@ -13,7 +13,7 @@ SECTIONS = ["Overview", "Quickstart", "Realistic output", "Do's and don'ts"]
 HINT_STYLES = {"info", "warning", "success", "danger"}
 MERMAID = ("flowchart", "graph", "sequenceDiagram", "classDiagram", "stateDiagram", "erDiagram", "gantt", "journey", "pie")
 # Pages that are not documentation of a feature and so do not need the four sections.
-LAYOUT_EXEMPT = {"SUMMARY.md", "architecture/terminal-ui.md"}
+LAYOUT_EXEMPT = {"SUMMARY.md", "cli-architecture/terminal-ui-design.md"}
 
 
 def registered_commands():

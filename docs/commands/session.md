@@ -1,107 +1,122 @@
-# Session Commands
+---
+description: Set up typed session storage with azu session:setup (cookie, Redis or memory), and clear Redis sessions with azu session:clear.
+---
 
-Give your app sessions in one command. `azu session:setup` writes a typed `UserSession` backed by the
-[session shard](https://github.com/azutoolkit/session), mounts its handler and puts a random `SESSION_SECRET`
-in your git-ignored `.env`. Signed-in users? Use `azu generate auth` instead: it sets up the same session for you.
+# Session commands
 
-## `azu session:setup`
+`azu session:setup` gives a web project sessions in one command: a typed `UserSession`, its store, the session handler, and a random `SESSION_SECRET` in your git-ignored `.env`. `azu session:clear` deletes the sessions kept in Redis. For sign-in, use `azu generate auth`: it sets up the same session and the sign-in pages with it.
+
+## Overview & visual demo
+
+Pick the backend once: cookie sessions for most apps, Redis when several instances must share sessions, memory only for development. The setup refuses to overwrite an existing initializer unless you pass `--force`, and it never touches the files that authentication owns.
+
+<figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate's list of written files, with one changed file marked with a tilde"><figcaption><p>Not <code>session:setup</code>'s output. This is the file list <code>azu g</code> prints after it writes, with a changed file marked <code>~</code>. <code>session:setup</code> prints plain lines and the next steps.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu session:setup"] --> B{"initializer or auth files in the way?"}
+  B -->|yes| C["refuse, exit 1, nothing written"]
+  B -->|no| D["write src/initializers/session.cr"]
+  D --> E["mount the handler in src/PROJECT.cr"]
+  E --> F["SESSION_SECRET into .env"]
+```
+
+## Quickstart & command syntax
 
 ```bash
 azu session:setup                    # encrypted cookie sessions (default)
-azu session:setup --backend redis    # sessions in Redis (REDIS_URL, default redis://localhost:6379)
-azu session:setup --backend memory   # in-process, one instance only (development)
+azu session:setup --backend redis    # sessions in Redis, REDIS_URL or redis://localhost:6379
+azu session:setup --backend memory   # in process, one instance only (development)
+
+azu session:clear                    # Redis only: asks first
+azu session:clear --backend redis --force
 ```
 
-| Option             | Short | Description                              | Default  |
-| ------------------ | ----- | ---------------------------------------- | -------- |
-| `--backend <type>` | `-b`  | `cookie`, `redis` or `memory`            | `cookie` |
-| `--force`          | `-f`  | Replace an existing initializer          | `false`  |
+### azu session:setup
 
-Any other backend, an unknown option, an argument or a `--backend` without a value is refused with exit code 2
-(the session shard has no database store). `-h` / `--help` shows the help and changes nothing.
+| Option             | Short | Meaning                                                              | Default  |
+| ------------------ | ----- | -------------------------------------------------------------------- | -------- |
+| `--backend TYPE`   | `-b`  | `cookie`, `redis` or `memory`                                        | `cookie` |
+| `--force`          | `-f`  | Replace an existing `src/initializers/session.cr`                    | off      |
 
-It refuses (exit code 1, nothing written) when:
+What it writes: `src/initializers/session.cr` (`UserSession < Session::Base`, the store, a 24-hour timeout, and `config.secret = Azu::Env.secret("SESSION_SECRET")`), the handler line `Session::SessionHandler(UserSession).new(Session.session),` after `Azu::Handler::RequestId.new,` in `src/<project>.cr`, and `SESSION_SECRET=<random>` in `.env` (mode `0600`) unless it is already there.
 
-- `src/initializers/session.cr` exists: run again with `--force` to replace it (what you added to `UserSession` is lost);
-- authentication is generated (`src/endpoints/sessions` or `src/services/auth_throttle.cr` exists), even with
-  `--force` and even when its initializer was deleted: sign-in needs the `UserSession` of `azu generate auth`
-  (`user_id`, `authenticated?`). To change its store, edit `config.store` in `src/initializers/session.cr`;
-- `src/initializers/session.cr` looks like it was written by `azu generate auth` (its marker line, or a
-  `def authenticated?`), even with `--force`. To change its store, edit `config.store`; to have `session:setup`
-  write a new one, delete the file and run it again;
-- `src/<project>.cr` is missing, or has no `Azu::Handler::RequestId.new,` line to put the session handler after:
-  add `Session::SessionHandler(UserSession).new(Session.session),` to its handlers yourself.
+It refuses with exit code `1` and writes nothing when:
 
-What it does:
+- `src/initializers/session.cr` exists. Run again with `--force` to replace it; what you added to `UserSession` is lost.
+- Authentication is generated. Its files, or the initializer `azu generate auth` writes, are in the project. `--force` does not override this. To change the store, edit `config.store` in the initializer.
+- `src/<project>.cr` is missing, or it has no `Azu::Handler::RequestId.new,` line to put the handler after. Add the handler line yourself and run it again.
 
-- writes `src/initializers/session.cr`: `UserSession < Session::Base`, the store, a 24-hour timeout, and
-  `config.secret = Azu::Env.secret("SESSION_SECRET")` (random per process in development, required in production);
-- adds `Session::SessionHandler(UserSession).new(Session.session),` after `Azu::Handler::RequestId.new,` in
-  `src/<project>.cr`;
-- appends `SESSION_SECRET=<random>` to `.env` (mode 0600) unless it is there.
+### azu session:clear
 
-Then add what you keep to the session and use it in an endpoint:
+| Option             | Short | Meaning                                                              | Default                     |
+| ------------------ | ----- | -------------------------------------------------------------------- | --------------------------- |
+| `--backend TYPE`   | `-b`  | `cookie`, `redis` or `memory`                                        | from the initializer, see below |
+| `--force`          | `-f`  | Do not ask before deleting                                           | off                         |
 
-```crystal
-class UserSession < Session::Base
-  property user_id : Int64? = nil
-end
+Without `--backend`, the backend comes from `src/initializers/session.cr` when that file is one the generators wrote, unchanged. With no initializer, `SESSION_BACKEND` is used. Anything else refuses with exit code `1`, because the command deletes data and does not guess what edited code does.
 
-Session.session.current_session.user_id = user.id
-Session.session.flash["notice"] = "Welcome back"
-```
+- **Redis:** deletes every `session:*` key in the database of `REDIS_URL` (default `redis://localhost:6379`), a `SCAN` page at a time. It prints the target as `redis://host:port/database` (never the user or password), then asks.
+- **Cookie:** refuses (exit `1`). Cookie sessions live in the browsers. Changing `SESSION_SECRET` and restarting ends them all.
+- **Memory:** refuses (exit `1`). Memory sessions live in the app process. Restart the app to end them.
 
-After a sign-in, set the user and call `Session.session.regenerate_id`: it gives the session a new id, so an id
-planted before the sign-in is worthless (session fixation). This is what the generated authentication does:
+### Signing a user in
 
+After a sign-in, set the user on the session and call `regenerate_id`. The new id means an id planted before sign-in is worth nothing (session fixation). This is what the generated authentication does:
+
+{% code title="src/endpoints/sessions/create_endpoint.cr (excerpt)" %}
 ```crystal
 Session.session.current_session.user_id = user.id
 Session.session.regenerate_id
 ```
+{% endcode %}
 
-Do not combine it with `azu generate auth`: both write `src/initializers/session.cr`, so `azu generate auth` refuses
-once `session:setup` has run, and `session:setup` refuses once authentication is generated.
+Do not combine `session:setup` with `azu generate auth`. Both write `src/initializers/session.cr`, and each one refuses once the other has run.
 
-## `azu session:clear`
+## Realistic output
 
-```bash
-azu session:clear                    # asks first
-azu session:clear --force
-azu session:clear --backend redis    # instead of reading src/initializers/session.cr
+{% code title="terminal: azu session:setup --help" %}
+```text
+Usage: azu session:setup [--backend cookie|redis|memory] [--force]
+
+Writes src/initializers/session.cr (a typed UserSession and its store), mounts the session handler
+after Azu::Handler::RequestId in src/<project>.cr and puts a random SESSION_SECRET in .env.
+
+Options:
+  -b, --backend <type>  cookie (default), redis or memory
+  -f, --force           Replace an existing src/initializers/session.cr (never one that looks like
+                        azu generate auth's, nor when auth's endpoints or throttle exist)
+  -h, --help            Show this help
+
+Exit codes: 0 done, 1 refused (the initializer exists, authentication is generated, no place for the
+handler), 2 invalid usage.
 ```
+{% endcode %}
 
-| Option             | Short | Description                                         |
-| ------------------ | ----- | --------------------------------------------------- |
-| `--backend <type>` | `-b`  | `cookie`, `redis` or `memory`                       |
-| `--force`          | `-f`  | Do not ask first                                    |
-
-The backend is `--backend`. Without it, the command infers the backend only when `src/initializers/session.cr` is,
-as written, a file the generators write for this project: what `azu session:setup --backend cookie|redis|memory`
-writes (its session key holds the project name from `shard.yml`) or what `azu generate auth` writes (cookie, with or
-without its first marker line). The comparison is exact, apart from CRLF line ends and whitespace or blank lines at the
-end of the file. Any other file (a comment added, a store changed, a guard, a file from another azu_cli version)
-makes it refuse with exit code 1 and ask for `--backend`, whatever `SESSION_BACKEND` says: the command deletes data on
-this answer, so it does not guess what edited code does. `SESSION_BACKEND` is used only when there is no
-`src/initializers/session.cr`; with neither, it refuses too. An unknown backend or option, or an argument, is refused
-with exit code 2; `-h` / `--help` shows the help.
-
-- Redis: deletes every `session:*` key (the keys the session shard's `RedisStore` writes) in the database of
-  `REDIS_URL` (default `redis://localhost:6379`), with `SCAN`, never `KEYS`. The prefix is not per app: an app
-  sharing that Redis database loses its sessions too. Before deleting, with or without `--force`, it prints the
-  target as `redis://host:port/database` (never the user or password in `REDIS_URL`) and says so. A `REDIS_URL` that is
-  not `redis[s]://[[user]:password@]host[:port][/database]` (an IPv6 host in brackets, an `@` in the password as `%40`)
-  is refused (exit code 1); a database the server does not have (16 by default, 0 to 15) fails before deleting anything.
-  `user:password@` authenticates as that ACL user (`AUTH user password`, Redis 6+), `:password@` with the password only
-  (`AUTH password`), and userinfo without a `:` sends no `AUTH`. It waits 5 seconds to connect (the TLS handshake of
-  `rediss://` included) and 10 seconds for each reply, then stops with exit code 1 (for instance `rediss://` against a
-  plain Redis port).
-- Cookie sessions live in the browsers, so the command cannot clear them and says so (exit code 1) without asking:
-  change `SESSION_SECRET` and restart, and every existing cookie stops working.
-- Memory sessions live in the app process: the command says so (exit code 1); restart the app to end them.
+*The help as the command prints it. `--help` changes nothing.*
 
 ## Environment variables
 
-| Variable         | Used for                                           |
-| ---------------- | -------------------------------------------------- |
-| `SESSION_SECRET` | Encrypts and signs sessions; required in production |
-| `REDIS_URL`      | The Redis backend                                  |
+| Variable         | Used for                                                                 |
+| ---------------- | ------------------------------------------------------------------------ |
+| `SESSION_SECRET` | Encrypts and signs sessions. Required in production; a random value in development, kept in `.env` |
+| `REDIS_URL`      | The Redis backend, and the database `session:clear --backend redis` empties |
+| `SESSION_BACKEND`| `session:clear` only, and only when there is no session initializer     |
+
+## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** `azu session:setup --help` lists the exit codes. Exit `1` means a refusal with nothing written, so a script can tell it apart from a real failure.
+{% endhint %}
+
+{% hint style="success" %}
+In production, set `SESSION_SECRET` in the environment of the process. The `.env` value is for development.
+{% endhint %}
+
+{% hint style="warning" %}
+`session:clear --backend redis` deletes every `session:*` key in that Redis database. Other apps that share the database lose their sessions too. The command prints this before it asks.
+{% endhint %}
+
+{% hint style="danger" %}
+Don't use `session:clear` to log everyone out of cookie sessions. It refuses. Changing `SESSION_SECRET` and restarting does the same job, and it logs out every user of the app.
+{% endhint %}

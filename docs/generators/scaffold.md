@@ -1,103 +1,154 @@
-# Scaffold Generator
+---
+description: Generate a full CRUD resource in one command, with the model, migration, endpoints, requests, services, pages and templates.
+---
 
-The scaffold generator creates a complete set of files for a resource with full CRUD operations.
+# Scaffold
 
-## Usage
+`azu g scaffold` writes a complete CRUD resource in the Azu contract style: a model and its migration, seven endpoints, request contracts, services, pages and Jinja templates. In an API project, or with `--api-only`, it writes JSON responses instead of pages and templates. [`azu g api_resource`](api-resource.md) is the same generator with the API layout forced on.
 
-```bash
-azu generate scaffold <name> [field:type...] [options]
+## Overview & visual demo
+
+<figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate scaffold preview listing 28 new files and one changed schema file, with the schema diff"><figcaption><p><code>azu g scaffold comment</code> on a terminal: the file list, the <code>schema.cr</code> diff, and the count to write. Nothing is written until you press Enter.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu g scaffold post title:string"] --> B{"Project kind"}
+  B -->|web| C["Model, migration, 7 endpoints, 4 pages, 5 templates"]
+  B -->|"--api-only"| D["Model, migration, 5 endpoints, 2 responses"]
+  C --> E["Requests and services"]
+  D --> E
+  E --> F["schema.cr declares the table"]
+  F --> G["azu db:migrate, then azu serve"]
 ```
 
-## Options
-
-| Option       | Description              | Default |
-| ------------ | ------------------------ | ------- |
-| `--api-only` | Generate API components  | false   |
-| `--web-only` | Generate web components  | false   |
-| `--force`    | Overwrite existing files | false   |
-
-## Examples
+## Quickstart & command syntax
 
 ```bash
-# Basic scaffold
-azu generate scaffold User name:string email:string
-
-# Blog post with relationships
-azu generate scaffold Post title:string content:text user_id:references published:bool
-
-# API-only scaffold
-azu generate scaffold Product name:string price:float64 --api-only
+azu g scaffold post title:string body:text published:bool
+azu db:migrate
+azu serve
 ```
 
-## Naming
+{% tabs %}
+{% tab title="Web" %}
+```bash
+azu g scaffold post title:string body:text published:bool
+```
 
-One scheme runs through every layer. For `Post` in a project named `blog` (module `Blog`):
+Seven endpoints, four pages and five templates. `new` and `edit` exist because a web app has forms.
+{% endtab %}
 
-| Layer      | Constant                           | File                                    |
-| ---------- | ---------------------------------- | --------------------------------------- |
-| Model      | `Post`                             | `src/models/post.cr`                    |
-| Migration  | `CreatePosts`                      | `src/db/migrations/<timestamp>_create_posts.cr` |
-| Request    | `Blog::Posts::CreateRequest`       | `src/requests/posts/create_request.cr`  |
-| Endpoint   | `Blog::Posts::CreateEndpoint`      | `src/endpoints/posts/create_endpoint.cr` |
-| Service    | `Blog::Posts::CreateService`       | `src/services/posts/create_service.cr`  |
-| Page       | `Blog::Posts::IndexPage`           | `src/pages/posts/index_page.cr`         |
-| Template   |                                    | `public/templates/blog/posts/index_page.jinja` |
+{% tab title="API" %}
+```bash
+azu g scaffold post title:string body:text --api-only
+azu g api_resource post title:string body:text      # the same, as a named generator
+```
 
-The model is a top-level class (`Post.create!`, `Post.find?`); everything that belongs to the web layer lives
-in the plural namespace `Blog::Posts`, so the two never collide. The template path is the one
-`Azu::Templates::Renderable#page_path` derives from the page's class name (`Blog::Posts::IndexPage` is
-`blog/posts/index_page.jinja`).
+Five endpoints (no `new` or `edit`) and JSON response classes. An API project gets this without the flag.
+{% endtab %}
 
-## Generated Files
+{% tab title="Preview" %}
+```bash
+azu g scaffold post title:string body:text --dry-run   # list the files, write nothing
+```
 
+On a terminal, `azu g` shows the same preview and waits for Enter; `--dry-run` only lists it.
+{% endtab %}
+
+{% tab title="Skip" %}
+```bash
+azu g scaffold post title:string --skip template,page   # no pages or templates
+azu g scaffold post title:string --skip migration       # no migration
+azu g scaffold post title:string --skip model           # migration only, no model
+```
+
+`--skip` takes a comma-separated list of `model`, `migration`, `endpoint`, `request`, `service`, `page`, `template` and `response`.
+{% endtab %}
+{% endtabs %}
+
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `--api-only` | JSON responses, no pages or templates, no `new` or `edit` | off (on in an API project) |
+| `--web-only` | Pages and templates even in an API project | off |
+| `--skip LIST` | Leave out the listed components | none |
+| `--force` | Overwrite existing files | off |
+| `--dry-run` | List the files and changes, write nothing | off |
+| `--check` | Type-check the project with the new files before writing | off |
+| `--yes` | Write without asking (a terminal still shows the preview) | off |
+| `--ui MODE` | `rich` or `plain` | `rich` on a terminal |
+
+The name is the resource. `Post`, `posts` and `post` all mean the same resource. A name is refused when it is not a Crystal identifier, when its singular and plural are the same, or when it would hide a constant the generated code uses (`Status`, `Request`, `Response` and so on).
+
+Attributes are `name:type[:modifier]`. A trailing `?` on the type makes the column nullable.
+
+| Type | Crystal type | Column and form |
+| --- | --- | --- |
+| `string`, `email`, `url` | `String` | `text` column, `<input type="text">` |
+| `text` | `String` | `text` column, `<textarea>` |
+| `int32`, `integer` | `Int32` | `column :n, Int32`, number input |
+| `int64` | `Int64` | `column :n, Int64`, number input |
+| `float32`, `float64`, `float` | `Float32`, `Float64` | number input |
+| `bool`, `boolean` | `Bool` | `boolean ..., default: false`, checkbox |
+| `time`, `datetime`, `date` | `Time`, `Date` | `column` |
+| `json`, `uuid` | `JSON::Any`, `UUID` | `column` |
+| `references`, `belongs_to` | `Int64` | foreign key, see below |
+
+| Modifier | Effect on the column |
+| --- | --- |
+| `unique` | `unique: true` |
+| `index` | `index: true` |
+| `required` | Accepted; NOT NULL is already the default |
+| `ref:<table>` | Foreign key to `<table>` (`post_id:int64:ref:posts`) |
+
+`user_id:references` and `post_id:belongs_to` derive the table from the name (`users`, `posts`). They add a foreign key and a `belongs_to` on the model.
+
+## Realistic output
+
+{% code title="generated files for azu g scaffold post title:string body:text published:bool" %}
 ```text
-src/
-├── models/post.cr
-├── db/
-│   ├── schema.cr                    # gets the `posts` table
-│   └── migrations/20240115103045_create_posts.cr
-├── requests/posts/                  # index, show, new, create, edit, update, destroy
-├── endpoints/posts/                 # the same seven actions
-├── services/posts/                  # create, update, destroy
-└── pages/posts/                     # index, show, new, edit
-public/templates/blog/posts/         # index, show, new, edit and the shared _form partial
+public/templates/blog/posts/     _form, edit_page, index_page, new_page, show_page  (.jinja)
+src/db/migrations/<version>_create_posts.cr
+src/db/schema.cr                 changed: adds the posts table
+src/endpoints/posts/             create, destroy, edit, index, new, show, update  _endpoint.cr
+src/models/post.cr
+src/pages/posts/                 edit, index, new, show  _page.cr
+src/requests/posts/              create, destroy, edit, index, new, show, update  _request.cr
+src/requests/predicates.cr
+src/services/posts/              create, destroy, update  _service.cr
 ```
+{% endcode %}
 
-An API project (`--api-only`, or `azu new --type api`) has no forms: it gets `src/responses/posts/` (index,
-show) instead of pages and templates, and endpoints without `new` and `edit`.
+*The web scaffold writes 29 new files and changes `src/db/schema.cr`. It writes no spec files.*
 
-Run `azu db:setup` to create the database and the table, then `azu serve`. The pages are at `/posts`.
-
-## Generated Code
-
-### Model
-
-Columns and associations only; validation lives in the request contracts.
-
+{% code title="src/models/post.cr" %}
 ```crystal
-# src/models/post.cr
+require "cql"
+
 class Post
   include CQL::ActiveRecord::Model(Int64)
   db_context BlogDB, :posts
 
-  getter title : String
-  getter body : String
-  getter published : Bool
-  getter created_at : Time?
-  getter updated_at : Time?
+  property title : String
+  property body : String
+  property published : Bool
+  property created_at : Time?
+  property updated_at : Time?
 
   def initialize(@title : String, @body : String, @published : Bool)
   end
 end
 ```
+{% endcode %}
 
-### Migration
+*The model declares columns and the table. Validation lives in the request, not here.*
 
-The same `table` block is added to `src/db/schema.cr`, where the models look their columns up.
-
+{% code title="src/db/migrations/20261027205952_create_posts.cr" %}
 ```crystal
-# src/db/migrations/20240115103045_create_posts.cr
-class CreatePosts < CQL::Migration(20240115103045)
+require "cql"
+
+# Migration to create posts table
+# Generated at 2026-10-27 20:59:52 UTC
+class CreatePosts < CQL::Migration(20261027205952_i64)
   def up
     schema.table :posts do
       primary :id, Int64, auto_increment: true
@@ -110,17 +161,36 @@ class CreatePosts < CQL::Migration(20240115103045)
   end
 
   def down
+    # Drop posts table
     schema.posts.drop!
   end
 end
 ```
+{% endcode %}
 
-### Request
+*The same `table` block is appended to `src/db/schema.cr`, where the models find their columns.*
 
-An invalid request never reaches the endpoint: Azu answers it with a 422.
-
+{% code title="src/endpoints/posts/create_endpoint.cr" %}
 ```crystal
-# src/requests/posts/create_request.cr
+module Blog
+  struct Posts::CreateEndpoint
+    include Azu::Endpoint(Posts::CreateRequest, Azu::Response::Empty)
+
+    post "/posts"
+
+    def call : Azu::Response::Empty
+      record = Posts::CreateService.new.call(create_request)
+      redirect to: "/posts/#{record.id}", status: 303
+    end
+  end
+end
+```
+{% endcode %}
+
+*A write redirects with 303. One endpoint has one response type.*
+
+{% code title="src/requests/posts/create_request.cr" %}
+```crystal
 module Blog
   struct Posts::CreateRequest
     include Azu::Request
@@ -134,109 +204,91 @@ module Blog
   end
 end
 ```
+{% endcode %}
 
-### Endpoint
+*Non-nullable strings must be present. The boolean defaults to `false`.*
 
-Writes answer with a `303 See Other`, so a browser reload does not repeat the form.
-
+{% code title="src/services/posts/create_service.cr" %}
 ```crystal
-# src/endpoints/posts/create_endpoint.cr
-module Blog
-  struct Posts::CreateEndpoint
-    include Azu::Endpoint(Posts::CreateRequest, Azu::Response::Empty)
-
-    post "/posts"
-
-    def call : Azu::Response::Empty
-      post = Posts::CreateService.new.call(create_request)
-      redirect to: "/posts/#{post.id}", status: 303
-    end
-  end
-end
-```
-
-### Service
-
-```crystal
-# src/services/posts/create_service.cr
 module Blog
   class Posts::CreateService
     def call(request : Posts::CreateRequest) : Post
-      post = Post.new(title: request.title, body: request.body, published: request.published)
-      post.save!
-      post
+      record = Post.new(title: request.title, body: request.body, published: request.published)
+      record.save!
+      record
     end
   end
 end
 ```
+{% endcode %}
 
-### Forms
+*The service saves the record. The endpoint only calls it and redirects.*
 
-The `_form` partial carries the CSRF field (`csrf_tag`, the project enables `Azu::Handler::CSRF`) and
-the edit page adds `_method=patch`, which the router turns into a `PATCH`. Delete is a form on the show page
-with `_method=delete`. Values are escaped with `| e` (azu also autoescapes `.jinja` templates, so HTML a page builds itself, like `csrf_tag`, is printed with `| safe`).
-
-## Attributes
-
-`name:type[?][:modifier...]`, for example `title:string`, `age:int32?`, `email:string:unique`,
-`owner_id:int64:ref:users`.
-
-- `?` makes the column and the request field optional; without it a column is NOT NULL and a string must be present.
-- `unique` and `index` become column options, `required` is the default and accepted for clarity,
-  `ref:<table>` (or the `references` type) adds a foreign key.
-- Names are lowercase identifiers and not Crystal keywords (`end`, `class`, `select`, ...) or methods of the model (`errors`, `table`, ...).
-- Resource names must differ in singular and plural (`Series`, `News`, `Fish` are rejected) and must not hide a constant
-  the generated code uses (`Status`, `Request`, `Context`, ...). A typed name is taken for a plural only when it is the plural of its own singular: `Posts` and `People` give `Post` and `Person`, while `Campus`, `Analysis`, `Address` and `Business` stay as typed (tables `campuses`, `analyses`, ...). The checks run for every generator that takes a resource name, not only the scaffold.
-- Not supported yet by the scaffold forms: `json` and `uuid` fields (they generate, but their forms are untested).
-
-An update is a `PATCH`: its request fields are all optional and only the ones sent change the record
-(a given string must not be blank). The edit form sends a hidden `false` before each checkbox so an unchecked box is saved.
-
-## Production
-
-Generated web projects refuse to boot in production (`CRYSTAL_ENV=production`; Azu does not read `AZU_ENV`) without
-`CSRF_SECRET` in the process environment (the generated app loads `.env` itself, so development needs no `export`;
-production containers inject real variables, which always win over a file). That includes a job worker, because `src/worker.cr` loads the app file.
-`azu serve --env production` prints the last lines the server wrote to stderr when it exits early.
-
-## Field Types
-
-| Type         | Crystal Type | Description           |
-| ------------ | ------------ | --------------------- |
-| `string`     | `String`     | Text field (must be present) |
-| `text`       | `String`     | Long text field       |
-| `int32`      | `Int32`      | 32-bit integer        |
-| `int64`      | `Int64`      | 64-bit integer        |
-| `float64`    | `Float64`    | Decimal number        |
-| `bool`       | `Bool`       | Boolean value         |
-| `time`       | `Time`       | Timestamp             |
-| `uuid`       | `UUID`       | UUID field            |
-| `references` | `Int64`      | Foreign key reference |
-
-## Common Patterns
-
-### Blog Post
-
-```bash
-azu generate scaffold Post title:string content:text user_id:references published:bool
+{% code title="public/templates/blog/posts/_form.jinja" %}
+```jinja
+<form action="{{ form_action }}" method="post" class="stack">
+  {{ csrf_tag | safe }}
+  {% if form_method %}<input type="hidden" name="_method" value="{{ form_method }}">{% endif %}
+  <label class="field">Title
+    <input type="text" name="title" value="{{ post.title | e }}" required>
+  </label>
+  <label class="field">Body
+    <textarea name="body" rows="6" required>{{ post.body | e }}</textarea>
+  </label>
+  <label class="field field--check">
+    <input type="hidden" name="published" value="false">
+    <input type="checkbox" name="published" value="true"{% if post.published %} checked{% endif %}>
+    Published
+  </label>
+  <div class="row">
+    <button class="btn" type="submit">Save</button>
+    <a class="btn btn--secondary" href="/posts">Cancel</a>
+  </div>
+</form>
 ```
+{% endcode %}
 
-### E-commerce Product
+*The shared form partial for `new` and `edit`. Values are escaped with `| e`; the CSRF field is printed with `| safe` because the helper builds it.*
 
-```bash
-azu generate scaffold Product name:string description:text price:float64 stock:int32
-```
+<details>
 
-### User Management
+<summary>The update side and the API layout</summary>
 
-```bash
-azu generate scaffold User name:string email:string role:string active:bool
-```
+Update is the same shape: `Posts::UpdateEndpoint` loads the record, `Posts::UpdateService` assigns each field that the PATCH carries, and the request declares every field optional with `validate title, given: true`.
 
----
+With `--api-only`, the tree changes to `src/responses/posts/index_response.cr` and `show_response.cr` in place of `src/pages/`, and the templates go. The endpoints answer JSON, and `create` answers `201`.
 
-**Next Steps:**
+</details>
 
-- [Model Generator](model.md) - Create database models
-- [Endpoint Generator](endpoint.md) - Create HTTP endpoints
-- [Migration Generator](migration.md) - Create database migrations
+## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** run `azu g scaffold ... --dry-run` first. It lists every file and the lines in each, so you can see what `--skip` and `--api-only` leave out before anything is written.
+{% endhint %}
+
+{% hint style="success" %}
+Commit or stash your work before you scaffold. Then the diff of `src/db/schema.cr` and the new files is the only thing to review.
+{% endhint %}
+
+{% hint style="warning" %}
+Existing files are kept, not overwritten, unless you pass `--force`. A second `create_posts` migration is refused when `CreatePosts` already exists, so a scaffold for a resource you already have stops at the migration step. Remove the old files or pick another name.
+{% endhint %}
+
+{% hint style="warning" %}
+Attribute types are checked here. A `title:foo` stops the run with `Unsupported attribute type 'foo'`. `id`, `created_at` and `updated_at` are left out because the model provides them.
+{% endhint %}
+
+{% hint style="danger" %}
+`--force` overwrites the endpoints, services and pages you have edited since the last scaffold. Generate once, then change the files you own.
+{% endhint %}
+
+<details>
+
+<summary>Related generators</summary>
+
+- [Endpoint](endpoint.md), [Page](page.md), [Service](service.md) and [Request](request.md) are the single-layer generators the scaffold runs.
+- [Migration](migration.md) adds columns to an existing table. Prefer it to scaffolding over a table you have already changed.
+- [API resource](api-resource.md) is the same scaffold with the API layout.
+- The command's own reference is in [azu generate](../command-reference/azu-generate.md).
+
+</details>

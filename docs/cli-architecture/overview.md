@@ -99,7 +99,6 @@ Don't document or register a flag or command you didn't implement. `azu help` an
 `on_error(cmd, error)`. A plugin can reject arguments by raising in `before_command`. `on_unload` is defined but never
 called. Registered in `CLI#load_builtin_plugins`: `GeneratorPlugin`, `DatabasePlugin`, `DevelopmentPlugin`.
 
-More: [Plugin system](../architecture/plugins.md), [CLI framework](../architecture/cli-framework.md),
-[Generator system](../architecture/generator-system.md).
+More: [Generator system](generator-system.md) and [Template engine](template-engine.md).
 
 </details>

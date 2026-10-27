@@ -1,395 +1,111 @@
-# Test Command
+---
+description: Run the spec suite with crystal spec under the test environment, with a watch mode and name filters.
+---
 
-The `azu test` command runs your application's test suite with support for watch mode, filtering, and continuous testing.
+# azu test
 
-## Synopsis
+`azu test` (alias `azu t`) runs `crystal spec` for your project with `CRYSTAL_ENV=test`, so the `.env.test` file is the one that applies. It adds a watch mode that reruns the suite when a file under `src/` or `spec/` changes, and a `--filter` that picks examples by name.
 
-```bash
-azu test [files] [options]
+## Overview & visual demo
+
+Use it for the whole suite before a commit, or `--watch` while you work on one area. Its output is plain Logger lines and whatever `crystal spec` prints, so the terminal shows no card.
+
+<figure><img src="../assets/terminal-ui/04-new-progress.png" alt="The progress card azu new draws, with a spinner on the Shards step"><figcaption><p>Not <code>azu test</code>'s output. This is the progress card <code>azu new</code> draws. <code>azu test</code> prints plain lines and the <code>crystal spec</code> output.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu test [file]"] --> B["CRYSTAL_ENV=test, .env.test loaded"]
+  B --> C["crystal spec [file] [--example F]"]
+  C --> D{"exit status"}
+  D -->|0| E["Tests passed, exit 0"]
+  D -->|other| F["Tests failed, exit 1"]
+  C -.->|"--watch: a src or spec file changed"| C
 ```
 
-## Description
-
-Execute your application's test suite using Crystal's built-in spec framework. The command provides a wrapper around `crystal spec` with additional features like file watching, filtering, and enhanced output formatting.
-
-## Usage
-
-### Basic Testing
+## Quickstart & command syntax
 
 ```bash
-# Run all tests
 azu test
-
-# Run specific test file
 azu test spec/models/user_spec.cr
-
-# Run all tests in a directory
-azu test spec/models/
-```
-
-### Watch Mode
-
-The watch mode automatically reruns tests when source or spec files change, providing immediate feedback during development:
-
-```bash
-# Run tests in watch mode
+azu test --filter "validates email"
 azu test --watch
-
-# Watch specific directory
-azu test spec/models/ --watch
+azu t -v
 ```
 
-When running in watch mode:
-- Tests run initially on startup
-- File changes trigger automatic test reruns
-- Press `Ctrl+C` to stop watching
-- Monitors both `src/` and `spec/` directories
+| Option                 | Short | Meaning                                                                          | Default  |
+| ---------------------- | ----- | -------------------------------------------------------------------------------- | -------- |
+| `[file]`               |       | A spec file, passed to `crystal spec` after `spec`                               | the whole suite |
+| `--watch`              | `-w`  | Rerun the suite when a `.cr` file under `src/` or `spec/` changes (Ctrl+C stops) | off      |
+| `--filter PATTERN`     | `-f`  | Run only the examples whose description matches (`crystal spec --example`)       | all      |
+| `--verbose`            | `-v`  | Pass `--verbose` to `crystal spec`                                               | off      |
+| `--parallel`           | `-p`  | Pass `--parallel` to `crystal spec`. The CLI does no sharding itself             | off      |
+| `--coverage`           | `-c`  | Prints a warning. No coverage is collected                                       | off      |
 
-### Filtering Tests
+Watch mode runs the suite once at start, then polls every 0.5 s. Each change reruns the same selection, so `--filter` and a file argument apply to every run.
 
-Filter tests by name or pattern to run specific test cases:
+Tests run as `test` whatever `CRYSTAL_ENV` says. To prepare the test database, use the same environment flag as the rest of the database commands:
 
 ```bash
-# Run tests matching pattern
-azu test --filter User
-
-# Run tests in specific file matching pattern
-azu test spec/models/user_spec.cr --filter "validates email"
-```
-
-## Options
-
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--watch` | `-w` | Watch mode - automatically rerun tests on file changes |
-| `--coverage` | `-c` | Enable coverage reporting (requires additional setup) |
-| `--verbose` | `-v` | Verbose output with detailed test information |
-| `--parallel` | `-p` | Run tests in parallel (if supported by test framework) |
-| `--filter <pattern>` | `-f` | Filter tests by name pattern |
-
-## Environment Variables
-
-The test command respects the following environment variables:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CRYSTAL_ENV` | Test environment | `test` |
-| `DATABASE_URL` | Test database URL | |
-
-## Examples
-
-### Development Workflow
-
-Run tests in watch mode during development:
-
-```bash
-# Terminal 1: Development server
-azu serve
-
-# Terminal 2: Continuous testing
-azu test --watch
-```
-
-### Focused Testing
-
-Run specific tests with verbose output:
-
-```bash
-# Test specific model
-azu test spec/models/user_spec.cr --verbose
-
-# Test with filter
-azu test --filter "User creation" --verbose
-```
-
-### Pre-Commit Testing
-
-Run all tests before committing:
-
-```bash
-# Run full test suite
-azu test
-
-# Or with verbose output for CI
-azu test --verbose
-```
-
-## Test File Structure
-
-The test command works with the standard Crystal spec structure:
-
-```
-spec/
-├── spec_helper.cr           # Test configuration
-├── support/                 # Test support files
-│   └── test_helpers.cr
-├── models/
-│   ├── user_spec.cr
-│   └── post_spec.cr
-├── endpoints/
-│   ├── users_spec.cr
-│   └── posts_spec.cr
-└── services/
-    └── user_service_spec.cr
-```
-
-## Output Format
-
-Test output includes:
-
-- **Test Results**: Pass/fail indicators for each test
-- **Duration**: Total test execution time
-- **Errors**: Detailed error messages and stack traces
-- **Summary**: Total tests, passed, failed counts
-
-Example output:
-
-```
-🧪 Running tests...
-Watch mode: disabled
-Coverage: disabled
-Parallel: disabled
-
-Finished in 1.42 seconds
-42 examples, 0 failures
-
-✅ Tests passed in 1.42s
-```
-
-## Watch Mode Behavior
-
-When file changes are detected:
-
-1. Displays changed file path
-2. Shows separator line for visual clarity
-3. Reruns the test suite
-4. Displays results
-5. Waits for next change
-
-Monitored file patterns:
-- `src/**/*.cr` - Source files
-- `spec/**/*.cr` - Spec files
-
-## Coverage Reporting
-
-Coverage reporting requires additional setup:
-
-```bash
-# Run with coverage flag
-azu test --coverage
-```
-
-**Note**: Coverage reporting may require installing additional tools like `crystal-coverage`.
-
-## Performance Considerations
-
-### Parallel Testing
-
-Enable parallel test execution for faster results:
-
-```bash
-azu test --parallel
-```
-
-**Note**: Parallel testing requires proper test isolation and may not be supported by all test frameworks.
-
-### Test Database
-
-For tests using the database:
-
-1. Use a separate test database
-2. Set `CRYSTAL_ENV=test`
-3. Run migrations before tests:
-
-```bash
-CRYSTAL_ENV=test azu db:create
-CRYSTAL_ENV=test azu db:migrate
+azu db:setup --env test
 azu test
 ```
 
-## Best Practices
+<details>
 
-### 1. Use Watch Mode During Development
+<summary>What the test command does not do</summary>
 
-```bash
-# Keep tests running while you code
-azu test --watch
+- It does not collect coverage. `--coverage` only prints a warning that coverage needs extra setup.
+- It does not run specs in parallel of its own. `--parallel` only adds a flag to `crystal spec`.
+- It does not pick up only the changed specs in watch mode. Each change reruns the selection.
+- It does not stop the watch loop on a failing run. The loop keeps watching and reruns on the next change.
+
+</details>
+
+## Realistic output
+
+{% code title="terminal: azu test, with DATABASE_URL set in the shell" %}
+```text
+warning: DATABASE_URL is set in your environment and wins over .env.test: the specs will use it
 ```
+{% endcode %}
 
-### 2. Keep Tests Fast
+*Printed on stderr before the run. `azu test` still runs; the specs use the shell's database.*
 
-- Use factories instead of fixtures
-- Mock external dependencies
-- Minimize database operations
-
-### 3. Organize Tests Logically
-
+{% code title="terminal: azu test --coverage --ui plain" %}
+```text
+WARNING: Coverage reporting requires additional setup
 ```
-spec/
-├── unit/        # Unit tests
-├── integration/ # Integration tests
-└── e2e/        # End-to-end tests
+{% endcode %}
+
+*The only effect of `--coverage`. The run goes on without a report.*
+
+{% code title="terminal: azu test (the tail of the crystal spec output)" %}
+```text
+Finished in <duration>
+<examples> examples, <failures> failures
 ```
+{% endcode %}
 
-### 4. Use Filters for Focused Development
+*The last lines come from `crystal spec`, so the wording is Crystal's. Angle brackets stand for the counts of your run.*
 
-```bash
-# Work on specific feature
-azu test --filter "User authentication" --watch
-```
+## Do's and don'ts
 
-### 5. Run Full Suite Before Commits
+{% hint style="info" %}
+**Pro tip:** run `azu test --watch --filter "User"` in one terminal while `azu dev` runs in another. The watch reruns only the examples you are working on.
+{% endhint %}
 
-```bash
-# Ensure everything passes
-azu test
-```
+{% hint style="success" %}
+Set up the test database once with `azu db:setup --env test`, then run `azu test`. The test database stays apart from development.
+{% endhint %}
 
-### 6. Test in Temporary Directories
+{% hint style="warning" %}
+`--coverage` does not produce a report. Use a coverage tool that wraps `crystal spec` if you need one.
+{% endhint %}
 
-When testing CLI commands that generate files or projects, **always use temporary directories**:
+{% hint style="warning" %}
+Watch mode reruns the whole selection, not just the spec that changed. Narrow it with a file argument or `--filter` when the suite is slow.
+{% endhint %}
 
-```crystal
-# Good: Use temporary directory
-it "generates project files" do
-  Dir.cd("/tmp") do
-    # Test file generation
-    FileUtils.rm_rf("test_project") # Cleanup
-  end
-end
-
-# Bad: Creates files in repository
-it "generates project files" do
-  # This pollutes the repository!
-end
-```
-
-**Manual testing should also use temporary directories:**
-
-```bash
-# Good: Test in /tmp
-cd /tmp
-azu new test_project
-cd test_project
-azu test
-cd ..
-rm -rf test_project
-
-# Bad: Test in repository root
-azu new test_project  # Don't do this!
-```
-
-**Patterns automatically ignored by `.gitignore`:**
-- `/test_*/` - Test projects
-- `/tmp_*/` - Temporary projects
-- `/playground_*/` - Playground projects
-- `*_test_project/` - Test project directories
-- `test_*.cr` - Test script files (outside `spec/`)
-- `/123*/` and `/*invalid*/` - Invalid names
-
-**Always clean up after manual testing:**
-
-```bash
-# Clean up test artifacts
-rm -rf /tmp/test_*
-rm -rf /tmp/*_test_project
-rm test_*.cr  # Remove any test scripts
-```
-
-## Troubleshooting
-
-### Tests Not Running
-
-Ensure your test files:
-- Are in the `spec/` directory
-- End with `_spec.cr`
-- Require `spec_helper`
-
-### Watch Mode Not Detecting Changes
-
-Check that:
-- Files are in `src/` or `spec/` directories
-- Files have `.cr` extension
-- File system permissions are correct
-
-### Parallel Tests Failing
-
-If parallel tests fail but sequential tests pass:
-- Check for shared state between tests
-- Ensure proper test isolation
-- Use separate database connections
-
-### Database Connection Errors
-
-Verify test database setup:
-
-```bash
-# Create test database
-CRYSTAL_ENV=test azu db:create
-
-# Run test migrations
-CRYSTAL_ENV=test azu db:migrate
-
-# Run tests
-azu test
-```
-
-## Integration with CI/CD
-
-### GitHub Actions Example
-
-```yaml
-name: Tests
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install Crystal
-        uses: crystal-lang/install-crystal@v1
-      - name: Install dependencies
-        run: shards install
-      - name: Setup database
-        run: |
-          CRYSTAL_ENV=test azu db:create
-          CRYSTAL_ENV=test azu db:migrate
-      - name: Run tests
-        run: azu test --verbose
-```
-
-### GitLab CI Example
-
-```yaml
-test:
-  stage: test
-  script:
-    - shards install
-    - CRYSTAL_ENV=test azu db:create
-    - CRYSTAL_ENV=test azu db:migrate
-    - azu test --verbose
-```
-
-## Aliases
-
-The test command can also be invoked using:
-
-```bash
-# Short form
-azu t
-```
-
-## Related Commands
-
-- [`azu serve`](serve.md) - Development server for running application
-- [`azu db:migrate`](database.md#azu-dbmigrate) - Run database migrations
-- [`azu generate`](generate.md) - Generate test files with scaffolds
-
-## See Also
-
-- [Crystal Spec Documentation](https://crystal-lang.org/reference/guides/testing.html)
-- [Testing Best Practices](../best-practices/testing.md)
-- [CI/CD Integration Guide](../guides/ci-cd.md)
-
+{% hint style="danger" %}
+Don't export `DATABASE_URL` in your shell for the tests. It wins over `.env.test`, and the specs then run against whatever database it names.
+{% endhint %}

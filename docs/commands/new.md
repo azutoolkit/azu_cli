@@ -1,321 +1,223 @@
+---
+description: Create a new Azu project with the wizard or flags, covering project types, databases, Docker and CI, and the files it writes.
+---
+
 # azu new
 
-The `azu new` command creates a new Azu project from scratch. This is the primary way to start a new application with Azu CLI.
+## Overview & visual demo
 
-## Overview
+`azu new` creates a project from scratch. On a terminal it opens a wizard, shows a flight plan and the equivalent command line, and writes nothing until you press Enter. With `--yes` it skips the questions and takes the defaults: a web app on SQLite, which runs without a database server. The concise version is [azu new](../command-reference/azu-new.md).
+
+<figure><img src="../assets/terminal-ui/03-new-review.png" alt="The azu new review screen with the flight plan, the next steps and the equivalent command line"><figcaption><p>The review screen. Enter writes the project and Esc quits without writing anything. The "as a command" line is the same choice written as flags.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu new blog"] --> B["Wizard, or flags with --yes"]
+  B --> C{"Review"}
+  C -->|Esc| D["Nothing written"]
+  C -->|Enter| E["Write files, .env at 0600"]
+  E --> F["git init and first commit"]
+  F --> G["shards install"]
+  G --> H["crystal build --no-codegen"]
+  H --> I["Next steps card"]
+```
+
+## Quickstart & command syntax
 
 ```bash
-azu new <project_name> [options]
+azu new blog                 # the wizard on a terminal
+azu new blog --yes           # no prompts: the defaults
+azu new shop --type api --db postgresql --yes
+azu new file_tool --type cli --yes
 ```
 
-## The wizard
-
-Run without `--yes` on a terminal, `azu new` opens a wizard: module, author, email, license, type, database, tests,
-jobs and extras (Docker, GitHub Actions, git, example code), with the answers so far beside each step. Steps that do not
-apply are skipped (a `cli` project has no database or jobs step). The review screen shows what will happen, checks
-that `crystal`, `shards` and `git` are on the `PATH`, and prints the same choices as one `azu new … --yes` command
-line. Then a live card follows the work (files, `.env` secrets, git, `shards install` with a count, type-check) and a
-last card lists the next steps.
-
-Keys: arrows (or `j`/`k`) move, Space toggles, Enter goes on, Shift-Tab goes back, Esc cancels (nothing is written).
-`--ui plain` (or `AZU_UI=plain`, or no terminal) uses line prompts and one line per step; `--ui json` prints NDJSON
-events.
-
-## Basic Usage
-
-### Create a Simple Web Application
+For a web or API app, the next steps are:
 
 ```bash
-# Create a new web application (SQLite: no database server needed)
-azu new my_blog
-
-# Navigate to the project
-cd my_blog
-
-# Create the SQLite database (db/my_blog_development.db) and run the migrations
-azu db:setup
-
-# Start development
-azu serve
+cd blog
+azu db:setup                 # creates the SQLite file and runs the migrations
+azu serve                    # then open http://localhost:4000
 ```
 
-### Create Different Project Types
+Project types:
+
+{% tabs %}
+{% tab title="web (default)" %}
+A full-stack app: Jinja pages, static files, a welcome page and a `/health` endpoint.
 
 ```bash
-# Web application (default)
-azu new my_web_app --type web
-
-# API-only application
-azu new my_api --type api
-# or use the shorthand:
-azu new my_api --api
-
-# CLI application
-azu new my_cli_tool --type cli
+azu new blog --type web
 ```
+{% endtab %}
 
-### Specify Database
+{% tab title="api" %}
+JSON endpoints. The main file is `src/api.cr`; `--api` is shorthand for `--type api`.
 
 ```bash
-# SQLite (default): a file, no server
-azu new my_app
-
-# PostgreSQL
-azu new my_app --db postgresql
-
-# MySQL
-azu new my_app --db mysql
+azu new shop --api --yes
 ```
+{% endtab %}
 
-## Command Options
-
-| Option                     | Description                                              | Default        |
-| -------------------------- | -------------------------------------------------------- | -------------- |
-| `--type <type>`            | Project type (web, api, cli)                             | web            |
-| `--api`                    | Shorthand for `--type api`                               |                |
-| `--db <db>`                | Database adapter (sqlite, postgresql, mysql)             | sqlite         |
-| `--test <framework>`       | Test framework (spec, minitest)                          | spec           |
-| `--docker`                 | Generate a `Dockerfile` and `.dockerignore` (web, api)   | off            |
-| `--ci <setup>`, `--no-ci`  | `GitHub Actions` or `None`                               | GitHub Actions |
-| `--git`, `--no-git`        | Initialize a git repository                              | on             |
-| `--example`, `--no-example`| Include the example code                                 | on             |
-| `--joobq`, `--no-joobq`    | Include JoobQ                                            | on             |
-| `--name`, `--module`, `--author`, `--email`, `--license` | Project metadata           |                |
-| `--yes`                    | Non-interactive: take the defaults                       |                |
-
-An existing directory is never overwritten: choose another name.
-
-## Project Types
-
-### Web Application (`--type web`)
-
-Full-stack web applications with HTML templates, CSS, and JavaScript.
-
-**Features:**
-
-- HTML page rendering with Jinja2 templates
-- Static asset management (CSS, JS, images)
-- Real-time components with WebSocket support
-- Complete MVC architecture
-
-**Generated Structure:**
-
-```
-my_web_app/
-├── src/
-│   ├── my_web_app.cr          # Main application
-│   ├── server.cr              # HTTP server
-│   ├── endpoints/             # Controllers
-│   ├── models/                # Database models
-│   ├── pages/                 # View components
-│   ├── contracts/             # Request validation
-│   └── initializers/          # App configuration
-├── public/
-│   ├── assets/                # Static files
-│   └── templates/             # HTML templates
-├── spec/                      # Test files
-└── db/                        # Database files
-```
-
-### API Application (`--type api`)
-
-API-only applications for building REST APIs, microservices, or mobile backends.
-
-**Features:**
-
-- JSON API endpoints
-- Request/response contracts
-- No HTML templates or static assets
-- Optimized for API development
-
-**Generated Structure:**
-
-```
-my_api/
-├── src/
-│   ├── my_api.cr              # Main application
-│   ├── server.cr              # HTTP server
-│   ├── endpoints/             # API controllers
-│   ├── models/                # Database models
-│   ├── contracts/             # API contracts
-│   ├── services/              # Business logic
-│   └── initializers/          # App configuration
-├── spec/                      # Test files
-└── db/                        # Database files
-```
-
-### CLI Application (`--type cli`)
-
-Command-line applications and tools.
-
-**Features:**
-
-- An `OptionParser` program with `--help`, `--version` (and, with the example, `--hello NAME`)
-- No web server, database, background jobs, `.env` or assets; no dependencies in `shard.yml` (`--db` is ignored)
-- `shards build` builds `bin/<name>`
-
-**Generated Structure:**
-
-```
-my_cli_tool/
-├── src/
-│   └── my_cli_tool.cr         # The program (MyCliTool.run)
-├── spec/
-│   ├── spec_helper.cr
-│   └── my_cli_tool_spec.cr
-├── shard.yml                  # target my_cli_tool: src/my_cli_tool.cr
-├── README.md, LICENSE, .gitignore, .editorconfig, .tool-versions
-└── .github/workflows/ci.yml   # unless --no-ci
-```
-
-## Database Options
-
-`azu new` used PostgreSQL by default before; it now uses SQLite, so a new project runs without a database server.
-Pass `--db postgresql` (or `--db mysql`) for a server database.
-
-### PostgreSQL (`--db postgresql`)
-
-**For production applications with a database server.**
+{% tab title="cli" %}
+An `OptionParser` program with `--help` and `--version`. No server, database, jobs, `.env` or assets, so `--db` is ignored and `--docker` is refused.
 
 ```bash
-azu new my_app --db postgresql
+azu new file_tool --type cli --yes
+cd file_tool && shards build && ./bin/file_tool --help
 ```
+{% endtab %}
+{% endtabs %}
 
-**Features:**
+Databases:
 
-- Full ACID compliance
-- Advanced features (JSON, arrays, etc.)
-- Excellent performance
-- Rich ecosystem
+{% tabs %}
+{% tab title="SQLite (default)" %}
+`--db sqlite` (or `sqlite3`). The database is a file under `db/`, so there is no server to start. `.env.development` points `DATABASE_URL` at `sqlite3://./db/<name>_development.db`.
+{% endtab %}
 
-**Requirements:**
-
-- PostgreSQL server installed
-- Database user with create privileges
-
-### MySQL (`--db mysql`)
-
-**Good for web applications and smaller projects.**
+{% tab title="PostgreSQL" %}
+`--db postgresql` (`postgres` and `pg` work too). Start the server before `azu db:setup`.
 
 ```bash
-azu new my_app --db mysql
+azu new shop --db postgresql --yes
 ```
+{% endtab %}
 
-**Features:**
-
-- Widely supported
-- Good performance
-- Easy to find hosting
-
-**Requirements:**
-
-- MySQL server installed
-- Database user with create privileges
-
-### SQLite (`--db sqlite`, the default)
-
-**Perfect for development, prototypes, and simple applications.**
+{% tab title="MySQL" %}
+`--db mysql`. Start the server before `azu db:setup`.
 
 ```bash
-azu new my_app
+azu new shop --db mysql --yes
+```
+{% endtab %}
+{% endtabs %}
+
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `--type TYPE` | `web`, `api` or `cli` | `web` |
+| `--api` | Shorthand for `--type api` | off |
+| `--db DATABASE` | `sqlite`, `postgresql` or `mysql` | `sqlite` |
+| `--test TEST` | `spec` or `minitest` | `spec` |
+| `--docker`, `--no-docker` | `Dockerfile` and `.dockerignore` (web and api only) | off |
+| `--ci CI`, `--no-ci` | `"GitHub Actions"` or `"None"` | `GitHub Actions` |
+| `--git`, `--no-git` | `git init` and a first commit | on |
+| `--example`, `--no-example` | Example code (for web and api it only changes the `tasks` target in `shard.yml`) | on |
+| `--joobq`, `--no-joobq` | JoobQ background jobs (web and api only) | on |
+| `--name NAME` | Project name; the positional argument works too | none |
+| `--module MODULE` | Module name | from the name: `my_app` becomes `MyApp` |
+| `--author`, `--email` | Written to `shard.yml` and `LICENSE` | your git config |
+| `--license LICENSE` | License name | `MIT` |
+| `--yes` | No prompts: take the defaults and the flags | off |
+| `--ui MODE` | `rich` (wizard and cards), `plain` (lines) or `json` (NDJSON events) | `rich` on a terminal |
+
+Names must start with a letter and contain only letters, digits, `_` and `-`. They cannot start or end with `-` or `_`, cannot be a Crystal keyword, and must give a valid module name. An existing directory is never overwritten.
+
+## Realistic output
+
+{% code title="terminal: azu new blog (blog already exists)" %}
+```text
+ERROR: Directory 'blog' already exists. Choose a different name.
+```
+{% endcode %}
+
+*The name is checked before anything is written. The exit code is 1.*
+
+{% code title="terminal: azu new blog, the compilation card after Enter" %}
+```text
+Compilation Progress
+  ✔ Files        63 written into ./blog        69 ms
+  ✔ Secrets      .env (0600) · CSRF_SECRET      0 ms
+  ✔ Git          init + 1 commit               76 ms
+  ✔ Shards       15 installed                  10.0s
+  ✔ Type-check   src/server.cr                  8.2s
+```
+{% endcode %}
+
+*The card from the run in the screenshot above, with the text as it reads on screen. Shards and the type-check take most of the time.*
+
+{% code title="terminal: azu new blog, the next steps card" %}
+```text
+blog is ready
+
+  $ cd blog
+  $ azu db:setup
+  $ azu serve
+  Visit: http://localhost:4000
+  Start background workers: azu jobs:worker
+
+JoobQ  config/jobs.yml · src/initializers/joobq.cr · src/worker.cr
+       azu generate job <name> [params]
+
+▸ Try  azu g scaffold post title:string body:text  then watch azu dev rebuild
+Docs https://azutoolkit.org · Support https://github.com/azutoolkit/azu
+```
+{% endcode %}
+
+*The last card of a successful run with JoobQ on. The "Visit" and "Start background workers" lines are the steps the command prints; the card has a border that is left out here.*
+
+## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** `--yes` takes the author and email from your git config, or falls back to `Your Name` and `your.email@example.com`. Set `git config --global user.name` and `user.email` once and every new project gets them.
+{% endhint %}
+
+{% hint style="success" %}
+Start on SQLite. There is no server to run, and `azu db:setup` creates the file. Move to PostgreSQL or MySQL when you need a server.
+{% endhint %}
+
+{% hint style="warning" %}
+`--docker` is for web and api projects. A cli project has no server to run in a container, so `--type cli --docker` is refused. With `--db postgresql` or `--db mysql`, start the database server before `azu db:setup`.
+{% endhint %}
+
+{% hint style="danger" %}
+Don't commit `.env`. It holds the generated `CSRF_SECRET`, it is git-ignored and it is written with mode 0600. Commit `.env.example`, which lists the same variables with the secrets blank.
+{% endhint %}
+
+<details>
+
+<summary>The wizard</summary>
+
+The wizard asks for the module, author, email, license, type, database, test framework, jobs and extras (Docker, GitHub Actions, git, example code). Steps that do not apply are skipped: a cli project has no database or jobs step. The review screen checks that `crystal`, `shards` and `git` are on the `PATH`, and prints the same choices as one `azu new … --yes` line.
+
+Keys: arrows (or `j` and `k`) move, Space toggles, Enter goes on, Shift-Tab goes back, Esc cancels. Esc writes nothing.
+
+Without a keyboard and screen (`--ui plain`, a pipe, `AZU_UI=plain`) the command asks line by line instead. `--yes` skips both.
+
+</details>
+
+<details>
+
+<summary>Generated files (web and api)</summary>
+
+```text
+blog/
+├── shard.yml, README.md, LICENSE, .gitignore, .editorconfig, .tool-versions
+├── .env (0600, git-ignored), .env.development, .env.test, .env.example
+├── config/           azu.yml, jobs.yml (JoobQ), mailer.yml, openapi.yml, api.yml
+├── public/           assets/, templates/ (layout.jinja, helpers/_nav.jinja, <app>/welcome/index_page.jinja)
+├── spec/             spec_helper.cr, blog_spec.cr
+└── src/
+    ├── blog.cr       the module: configure, the handler stack, requires
+    ├── server.cr     starts the server (the build target of a web app)
+    ├── api.cr        starts the server (the build target of an api app)
+    ├── db/           schema.cr, seed.cr, seeds/
+    ├── initializers/ cql_config.cr, logger.cr, mailer.cr, joobq.cr (JoobQ)
+    ├── endpoints/ pages/ requests/ responses/   the welcome and health examples
+    ├── models/ services/ validators/ components/ middleware/ channels/ jobs/ tasks/
+    ├── tasks.cr      the tasks target (with --example)
+    └── worker.cr     the JoobQ worker (with JoobQ)
 ```
 
-`.env.development` and `.env.test` point `DATABASE_URL` at `db/my_app_development.db` and `db/my_app_test.db`;
-`azu db:setup` creates the file. The generated CI workflow needs no database service.
+The CI workflow is `.github/workflows/ci.yml` unless `--no-ci`. `Dockerfile` and `.dockerignore` appear only with `--docker`. A cli project gets only the program, its spec, the shard file and the project files.
 
-**Features:**
+The `shard.yml` pins are the ones the generator uses (excerpt):
 
-- No server required
-- File-based database
-- Zero configuration
-- Great for development
-
-**Use Cases:**
-
-- Development and testing
-- Simple applications
-- Prototypes and demos
-- Embedded applications
-
-## Docker and CI
-
-### Docker (`--docker`)
-
-Generates a multi-stage `Dockerfile` and a `.dockerignore`:
-
-- build stage `crystallang/crystal:<version of the template>` with the system packages the CI job installs,
-  `shards install`, and a `crystal build --release` of `src/server.cr` (web) or `src/api.cr` (api);
-- runtime stage on `ubuntu:26.04` (the release of the build image) with only the shared libraries the binary links against, a non-root user,
-  `CRYSTAL_ENV=production`, `HOST=0.0.0.0`, `PORT=4000` and a `HEALTHCHECK` on `/health`;
-- on SQLite, a `/data` volume and `DATABASE_URL=sqlite3:///data/<project>.db`.
-
-The secrets are not in the image. A web container refuses to start without `CSRF_SECRET` (and, once you generate
-authentication, `SESSION_SECRET`):
-
-```bash
-docker build -t my_app .
-docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) my_app
-```
-
-The image does not run migrations. A CLI project has no server, so `--docker` is refused for `--type cli`.
-`scripts/e2e_docker.sh` in this repository builds and runs a generated image (it needs a docker daemon).
-
-### CI (`--ci`)
-
-`--ci "GitHub Actions"` (the default) generates `.github/workflows/ci.yml`: in a `crystallang/crystal` container pinned
-to the Crystal version of the template (also in `.tool-versions`), it installs the system packages and shards, checks
-formatting (`crystal tool format --check src spec`), runs the specs and builds the entry point. `--no-ci` skips it.
-GitLab CI is not supported.
-
-## Generated Files
-
-### Core Application Files
-
-**`src/<project_name>.cr`** - Main application module:
-
-```crystal
-require "azu"
-require "./server"
-
-module MyApp
-  VERSION = "0.1.0"
-
-  # Application configuration
-  Azu.configure do |config|
-    config.debug = true
-    config.log_level = :debug
-    config.host = "localhost"
-    config.port = 4000
-  end
-end
-```
-
-**`src/server.cr`** - HTTP server configuration:
-
-```crystal
-require "azu"
-
-# Load all application components
-require "./endpoints/**"
-require "./models/**"
-require "./services/**"
-require "./middleware/**"
-require "./initializers/**"
-
-# Start the server
-Azu::Server.start
-```
-
-### Configuration Files
-
-**`shard.yml`** - Crystal dependencies:
-
+{% code title="shard.yml (excerpt)" %}
 ```yaml
-name: my_app
-version: 0.1.0
+crystal: '>= 1.22.1'
 
 targets:
-  my_app:
+  blog:
     main: src/server.cr
 
 dependencies:
@@ -324,235 +226,59 @@ dependencies:
     version: ~> 0.10.1
   cql:
     github: azutoolkit/cql
-    version: 0.0.604
+    version: 0.0.604          # exact on purpose
   session:
     github: azutoolkit/session
     version: ~> 1.1
-  # ... joobq, redis, topia
-  sqlite3: # pg ~> 0.31.0 with --db postgresql, mysql ~> 0.18.0 with --db mysql
+  # with JoobQ: joobq ~> 0.4.2 and redis
+  topia:
+    github: azutoolkit/topia
+  sqlite3:                    # pg ~> 0.31.0 or mysql ~> 0.18.0 for the other databases
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.24.0
 ```
+{% endcode %}
 
-**`.env`, `.env.development`, `.env.test`, `.env.example`** - Environment files. The app (and every `azu` command
-except `new`) loads them at boot; precedence, highest first: variables already in the environment (never
-overridden), `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`.
+</details>
 
-- `.env` is git-ignored: random `CSRF_SECRET` (and `SESSION_SECRET` after `azu generate auth`), `PORT`, `HOST`, log settings
-- `.env.development` / `.env.test` are committed: the `DATABASE_URL` of that environment, and in development
-  `PERFORMANCE_MONITORING=true`, which records the requests the development dashboard (`/dev-dashboard`) shows
-- `.env.example` is committed: every variable the app reads, with the secrets left blank
-- `.env.local` (git-ignored) is yours for machine-specific overrides
+<details>
 
-**`README.md`** - Project documentation:
+<summary>Environment files</summary>
 
-````markdown
-# My App
+- `.env` is git-ignored and mode 0600. It has a random `CSRF_SECRET`, `PORT=4000`, the log settings and the template path. `azu generate auth` and `azu session:setup` add a `SESSION_SECRET` to it later.
+- `.env.development` and `.env.test` are committed and hold no secrets: `DATABASE_URL` for that environment, and `PERFORMANCE_MONITORING=true` in development, which feeds the `/dev-dashboard` request list.
+- `.env.example` is committed and lists every variable the app reads, with the secrets blank.
+- `.env.local` (git-ignored) is yours for machine-specific values.
 
-A Crystal web application built with Azu.
+Precedence, highest first: variables already in the environment, `.env.local`, `.env.<CRYSTAL_ENV>`, `.env`. The app and every `azu` command except `new`, `init`, `help`, `version` and `completion` load them.
 
-## Installation
+</details>
 
-1. Install dependencies:
-   ```bash
-   shards install
-   ```
-````
+<details>
 
-2. Setup database:
+<summary>Docker and CI</summary>
 
-   ```bash
-   azu db:setup
-   ```
+`--docker` writes a multi-stage `Dockerfile`:
 
-3. Start development server:
-   ```bash
-   azu serve
-   ```
+- the build stage is `crystallang/crystal:1.22.1`, installs the packages the CI job installs, runs `shards install` and `crystal build --release --no-debug` on the main file;
+- the runtime stage is `ubuntu:26.04` with only the shared libraries the binary needs, runs as a non-root user (`app`, uid 10001), sets `CRYSTAL_ENV=production`, `HOST=0.0.0.0` and `PORT=4000`, and has a `HEALTHCHECK` on `/health`;
+- on SQLite it adds a `/data` volume and `DATABASE_URL=sqlite3:///data/<name>.db`. The image does not run migrations.
 
-## Development
-
-- `azu serve` - Start development server
-- `azu generate scaffold Post title:string` - Generate resources
-- `crystal spec` - Run tests
-
-````
-
-### Database Configuration
-
-**`src/initializers/cql_config.cr`** - Azu + CQL setup:
-
-```crystal
-require "sqlite3" # "pg" with --db postgresql, "mysql" with --db mysql
-require "azu/cql"
-
-Azu::CQL.configure do |c|
-  c.db = ENV["DATABASE_URL"]? || "sqlite3://./db/my_app_#{ENV["CRYSTAL_ENV"]? || "development"}.db"
-  c.pool.size = 10
-end
-
-# The schema (src/db/schema.cr) loads after the initializers, so it is attached lazily
-Azu::CQL.attach { MyAppDB }
-```
-
-```crystal
-# src/db/schema.cr: URL, adapter and pool come from CQL.config
-MyAppDB = Azu::CQL.schema :my_app_db do
-  table :users do
-    primary :id, Int64
-    column :name, String
-  end
-end
-```
-
-Azu's dev dashboard (`/dev-dashboard`) then shows a **Database** tab with every query. See the
-[azu database dashboard guide](https://github.com/azutoolkit/azu/blob/master/docs/reference/database-dashboard.md).
-Tables used by models must be declared in `src/db/schema.cr`; migrations are run with
-`auto_sync: false`, so they never rewrite that file.
-`
-
-## Examples
-
-### Complete Blog Application
+Secrets are not baked into the image. A web container refuses to boot in production without `CSRF_SECRET`:
 
 ```bash
-# Create blog with PostgreSQL
-azu new my_blog --db postgresql --type web
-
-cd my_blog
-
-# Setup database
-azu db:create
-azu db:migrate
-
-# Generate blog resources
-azu generate scaffold Post title:string content:text published:boolean
-azu generate scaffold User name:string email:string
-
-# Start development
-azu serve
+docker build -t blog .
+docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) blog
 ```
 
-### API Service
+`--ci "GitHub Actions"` (the default) writes `.github/workflows/ci.yml`. It runs in a `crystallang/crystal:1.22.1` container, installs the system packages and the shards, checks formatting with `crystal tool format --check src spec`, runs the specs (`crystal spec`, or `crystal run spec/test_helper.cr` for minitest) and builds the main file. `--no-ci` and `--ci None` skip it. GitLab CI is not supported.
 
-```bash
-# Create API service
-azu new user_api --type api --db postgresql
+</details>
 
-cd user_api
+<details>
 
-# Setup
-azu db:create
-azu db:migrate
+<summary>JoobQ</summary>
 
-# Generate API endpoints
-azu generate model User name:string email:string
-azu generate endpoint api/v1/users --api
+With JoobQ on (the default for web and api), the project has `config/jobs.yml`, `src/initializers/joobq.cr` and `src/worker.cr`. Start a worker with `azu jobs:worker`, and create jobs with `azu generate job <name> [param:type]`. `--no-joobq` removes those files and the `joobq` and `redis` dependencies.
 
-# Start API server
-azu serve --port 8080
-```
-
-### CLI Tool
-
-```bash
-# Create CLI tool
-azu new file_processor --type cli
-
-cd file_processor
-
-# Build and run
-shards build
-./bin/file_processor --help
-```
-
-## Post-Creation Steps
-
-After creating a new project:
-
-1. **Navigate to project directory:**
-
-   ```bash
-   cd my_app
-   ```
-
-2. **Install dependencies:**
-
-   ```bash
-   shards install
-   ```
-
-3. **Setup database (SQLite needs no server; with `--db postgresql` or `mysql`, start the server first):**
-
-   ```bash
-   azu db:setup
-   ```
-
-4. **Start development:**
-
-   ```bash
-   azu serve
-   ```
-
-5. **Generate your first resource:**
-   ```bash
-   azu generate scaffold Post title:string content:text
-   ```
-
-## Troubleshooting
-
-### Permission Denied
-
-Check the permissions of the directory you run `azu new` in, or run it from another directory.
-
-### Database Connection Error
-
-With `--db postgresql` or `--db mysql`, ensure the database server is running and the user can create databases, or
-use the default SQLite.
-
-## Best Practices
-
-### 1. Choose the Right Project Type
-
-- **Web**: Full-stack applications with UI
-- **API**: Backend services and microservices
-- **CLI**: Command-line tools and utilities
-
-### 2. Select Appropriate Database
-
-- **PostgreSQL**: Production applications, complex data
-- **MySQL**: Web applications, shared hosting
-- **SQLite**: Development, prototypes, simple apps
-
-### 3. Use Descriptive Names
-
-```bash
-# Good names
-azu new blog_platform
-azu new user_management_api
-azu new data_processor_cli
-
-# Avoid generic names
-azu new app
-azu new project
-azu new test
-```
-
-### 4. Plan Your Structure
-
-Before creating the project, consider:
-
-- **Project type** (web, API, CLI)
-- **Database requirements**
-- **Deployment environment**
-- **Team size and workflow**
-
----
-
-The `azu new` command is your starting point for all Azu applications. Choose the right options for your project type and requirements to get the best foundation for your development.
-
-**Next Steps:**
-
-- [Project Structure](../getting-started/project-structure.md) - Understand the generated structure
-- [Quick Start](../getting-started/quickstart.md) - Build your first feature
-- [Database Commands](database.md) - Manage your database
+</details>

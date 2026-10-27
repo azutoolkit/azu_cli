@@ -107,7 +107,7 @@ Never put a two-column glyph (emoji, CJK) inside a frame. `Frame#text` replaces 
 
 <summary>Design reference</summary>
 
-Color tokens, glyph rules, the renderer and the screen mockups: [Terminal UI (design)](../architecture/terminal-ui.md).
+Color tokens, glyph rules, the renderer and the screen mockups: [Terminal UI (design)](terminal-ui-design.md).
 Some mockups there are proposals; that page lists which parts are built.
 
 </details>

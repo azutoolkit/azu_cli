@@ -1,515 +1,99 @@
-# OpenAPI Commands
+---
+description: Generate Crystal code from an OpenAPI 3.1 document with openapi:generate, and export the OpenAPI document of your app with openapi:export.
+---
 
-Azu CLI provides comprehensive OpenAPI 3.1 support for both generating code from OpenAPI specifications and exporting OpenAPI specifications from your Crystal code.
+# OpenAPI commands
 
-## Overview
+`azu openapi:generate` writes models, endpoints, requests and pages from an OpenAPI document. `azu openapi:export` goes the other way: it builds the document from the endpoints your app really declares.
 
-The OpenAPI commands enable bidirectional integration between OpenAPI specifications and Azu applications:
+## Overview & visual demo
 
-- **Generate code** from OpenAPI specifications
-- **Export specifications** from existing Azu code
-- **Support OpenAPI 3.1** standard
-- **Type-safe integration** with Crystal
+Use `generate` to start an API from a spec, and `export` to check that the code still matches it. Export compiles and loads your app, so it takes as long as a build.
 
-## Available Commands
+<figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate preview listing new files and a diff of the schema file"><figcaption><p>Not an OpenAPI command's output. This is the preview <code>azu g</code> shows before it writes. <code>openapi:generate</code> writes its files without a preview.</p></figcaption></figure>
 
-| Command | Description |
-|---------|-------------|
-| `azu openapi:generate` | Generate Crystal code from OpenAPI specification |
-| `azu openapi:export` | Export OpenAPI specification from Crystal code |
+```mermaid
+flowchart LR
+  A["openapi.yaml"] -->|"openapi:generate"| B["src/models, endpoints, requests, pages"]
+  B --> C["you edit the code"]
+  C -->|"openapi:export"| D["openapi.yaml or openapi.json"]
+  D -.->|"diff against the committed spec"| A
+```
 
-## azu openapi:generate
+## Quickstart & command syntax
 
-Generates Crystal code from an OpenAPI 3.1 specification file, creating models, endpoints, requests, and responses.
-
-### Basic Usage
+### azu openapi:generate
 
 ```bash
-# Generate all code from OpenAPI spec
 azu openapi:generate openapi.yaml
-
-# Generate only models
 azu openapi:generate openapi.yaml --models-only
-
-# Generate only endpoints
-azu openapi:generate openapi.yaml --endpoints-only
-
-# Force overwrite existing files
 azu openapi:generate openapi.yaml --force
 ```
 
-### Options
+| Option               | Meaning                                                   | Default |
+| -------------------- | --------------------------------------------------------- | ------- |
+| `<spec_path>`        | The OpenAPI file, YAML or JSON. Put it first             | required |
+| `--spec PATH`        | The same, as an option                                    | none    |
+| `--force`            | Overwrite files that already exist                        | off     |
+| `--models-only`      | Only the models from the component schemas                | off     |
+| `--endpoints-only`   | Only the endpoints, requests and pages from the paths     | off     |
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--spec PATH` | Path to OpenAPI specification file | Required |
-| `--force` | Overwrite existing files without prompting | false |
-| `--models-only` | Generate only models from schemas | false |
-| `--endpoints-only` | Generate only endpoints from paths | false |
+It writes `src/models/` (from schemas), and `src/endpoints/<resource>/`, `src/requests/<resource>/` and `src/pages/<resource>/` (from paths and bodies). The resource is the first path segment that is not `api`, a version like `v1`, or a parameter. An existing file is skipped with a warning unless you pass `--force`. Exit `0` on success, `1` when the spec is missing or generation fails.
 
-### Examples
-
-#### Generate Complete API
-
-```bash
-# Generate all components from OpenAPI spec
-azu openapi:generate api-spec.yaml
-
-# Output:
-# Parsing OpenAPI specification: api-spec.yaml
-# Generated models: 5
-# Generated endpoints: 12
-# Generated requests: 8
-# Generated responses: 12
-# ✓ Code generation completed successfully
-```
-
-#### Generate Specific Components
+### azu openapi:export
 
 ```bash
-# Generate only models
-azu openapi:generate api-spec.yaml --models-only
-# Generated models: 5
-# ✓ Code generation completed successfully
-
-# Generate only endpoints
-azu openapi:generate api-spec.yaml --endpoints-only
-# Generated endpoints: 12
-# ✓ Code generation completed successfully
-```
-
-#### Force Overwrite
-
-```bash
-# Overwrite existing files
-azu openapi:generate api-spec.yaml --force
-# Overwriting existing files...
-# ✓ Code generation completed successfully
-```
-
-### Generated Code Structure
-
-The generator creates the following files based on your OpenAPI specification:
-
-```
-src/
-├── models/                    # Generated from schemas
-│   ├── user.cr
-│   ├── post.cr
-│   └── comment.cr
-├── endpoints/                 # Generated from paths
-│   ├── users/
-│   │   ├── index_endpoint.cr
-│   │   ├── show_endpoint.cr
-│   │   ├── create_endpoint.cr
-│   │   ├── update_endpoint.cr
-│   │   └── destroy_endpoint.cr
-│   └── posts/
-│       ├── index_endpoint.cr
-│       └── show_endpoint.cr
-├── requests/                  # Generated from request bodies
-│   ├── users/
-│   │   ├── create_request.cr
-│   │   └── update_request.cr
-│   └── posts/
-│       ├── create_request.cr
-│       └── update_request.cr
-└── pages/                     # Generated from responses
-    ├── users/
-    │   ├── index_page.cr
-    │   ├── show_page.cr
-    │   └── create_page.cr
-    └── posts/
-        ├── index_page.cr
-        └── show_page.cr
-```
-
-### Generated Model Example
-
-```crystal
-# src/models/user.cr
-require "cql"
-
-class User < CQL::Model
-  table :users
-
-  column :id, Int64
-  column :name, String
-  column :email, String
-  column :created_at, Time
-  column :updated_at, Time
-
-  validates :name, presence: true
-  validates :email, presence: true, format: /^[^@]+@[^@]+\.[^@]+$/
-end
-```
-
-### Generated Endpoint Example
-
-```crystal
-# src/endpoints/users/index_endpoint.cr
-class Users::IndexEndpoint < Azu::Endpoint
-  def call
-    users = User.all
-    render_page(Users::IndexPage, users: users)
-  end
-end
-```
-
-### Generated Request Example
-
-```crystal
-# src/requests/users/create_request.cr
-class Users::CreateRequest < Azu::Request
-  field :name, String, required: true
-  field :email, String, required: true, format: /^[^@]+@[^@]+\.[^@]+$/
-end
-```
-
-### Generated Response Example
-
-```crystal
-# src/pages/users/show_page.cr
-class Users::ShowPage < Azu::Page
-  def initialize(@user : User)
-  end
-
-  def render
-    template("users/show_page.jinja", {
-      "user" => @user.to_h
-    })
-  end
-end
-```
-
-### Supported OpenAPI Features
-
-#### Schemas (Component Models)
-
-- **Basic types**: string, integer, number, boolean
-- **Complex types**: object, array
-- **Validation**: required fields, format patterns, length constraints
-- **Nested objects**: automatically handled
-- **Enums**: converted to Crystal enums
-
-#### Paths (Endpoints)
-
-- **HTTP methods**: GET, POST, PUT, PATCH, DELETE
-- **Path parameters**: automatically extracted
-- **Query parameters**: converted to request validation
-- **Request bodies**: generated as request classes
-- **Responses**: generated as page classes
-
-#### Request/Response Bodies
-
-- **JSON schemas**: converted to Crystal structs
-- **Validation rules**: mapped to Azu validation
-- **Nested objects**: properly handled
-- **Arrays**: converted to Crystal arrays
-
-### OpenAPI Specification Example
-
-```yaml
-# openapi.yaml
-openapi: 3.1.0
-info:
-  title: Blog API
-  version: 1.0.0
-  description: A simple blog API
-
-paths:
-  /users:
-    get:
-      summary: List users
-      responses:
-        '200':
-          description: List of users
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-    post:
-      summary: Create user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateUserRequest'
-      responses:
-        '201':
-          description: User created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-
-components:
-  schemas:
-    User:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-        created_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - name
-        - email
-        - created_at
-
-    CreateUserRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-      required:
-        - name
-        - email
-```
-
-## azu openapi:export
-
-Writes the OpenAPI 3.1 document of your app, built by Azu itself (`Azu::OpenAPI`) from your
-`Azu::Endpoint(Request, Response)` contracts. It sees every route the app really has, including the ones declared in
-`routes`, `scope` and mounted apps, with typed `{id}` path parameters, query parameters or request bodies, the
-`validate` rules as JSON Schema keywords (`minLength`, `pattern`, `minimum`, ...), response schemas, and shared
-components referenced with `$ref`.
-
-```bash
-azu openapi:export                                         # openapi.yaml
-azu openapi:export --output docs/openapi.json              # JSON, picked from the extension
-azu openapi:export --project "Blog API" --version 2.0.0    # info.title and info.version
-```
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--output PATH` | Output file | `openapi.yaml` |
-| `--format FORMAT` | `yaml` or `json` | from the extension of `--output`, else `yaml` |
-| `--project NAME` | `info.title` | the `name` in `shard.yml` |
-| `--version VERSION` | `info.version` | `1.0.0` |
-
-How it works: like `azu routes`, the command compiles a small script that requires `src/<project>.cr` (without
-starting the server) and prints `Azu::OpenAPI.document(Azu::App.default, info)`. So the first run takes as long as a
-build, and the top-level code of your app file runs (initializers, `.env` loading): do not point it at a production
-database. It needs azu 0.5.72 or newer. Exit codes: 0 written, 1 the app could not be compiled or loaded (the
-compiler's last lines are shown), 2 invalid usage.
-
-What the document contains, and what Azu cannot infer (summaries, security schemes, a success status other than
-200), is described in [Azu's OpenAPI reference](https://github.com/azutoolkit/azu/blob/master/docs/reference/api/openapi.md).
-To serve the document from the running app instead, add `Azu::OpenAPI::Handler`.
-
-## Workflow Integration
-
-### API-First Development
-
-1. **Design API** using OpenAPI specification
-2. **Generate code** from specification
-3. **Implement business logic** in generated files
-4. **Export updated spec** as you develop
-
-```bash
-# Start with OpenAPI spec
-azu openapi:generate api-design.yaml
-
-# Develop your application
-# ... implement business logic ...
-
-# Export updated specification
-azu openapi:export --output updated-api.yaml
-```
-
-### Code-First Development
-
-1. **Develop application** with Azu endpoints and models
-2. **Export specification** from existing code
-3. **Share specification** with frontend/API consumers
-4. **Generate client code** from specification
-
-```bash
-# Develop your application
-# ... create endpoints and models ...
-
-# Export OpenAPI specification
 azu openapi:export
-
-# Share with frontend team
-# They can generate client code from openapi.yaml
+azu openapi:export --output docs/openapi.json
+azu openapi:export --project "Blog API" --version 2.0.0
 ```
 
-### Continuous Integration
+| Option              | Meaning                                                        | Default                                |
+| ------------------- | -------------------------------------------------------------- | -------------------------------------- |
+| `--output PATH`     | Where to write the document                                    | `openapi.yaml`                         |
+| `--format FORMAT`   | `yaml` or `json`                                               | from the extension of `--output`, else `yaml` |
+| `--project NAME`    | `info.title`                                                   | the `name` in `shard.yml`              |
+| `--version VERSION` | `info.version`                                                 | `1.0.0`                                |
+| `--help`, `-h`      | Print the usage and exit `0`                                   | off                                    |
 
-```bash
-# In CI pipeline
-# Generate code from spec
-azu openapi:generate api-spec.yaml
+It reads `./src/<project>.cr` and fails with exit `1` if that file is not there, so run it from the project root. The document covers every `Azu::Endpoint`, including scopes and mounted apps, with the path parameters, query parameters, request bodies and response schemas. Exit `0` when the file is written, `1` when the app does not compile or load, `2` for invalid usage.
 
-# Run tests
-crystal spec
+## Realistic output
 
-# Export updated spec
-azu openapi:export --output generated-api.yaml
-
-# Compare with original spec
-diff api-spec.yaml generated-api.yaml
+{% code title="terminal: azu openapi:export" %}
+```text
+OpenAPI document written to openapi.yaml
 ```
+{% endcode %}
 
-## Best Practices
+*The only line the export prints on success. Compiler errors appear before it, and nothing is written when the app fails to build.*
 
-### 1. Specification Management
-
-```bash
-# Keep specifications in version control
-git add openapi.yaml
-git commit -m "Update API specification"
-
-# Use meaningful file names
-azu openapi:export --output "api-v1.2.0.yaml"
+{% code title="terminal: azu openapi:generate openapi.yaml (an existing file)" %}
+```text
+WARNING: Model file already exists: <path> (use --force to overwrite)
 ```
+{% endcode %}
 
-### 2. Code Generation
+*The generator skips the file and carries on. `<path>` is the file it did not write. The other progress lines are log lines with a timestamp in plain mode.*
 
-```bash
-# Always review generated code
-azu openapi:generate api-spec.yaml
+## Do's and don'ts
 
-# Customize generated files as needed
-# ... edit generated files ...
+{% hint style="info" %}
+**Pro tip:** keep the spec in version control and run `azu openapi:export` in CI. Diff the result against the committed file to catch an endpoint that drifted from the spec.
+{% endhint %}
 
-# Regenerate when spec changes
-azu openapi:generate api-spec.yaml --force
-```
+{% hint style="success" %}
+Put the spec path first: `azu openapi:generate openapi.yaml --force`. The command takes the first argument as the path, so `--force openapi.yaml` looks for a file called `--force`.
+{% endhint %}
 
-### 3. Validation
+{% hint style="warning" %}
+`openapi:generate` skips existing files, and `--force` overwrites them, including any edits you made. Commit before you regenerate.
+{% endhint %}
 
-```bash
-# Validate OpenAPI specification
-# Use online validators or tools like swagger-codegen
+{% hint style="warning" %}
+`openapi:export` loads your app, so its top-level code runs (initializers, `.env` loading, database connections). Don't point it at a production database. It needs azu 0.5.72 or newer.
+{% endhint %}
 
-# Test generated code
-crystal spec
-```
-
-### 4. Documentation
-
-```bash
-# Export specification for documentation
-azu openapi:export --output docs/api.yaml
-
-# Generate API documentation
-# Use tools like Swagger UI or Redoc
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### Invalid OpenAPI Specification
-
-```bash
-# Check specification syntax
-cat openapi.yaml | head -20
-
-# Validate with online tools
-# https://editor.swagger.io/
-```
-
-#### Generation Failures
-
-```bash
-# Check for missing dependencies
-crystal deps
-
-# Verify file permissions
-ls -la openapi.yaml
-
-# Use verbose output for debugging
-azu openapi:generate openapi.yaml --verbose
-```
-
-#### Export Issues
-
-`azu openapi:export` compiles your app, so a compile error stops it (its last lines are shown). Check that the app
-builds and that azu is 0.5.72 or newer:
-
-```bash
-crystal build src/<project>.cr --no-codegen
-shards list | grep azu
-```
-
-### File Permission Issues
-
-```bash
-# Fix file permissions
-chmod 644 openapi.yaml
-chmod 755 src/
-
-# Check directory permissions
-ls -la
-```
-
-### Memory Issues
-
-```bash
-# For large specifications
-# Process in smaller chunks
-azu openapi:generate openapi.yaml --models-only
-azu openapi:generate openapi.yaml --endpoints-only
-```
-
-## Integration Examples
-
-### Frontend Integration
-
-```bash
-# Export API specification
-azu openapi:export --output frontend/api-spec.json --format json
-
-# Frontend team can generate TypeScript client
-# npx @openapitools/openapi-generator-cli generate -i api-spec.json -g typescript-axios -o src/api
-```
-
-### API Documentation
-
-```bash
-# Export for documentation
-azu openapi:export --output docs/api.yaml
-
-# Generate Swagger UI
-# Use tools like swagger-ui-dist or redoc-cli
-```
-
-### Testing Integration
-
-```bash
-# Generate test data from spec
-azu openapi:generate test-spec.yaml --models-only
-
-# Use in test files
-# require "./models/**"
-# user = User.new(name: "Test", email: "test@example.com")
-```
-
----
-
-The OpenAPI commands provide powerful integration between OpenAPI specifications and Azu applications, enabling both API-first and code-first development workflows.
-
-**Next Steps:**
-
-- [Generate Command](generate.md) - Learn about code generation
-- [Model Generator](../generators/model.md) - Create database models
-- [Endpoint Generator](../generators/endpoint.md) - Create HTTP endpoints
-- [API Development Workflows](../examples/README.md) - Learn API development patterns
+{% hint style="danger" %}
+Don't read a missing file after a failed export as a bug in the spec. A compile error stops the export and writes nothing; the compiler's last lines show where the app breaks.
+{% endhint %}

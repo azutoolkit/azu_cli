@@ -1,56 +1,107 @@
+---
+description: Check Crystal, shards, dependencies, the database, the environment, secrets and the port before you run the app. Read-only.
+---
+
 # azu doctor
 
-Diagnoses the environment the project runs in. Nothing is changed and no value of a variable and no password of a URL is printed. A `DATABASE_URL` is cut at its last `@` before the first `?` or `#`; when an `@` follows a `?` or `#` the host cannot be told from a piece of the password, so the check only warns (no host printed). The same goes for a URL without `@` whose `:` is not followed by a valid port (`postgres://user:secret`, `postgres://user:12345678`), which could be a user and password that lost their `@`; a port after the `@` that is not 1-65535 fails without being printed. Only `postgres://user:1234` (digits that are a valid port) reads as host `user`, which is what a URL parser would also do and asks you to percent-encode `@ ? # /` in the user and password. Write `crystal:` in shard.yml as a quoted string (`'>= 1.10'`): an unquoted `1.10` is read by YAML as the number 1.1.
+`azu doctor` runs nine checks on the project and the machine it runs on and reports each one as ok, a warning or a failure. It changes nothing, and it never prints a variable's value or the password in a URL.
+
+## Overview & visual demo
+
+Run it first when a project will not boot, or before you deploy. Warnings are advice and exit `0`; a failure exits `1`, which makes it usable as a CI gate.
+
+<figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor card with nine green checks and the summary 9 ok, 0 warn, 0 fail"><figcaption><p><code>azu doctor</code> on a color terminal: one mark per check, the hint under any warning, and the counts in the corner.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu doctor"] --> B["nine read-only checks"]
+  B --> C{"any check failed?"}
+  C -->|no| D["exit 0, warnings allowed"]
+  C -->|yes| E["exit 1"]
+```
+
+## Quickstart & command syntax
 
 ```bash
-azu doctor [--json] [--ui rich|plain]
+azu doctor
+azu doctor --json
+azu doctor --json | jq '.checks[] | select(.status != "ok")'
+azu doctor --ui plain
 ```
 
-| Check          | What it verifies                                                                                                                          |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `crystal`      | Crystal is installed and not older than the first version in the `crystal:` line of `shard.yml` (fail otherwise)                          |
-| `shards`       | `shards` is installed                                                                                                                     |
-| `dependencies` | `shards check` passes (installed shards match `shard.yml` and `shard.lock`: fail otherwise); a missing `shard.lock` is a warning           |
-| `database`     | `DATABASE_URL` (or `AZU_DATABASE_URL`): a SQLite file is writable (a file that does not exist yet is a warning, a missing directory a failure); a PostgreSQL or MySQL host accepts a TCP connection within 3 s (credentials are not tried; IPv6 literals work; the output shows scheme, host, port and the database name only; a unix-socket URL such as `postgres:///db?host=/var/run/postgresql` is a warning, not tested). Unset: a warning in a project that uses CQL |
-| `env`          | Every variable `.env.example` declares without a value is set (`SESSION_SECRET` only when the project has `src/initializers/session.cr`). Names only |
-| `secrets`      | `CSRF_SECRET` and `SESSION_SECRET`, when set, are at least 32 characters and not a placeholder (`changeme`, `secret`, ...); no `secret = "literal"` in `src/` |
-| `port`         | `PORT` (default 4000) is a valid port and free. In use is a warning, since the app may be running; so is a port below 1024 the user may not bind (reported as such, not as in use). The check binds `0.0.0.0` and releases it at once; on macOS a port held only on `127.0.0.1` or `::1` can show as free. The URL in the output never shows the user or password, nor anything before the last `@`; `--json` counts are `ok`/`warn`/`fail`, the text summary says warnings/failures                                          |
-| `docker`       | docker is installed. Only a warning when the project has a `Dockerfile`                                                                    |
-| `gitignore`    | `.env`, if present, is git-ignored and not tracked (`git check-ignore`, falling back to `.gitignore`)                                      |
+| Option       | Meaning                                                                 | Default                                  |
+| ------------ | ----------------------------------------------------------------------- | ---------------------------------------- |
+| `--json`     | Print `{"checks": [...], "summary": {...}}` instead of the text         | off                                      |
+| `--ui MODE`  | `rich` (a card) or `plain` (text)                                       | `rich` on a color terminal outside CI    |
+| `--help`     | Print the checks and the exit codes                                     | off                                      |
 
-The variables come from the environment `azu` runs in, which includes the project's `.env` files. With
-`CRYSTAL_ENV=production` the `env` and `secrets` problems are failures instead of warnings.
+An unknown option is refused with exit code `2`.
 
-## Output
+The checks, in the order they run:
 
-On a color terminal (not CI) the checks are a card: a mark per check (`✔` ok, `▲` warning, `✖` failure), the hints
-under them and the counts in the corner; the border is amber with a warning and red with a failure. `--ui plain`, a
-pipe, `NO_COLOR` and CI print the text below.
+| Check          | What it verifies                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `crystal`      | Crystal is installed and not older than the lower bound of `crystal:` in `shard.yml`. Older is a failure.         |
+| `shards`       | `shards --version` runs.                                                                                          |
+| `dependencies` | `shards check` passes. A mismatch with `shard.yml` or `shard.lock` fails; a missing `shard.lock` warns.           |
+| `database`     | `DATABASE_URL` (or `AZU_DATABASE_URL`). A SQLite file must be writable. A PostgreSQL or MySQL host must accept a TCP connection within 3 s. Credentials are never tried. Unset warns when the project uses CQL. |
+| `env`          | Every variable `.env.example` leaves blank is set. Names only. `SESSION_SECRET` counts only when `src/initializers/session.cr` exists. |
+| `secrets`      | `CSRF_SECRET` and `SESSION_SECRET`, when set, are at least 32 characters and not a placeholder. No `secret = "..."` literal in `src/`. |
+| `port`         | `PORT` (default `4000`) is a valid port and free. In use, or below 1024 and not bindable, warns.                 |
+| `docker`       | Docker is installed. Only a warning when the project has a `Dockerfile`.                                          |
+| `gitignore`    | `.env`, if present, is git-ignored. A tracked `.env` fails.                                                       |
 
+With `CRYSTAL_ENV=production`, the `env` and `secrets` problems become failures instead of warnings.
+
+## Realistic output
+
+{% code title="terminal: azu doctor --ui plain" %}
 ```text
-╭─ Doctor · blog ───────────────────────────────────────────── 8 ok · 1 warn · 0 fail ─╮
-│                                                                                     │
-│ ✔ crystal       Crystal 1.22.1 (the project needs 1.22.1 or newer)                  │
-│ ▲ database      SQLite file ./db/blog_development.db does not exist yet             │
-│                 ▸ run 'azu db:setup'                                                │
-│ ...                                                                                 │
-╰─────────────────────────────────────────────────────────────────────────────────────╯
-```
+ok    crystal       Crystal 1.22.1 (the project needs 1.22.1 or newer)
+ok    shards        Shards 0.20.0 [b2b98ca] (2025-12-19)
+ok    dependencies  installed and in sync with shard.lock
+ok    database      SQLite file ./db/demo_app_development.db is writable
+ok    env           every variable .env.example leaves blank is set
+ok    secrets       no weak or hard-coded secrets found
+ok    port          port 4000 is free
+ok    docker        docker is installed
+ok    gitignore     .env is git-ignored
 
+9 ok, 0 warnings, 0 failures
+```
+{% endcode %}
+
+*The plain text of the card above. Pipes, CI and `NO_COLOR` get this form.*
+
+{% code title="terminal: azu doctor --ui plain (with a warning)" %}
 ```text
-ok    crystal        Crystal 1.22.1 (the project needs 1.22.1 or newer)
-ok    shards         Shards 0.19.1
-ok    dependencies   installed and in sync with shard.lock
-warn  database       SQLite file ./db/blog_development.db does not exist yet
-                     hint: run 'azu db:setup'
-...
-
-8 ok, 1 warnings, 0 failures
+warn  database      SQLite file ./db/blog_development.db does not exist yet
+                    hint: run 'azu db:setup'
 ```
+{% endcode %}
 
-`--json` prints `{"checks": [{"id", "status", "message", "hint"}], "summary": {"ok", "warn", "fail"}}`; `status` is
-`ok`, `warn` or `fail`, `hint` is `null` for `ok`.
+*A warning prints its hint on the next line. The exit code stays `0`. The column width depends on the longest check name in the run.*
 
-## Exit codes
+The text summary says warnings and failures; `--json` gives the counts as `ok`, `warn` and `fail`. Each check has `id`, `status` (`ok`, `warn` or `fail`), `message` and `hint` (`null` for `ok`).
 
-`0` no check failed (warnings are allowed), `1` at least one check failed, `2` invalid usage.
+## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** `azu doctor --json | jq '.checks[] | select(.status != "ok")'` lists only the checks that need attention.
+{% endhint %}
+
+{% hint style="success" %}
+Run it in CI before the test step. Exit `1` fails the job, and warnings do not.
+{% endhint %}
+
+{% hint style="warning" %}
+Write `crystal:` in `shard.yml` as a quoted string (`'>= 1.22.1'`). An unquoted `1.10` is read by YAML as the number `1.1`, and the check then compares against `1.1`.
+{% endhint %}
+
+{% hint style="warning" %}
+If `DATABASE_URL` has an `@` after a `?` or `#`, or a `:` that is not followed by a port, the database check warns and does not connect. Percent-encode `@ ? # / :` in the user and password (`%40`, `%3F`, `%23`, `%2F`, `%3A`).
+{% endhint %}
+
+{% hint style="danger" %}
+Don't read a clean run as proof the app works. Doctor checks the environment, not your code. Run `azu test` and boot the app as well.
+{% endhint %}

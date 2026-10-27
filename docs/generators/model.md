@@ -197,5 +197,5 @@ Put validations in the request contracts (`azu g request`), not in the model. Th
 {% endhint %}
 
 {% hint style="danger" %}
-Don't name an attribute after a Crystal keyword or a model method such as `errors`. The generator refuses those names, and getting around that refusal by hand breaks the model.
+Don't name an attribute after a Crystal keyword or a method the model already has, such as `errors`. The generator refuses those names because the getter would hide the method or not compile at all.
 {% endhint %}

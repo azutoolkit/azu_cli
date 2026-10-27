@@ -1,72 +1,96 @@
+---
+description: Print the command overview, or the detailed help for one command or topic, from azu help.
+---
+
 # azu help
 
-Shows the commands the CLI registers, or the options of one command.
+`azu help` prints the list of commands. `azu help <topic>` prints the usage, options and examples for one command or group, and says so when a topic has no detailed help.
 
-## Usage
+## Overview & visual demo
+
+Use it to find a command you half remember, or the flags of one you do not. The output is plain text from the CLI itself, so it matches the build you have installed.
+
+<figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing the generators"><figcaption><p>Not <code>azu help</code>'s output. This is the generator menu <code>azu g</code> shows with no arguments. <code>azu help</code> prints plain text.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu help [topic]"] --> B{"topic given?"}
+  B -->|no| C["overview of every command"]
+  B -->|yes| D{"detailed help for topic?"}
+  D -->|yes| E["usage, options, examples"]
+  D -->|no| F["No detailed help for topic"]
+```
+
+## Quickstart & command syntax
 
 ```bash
-azu help [new|generate|db|serve|test|jobs|session]
+azu help
+azu help test
+azu help db
+azu help generate
 ```
 
-`azu` with no arguments prints the same overview. `azu --help` and `azu --version` are not understood: use
-`azu help` and `azu version`. For topics without detailed help (`azu help plugin`, ...) the command says so.
+| Argument    | Meaning                                                                                                      | Default  |
+| ----------- | ------------------------------------------------------------------------------------------------------------ | -------- |
+| `[command]` | A detailed-help topic: `new`, `generate` (or `g`), `db`, `dev`, `routes`, `console`, `doctor`, `serve` (or `s`), `test` (or `t`), `jobs`, `session` | the overview |
 
-## Output of `azu help`
+`azu` with no arguments prints the overview too. Any other topic prints `No detailed help for: <topic>` and points you back to `azu help`. That covers, for example, `openapi`, `config`, `completion` and `version`. For those, use the command's own `--help`, such as `azu config:show --help` or `azu openapi:export --help`.
 
+## Realistic output
+
+{% code title="terminal: azu help test" %}
+```text
+Usage: azu test [files] [options]
+
+Run application tests with Crystal spec.
+
+Options:
+  --watch, -w              Run tests in watch mode
+  --coverage, -c           Enable coverage reporting
+  --verbose, -v            Enable verbose output
+  --parallel, -p           Run tests in parallel
+  --filter, -f <pattern>   Run examples matching pattern
+
+Examples:
+  azu test
+  azu test spec/models/
+  azu test --watch
+  azu test --filter User
 ```
+{% endcode %}
+
+*The detailed help for `test`, printed as written in the command. Its `--coverage` line describes a flag that only prints a warning; see [azu test](test.md).*
+
+{% code title="terminal: azu help (the start of the overview)" %}
+```text
 Azu CLI - Crystal web framework command line tool
-Version: 0.0.1
+Version: 0.1.46
 
 Usage: azu <command> [options] [arguments]
 
 Project Commands:
   new <project-name>     Create a new Azu project
   init                   Initialize Azu in existing project
-  generate <type> <name> Generate code (alias: g)
-
-Database Commands:
-  db:create              Create the database
-  db:migrate             Run pending migrations
-  db:rollback            Rollback migrations
-  db:seed                Seed the database with data
-  db:reset               Reset database (drop, create, migrate)
-  db:status              Show migration status
-  db:setup               Setup database (create and migrate)
-  db:drop                Drop the database
-
-Development Commands:
-  serve                  Start development server with hot reload (alias: s)
-  test                   Run application tests (alias: t)
-
-Job Queue Commands:
-  jobs:worker            Start background job workers
-  jobs:status            Show job queue status
-  jobs:clear             Clear job queues
-  jobs:retry             Retry failed jobs
-  jobs:ui                Start JoobQUI web interface
-
-Session Commands:
-  session:setup          Setup session management
-  session:clear          Clear all sessions
-
-Other Commands:
-  plugin <operation>     Plugin management
-  version                Show version information
-  help [command]         Show this help or command help
-
-Generator Types:
-  model, endpoint, service, request, page, migration, scaffold
-  component, middleware, validator, job, mailer, channel, auth
-
-Examples:
-  azu new my-app
-  azu generate model User name:string email:string
-  azu generate auth
-  azu db:create
-  azu db:migrate
-  azu serve
-  azu test --watch
-  azu jobs:worker --workers 4
-
-For more information, visit: https://azutopia.gitbook.io/azu
+...
 ```
+{% endcode %}
+
+*The overview runs on through the database, development, job, session, OpenAPI, configuration and other groups.*
+
+## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** search the overview for a name instead of scrolling: `azu help | grep jobs:`.
+{% endhint %}
+
+{% hint style="success" %}
+Use the topic that matches the group, such as `azu help db` or `azu help jobs`. Each one lists the commands of its group and their main options on one screen.
+{% endhint %}
+
+{% hint style="warning" %}
+Not every command has a topic. `azu help openapi` prints `No detailed help for: openapi`. The command's own `--help` is the reference: `azu openapi:export --help`.
+{% endhint %}
+
+{% hint style="danger" %}
+`azu --help` and `azu --version` are not understood. They exit with `Unknown command` and code `1`. Use `azu help` and `azu version`.
+{% endhint %}

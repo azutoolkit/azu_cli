@@ -130,6 +130,6 @@ Do not document a flag or command that is not registered. `azu plugin` and exter
 
 `Plugins::Base` offers `before_command`, `after_command` and `on_error` hooks for cross-cutting behavior around every
 command. Register one in `CLI#load_builtin_plugins`. It is for the CLI's own code, not an extension point for users.
-See [Plugin system](../architecture/plugins.md) and [Generator system](../architecture/generator-system.md).
+See [Generator system](../cli-architecture/generator-system.md) and [Template engine](../cli-architecture/template-engine.md).
 
 </details>

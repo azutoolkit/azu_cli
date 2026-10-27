@@ -33,7 +33,6 @@
   * [azu completion](commands/completion.md)
   * [azu help](commands/help.md)
   * [azu version](commands/version.md)
-* [CLI Options Reference](reference/cli-options.md)
 
 ## Generators
 
@@ -59,31 +58,14 @@
 
 * [Overview](cli-architecture/overview.md)
 * [Terminal UI](cli-architecture/terminal-ui.md)
-* [Internals](architecture/README.md)
-  * [CLI Framework (Topia)](architecture/cli-framework.md)
-  * [Generator System](architecture/generator-system.md)
-  * [Template Engine (ECR)](architecture/template-engine.md)
-  * [Configuration System](architecture/configuration.md)
-  * [Plugin System](architecture/plugins.md)
-  * [Logging](architecture/logging.md)
-  * [Terminal UI Design](architecture/terminal-ui.md)
+* [Generator System](cli-architecture/generator-system.md)
+* [Template Engine](cli-architecture/template-engine.md)
+* [Terminal UI Design](cli-architecture/terminal-ui-design.md)
 
 ## Advanced
 
-* [Configuration (azu.yml)](advanced/configuration.md)
+* [Configuration](advanced/configuration.md)
 * [Custom Tasks and Extensions](advanced/custom-tasks.md)
-* [Configuration Guides](configuration/README.md)
-  * [Project Configuration](configuration/project-config.md)
-  * [Database Configuration](configuration/database-config.md)
-  * [Development Server Configuration](configuration/dev-server-config.md)
-  * [Generator Configuration](configuration/generator-config.md)
-  * [Environment Variables](configuration/environment.md)
-* [Integration](integration/README.md)
-  * [Azu Framework](integration/azu-framework.md)
-  * [CQL ORM](integration/cql-orm.md)
-* [Examples](examples/README.md)
-  * [REST API](examples/rest-api.md)
-* [OptionParser Integration](reference/option-parser-integration.md)
 
 ## Help and Contributing
 
