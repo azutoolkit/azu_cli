@@ -1,6 +1,24 @@
 require "../../spec_helper"
 require "../../support/test_helpers"
 
+private def with_env(vars : Hash(String, String?), &)
+  saved = vars.keys.to_h { |name| {name, ENV[name]?} }
+  vars.each { |name, value| value ? (ENV[name] = value) : ENV.delete(name) }
+  begin
+    yield
+  ensure
+    saved.each { |name, value| value ? (ENV[name] = value) : ENV.delete(name) }
+  end
+end
+
+# CI containers have no git identity, so the first commit of `azu new` needs one from the environment.
+private GIT_IDENTITY = {
+  "GIT_AUTHOR_NAME"     => "Azu Spec",
+  "GIT_AUTHOR_EMAIL"    => "spec@example.com",
+  "GIT_COMMITTER_NAME"  => "Azu Spec",
+  "GIT_COMMITTER_EMAIL" => "spec@example.com",
+} of String => String?
+
 describe AzuCLI::Commands::New do
   describe "#initialize" do
     it "sets up new command properties" do
@@ -747,7 +765,7 @@ describe AzuCLI::Commands::New do
         command.parse_args(["--yes", "test_project"])
 
         TestHelpers::TestSetup.with_captured_output do |capture|
-          result = command.execute
+          result = with_env(GIT_IDENTITY) { command.execute }
           result.success?.should be_true
           capture.stdout.should contain("Creating new Azu project: test_project")
           %w(Files Secrets Git Shards Type-check).each do |step|

@@ -68,7 +68,7 @@ module AzuCLI
       end
       # The compiler finds the shards through lib/: link it so the shadow can be type-checked.
       shards = File.join(from, "lib")
-      File.symlink(File.real_path(shards), File.join(to, "lib")) if Dir.exists?(shards)
+      File.symlink(File.realpath(shards), File.join(to, "lib")) if Dir.exists?(shards)
     end
 
     def self.compare(shadow : String, project : String) : Array(Entry)
@@ -241,7 +241,7 @@ module AzuCLI
     end
 
     def self.project_directory(project : String) : String
-      real = File.real_path(project)
+      real = File.realpath(project)
       File.join(state_root, "#{File.basename(real)}-#{Digest::SHA256.hexdigest(real)[0, 12]}", "undo")
     end
 
@@ -283,8 +283,8 @@ module AzuCLI
 
     # Removes the directories a deleted file leaves empty, up to (not including) the project.
     private def self.prune_empty_directories(directory : String, project : String) : Nil
-      root = File.real_path(project)
-      while Dir.exists?(directory) && Dir.empty?(directory) && File.real_path(directory) != root && File.real_path(directory).starts_with?(root)
+      root = File.realpath(project)
+      while Dir.exists?(directory) && Dir.empty?(directory) && File.realpath(directory) != root && File.realpath(directory).starts_with?(root)
         Dir.delete(directory)
         directory = File.dirname(directory)
       end

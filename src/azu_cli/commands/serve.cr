@@ -79,7 +79,7 @@ module AzuCLI
         output = IO::Memory.new
         error = IO::Memory.new
 
-        start_time = Time.monotonic
+        start_time = Time.instant
 
         status = Process.run(
           "shards",
@@ -88,7 +88,7 @@ module AzuCLI
           error: error
         )
 
-        duration = (Time.monotonic - start_time).total_seconds
+        duration = (Time.instant - start_time).total_seconds
 
         if status.success?
           Logger.info("✅ Compilation successful! (#{duration.round(2)}s)")

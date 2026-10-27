@@ -44,7 +44,7 @@
 
 - Changed: the `generated-app` CI job has a `redis:7` service and sets `E2E_REDIS_URL`, so
   `scripts/e2e_generated_app.sh` runs a generated job through a worker in CI; before, CI only type-checked it
-  
+
 ## Unreleased - `azu new --type cli` generates a cli project
 
 - Fixed: `azu new --type cli` generated the whole web project (`src/server.cr`, endpoints, pages, `src/worker.cr`,
@@ -163,7 +163,7 @@
 
 - Changed: `Generate::Project::CRYSTAL_VERSION` is 1.22.1: generated projects get `.tool-versions` `crystal 1.22.1`, a Dockerfile `FROM crystallang/crystal:1.22.1` and a CI workflow in that container. The generated `shard.yml` declared `crystal: '>= 1.19.1'` at that point; the section above raises it to `'>= 1.22.1'` (azu 0.5.124+ needs it; cql 0.0.604 needs 1.12.2). This repository's `.tool-versions` is 1.22.1 too
 - Changed: the CI matrix ran 1.19.1, 1.22.1 (primary) and latest at that point (the 1.19.1 legs are gone, see above); the generated-app jobs run web on all three and api on 1.22.1
-- Verified on 1.22.1: format check, `shards build`, the full spec suite and `scripts/e2e_generated_app.sh web` and `api`. The build prints five deprecation warnings (`Time.monotonic`, `Process::Status#exit_signal`), no error
+- Verified on 1.22.1: format check, `shards build`, the full spec suite and `scripts/e2e_generated_app.sh web` and `api`. The build prints five deprecation warnings (`Time.instant`, `Process::Status#exit_signal`), no error
 
 ## Unreleased - Review of the loopback PR
 
