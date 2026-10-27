@@ -38,8 +38,10 @@ dependencies:
   #   github: luckyframework/carbon
 
 <% if has_joobq? -%>
+  # The generated jobs, worker and initializer are compiled against this release (scripts/e2e_generated_app.sh)
   joobq:
     github: azutoolkit/joobq
+    version: ~> 0.4.2
 
   redis:
     github: stefanwille/crystal-redis

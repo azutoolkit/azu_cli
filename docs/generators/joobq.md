@@ -110,6 +110,13 @@ joobq:
 
 ```crystal
 # src/initializers/joobq.cr
+# JoobQ's Redis store reads REDIS_HOST, REDIS_PORT and REDIS_PASS; REDIS_URL (`azu jobs:worker` sets it) fills them
+# before JoobQ builds a store
+redis = URI.parse(ENV["REDIS_URL"]? || "redis://localhost:6379")
+ENV["REDIS_HOST"] ||= redis.host || "localhost"
+redis.port.try { |port| ENV["REDIS_PORT"] ||= port.to_s }
+redis.password.try { |password| ENV["REDIS_PASS"] ||= password }
+
 require "joobq"
 
 # Require all job classes
@@ -120,7 +127,7 @@ JoobQ::QueueFactory.register_job_type(ExampleJob)
 JoobQ::QueueFactory.register_job_type(EmailJob)
 
 # Initialize from YAML config
-environment = ENV["AZU_ENV"]? || "development"
+environment = ENV["CRYSTAL_ENV"]? || "development"
 JoobQ.initialize_config_with(:file, "config/joobq.#{environment}.yml")
 
 # Disable REST API for worker processes
@@ -139,7 +146,7 @@ struct SendEmailJob
   # Queue configuration
   @queue   = "mailers"
   @retries = 3
-  @expires = 1.hour.total_seconds.to_i
+  @expires = 1.hour.from_now.to_unix_ms # a Unix time in milliseconds, as JoobQ stores it
 
   # Job parameters
   property to : String
@@ -176,30 +183,32 @@ SendEmailJob.enqueue(
   body: "Thanks for signing up"
 )
 
-# Schedule for later
-SendEmailJob.schedule(
-  in: 5.minutes,
+# Run it in 5 minutes
+SendEmailJob.delay(
+  for: 5.minutes,
   to: "user@example.com",
   subject: "Welcome!",
   body: "Thanks for signing up"
 )
 
-# Schedule at specific time
+# Run it every hour (JoobQ's recurring scheduler)
 SendEmailJob.schedule(
-  at: Time.utc(2025, 10, 12, 10, 0, 0),
-  to: "user@example.com",
-  subject: "Reminder",
-  body: "Don't forget!"
+  every: 1.hour,
+  to: "team@example.com",
+  subject: "Hourly report",
+  body: "..."
 )
+```
 
-# Enqueue with custom options
-SendEmailJob.enqueue(
-  to: "user@example.com",
-  subject: "Important",
-  body: "This is important",
-  queue: "critical",
-  retries: 5
-)
+`enqueue` and `delay` pass their arguments to the job's `initialize`; the queue, retries and expiry are the
+job's `@queue`, `@retries` and `@expires`. A worker runs a job once a queue does. `JoobQ.forge` starts the queues
+of `queue_configs` (the YAML `queues:` section fills it too); in joobq 0.4.2 the `queue` macro of `JoobQ.configure`
+does not reach the worker:
+
+```crystal
+# src/initializers/joobq.cr
+JoobQ::QueueFactory.register_job_type(SendEmailJob)
+JoobQ.config.queue_configs["mailers"] = {job_class_name: "SendEmailJob", workers: 2, throttle: nil}
 ```
 
 ### Start Workers
@@ -366,8 +375,8 @@ class User < CQL::Model(Int64)
 
   def after_create
     # Schedule job after user is created
-    SendWelcomeEmailJob.schedule(
-      in: 5.minutes,
+    SendWelcomeEmailJob.delay(
+      for: 5.minutes,
       user_id: self.id.not_nil!
     )
   end

@@ -6,6 +6,9 @@
 # A web project also gets a Chat channel (two WebSocket clients) and authentication (sign up, sign in,
 # a protected page, sign out; the password is stored as a bcrypt digest).
 #
+# The JoobQ code it generates (a job, the worker and initializer of `azu new` and of `azu generate joobq`) must
+# compile against the pinned joobq.
+#
 # It also drives the CLI's own development commands against the project: `azu routes`, `azu openapi:export`, `azu doctor`, and
 # `azu dev` (rebuild and restart on a source change, no rebuild for a template, a failed build keeps the old app).
 #
@@ -14,6 +17,7 @@
 #        E2E_DB   database adapter for `azu new`     (default: sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
 #        E2E_SKIP_DEV set to 1 to skip the `azu dev` check (two more compiles, a few minutes)
+#        E2E_REDIS_URL  a Redis to run a generated job through (a worker builds and runs it); unset skips that check
 #        Secrets: CSRF_SECRET (web) always; SESSION_SECRET only once `azu generate auth` ran, which this script does for
 #        web on SQLite (not for PostgreSQL, which only boots). The production checks run in a clean environment.
 #        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
@@ -768,6 +772,46 @@ if [ "$SCAFFOLD" = 1 ] && [ "${E2E_SKIP_DEV:-0}" != 1 ]; then
   wait "$SERVER_PID" 2>/dev/null || true
   SERVER_PID=""
   check_dev
+fi
+
+# The JoobQ code azu writes must compile against the joobq the project pins: a job (with a queue a worker runs),
+# the worker of `azu new`, then the files of `azu generate joobq`. --no-codegen type-checks without linking.
+# With E2E_REDIS_URL a worker also runs a job enqueued through that Redis.
+if grep -q "^  joobq:" shard.yml; then
+  step "generated JoobQ code compiles against the pinned joobq"
+  "$AZU_BIN" generate job SendWelcome email:string user_id:int64
+  # The queue the job's next steps tell a user to add (this file is the e2e's; the project is thrown away)
+  printf '%s\n' 'JoobQ::QueueFactory.register_job_type(SendWelcomeJob)' \
+    'JoobQ.config.queue_configs["default"] = {job_class_name: "SendWelcomeJob", workers: 2, throttle: nil}' >src/initializers/zz_e2e_queues.cr
+  crystal build --no-codegen src/worker.cr || fail "the worker of azu new does not compile with a generated job"
+  echo "ok: azu new's worker and a generated job compile"
+  if [ -n "${E2E_REDIS_URL:-}" ]; then
+    step "a worker runs a job enqueued through $E2E_REDIS_URL"
+    # Enqueue, then the worker's own code (the worker requires the app first, so this runs before JoobQ.forge)
+    printf '%s\n' "require \"./$NAME\"" 'SendWelcomeJob.enqueue(email: "e2e@example.com", user_id: 7_i64)' 'require "./worker"' >src/e2e_jobs.cr
+    crystal build src/e2e_jobs.cr -o bin/e2e_jobs || fail "the job round trip does not build"
+    REDIS_URL="$E2E_REDIS_URL" ./bin/e2e_jobs --worker >"$WORK/worker.log" 2>&1 &
+    WORKER_PID=$!
+    tries=0
+    until grep -q "SendWelcome job completed successfully" "$WORK/worker.log"; do
+      tries=$((tries + 1))
+      [ "$tries" -lt 30 ] || { tail -n 20 "$WORK/worker.log" >&2; kill "$WORKER_PID" 2>/dev/null; fail "the worker did not run the enqueued job"; }
+      sleep 1
+    done
+    # The worker traps TERM and exits 0; one that ignores it is killed after 10 seconds (status 137)
+    (sleep 10; kill -KILL "$WORKER_PID" 2>/dev/null) &
+    TIMER_PID=$!
+    kill -TERM "$WORKER_PID" 2>/dev/null || true
+    code=0
+    wait "$WORKER_PID" 2>/dev/null || code=$?
+    kill "$TIMER_PID" 2>/dev/null || true
+    [ "$code" = 0 ] || fail "the worker did not stop cleanly on SIGTERM (status $code)"
+    rm -f src/e2e_jobs.cr
+    echo "ok: the worker ran the job enqueued through Redis, and stopped on SIGTERM"
+  fi
+  "$AZU_BIN" generate joobq --force
+  crystal build --no-codegen src/worker.cr || fail "the worker of azu generate joobq does not compile"
+  echo "ok: azu generate joobq's worker, initializer and example job compile"
 fi
 
 step "PASS: generated $TYPE app compiles, boots and serves"
