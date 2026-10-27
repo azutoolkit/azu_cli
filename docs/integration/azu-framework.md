@@ -420,8 +420,9 @@ struct SendWelcomeEmailJob
   end
 end
 
-# src/initializers/joobq.cr, inside JoobQ.configure: a worker runs this queue
-#   queue "default", 2, SendWelcomeEmailJob
+# src/initializers/joobq.cr: a worker runs this queue
+#   JoobQ::QueueFactory.register_job_type(SendWelcomeEmailJob)
+#   JoobQ.config.queue_configs["default"] = {job_class_name: "SendWelcomeEmailJob", workers: 2, throttle: nil}
 
 # Enqueue it
 SendWelcomeEmailJob.enqueue(user_id: user.id.not_nil!)

@@ -3,12 +3,14 @@ require "./<%=project%>"
 # JoobQ worker process: runs the queues configured in src/initializers/joobq.cr.
 # Start it with `azu jobs:worker`, or `crystal run src/worker.cr -- --worker`.
 
-Log.info { "Starting JoobQ workers for queues: #{JoobQ.config.queues.keys.join(", ")}" }
+Log.info { "Starting JoobQ workers for queues: #{JoobQ.queues.keys.join(", ")}" }
 Log.info { "Default queue: #{JoobQ.config.default_queue}, retries: #{JoobQ.config.retries}" }
 
-Signal::INT.trap do
-  Log.info { "Stopping JoobQ workers" }
-  exit
+{Signal::INT, Signal::TERM}.each do |signal|
+  signal.trap do
+    Log.info { "Stopping JoobQ workers" }
+    exit
+  end
 end
 
 # Starts the queues and blocks

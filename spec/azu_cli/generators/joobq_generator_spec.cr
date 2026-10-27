@@ -135,8 +135,8 @@ describe AzuCLI::Generate::JoobQ do
           content = File.read(initializer_file)
           content.should contain("require \"joobq\"")
           content.should contain("JoobQ.configure")
-          content.should contain(%(redis_url ||= "redis://localhost:6379"))
-          content.should contain("JoobQ.config.store = JoobQ::RedisStore.new(host: redis.host")
+          content.should contain(%(URI.parse(ENV["REDIS_URL"]? || "redis://localhost:6379")))
+          content.should contain(%(ENV["REDIS_HOST"] ||= redis.host))
           content.should contain("JoobQ::QueueFactory.register_job_type(ExampleJob)")
         end
       end
@@ -153,7 +153,7 @@ describe AzuCLI::Generate::JoobQ do
           initializer_file = "src/initializers/joobq.cr"
           content = File.read(initializer_file)
 
-          content.should contain(%(redis_url ||= "redis://custom:6379"))
+          content.should contain(%(ENV["REDIS_URL"]? || "redis://custom:6379"))
         end
       end
 
@@ -171,7 +171,7 @@ describe AzuCLI::Generate::JoobQ do
 
           content.should contain("config.default_queue = \"priority\"")
 
-          content.should contain(%(queue "priority", 5, ExampleJob))
+          content.should contain(%(JoobQ.config.queue_configs["priority"] = {job_class_name: "ExampleJob", workers: 5, throttle: nil}))
         end
       end
     end
@@ -463,7 +463,7 @@ describe AzuCLI::Generate::JoobQ do
           generator.render(".")
 
           # the URL is the fallback of the initializer and what the worker prints
-          File.read("src/initializers/joobq.cr").should contain(%(redis_url ||= "redis://custom-host:6380"))
+          File.read("src/initializers/joobq.cr").should contain(%(ENV["REDIS_URL"]? || "redis://custom-host:6380"))
         end
       end
 

@@ -39,6 +39,29 @@ describe "Generated JoobQ code" do
     end
   end
 
+  # JoobQ.forge starts QueueFactory.queues, built from config.queue_configs; the `queue` macro of JoobQ.configure
+  # fills config.queues, which forge never reads. Every store (enqueue, delay, the workers) reads REDIS_HOST/PORT/PASS.
+  it "gives the workers queues that forge starts, and one Redis, set before joobq builds a store" do
+    render_joobq_code do |files|
+      initializers = files.select { |path, _| path.ends_with?("initializers/joobq.cr") }
+      initializers.size.should eq(2)
+      initializers.each do |path, code|
+        code.should_not match(/^\s*queue\s+"/m)
+        code.should_not contain("config.store =")
+        (code.index!(%(ENV["REDIS_HOST"] ||=)) < code.index!(%(require "joobq"))).should be_true
+      end
+      files.find! { |path, _| path.ends_with?("/joobq/src/initializers/joobq.cr") }[1].should contain(%(JoobQ.config.queue_configs["default"] = {job_class_name: "ExampleJob", workers: 3, throttle: nil}))
+      files.select { |path, _| path.ends_with?("worker.cr") }.each_value(&.should(contain("{Signal::INT, Signal::TERM}")))
+    end
+  end
+
+  it "refuses a --redis URL it would have to write a password or garbage for" do
+    AzuCLI::Generate::JoobQ.redis_url_error("redis://cache:6380").should be_nil
+    AzuCLI::Generate::JoobQ.redis_url_error("redis://:secret@cache:6380").not_nil!.should contain("password")
+    AzuCLI::Generate::JoobQ.redis_url_error("redis://user:secret@cache").not_nil!.should contain("password")
+    AzuCLI::Generate::JoobQ.redis_url_error("cache:6379").not_nil!.should contain("Invalid Redis URL")
+  end
+
   it "pins joobq to the release the generated code is written for" do
     dir = File.tempname("azu_joobq_pin")
     AzuCLI::Generate::Project.new("blog", "Blog", "Jane", "jane@example.com").render(dir)

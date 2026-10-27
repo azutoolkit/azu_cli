@@ -5,11 +5,13 @@ require "./jobs/**"
 # Start it with `azu jobs:worker`, or `crystal run src/worker.cr -- --worker`.
 # Redis: REDIS_URL, else the URL in src/initializers/joobq.cr
 
-Log.info { "Starting JoobQ workers for queues: #{JoobQ.config.queues.keys.join(", ")}" }
+Log.info { "Starting JoobQ workers for queues: #{JoobQ.queues.keys.join(", ")}" }
 
-Signal::INT.trap do
-  Log.info { "Stopping JoobQ workers" }
-  exit
+{Signal::INT, Signal::TERM}.each do |signal|
+  signal.trap do
+    Log.info { "Stopping JoobQ workers" }
+    exit
+  end
 end
 
 # Starts the queues and blocks

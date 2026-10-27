@@ -85,12 +85,13 @@ The workers expect a `src/worker.cr` file in your project:
 ```crystal
 require "./my_app" # the app, whose src/initializers/joobq.cr configures JoobQ and its queues
 
-# Starts the queues configured with `queue "default", 2, SendEmailJob` and blocks
+# Starts the queues of JoobQ.config.queue_configs (see src/initializers/joobq.cr) and blocks
 JoobQ.forge
 ```
 
 `azu new` generates this file and the initializer (JoobQ `~> 0.4.2`). JoobQ's Redis store takes a host, a port and
-a password; the generated initializer builds it from `REDIS_URL`, which `azu jobs:worker` sets.
+a password (`REDIS_HOST`, `REDIS_PORT`, `REDIS_PASS`); the generated initializer fills those from `REDIS_URL`, which
+`azu jobs:worker` sets, before JoobQ builds its store.
 
 ---
 

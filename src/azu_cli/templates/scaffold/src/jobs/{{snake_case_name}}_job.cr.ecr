@@ -49,6 +49,7 @@ struct <%= job_struct_name %>
   end
 end
 
-# A worker runs it once a queue does: in the JoobQ.configure block of src/initializers/joobq.cr add
-#   queue "<%= queue %>", 2, <%= job_struct_name %>
+# A worker runs it once a queue does; in src/initializers/joobq.cr add
+#   JoobQ::QueueFactory.register_job_type(<%= job_struct_name %>)
+#   JoobQ.config.queue_configs["<%= queue %>"] = {job_class_name: "<%= job_struct_name %>", workers: 2, throttle: nil}
 

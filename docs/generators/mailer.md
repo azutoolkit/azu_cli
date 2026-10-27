@@ -327,7 +327,7 @@ require "../mailers/user_mailer"
 struct UserMailerJob
   include JoobQ::Job
 
-  queue "mailers"
+  @queue = "mailers"
 
   property action : String
   property to : String

@@ -110,6 +110,13 @@ joobq:
 
 ```crystal
 # src/initializers/joobq.cr
+# JoobQ's Redis store reads REDIS_HOST, REDIS_PORT and REDIS_PASS; REDIS_URL (`azu jobs:worker` sets it) fills them
+# before JoobQ builds a store
+redis = URI.parse(ENV["REDIS_URL"]? || "redis://localhost:6379")
+ENV["REDIS_HOST"] ||= redis.host || "localhost"
+redis.port.try { |port| ENV["REDIS_PORT"] ||= port.to_s }
+redis.password.try { |password| ENV["REDIS_PASS"] ||= password }
+
 require "joobq"
 
 # Require all job classes
@@ -122,12 +129,6 @@ JoobQ::QueueFactory.register_job_type(EmailJob)
 # Initialize from YAML config
 environment = ENV["CRYSTAL_ENV"]? || "development"
 JoobQ.initialize_config_with(:file, "config/joobq.#{environment}.yml")
-
-# REDIS_URL (`azu jobs:worker` sets it) becomes JoobQ's Redis store
-if redis_url = ENV["REDIS_URL"]?
-  redis = URI.parse(redis_url)
-  JoobQ.config.store = JoobQ::RedisStore.new(host: redis.host || "localhost", port: redis.port || 6379, password: redis.password)
-end
 
 # Disable REST API for worker processes
 if ARGV.includes?("--worker")
@@ -200,13 +201,14 @@ SendEmailJob.schedule(
 ```
 
 `enqueue` and `delay` pass their arguments to the job's `initialize`; the queue, retries and expiry are the
-job's `@queue`, `@retries` and `@expires`. A worker runs a job once a queue does:
+job's `@queue`, `@retries` and `@expires`. A worker runs a job once a queue does. `JoobQ.forge` starts the queues
+of `queue_configs` (the YAML `queues:` section fills it too); in joobq 0.4.2 the `queue` macro of `JoobQ.configure`
+does not reach the worker:
 
 ```crystal
 # src/initializers/joobq.cr
-JoobQ.configure do |config|
-  queue "mailers", 2, SendEmailJob
-end
+JoobQ::QueueFactory.register_job_type(SendEmailJob)
+JoobQ.config.queue_configs["mailers"] = {job_class_name: "SendEmailJob", workers: 2, throttle: nil}
 ```
 
 ### Start Workers

@@ -5,5 +5,6 @@
 # To create a new job:
 #   azu generate job SendEmail to:string subject:string body:string
 #
-# Then give it a queue in the JoobQ.configure block of src/initializers/joobq.cr:
-#   queue "default", 2, SendEmailJob
+# Then give it a queue that the worker runs, in src/initializers/joobq.cr:
+#   JoobQ::QueueFactory.register_job_type(SendEmailJob)
+#   JoobQ.config.queue_configs["default"] = {job_class_name: "SendEmailJob", workers: 2, throttle: nil}
