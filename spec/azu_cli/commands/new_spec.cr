@@ -526,7 +526,7 @@ describe AzuCLI::Commands::New do
         TestHelpers::TestSetup.with_captured_output do |capture|
           result = command.execute
           result.success?.should be_true
-          capture.stdout.should contain("Installing dependencies")
+          capture.stdout.should match(/^\[ok\] Shards +\d+ installed/m)
         end
       end
     end
@@ -712,8 +712,10 @@ describe AzuCLI::Commands::New do
           result = command.execute
           result.success?.should be_true
           capture.stdout.should contain("Creating new Azu project: test_project")
-          capture.stdout.should contain("Installing dependencies")
-          capture.stdout.should contain("Project 'test_project' created successfully!")
+          %w(Files Secrets Git Shards Type-check).each do |step|
+            capture.stdout.should match(/^\[ok\] #{step} /m)
+          end
+          capture.stdout.should contain("test_project is ready")
         end
       end
     end
