@@ -1,12 +1,15 @@
+---
+description: How one azu command travels through the CLI, and where to change it.
+---
+
 # CLI architecture
 
-How one `azu ...` invocation travels through the CLI, and where you would change it.
+Every command is a class that returns a `Result`. The CLI finds it by name, parses its arguments, runs it through
+middleware and plugin hooks, and turns the result into an exit code.
 
-## Overview
+## Overview & visual demo
 
-Every command is a class that returns a `Result`. The CLI looks it up by name, parses its arguments, runs it through a
-middleware chain and the built-in plugin hooks, and turns the `Result` into an exit code. Generators render ECR
-templates with [Teeplate](https://github.com/crystal-loot/teeplate).
+<figure><img src="../assets/terminal-ui/04-new-progress.png" alt="azu new mid-run: a review screen above a progress card with a spinner"><figcaption><p>One command, three layers: the wizard and review (UI), the steps it runs (command), and the files it writes (generator).</p></figcaption></figure>
 
 ```mermaid
 flowchart TD
@@ -19,33 +22,42 @@ flowchart TD
   G --> H["plugins.before_command"]
   H --> I["command.execute : Result"]
   I --> J["middleware.after, plugins.after_command"]
-  J --> K["exit code: 0, 1 or 2"]
+  J --> K["exit code 0, 1 or 2"]
   I -. raises .-> L["middleware.error, plugins.on_error, exit 1"]
 ```
 
 `load_project_env` runs for every command except `new`, `init`, `help`, `version` and `completion`.
 
-## Quickstart
+## Quickstart & command syntax
 
-The parts, and the file to open for each:
+Where to look:
 
-| Part        | Where                       | What it does                                                           |
-| ----------- | --------------------------- | ---------------------------------------------------------------------- |
-| Registry    | `src/azu_cli/cli.cr`        | `CLI#setup_commands` registers every command and alias                 |
-| Commands    | `src/azu_cli/commands/`     | Subclasses of `Commands::Base`; `db:*`, `jobs:*`, `config:*` live in subdirectories |
-| Generators  | `src/azu_cli/generators/`   | `Teeplate::FileTree` subclasses, one per generator type                |
-| Templates   | `src/azu_cli/templates/`    | ECR files: `project/`, `scaffold/`, `auth/`, `joobq/`, ...             |
-| Middleware  | `src/azu_cli/middleware/`   | Logging, error handling, configuration                                 |
-| Plugins     | `src/azu_cli/plugins/`      | Three built-in hook sets (generator, database, development)            |
-| UI engine   | `src/azu_cli/ui/`           | Terminal detection, frames, reporters; see [Terminal UI](terminal-ui.md) |
+| Part       | Path                      | What it does                                                           |
+| ---------- | ------------------------- | ---------------------------------------------------------------------- |
+| Registry   | `src/azu_cli/cli.cr`      | `CLI#setup_commands` registers every command and alias                 |
+| Commands   | `src/azu_cli/commands/`   | `Commands::Base` subclasses; `db/`, `jobs/`, `config/` are subfolders  |
+| Generators | `src/azu_cli/generators/` | `Teeplate::FileTree` subclasses, one per generator                     |
+| Templates  | `src/azu_cli/templates/`  | ECR files: `project/`, `scaffold/`, `auth/`, `joobq/`, ...             |
+| Middleware | `src/azu_cli/middleware/` | Logging, error handling, configuration                                 |
+| Plugins    | `src/azu_cli/plugins/`    | Three built-in hook sets: generator, database, development             |
+| UI engine  | `src/azu_cli/ui/`         | See [Terminal UI](terminal-ui.md)                                      |
 
-Exit codes: `0` success, `1` failure, `2` invalid usage.
+```crystal title="src/azu_cli/cli.cr (shape of a registration)"
+register_command("generate", Commands::Generate)
+register_command("g", Commands::Generate) # alias
+```
 
-## Output
+| Exit code | Meaning        |
+| --------- | -------------- |
+| `0`       | Success        |
+| `1`       | Failure        |
+| `2`       | Invalid usage  |
 
-`azu help` lists what is registered. Aliases: `g` for `generate`, `s` and `server` for `serve`, `t` for `test`.
+Aliases: `g` for `generate`, `s` and `server` for `serve`, `t` for `test`.
 
-```text
+## Realistic output
+
+```text title="terminal"
 $ azu nope
 Unknown command: nope
 Run 'azu help' to see available commands
@@ -53,21 +65,26 @@ $ echo $?
 1
 ```
 
+*An unknown command exits 1 and points at `azu help`.*
+
 ## Do's and don'ts
 
 {% hint style="info" %}
-A command prints data to its `stdout` and keeps the CLI's own log lines off it when the data is the product (`routes`,
-`doctor`). That is why `azu routes --format json | jq` works.
+**Pro tip:** commands whose output is data (`routes`, `doctor`) keep the CLI's own log lines off stdout, so
+`azu routes --format json | jq` just works.
+{% endhint %}
+
+{% hint style="success" %}
+Add a command by subclassing `Commands::Base`, returning a `Result`, and registering it. The wiring is automatic from there.
 {% endhint %}
 
 {% hint style="warning" %}
-The plugin system is internal. There is no `azu plugin` command, no plugin installation and no loading of external
-plugins. See [Custom tasks](../advanced/custom-tasks.md) for how to extend the CLI.
+The plugin system is internal. There's no `azu plugin` command, no plugin installation and no external plugin loading.
+See [Custom tasks](../advanced/custom-tasks.md) for how to extend the CLI.
 {% endhint %}
 
 {% hint style="danger" %}
-Do not document or register a flag or command you did not implement. `azu help` and `CLI_REFERENCE.md` must list exactly
-what exists.
+Don't document or register a flag or command you didn't implement. `azu help` and `CLI_REFERENCE.md` list exactly what exists.
 {% endhint %}
 
 <details>
@@ -75,10 +92,10 @@ what exists.
 <summary>Plugin hooks</summary>
 
 `Plugins::Base` defines `on_load` (once at start), `before_command(cmd, args)`, `after_command(cmd, result)` and
-`on_error(cmd, error)`. A plugin may reject arguments by raising in `before_command`. `on_unload` is defined but never
+`on_error(cmd, error)`. A plugin can reject arguments by raising in `before_command`. `on_unload` is defined but never
 called. Registered in `CLI#load_builtin_plugins`: `GeneratorPlugin`, `DatabasePlugin`, `DevelopmentPlugin`.
 
-Details: [Plugin system](../architecture/plugins.md), [CLI framework](../architecture/cli-framework.md),
+More: [Plugin system](../architecture/plugins.md), [CLI framework](../architecture/cli-framework.md),
 [Generator system](../architecture/generator-system.md).
 
 </details>

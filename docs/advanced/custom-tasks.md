@@ -2,10 +2,12 @@
 
 Two different things share this name: tasks your project runs, and changes to the CLI itself.
 
-## Overview
+## Overview & visual demo
 
 Generated projects (with the example code) include a [Topia](https://github.com/azutoolkit/topia) task runner you can
 extend freely. The CLI has no plugin installer, so a new generator or command means a change to `azu_cli` itself.
+
+<figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate output listing the files a generator wrote"><figcaption><p>What a generator produces: a list of files rendered from ECR templates. Adding your own generator means adding that template folder.</p></figcaption></figure>
 
 ```mermaid
 flowchart TD
@@ -15,7 +17,7 @@ flowchart TD
   C --> M["Command: Commands::Base + register"]
 ```
 
-## Quickstart
+## Quickstart & command syntax
 
 ### Project tasks
 
@@ -88,17 +90,21 @@ crystal run src/azu_cli.cr -- <name> --help     # run it without installing
 crystal spec spec/azu_cli/integration/
 ```
 
-## Output
+## Realistic output
 
-```text
+```text title="terminal"
 $ bin/tasks --list
 hello
 cleanup
 ```
 
-The exact listing format comes from Topia and may include dependencies and descriptions.
+*Illustrative: the exact listing format comes from Topia and may include dependencies and descriptions.*
 
 ## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** `crystal run src/azu_cli.cr -- <command>` runs your change without installing it.
+{% endhint %}
 
 {% hint style="success" %}
 Give a new command `--ui` support through `UI::Reporter` and keep a plain output, so it works in pipes and CI.

@@ -2,10 +2,12 @@
 
 How the CLI finds its settings, what `azu.yml` can hold and which environment variables win.
 
-## Overview
+## Overview & visual demo
 
 The CLI reads an optional `azu.yml`, then applies environment variables on top. Your **app** is configured separately,
 through `.env` files that Azu loads itself. This page is about the CLI's side; the app's `.env` rules are at the end.
+
+<figure><img src="../assets/terminal-ui/17-db-migrate.png" alt="azu db:migrate card showing the database name and one applied migration"><figcaption><p>Environment in action: <code>azu db:migrate</code> names the database it ran against in its card (<code>demo_app_development</code>), so you can tell which environment you hit.</p></figcaption></figure>
 
 ```mermaid
 flowchart TD
@@ -19,7 +21,7 @@ flowchart TD
   G --> H["Log level and environment-specific adjustments"]
 ```
 
-## Quickstart
+## Quickstart & command syntax
 
 The file is searched in this order, first hit wins:
 
@@ -97,9 +99,9 @@ In production the CLI turns debug mode off and stops watching and rebuilding.
 {% endtab %}
 {% endtabs %}
 
-## Output
+## Realistic output
 
-```bash
+```bash title="terminal"
 azu config:show --section database --format json
 azu config:validate
 azu config:env --list
@@ -107,6 +109,8 @@ azu config:env --list
 
 `config:show` prints the settings the CLI actually resolved (`--format yaml|json|table`, `--section`, `--env`),
 `config:validate` checks them, and `config:env` lists, sets and unsets the Azu environment variables.
+
+*Run any of them with `--help` for the exact options.*
 
 ## Do's and don'ts
 
@@ -119,6 +123,10 @@ If the file has a top-level section named after the current environment (for exa
 The environment step runs after the file and always assigns. In practice `global.debug_mode`, `verbose`, `quiet`,
 `database.url` and `database.name` in the file are replaced when the matching variable is unset. Set those through
 the environment.
+{% endhint %}
+
+{% hint style="info" %}
+**Pro tip:** `azu config:show --env production` shows what the CLI would use in production, without switching your shell.
 {% endhint %}
 
 {% hint style="success" %}

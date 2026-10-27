@@ -2,10 +2,12 @@
 
 Azu CLI is one binary, built from source with Crystal. There is no Homebrew formula and no prebuilt release binary yet.
 
-## Overview
+## Overview & visual demo
 
-You need Crystal and `shards`, then `make install`. A SQLite library is enough for the default database; PostgreSQL and
-MySQL need a server only if you pick them.
+Install Crystal, build the CLI from source, check it with `azu version`. That's it. SQLite is the default database, so
+you don't need a server unless you pick PostgreSQL or MySQL.
+
+<figure><img src="../assets/terminal-ui/18-version.png" alt="azu version card"><figcaption><p>Done: <code>azu version</code> on a color terminal, with the Azu, CQL and JoobQ versions of the project you're in.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
@@ -15,7 +17,7 @@ flowchart LR
   D --> E["azu version"]
 ```
 
-## Quickstart
+## Quickstart & command syntax
 
 ### 1. Crystal
 
@@ -99,11 +101,11 @@ azu completion fish > ~/.config/fish/completions/azu.fish
 {% endtab %}
 {% endtabs %}
 
-`azu completion` with no shell argument guesses from `$SHELL`; `--shell NAME` forces one.
+Open a new shell, then type `azu g<Tab>`.
 
-## Output
+## Realistic output
 
-```text
+```text title="terminal"
 $ azu version
 Azu CLI v0.1.46
 Crystal 1.22.1
@@ -118,9 +120,14 @@ Plugins:
 On a color terminal inside a project the same command is a card that also lists the `azu`, `cql` and `joobq`
 versions from `shard.lock` (`--ui plain` for the text above).
 
-<figure><img src="../assets/terminal-ui/18-version.png" alt="azu version card"><figcaption><p><code>azu version</code> on a color terminal.</p></figcaption></figure>
+*Plain output, as printed in a pipe, in CI or with `--ui plain`.*
+
 
 ## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** `azu completion` with no shell argument guesses from `$SHELL`; `--shell NAME` forces one.
+{% endhint %}
 
 {% hint style="success" %}
 Run `azu doctor` in a project after installing. It checks Crystal, shards, dependencies, database, ports and secrets, and
