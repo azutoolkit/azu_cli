@@ -8,10 +8,11 @@ license: <%= @license %>
 targets:
   <%= @project.downcase.gsub(/[^a-z0-9_]/, "_") %>:
     main: src/<% if @project_type == "web" %>server.cr<% elsif @project_type == "api" %>api.cr<% elsif @project_type == "cli" %><%= @project %>.cr<% else %>server.cr<% end %>
-<% if @include_example -%>
+<% if @include_example && @project_type != "cli" -%>
   tasks:
     main: src/tasks.cr
 <% end -%>
+<% unless @project_type == "cli" -%>
 
 dependencies:
   # The generated app requires "azu/env" and "azu/dev". v0.5.111 is the first release with the loopback default
@@ -62,6 +63,7 @@ dependencies:
   sqlite3:
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.24.0
+<% end -%>
 <% end -%>
 
 <% if @test_framework == "minitest" -%>
