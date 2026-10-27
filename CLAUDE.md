@@ -383,6 +383,10 @@ Generators extend `Teeplate::FileTree`:
   migration or seed script (`ScriptOutput` sorts its output)
 - Commands report through `UI::Reporter` (`rich` card, `plain` lines, `json` NDJSON), chosen by `--ui`/`AZU_UI`, else
   rich only on a terminal with color, not in CI. Pipes and `--yes` must keep working without a terminal
+- `azu dev`'s Commands panel is `dev_server/control.cr`: a catalog of commands with triggers, `Control.outcome` parsing
+  each one's plain output, and a `Runner` fiber that runs them one at a time as subprocesses (`AZU_UI=plain`,
+  `AZU_CONTROL=1`), paused while the app builds. Never block the dashboard's fiber: `Runner#enqueue` wakes the runner
+  with a non-blocking `select` send (`Channel#empty?` blocked it for good)
 - `azu dev`'s dashboard (`dev_server/hud.cr`) gets build/app/log events from `Commands::Dev` and telemetry from the app
   over `AZU_TELEMETRY_SOCKET` (azu's `Dev::Telemetry`, JSON lines, `"v": 1`; unknown fields ignored)
 - `azu generate` on a terminal (or with `--dry-run`/`--check`) runs itself in a shadow copy (`GeneratePlan`,

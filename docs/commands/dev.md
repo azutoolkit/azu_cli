@@ -22,7 +22,7 @@ keeps the line output described below.
 | Log      | The app's stdout and stderr (the dashboard reads them through pipes)                                     |
 
 A failed build covers the dashboard with the error location and the compiler's excerpt while the previous build keeps
-serving; Esc goes back. Keys: `1`-`5` panels, `r` rebuild now, `l` log, `c` clear the log, `q` or Ctrl-C quit. Quitting
+serving; Esc goes back. Keys: `1`-`6` panels, `r` rebuild now, `l` log, `c` clear the log, `q` or Ctrl-C quit. Quitting
 prints a one-line summary of the session.
 
 Requests and SQL come from the app: `azu dev` listens on a Unix socket (mode 0600) and passes its path to the app as
@@ -80,3 +80,25 @@ change (no build), broken source (old app keeps serving), fixed source (restart 
 Stopping: Ctrl-C and SIGTERM end a build in progress (and the compiler it started; `pgrep` or `/proc` finds it) and the app, and no app is started after that. SIGKILL of `azu dev` cannot be handled: the app keeps running and holding its port until you end it.
 
 On shutdown the compiler's partial output that was already printed stays on the terminal; only the "build failed" message is suppressed. `SIGTERM` is not followed by `SIGKILL`: a build that traps `SIGTERM` keeps running.
+
+## Commands panel (the control plane)
+
+Panel `2` runs the CLI's own commands for you and keeps their last outcome. Each one runs as `azu <command>` with
+plain output, one at a time, and never while the app builds (they compile too):
+
+| Command           | Runs                                                              |
+| ----------------- | ----------------------------------------------------------------- |
+| `doctor`          | at start and when `.env*`, `shard.yml`/`shard.lock` or the CLI config changes |
+| `config:validate` | same as `doctor`                                                   |
+| `routes`          | after each successful build                                       |
+| `test`            | on Enter; `w` also runs it after each build                       |
+| `db:status`       | at start and when `src/db/migrations` changes                     |
+| `db:migrate`      | on Enter, then `y` (it changes the database); `db:status` runs after it |
+| `session:clear`   | on Enter, then `y` (`--force`: the dashboard asked already)       |
+| `config:show`, `config:env --list`, `version` | at start (and on config changes) |
+| `completion <shell>` | on Enter, for the shell in `SHELL` (bash when it is another)   |
+
+The list shows each command's mark (`✔` ok, `▲` needs a look, `✖` failed), a one-line outcome and its age; the card
+beside it shows the selected command's output and when it runs. Keys: `↑`/`↓` select, Enter run, `a` run every check
+again (not the tests, not the commands that change things). The overview sums the commands up in one line. Run from
+the dashboard (`AZU_CONTROL=1`), `doctor` counts the port the app holds as expected, not as a warning.

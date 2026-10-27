@@ -1,14 +1,17 @@
 require "../ui"
 require "./telemetry"
+require "./control"
 
 module AzuCLI
   module DevServer
-    # The `azu dev` dashboard: build, app, requests, SQL, jobs and the app's log, updated as events arrive.
+    # The `azu dev` dashboard: build, app, the CLI's commands (the control plane), requests, SQL, jobs and the app's
+    # log, updated as events arrive.
     class Hud < UI::Screen
       include UI
 
       enum Tab
         Overview
+        Commands
         Requests
         SQL
         Jobs
@@ -51,12 +54,40 @@ module AzuCLI
       @jobs : Events::JobsSample?
       @error_dismissed = false
       @exit_note : String?
+      # The control plane: what each command last did, and which one the Commands panel shows
+      getter runs = {} of String => Control::Run
+      getter statuses = {} of String => Control::Status
+      getter selected = 0
+      getter confirming : Control::Command?
+      getter? test_watch = false
+      @kicked_off = false
 
-      def initialize(@project : String, @port : String, @environment : String, @watching : String, @on_rebuild : Proc(Nil) = -> { }, @clock : Proc(Time::Instant) = -> { Time.instant }, @directory : String = Dir.current, @branch : String? = nil)
+      def initialize(@project : String, @port : String, @environment : String, @watching : String, @on_rebuild : Proc(Nil) = -> { }, @clock : Proc(Time::Instant) = -> { Time.instant }, @directory : String = Dir.current, @branch : String? = nil,
+                     @commands : Array(Control::Command) = Control.catalog, @on_control : Proc(Control::Command, Nil) = ->(_command : Control::Command) { })
       end
 
       def animating? : Bool
-        state.building? || state.starting?
+        state.building? || state.starting? || statuses.values.any?(&.busy?)
+      end
+
+      def commands : Array(Control::Command)
+        @commands
+      end
+
+      def status(id : String) : Control::Status
+        statuses[id]? || Control::Status::Idle
+      end
+
+      # Runs the commands that `trigger` concerns (one already queued or running is left as it is).
+      def trigger(trigger : Control::Trigger) : Nil
+        @commands.each { |command| run(command) if command.triggers.includes?(trigger) }
+        @commands.find(&.id.==("test")).try { |command| run(command) } if trigger.build? && test_watch?
+      end
+
+      private def run(command : Control::Command) : Nil
+        return if status(command.id).busy?
+        statuses[command.id] = Control::Status::Queued
+        @on_control.call(command)
       end
 
       def requests_served : Int64
@@ -70,6 +101,10 @@ module AzuCLI
       end
 
       def update(event : Event) : UI::Action
+        unless @kicked_off
+          @kicked_off = true
+          trigger(Control::Trigger::Start)
+        end
         case event
         when Key     then key(event)
         when Resize  then UI::Action::Redraw
@@ -87,10 +122,12 @@ module AzuCLI
           @error_dismissed = true
           return UI::Action::Redraw
         end
-        if (char = key.char) && ('1'..'5').includes?(char)
+        return confirm(key) if @confirming
+        if (char = key.char) && ('1'..'6').includes?(char)
           @tab = Tab.from_value(char.to_i - 1)
           return UI::Action::Redraw
         end
+        return commands_key(key) if tab.commands? && commands_key?(key)
         case key.char
         when 'r'
           @on_rebuild.call
@@ -106,8 +143,46 @@ module AzuCLI
         end
       end
 
+      private def commands_key?(key : Key) : Bool
+        key.code.up? || key.code.down? || key.code.enter? || {'j', 'k', 'a', 'w'}.includes?(key.char)
+      end
+
+      # The Commands panel: move, run the selected command (after `y` when it changes something), run every check,
+      # or re-run the tests after each build.
+      private def commands_key(key : Key) : UI::Action
+        if key.code.up? || key.char?('k')
+          @selected = (@selected - 1) % @commands.size
+        elsif key.code.down? || key.char?('j')
+          @selected = (@selected + 1) % @commands.size
+        elsif key.code.enter?
+          command = @commands[@selected]
+          command.confirm ? (@confirming = command) : run(command)
+        elsif key.char?('a')
+          @commands.each { |command| run(command) unless command.confirm || command.id.in?("test", "completion") }
+        elsif key.char?('w')
+          @test_watch = !@test_watch
+        end
+        UI::Action::Redraw
+      end
+
+      private def confirm(key : Key) : UI::Action
+        command = @confirming.not_nil!
+        @confirming = nil
+        run(command) if key.char?('y') || key.char?('Y')
+        UI::Action::Redraw
+      end
+
       private def message(event : Message) : UI::Action
         case event
+        when Events::ControlQueued
+          statuses[event.id] = Control::Status::Queued unless status(event.id).running?
+        when Events::ControlStarted
+          statuses[event.id] = Control::Status::Running
+        when Events::ControlFinished
+          outcome, summary = Control.outcome(event.id, event.exit_code, event.output)
+          statuses[event.id] = outcome
+          runs[event.id] = Control::Run.new(outcome, summary, event.output.lines.map(&.rstrip), event.seconds, @clock.call)
+          @commands.find(&.id.==("db:status")).try { |status_command| run(status_command) } if event.id == "db:migrate"
         when Events::BuildStarted
           @state = State::Building
           @build_started = @clock.call
@@ -122,6 +197,7 @@ module AzuCLI
           @last_build_seconds = event.seconds
           @progress = nil
           if event.success
+            trigger(Control::Trigger::Build)
             @build_history = (@build_history << event.seconds).last(10)
             @error = nil
             @state = @pid ? State::Running : State::Starting
@@ -143,6 +219,8 @@ module AzuCLI
           @state = State::Stopped unless state.failed?
         when Events::Changed
           @changed = event.files
+          trigger(Control::Trigger::Migrations) if event.files.any?(&.includes?("db/migrations/"))
+          trigger(Control::Trigger::Config) if event.files.any? { |file| Hud.config_file?(file) }
         when Events::LogLine
           @log << event
           @log.shift if @log.size > LOG_LINES
@@ -161,6 +239,12 @@ module AzuCLI
         UI::Action::Redraw
       end
 
+      # A file the configuration commands read: .env*, shard.yml/shard.lock, the CLI configuration.
+      def self.config_file?(path : String) : Bool
+        name = File.basename(path)
+        name.starts_with?(".env") || name.in?("shard.yml", "shard.lock") || path.includes?("config/azu") || name.starts_with?(".azu")
+      end
+
       private def failed_card? : Bool
         state.failed? && !@error_dismissed && !@error.nil?
       end
@@ -177,13 +261,22 @@ module AzuCLI
         else
           case tab
           in .overview? then overview(frame, body)
+          in .commands? then commands_panel(frame, body)
           in .requests? then requests(frame, body, full: true)
           in .sql?      then sql(frame, body, full: true)
           in .jobs?     then jobs(frame, body)
           in .log?      then log_card(frame, body, "Log")
           end
         end
-        keys = failed_card? ? [{"Esc", "Back to the dashboard"}, {"r", "Retry build"}, {"q", "Quit"}] : [{"1-5", "Panels"}, {"r", "Rebuild"}, {"l", "Log"}, {"c", "Clear log"}, {"q", "Quit"}]
+        keys = if failed_card?
+                 [{"Esc", "Back to the dashboard"}, {"r", "Retry build"}, {"q", "Quit"}]
+               elsif command = @confirming
+                 [{"y", "Run #{command.line}"}, {"any key", "Cancel"}]
+               elsif tab.commands?
+                 [{"↑/↓", "Select"}, {"Enter", "Run"}, {"a", "Run all checks"}, {"w", "Tests after builds: #{test_watch? ? "on" : "off"}"}, {"1-6", "Panels"}, {"q", "Quit"}]
+               else
+                 [{"1-6", "Panels"}, {"r", "Rebuild"}, {"l", "Log"}, {"c", "Clear log"}, {"q", "Quit"}]
+               end
         Widgets.key_bar(frame, 1, height - 2, keys, width - 2)
         status_line(frame, width, height - 1)
       end
@@ -232,6 +325,10 @@ module AzuCLI
           top, rest = body.split_top(4)
           compact_card(frame, top)
         end
+        if rest.h >= 12
+          strip, rest = rest.split_top(3)
+          commands_strip(frame, strip)
+        end
         request_rows = Math.max(1, Math.min(5, (rest.h - 12) // 1))
         reqs, rest = rest.split_top(request_rows + 3)
         requests(frame, reqs)
@@ -244,6 +341,122 @@ module AzuCLI
           sql(frame, lower)
         end
         log_card(frame, rest, "Log") if rest.h >= 3
+      end
+
+      # ---- the control plane
+
+      private def mark(frame : Frame, status : Control::Status) : {String, Token}
+        g = frame.glyphs
+        case status
+        in .idle?    then {g.off, Token::Faint}
+        in .queued?  then {g.dot, Token::Muted}
+        in .running? then {Widgets.spinner(g, @clock.call), Token::Cyan}
+        in .ok?      then {g.ok, Token::Green}
+        in .warn?    then {g.warn, Token::Amber}
+        in .fail?    then {g.fail, Token::Red}
+        end
+      end
+
+      # One line on the overview: every command that has run, with its mark; what needs a look first.
+      private def commands_strip(frame : Frame, rect : Rect) : Nil
+        attention = @commands.count { |command| status(command.id).warn? || status(command.id).fail? }
+        inner = frame.card(rect, "Commands", attention > 0 ? "#{attention} need a look · [2]" : "[2] details")
+        return if inner.empty?
+
+        segs = [] of Seg
+        @commands.each do |command|
+          next if status(command.id).idle?
+          glyph, tone = mark(frame, status(command.id))
+          segs << Seg[glyph, tone] << Seg[" #{command.id}", status(command.id).ok? ? Token::Muted : tone] << Seg["   "]
+        end
+        segs << Seg["starting the checks", Token::Muted] if segs.empty?
+        frame.line(inner.x, inner.y, segs, inner.w)
+      end
+
+      private def commands_panel(frame : Frame, body : Rect) : Nil
+        list_width = Math.min(60, Math.max(36, body.w * 9 // 20))
+        list, detail = body.w >= 90 ? {Rect.new(body.x, body.y, list_width, body.h), Rect.new(body.x + list_width + 1, body.y, body.w - list_width - 1, body.h)} : body.split_top(@commands.size + 8)
+        command_list(frame, list)
+        command_detail(frame, detail) unless detail.h < 3
+      end
+
+      private def command_list(frame : Frame, rect : Rect) : Nil
+        counts = {Control::Status::Ok, Control::Status::Warn, Control::Status::Fail}.map { |wanted| @commands.count { |command| status(command.id) == wanted } }
+        g = frame.glyphs
+        inner = frame.card(rect, "Commands", "#{counts[0]} #{g.ok}  #{counts[1]} #{g.warn}  #{counts[2]} #{g.fail}")
+        return if inner.empty?
+
+        y = inner.y
+        group = nil
+        @commands.each_with_index do |command, index|
+          break if y >= inner.bottom
+          if command.group != group
+            group = command.group
+            frame.text(inner.x, y, group.upcase, Token::Faint)
+            y += 1
+            break if y >= inner.bottom
+          end
+          selected = index == @selected
+          glyph, tone = mark(frame, status(command.id))
+          frame.text(inner.x, y, selected ? g.pointer : " ", Token::Cyan)
+          frame.text(inner.x + 2, y, glyph, tone)
+          frame.text(inner.x + 4, y, command.id, selected ? frame.style(Token::Cyan, Attr::Bold) : frame.style(Token::Text), max: 16)
+          age = runs[command.id]?.try { |run| ago(run.at) } || ""
+          age_x = inner.right - Width.of(age)
+          summary = runs[command.id]?.try(&.summary) || (command.confirm ? "Enter, then y" : (command.triggers.none? ? "Enter runs it" : ""))
+          summary = "queued" if status(command.id).queued?
+          summary = "running" if status(command.id).running?
+          frame.text(inner.x + 21, y, summary, status(command.id).ok? || status(command.id).idle? ? Token::Muted : tone, max: age_x - inner.x - 22)
+          frame.text(age_x, y, age, Token::Faint)
+          y += 1
+        end
+      end
+
+      private def command_detail(frame : Frame, rect : Rect) : Nil
+        command = @commands[@selected]
+        run = runs[command.id]?
+        badge = run.try { |done| "#{Widgets.duration(done.seconds)} · #{ago(done.at)} ago" }
+        inner = frame.card(rect, command.line, badge)
+        return if inner.empty?
+
+        y = inner.y
+        if pending = @confirming
+          frame.text(inner.x, y, "#{frame.glyphs.warn} #{pending.line} changes #{pending.id.starts_with?("db") ? "the database" : "the session store"}: press y to run it", Token::Amber, max: inner.w)
+          y += 2
+        end
+        when_line = Hud.when_runs(command, test_watch?)
+        frame.text(inner.x, y, when_line, Token::Faint, max: inner.w)
+        y += 1
+        if status(command.id).running?
+          frame.text(inner.x, y, "#{Widgets.spinner(frame.glyphs, @clock.call)} running", Token::Cyan)
+          y += 1
+        end
+        return unless run
+        y += 1
+        lines = run.output.reject(&.blank?)
+        room = inner.bottom - y
+        return if room <= 0
+        lines.last(room).each_with_index do |line, index|
+          tone = line.matches?(/\A(ok|✔)\b/) ? Token::Text : (line.matches?(/\A(warn|WARNING)/) ? Token::Amber : (line.matches?(/\A(fail|ERROR|FATAL)|error/i) ? Token::Red : Token::Text))
+          frame.text(inner.x, y + index, line, tone, max: inner.w)
+        end
+      end
+
+      # "runs at start and on config changes", for the detail card.
+      def self.when_runs(command : Control::Command, test_watch : Bool) : String
+        return "changes things: runs on Enter, after y" if command.confirm
+        return "runs on Enter#{test_watch ? " and after each build (w)" : "; w runs it after each build"}" if command.id == "test"
+        events = [] of String
+        events << "at start" if command.triggers.start?
+        events << "after each build" if command.triggers.build?
+        events << "when src/db/migrations changes" if command.triggers.migrations?
+        events << "when .env, shard.yml or the CLI config changes" if command.triggers.config?
+        events.empty? ? "runs on Enter" : "runs #{events.join(", ")} and on Enter"
+      end
+
+      private def ago(at : Time::Instant) : String
+        seconds = (@clock.call - at).total_seconds
+        seconds < 60 ? "#{seconds.to_i}s" : (seconds < 3600 ? "#{(seconds / 60).to_i}m" : "#{(seconds / 3600).to_i}h")
       end
 
       private def build_card(frame : Frame, rect : Rect) : Nil
