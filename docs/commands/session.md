@@ -75,17 +75,22 @@ azu session:clear --backend redis    # instead of reading src/initializers/sessi
 | `--backend <type>` | `-b`  | `cookie`, `redis` or `memory`                       |
 | `--force`          | `-f`  | Do not ask first                                    |
 
-The backend is `--backend`, or the store `src/initializers/session.cr` sets (its `config.store =` or
-`Session.use_store(` lines, over several lines too; comments do not count), or `SESSION_BACKEND` when the file sets
-none. When none of them says, or the file's lines name different stores or one that is not the session shard's, the
-command refuses (exit code 1). An unknown backend or option, or an argument, is refused with exit code 2; `-h` /
+The backend is `--backend`, or the store `src/initializers/session.cr` sets, or `SESSION_BACKEND` when the file sets
+none. The command deletes data on that answer, so it reads the file strictly: a store counts only as
+`Session.use_store(Session::<Store>(UserSession))` or `config.store = Session::<Store>(UserSession).new(...)` (the
+forms `azu session:setup` and `azu generate auth` write, over several lines too) at the top level or in a `do` block,
+and comments, strings, heredocs and other literals do not count. It refuses (exit code 1), whatever `SESSION_BACKEND`
+says, when the stores in the file differ, when anything else sets a store (`config.store ||=`, a store that is not
+`Session::...`, one behind an `if` or in a `def`, ...) or when it cannot read the file; pass `--backend` then. When
+nothing says which backend, it refuses too. An unknown backend or option, or an argument, is refused with exit code 2; `-h` /
 `--help` shows the help.
 
 - Redis: deletes every `session:*` key (the keys the session shard's `RedisStore` writes) in the database of
   `REDIS_URL` (default `redis://localhost:6379`), with `SCAN`, never `KEYS`. The prefix is not per app: an app
   sharing that Redis database loses its sessions too. Before deleting, with or without `--force`, it prints the
-  target (the password in `REDIS_URL` shown as `***`) and says so. A `REDIS_URL` that is not
-  `redis://host[:port][/database]` is refused (exit code 1).
+  target as `redis://host:port/database` (never the user or password in `REDIS_URL`) and says so. A `REDIS_URL` that is
+  not `redis[s]://[[user]:password@]host[:port][/database]` (an IPv6 host in brackets, an `@` in the password as `%40`)
+  is refused (exit code 1); a database the server does not have (16 by default, 0 to 15) fails before deleting anything.
 - Cookie sessions live in the browsers, so the command cannot clear them and says so (exit code 1) without asking:
   change `SESSION_SECRET` and restart, and every existing cookie stops working.
 - Memory sessions live in the app process: the command says so (exit code 1); restart the app to end them.

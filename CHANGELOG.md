@@ -17,11 +17,18 @@
 - Fixed: `session:clear` read the backend from any mention of `RedisStore` in `src/initializers/session.cr`, comments
   included. The initializer of `azu generate auth` (a `CookieStore`) mentions `Session::RedisStore` in a comment, so
   in every project with generated authentication `session:clear` deleted every `session:*` key of the Redis at
-  `REDIS_URL`. It now reads the store from the `config.store =` and `Session.use_store(` lines only (comments
-  ignored, over several lines), and refuses (exit 1) when they name different stores or one that is not the shard's
-- Fixed: `session:clear` prints the Redis target, its password as `***`, and that every `session:*` key in that
-  database goes, other apps' sessions included, also with `--force`; a `REDIS_URL` that is not a redis URL is a clean
-  error (exit 1) instead of `Invalid Int32`; it refuses an argument (exit 2)
+  `REDIS_URL`. It now reads the code of the initializer (comments, strings, chars, heredocs, `%` literals and regexes
+  are not code) and takes a store only from `Session.use_store(Session::<Store>(T))` or
+  `config.store = Session::<Store>(T).new(...)` at the top level or in a `do` block (`Session::` required, so
+  `MyApp::RedisStore` is not the shard's). It refuses (exit 1, also with `SESSION_BACKEND` set) when the stores
+  differ, when anything else sets a store (`config.store ||=`, `config.store = (...)`, a variable, `store:`, a store
+  behind an `if`, in a `def` or a `{ }` block) and when it cannot read the file (an unterminated literal or heredoc,
+  unbalanced `end`s, macro conditionals, `=begin`)
+- Fixed: `session:clear` prints the Redis target as `scheme://host:port/database` (never the user or password, nor
+  the URL as given, also in errors), and that every `session:*` key in that database goes, other apps' sessions
+  included, also with `--force`; it connects to a bracketed IPv6 host; a `REDIS_URL` it cannot read (two `@`, no host,
+  a port outside 1..65535, a database that is not a number) is a clean error (exit 1) instead of `Invalid Int32`, and a
+  database the server does not have says so; it refuses an argument (exit 2)
 - Fixed: `session:setup -h` and `session:clear -h` ran the command; they show the help
 - Fixed: `session:setup` refuses (exit 1, even with `--force`) when auth's endpoints or throttle exist although its
   initializer was deleted. An initializer that only looks like auth's says so and how to replace it (delete the file)

@@ -1,6 +1,7 @@
 require "../base"
+require "./redis_target"
+require "./store_detector"
 require "redis"
-require "uri"
 
 module AzuCLI
   module Commands
@@ -15,9 +16,6 @@ module AzuCLI
         # not per app, so every session in the Redis database goes.
         REDIS_KEY_PATTERN = "session:*"
         INITIALIZER       = "./src/initializers/session.cr"
-        STORE_BACKENDS    = {"CookieStore" => "cookie", "RedisStore" => "redis", "MemoryStore" => "memory"}
-        # The store an initializer sets: `config.store = <Store>` or `Session.use_store(<Store>`, across lines.
-        STORE_LINE = /(?:\b\w+\.store\s*=(?![=~])|\buse_store\s*\(?)\s*([\w:]+)/
 
         property force : Bool = false
         property backend : String?
@@ -53,38 +51,10 @@ module AzuCLI
           end
         end
 
-        # The backends the store lines of an initializer name, in order and without repeats: "cookie", "redis",
-        # "memory", or the store as written when it is none of the session shard's. Comments do not count.
+        # The backends the initializer sets (see StoreDetector): an entry that is not a backend is a store it
+        # cannot read, which makes the command refuse.
         def self.store_backends(source : String) : Array(String)
-          code_only(source).scan(STORE_LINE).map do |match|
-            store = match[1]
-            STORE_BACKENDS[store.split("::").last]? || store
-          end.uniq
-        end
-
-        # `source` without its comments: from a `#` outside a string literal to the end of the line.
-        def self.code_only(source : String) : String
-          source.lines(chomp: false).join do |line|
-            quote = nil
-            cut = line.size
-            line.each_char_with_index do |char, index|
-              if quote
-                quote = nil if char == quote && line[index - 1]? != '\\'
-              elsif char == '"' || char == '\''
-                quote = char
-              elsif char == '#'
-                cut = index
-                break
-              end
-            end
-            cut < line.size ? "#{line[0, cut]}\n" : line
-          end
-        end
-
-        # The URL with its password replaced by `***`, so it can be printed.
-        def self.redacted_url(uri : URI) : String
-          return uri.to_s unless uri.password
-          uri.to_s.sub(/\A([a-z][a-z0-9+.-]*:\/\/[^:@\/]*:)[^@\/]*@/i, "\\1***@")
+          StoreDetector.backends(source)
         end
 
         # Deletes every key matching `pattern`, a SCAN page at a time (never KEYS, which blocks the server).
@@ -113,48 +83,36 @@ module AzuCLI
         end
 
         private def clear_redis_sessions : Result
-          uri = redis_uri
-          return uri if uri.is_a?(Result)
+          target = RedisTarget.parse(ENV["REDIS_URL"]? || "redis://localhost:6379")
+          return error("REDIS_URL cannot be used: #{target}. Nothing was deleted.") if target.is_a?(String)
 
-          stdout.puts "This deletes every #{REDIS_KEY_PATTERN} key in database #{uri.path.lchop('/').presence || "0"} of " \
-                      "#{self.class.redacted_url(uri)}, including the sessions of other apps that share that database: " \
-                      "every user of each of them is logged out."
+          stdout.puts "This deletes every #{REDIS_KEY_PATTERN} key in database #{target.database} of #{target}, " \
+                      "including the sessions of other apps that share that database: every user of each of them is logged out."
           unless @force
             stdout.print "Delete them? [y/N]: "
             stdout.flush
             response = gets
             return error("Operation cancelled") unless response && response.downcase.starts_with?("y")
           end
+          delete_sessions(target)
+        end
 
-          redis = Redis.new(url: uri.to_s)
+        private def delete_sessions(target : RedisTarget) : Result
+          redis = Redis.new(host: target.host, port: target.port, password: target.password, database: target.database,
+            ssl: target.ssl?)
           begin
-            count = self.class.clear_redis(redis)
-            success("Cleared #{count} session(s)")
+            success("Cleared #{self.class.clear_redis(redis)} session(s)")
           ensure
             redis.close
           end
         rescue ex : Redis::Error | Socket::Error | IO::Error
-          error("Failed to clear Redis sessions: #{ex.message}")
-        end
-
-        # REDIS_URL (default redis://localhost:6379) when it is a redis:// or rediss:// URL with a host and a
-        # numeric port, or the error to answer.
-        private def redis_uri : URI | Result
-          url = ENV["REDIS_URL"]? || "redis://localhost:6379"
-          uri = URI.parse(url)
-          database = uri.path.lchop('/')
-          port = url.sub(/\A[a-z]+:\/\//i, "").split('/', 2)[0].split('@').last.partition(':')[2]
-          unless %w[redis rediss].includes?(uri.scheme) && uri.host.presence && (port.empty? || port.to_i?) &&
-                 (database.empty? || database.to_i?)
-            return invalid_redis_url(uri)
+          message = target.scrub(ex.message.to_s)
+          if message.includes?("DB index is out of range")
+            error("#{target} has no database #{target.database} (a server has 16, 0 to 15, unless its `databases` " \
+                  "setting says otherwise). Nothing was deleted.")
+          else
+            error("Failed to clear Redis sessions at #{target}: #{message}")
           end
-          uri
-        rescue URI::Error | ArgumentError
-          error("REDIS_URL is not a redis://host[:port][/database] URL.")
-        end
-
-        private def invalid_redis_url(uri : URI) : Result
-          error("REDIS_URL (#{self.class.redacted_url(uri)}) is not a redis://host[:port][/database] URL.")
         end
 
         # The store the initializer sets, or SESSION_BACKEND when it sets none; an error when it cannot tell.
@@ -165,7 +123,7 @@ module AzuCLI
           elsif backends.size == 1 && BACKENDS.includes?(backends.first)
             backends.first
           else
-            error("Cannot tell the session backend: #{INITIALIZER} sets #{backends.join(" and ")}. Pass --backend #{BACKENDS.join("|")}.")
+            error("Cannot tell the session backend from #{INITIALIZER} (#{backends.join("; ")}). Pass --backend #{BACKENDS.join("|")}.")
           end
         end
 
@@ -179,10 +137,12 @@ module AzuCLI
             #{USAGE}
 
             Deletes the sessions kept in Redis: every #{REDIS_KEY_PATTERN} key in REDIS_URL's database, SCAN by SCAN,
-            including the sessions of other apps that share that database. It prints the target (password hidden)
-            and asks first unless --force.
-            The backend is read from the store src/initializers/session.cr sets (config.store or Session.use_store,
-            comments ignored) unless --backend names it. Cookie and memory sessions cannot be cleared from here: the
+            including the sessions of other apps that share that database. It prints the target as
+            scheme://host:port/database (never the user or password) and asks first unless --force.
+            The backend is read from the store src/initializers/session.cr sets unless --backend names it: only
+            `Session.use_store(Session::<Store>(...))` or `config.store = Session::<Store>(...).new(...)` at the top
+            level or in a do block count (comments and strings do not); any other store it finds, or code it cannot
+            read, makes it refuse. Cookie and memory sessions cannot be cleared from here: the
             command says what to do instead, without asking.
 
             Options:

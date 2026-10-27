@@ -171,6 +171,30 @@ describe AzuCLI::Commands::Session::Clear do
       end
     end
 
+    it "refuses, even with SESSION_BACKEND=redis, an initializer whose store it cannot read" do
+      ["config.store = (Session::CookieStore(U).new)\nputs \"use config.store = Session::RedisStore for revocation\"\n",
+       "config.store ||= Session::RedisStore(U).new\n",
+       "config.store = MyApp::RedisStore.new\n",
+       "DOC = <<-TXT\n  config.store = Session::RedisStore(U).new\n",
+       "if ENV[\"R\"]?\n  Session.use_store(Session::RedisStore(U))\nend\n"].each do |source|
+        in_tmp_project(files: {"src/initializers/session.cr" => source}) do
+          with_redis_url(NO_REDIS) do
+            old = ENV["SESSION_BACKEND"]?
+            ENV["SESSION_BACKEND"] = "redis"
+            begin
+              result, output = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
+              result.success?.should be_false
+              result.exit_code.should eq 1
+              result.error.should contain("--backend")
+              output.should_not contain("deletes")
+            ensure
+              old ? (ENV["SESSION_BACKEND"] = old) : ENV.delete("SESSION_BACKEND")
+            end
+          end
+        end
+      end
+    end
+
     it "refuses an initializer whose stores disagree or are not the shard's" do
       ["Session.use_store(Session::CookieStore(UserSession))\nconfig.store = Session::RedisStore(UserSession).new\n",
        "config.store = MyStore.new\n"].each do |source|
@@ -209,26 +233,43 @@ describe AzuCLI::Commands::Session::Clear do
   end
 
   describe "Redis target" do
-    it "prints the target, password redacted, and what goes, even with --force" do
+    it "prints the target without any userinfo, and what goes, even with --force" do
       with_redis_url("redis://app:s3cret@127.0.0.1:1/3") do
         result, output = run_command(AzuCLI::Commands::Session::Clear.new, ["--backend", "redis", "--force"])
         result.success?.should be_false # nothing listens there
-        output.should contain("redis://app:***@127.0.0.1:1/3")
+        output.should contain("redis://127.0.0.1:1/3")
         output.should contain("session:*")
         output.should contain("database 3")
         output.should contain("other apps")
-        output.should_not contain("s3cret")
-        result.error.to_s.should_not contain("s3cret")
+        (output + result.error.to_s).should_not contain("s3cret")
+        (output + result.error.to_s).should_not contain("app:")
       end
     end
 
-    it "redacts a password given without a user" do
-      AzuCLI::Commands::Session::Clear.redacted_url(URI.parse("redis://:pw@host:6380")).should eq "redis://:***@host:6380"
-      AzuCLI::Commands::Session::Clear.redacted_url(URI.parse("redis://host")).should eq "redis://host"
+    it "never prints a part of an odd userinfo, nor the raw URL, in the output or the error" do
+      ["redis://u:sekq:ritq@127.0.0.1:1/0", "redis://u:p@sekritq@localhost:1/0", "redis://sekritq@127.0.0.1:1",
+       "redis://sekritq@", "redis://:sekritq@[::1]:1/0"].each do |url|
+        with_redis_url(url) do
+          result, output = run_command(AzuCLI::Commands::Session::Clear.new, ["--backend", "redis", "--force"])
+          result.success?.should be_false
+          result.exit_code.should eq 1
+          text = output + result.error.to_s
+          {"sekq", "ritq", "sekritq", url}.each { |secret| text.should_not contain(secret) }
+        end
+      end
+    end
+
+    it "connects to a bracketed IPv6 host instead of calling the URL invalid" do
+      with_redis_url("redis://:pw@[::1]:1/0") do
+        result, output = run_command(AzuCLI::Commands::Session::Clear.new, ["--backend", "redis", "--force"])
+        result.success?.should be_false # nothing listens there
+        output.should contain("redis://[::1]:1/0")
+        result.error.to_s.should_not contain("REDIS_URL")
+      end
     end
 
     it "refuses a REDIS_URL that is not a redis URL (exit 1)" do
-      ["notaurl", "http://host:6379", "redis://host:port"].each do |url|
+      ["notaurl", "http://host:6379", "redis://host:port", "redis://host:6379/x"].each do |url|
         with_redis_url(url) do
           result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--backend", "redis", "--force"])
           result.success?.should be_false
