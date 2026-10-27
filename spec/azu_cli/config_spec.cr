@@ -92,18 +92,19 @@ describe AzuCLI::Config do
     end
   end
 
-  describe "#generate_sample_config" do
-    it "generates a sample configuration file" do
-      temp_file = "/tmp/test_azu_config.yml"
-      AzuCLI::Config.generate_sample_config(temp_file)
+  describe "an azu.yml" do
+    it "is not read: the CLI is configured by the environment only" do
+      TestHelpers::TestSetup.with_temp_project do |_|
+        Dir.mkdir_p("config")
+        File.write("config/azu.yml", "server:\n  port: 9999\nlogging:\n  level: debug\n")
 
-      File.exists?(temp_file).should be_true
-      content = File.read(temp_file)
-      content.should contain("environment: development")
-      content.should contain("database:")
-      content.should contain("server:")
+        TestHelpers::TestSetup.with_env({"AZU_PORT" => nil}) do
+          config = AzuCLI::Config.new
+          config.load!
 
-      File.delete(temp_file)
+          config.dev_server_port.should eq(4000)
+        end
+      end
     end
   end
 end

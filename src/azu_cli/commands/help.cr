@@ -67,11 +67,6 @@ module AzuCLI
         puts "  openapi:export        Export an OpenAPI 3.1 spec from the code"
         puts "  openapi:generate      Generate code from an OpenAPI 3.1 spec"
         puts
-        puts "Configuration Commands:"
-        puts "  config:show            Show the CLI configuration"
-        puts "  config:validate        Validate the CLI configuration"
-        puts "  config:env             List or change environment variables"
-        puts
         puts "Other Commands:"
         puts "  completion <shell>     Print a shell completion script (bash, zsh, fish)"
         puts "  version                Show version information"

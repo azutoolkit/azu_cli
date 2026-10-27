@@ -193,7 +193,7 @@ Without a keyboard and screen (`--ui plain`, a pipe, `AZU_UI=plain`) the command
 blog/
 ├── shard.yml, README.md, LICENSE, .gitignore, .editorconfig, .tool-versions
 ├── .env (0600, git-ignored), .env.development, .env.test, .env.example
-├── config/           azu.yml, jobs.yml (JoobQ), mailer.yml, openapi.yml, api.yml
+├── config/           jobs.yml (JoobQ), mailer.yml, openapi.yml, api.yml
 ├── public/           assets/, templates/ (layout.jinja, helpers/_nav.jinja, <app>/welcome/index_page.jinja)
 ├── spec/             spec_helper.cr, blog_spec.cr
 └── src/

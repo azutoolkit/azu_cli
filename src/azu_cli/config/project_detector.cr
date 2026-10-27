@@ -1,7 +1,5 @@
-require "yaml"
-
 module AzuCLI
-  # Detects project type from structure and configuration
+  # Detects the project type (web, api or cli) from the files of the project
   class ProjectDetector
     @cached_type : String?
 
@@ -11,12 +9,6 @@ module AzuCLI
     # Detect project type (web, api, cli)
     def detect_type : String
       return @cached_type.not_nil! if @cached_type
-
-      # Try to detect from config file first
-      if type = type_from_config
-        @cached_type = type
-        return type
-      end
 
       # Try to detect from structure
       if type = type_from_structure
@@ -44,23 +36,6 @@ module AzuCLI
       detect_type == "cli"
     end
 
-    # Detect type from azu.yml config
-    private def type_from_config : String?
-      config_path = File.join(@project_path, "config/azu.yml")
-      return nil unless File.exists?(config_path)
-
-      config = YAML.parse(File.read(config_path))
-      if project_config = config["project"]?
-        if type = project_config["type"]?
-          return type.as_s
-        end
-      end
-
-      nil
-    rescue
-      nil
-    end
-
     # Detect type from project structure
     private def type_from_structure : String?
       # Check for web-specific files
@@ -86,40 +61,6 @@ module AzuCLI
       end
 
       nil
-    end
-
-    # Get API version from config
-    def api_version : String
-      config_path = File.join(@project_path, "config/azu.yml")
-      return "v1" unless File.exists?(config_path)
-
-      config = YAML.parse(File.read(config_path))
-      if project_config = config["project"]?
-        if version = project_config["api_version"]?
-          return version.as_s
-        end
-      end
-
-      "v1"
-    rescue
-      "v1"
-    end
-
-    # Check if OpenAPI is enabled
-    def openapi_enabled? : Bool
-      config_path = File.join(@project_path, "config/azu.yml")
-      return false unless File.exists?(config_path)
-
-      config = YAML.parse(File.read(config_path))
-      if project_config = config["project"]?
-        if enabled = project_config["openapi_enabled"]?
-          return enabled.as_bool
-        end
-      end
-
-      false
-    rescue
-      false
     end
   end
 end

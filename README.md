@@ -52,7 +52,6 @@ Run `azu help` for the list (`azu --help` and `azu --version` are not options: u
 | Jobs        | `jobs:worker`, `jobs:status`, `jobs:clear`, `jobs:retry`, `jobs:ui`                            |
 | Session     | `session:setup`, `session:clear`                                                               |
 | OpenAPI     | `openapi:export`, `openapi:generate`                                                           |
-| Config      | `config:show`, `config:validate`, `config:env`                                                 |
 | Other       | `completion`, `version`, `help`                                                                |
 
 ## Generators

@@ -154,14 +154,6 @@ azu openapi:export [--output FILE] [--format yaml|json] [--project NAME] [--vers
 azu openapi:generate <spec> [--force] [--models-only] [--endpoints-only]
 ```
 
-## Configuration Commands
-
-```bash
-azu config:show [--format yaml|json|table] [--env ENV] [--section NAME]
-azu config:validate [--env ENV]
-azu config:env [--list|--show|--set K=V|--unset K]
-```
-
 ## Other
 
 ```bash

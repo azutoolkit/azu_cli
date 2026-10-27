@@ -25,7 +25,6 @@
 * [azu jobs:*](command-reference/azu-jobs.md)
 * [azu session:*](command-reference/azu-session.md)
 * [azu openapi:*](command-reference/azu-openapi.md)
-* [azu config:*](command-reference/azu-config.md)
 * [azu completion](command-reference/azu-completion.md)
 * [Production Builds](command-reference/building-for-production.md)
 

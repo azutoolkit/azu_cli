@@ -468,8 +468,7 @@ describe AzuCLI::Commands::Generate do
   describe "project type detection" do
     it "detects API projects and sets api_only mode" do
       ScratchProject.new.in_generated_project do
-        Dir.mkdir_p("config")
-        File.write("config/azu.yml", "project:\n  type: api\n")
+        File.write("src/api.cr", "# the entry point of an API project\n")
 
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["model", "User"])
@@ -481,8 +480,7 @@ describe AzuCLI::Commands::Generate do
 
     it "keeps web mode for a web-only request in an API project" do
       ScratchProject.new.in_generated_project do
-        Dir.mkdir_p("config")
-        File.write("config/azu.yml", "project:\n  type: api\n")
+        File.write("src/api.cr", "# the entry point of an API project\n")
 
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["model", "User", "--web-only"])

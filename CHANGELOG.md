@@ -2,6 +2,15 @@
 
 ## Unreleased - generated projects depend on azu 0.10 and session 1.1
 
+- Removed: `azu.yml` and the `config:show`, `config:validate` and `config:env` commands. The file was read for a few
+  logging flags only: `azu dev` and `azu serve` read `PORT`/`HOST`, `azu db:*` reads `DATABASE_URL`, and a section named
+  after the environment replaced the rest of the file instead of merging with it. The CLI is configured by
+  environment variables (`AZU_ENV`, `AZU_DEBUG`, `AZU_VERBOSE`, `AZU_QUIET`, `AZU_UI`, `NO_COLOR`) and the app by its
+  `.env` files. `azu new` no longer writes `config/azu.yml`, `azu init` no longer writes it, and a project's type is
+  read from its files (`src/api.cr` for an API) only. An existing `config/azu.yml` is ignored; delete it.
+- Fixed: generated logging and custom middleware called `call_next` twice, so the rest of the chain ran twice.
+- Fixed: `azu generate mailer ... --skip job` wrote the job file anyway; `azu generate` help suggested `middleware
+  --type auth`, which is not a type (use `authentication`).
 - Docs: rewritten for GitBook and limited to using the CLI (`.gitbook.yaml` points GitBook at `docs/`). Every page has one
   layout (overview with a screenshot and a diagram, quickstart with a flags table, realistic output, do's and don'ts),
   and the command pages live in `docs/command-reference/azu-<command>.md`. `scripts/check_docs.py` (run by

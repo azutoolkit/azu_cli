@@ -15,7 +15,7 @@ flowchart LR
   A["azu"] --> B["Project: new, init"]
   A --> C["Generate: generate (g), undo"]
   A --> D["Run: dev, serve (s), routes, console"]
-  A --> E["Check: doctor, test (t), config:*"]
+  A --> E["Check: doctor, test (t)"]
   A --> F["Data: db:*"]
   A --> G["Background: jobs:*, session:*"]
   A --> H["API: openapi:*"]
@@ -45,7 +45,6 @@ azu serve
 | `azu console` | Open Crystal's interpreter with the app loaded | [console](azu-console.md) |
 | `azu doctor` | Check the toolchain, dependencies, database, environment and port | [doctor](azu-doctor.md) |
 | `azu test` (`t`) | Run the application's tests | [test](azu-test.md) |
-| `azu config:show`, `config:validate`, `config:env` | Show, validate and manage the configuration | [config](azu-config.md) |
 | `azu db:*` | Create, migrate, roll back, seed and inspect the database | [database](azu-db.md) |
 | `azu jobs:worker`, `jobs:status`, `jobs:clear`, `jobs:retry`, `jobs:ui` | Run and manage JoobQ background jobs | [jobs](azu-jobs.md) |
 | `azu session:setup`, `azu session:clear` | Configure sessions and clear them | [session](azu-session.md) |

@@ -14,7 +14,6 @@ module AzuCLI
         jobs:worker jobs:status jobs:clear jobs:retry jobs:ui
         session:setup session:clear
         openapi:generate openapi:export
-        config:show config:validate config:env
         completion
       ]
 
@@ -217,11 +216,6 @@ module AzuCLI
         complete -c azu -n '__fish_seen_subcommand_from new' -l yes -d 'Non-interactive mode'
 
         # Config command options
-        complete -c azu -n '__fish_seen_subcommand_from config:show' -l format -s f -d 'Output format' -xa 'yaml json table'
-        complete -c azu -n '__fish_seen_subcommand_from config:show' -l section -s s -d 'Show section'
-        complete -c azu -n '__fish_seen_subcommand_from config:validate' -l strict -d 'Strict validation'
-        complete -c azu -n '__fish_seen_subcommand_from config:env' -l list -d 'List variables'
-        complete -c azu -n '__fish_seen_subcommand_from config:env' -l show -d 'Show values'
 
         # Completion command options
         complete -c azu -n '__fish_seen_subcommand_from completion' -l shell -s s -d 'Shell type' -xa 'bash zsh fish'
@@ -259,9 +253,6 @@ module AzuCLI
         when "session:clear"        then "Clear sessions"
         when "openapi:generate"     then "Generate from OpenAPI"
         when "openapi:export"       then "Export OpenAPI spec"
-        when "config:show"          then "Show configuration"
-        when "config:validate"      then "Validate configuration"
-        when "config:env"           then "Manage environment"
         when "completion"           then "Generate completions"
         else                             cmd
         end

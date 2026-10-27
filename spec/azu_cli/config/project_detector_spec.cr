@@ -46,16 +46,14 @@ describe AzuCLI::ProjectDetector do
       Dir.delete("spec/fixtures/default_project")
     end
 
-    it "reads type from config/azu.yml" do
+    it "does not read the type from a config/azu.yml" do
       Dir.mkdir_p("spec/fixtures/config_project/config")
-      config_content = <<-YAML
-      project:
-        type: api
-      YAML
-      File.write("spec/fixtures/config_project/config/azu.yml", config_content)
+      File.write("spec/fixtures/config_project/config/azu.yml", "project:
+  type: api
+")
 
       detector = AzuCLI::ProjectDetector.new("spec/fixtures/config_project")
-      detector.detect_type.should eq("api")
+      detector.detect_type.should eq("web")
 
       File.delete("spec/fixtures/config_project/config/azu.yml")
       Dir.delete("spec/fixtures/config_project/config")
@@ -136,60 +134,6 @@ describe AzuCLI::ProjectDetector do
       File.delete("spec/fixtures/api_project/src/api.cr")
       Dir.delete("spec/fixtures/api_project/src")
       Dir.delete("spec/fixtures/api_project")
-    end
-  end
-
-  describe "#api_version" do
-    it "returns v1 by default" do
-      Dir.mkdir_p("spec/fixtures/test_project")
-
-      detector = AzuCLI::ProjectDetector.new("spec/fixtures/test_project")
-      detector.api_version.should eq("v1")
-
-      Dir.delete("spec/fixtures/test_project")
-    end
-
-    it "reads version from config" do
-      Dir.mkdir_p("spec/fixtures/config_project/config")
-      config_content = <<-YAML
-      project:
-        api_version: v2
-      YAML
-      File.write("spec/fixtures/config_project/config/azu.yml", config_content)
-
-      detector = AzuCLI::ProjectDetector.new("spec/fixtures/config_project")
-      detector.api_version.should eq("v2")
-
-      File.delete("spec/fixtures/config_project/config/azu.yml")
-      Dir.delete("spec/fixtures/config_project/config")
-      Dir.delete("spec/fixtures/config_project")
-    end
-  end
-
-  describe "#openapi_enabled?" do
-    it "returns false by default" do
-      Dir.mkdir_p("spec/fixtures/test_project")
-
-      detector = AzuCLI::ProjectDetector.new("spec/fixtures/test_project")
-      detector.openapi_enabled?.should be_false
-
-      Dir.delete("spec/fixtures/test_project")
-    end
-
-    it "reads from config" do
-      Dir.mkdir_p("spec/fixtures/config_project/config")
-      config_content = <<-YAML
-      project:
-        openapi_enabled: true
-      YAML
-      File.write("spec/fixtures/config_project/config/azu.yml", config_content)
-
-      detector = AzuCLI::ProjectDetector.new("spec/fixtures/config_project")
-      detector.openapi_enabled?.should be_true
-
-      File.delete("spec/fixtures/config_project/config/azu.yml")
-      Dir.delete("spec/fixtures/config_project/config")
-      Dir.delete("spec/fixtures/config_project")
     end
   end
 end

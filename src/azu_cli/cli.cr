@@ -75,11 +75,6 @@ module AzuCLI
       register_command("openapi:generate", Commands::OpenAPI::Generate)
       register_command("openapi:export", Commands::OpenAPI::Export)
 
-      # Config commands
-      register_command("config:show", Commands::Config::Show)
-      register_command("config:validate", Commands::Config::Validate)
-      register_command("config:env", Commands::Config::Env)
-
       # Completion command
       register_command("completion", Commands::Completion)
     end
