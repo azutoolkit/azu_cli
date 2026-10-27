@@ -8,7 +8,7 @@ mockups are still proposals. What exists:
 | Engine: terminal, tokens, glyphs, frame, renderers, input, event loop, reporters | `src/azu_cli/ui/` | Built, as in section 3 |
 | `azu new` wizard, review, progress card, done card | `commands/new.cr`, `commands/new_wizard.cr` | Built. The steps are the existing options; the Driver and Frontend steps of the mockups are not (no such generator options exist) |
 | `azu dev` dashboard: build stages and history, app, requests, SQL, jobs, log, failed-build card | `dev_server/hud.cr`, `dev_server/telemetry.cr`, `commands/dev.cr` | Built. Spark tab, `[o]` open in editor, `[s]` SVG snapshot and the command palette are not |
-| App telemetry over `AZU_TELEMETRY_SOCKET` | azu `src/azu/dev/telemetry.cr` | Built (azu branch `claude/pensive-davinci-equizt`); generated projects need an azu release that has it |
+| App telemetry over `AZU_TELEMETRY_SOCKET` | azu `src/azu/dev/telemetry.cr` | Released in azu 0.10.1, the release generated projects pin (`~> 0.10.1`) |
 | `azu generate` preview, menu, `--dry-run`, `--check`, `azu undo` | `generate_plan.cr`, `generate_preview.cr`, `commands/generate_flow.cr`, `commands/undo.cr` | Built (innovation 3) |
 | Innovations 1, 2, 4 (budgets), 5 | — | Proposals |
 

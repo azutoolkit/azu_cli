@@ -28,7 +28,8 @@ prints a one-line summary of the session.
 Requests and SQL come from the app: `azu dev` listens on a Unix socket (mode 0600) and passes its path to the app as
 `AZU_TELEMETRY_SOCKET`; an app that requires `azu/dev` and runs in development writes one JSON snapshot per second
 (azu's `Dev::Telemetry`, from the same performance monitor and query store as `/dev-dashboard`; requests need
-`PERFORMANCE_MONITORING=true`). With an azu that does not have it the two panels say what they need.
+`PERFORMANCE_MONITORING=true`; azu 0.10.1 and newer, which projects generated now pin). With an older azu the two
+panels say what they need.
 
 ## What happens on a change
 
