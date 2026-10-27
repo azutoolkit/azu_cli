@@ -313,6 +313,12 @@ module AzuCLI
         LOG_LINE      = /\A\d{4}-\d\d-\d\dT[\d:.]+Z\s+([A-Z]+) - (.*)\z/
         MIGRATION_ROW = /\A\s*│\s*(✔|✗)\s*│\s*(\S+)\s*│\s*(\d+)\s*│/
         BOX           = /\A\s*[┌├└│]/
+        # Lines the azu migrate script prints before `up`: the plan marker, then one per migration it will apply.
+        PLAN    = "AZU_PLAN"
+        PENDING = "AZU_PENDING"
+
+        # The migrations the script said it would apply ({version, name}), nil when it said nothing.
+        getter planned : Array({String, String})?
 
         getter migrations = [] of {Bool, String, String}
         getter warnings = [] of String
@@ -321,7 +327,12 @@ module AzuCLI
         def initialize(lines : Array(String))
           lines.each do |line|
             next if line.blank?
-            if row = MIGRATION_ROW.match(line)
+            if line.strip == PLAN
+              @planned = [] of {String, String}
+            elsif line.starts_with?("#{PENDING} ")
+              _, version, name = line.split(' ', 3)
+              (@planned ||= [] of {String, String}) << {version, name.split("::").last}
+            elsif row = MIGRATION_ROW.match(line)
               migrations << {row[1] == "✔", row[2], row[3]}
             elsif log = LOG_LINE.match(line)
               warnings << log[2] if {"WARN", "ERROR", "FATAL"}.includes?(log[1])
@@ -333,6 +344,9 @@ module AzuCLI
 
         # "applied CreatePosts, AddTagsToPosts", "rolled back CreatePosts", or "done".
         def summary : String
+          if plan = planned
+            return plan.empty? ? "nothing to do: up to date" : "applied #{plan.map(&.[1]).join(", ")}"
+          end
           return "done" if migrations.empty?
           applied, rolled_back = migrations.partition(&.[0])
           [{"applied", applied}, {"rolled back", rolled_back}].reject(&.[1].empty?).join("; ") do |(verb, rows)|
@@ -342,6 +356,7 @@ module AzuCLI
 
         # The line a running task shows: a log line's message, without its time and level.
         def self.note(line : String) : String
+          return "planning" if line.strip == PLAN || line.starts_with?("#{PENDING} ")
           LOG_LINE.match(line).try(&.[2]) || line.strip
         end
       end

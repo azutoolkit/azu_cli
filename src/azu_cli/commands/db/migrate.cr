@@ -126,6 +126,19 @@ module AzuCLI
           end
         end
 
+        # Script lines that print, before `up` runs, the migrations it is about to apply (CQL's own table after it lists
+        # every applied migration, new or not): the card says what this run applied.
+        private def planned_migrations_snippet(version : Int64?, steps : Int32?) : String
+          scope = if ver = version
+                    ".select { |migration| migration.version <= #{ver}_i64 }"
+                  elsif st = steps
+                    ".first(#{st})"
+                  else
+                    ""
+                  end
+          "puts \"#{ScriptOutput::PLAN}\"\nmigrator.pending_migrations#{scope}.each { |migration| puts \"#{ScriptOutput::PENDING} \#{migration.version} \#{migration.name}\" }\n"
+        end
+
         # Check if migrations directory has migration files
         private def has_migrations? : Bool
           return false unless Dir.exists?(migrations_dir)
@@ -142,6 +155,7 @@ module AzuCLI
 
             case action
             when "up"
+              io << planned_migrations_snippet(version, steps) if rich?
               if ver = version
                 io << "migrator.up_to(#{ver}_i64)\n"
               elsif st = steps
