@@ -326,6 +326,5 @@ module AzuCLI
         raise "Configuration validation failed:\n  #{errors.join("\n  ")}"
       end
     end
-
   end
 end
