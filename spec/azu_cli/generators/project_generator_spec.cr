@@ -30,7 +30,7 @@ describe AzuCLI::Generate::Project do
 
     generator.license.should eq("MIT")
     generator.project_type.should eq("web")
-    generator.database.should eq("postgresql")
+    generator.database.should eq("sqlite")
     generator.test_framework.should eq("spec")
     generator.ci_setup.should eq("GitHub Actions")
     generator.docker_support.should be_false
@@ -210,7 +210,7 @@ describe AzuCLI::Generate::Project do
 
   describe "Azu + CQL setup" do
     it "generates a single cql_config initializer and no database initializer" do
-      generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com")
+      generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: "postgresql")
 
       test_dir = "./tmp_test_cql_config"
       FileUtils.mkdir_p(test_dir)
@@ -322,6 +322,47 @@ describe AzuCLI::Generate::Project do
       File.read("./shard.yml").should contain("crystal: '>= #{AzuCLI::Generate::Project::CRYSTAL_VERSION}'\n")
       checks = AzuCLI::Diagnostics::Checks.new(test_dir, ->(name : String) { ENV[name]? }, AzuCLI::Diagnostics::LocalSystem.new)
       checks.crystal_floor.should eq AzuCLI::Generate::Project::CRYSTAL_VERSION
+    end
+
+    it "defaults to SQLite: the sqlite3 driver, file URLs, and a CI workflow without a database service" do
+      test_dir = "./tmp_test_default_db"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
+
+      shard = File.read(File.join(test_dir, "shard.yml"))
+      shard.should match(/sqlite3:\n    github: crystal-lang\/crystal-sqlite3\n    version: ~> 0\.24\.0\n/)
+      shard.should_not contain("crystal-pg")
+      File.read(File.join(test_dir, "src", "initializers", "cql_config.cr")).should contain(%(require "sqlite3"))
+      File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=sqlite3://./db/myapp_development.db\n")
+      File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=sqlite3://./db/myapp_test.db\n")
+      workflow = File.read(File.join(test_dir, ".github", "workflows", "ci.yml"))
+      workflow.should contain("libsqlite3-dev")
+      workflow.should_not contain("services:")
+    end
+
+    it "names the chosen adapter in config/azu.yml, with a server port only for a server database" do
+      {"sqlite" => {"sqlite3", nil}, "postgresql" => {"postgresql", 5432}, "mysql" => {"mysql", 3306}}.each do |database, (adapter, port)|
+        test_dir = "./tmp_test_azu_yml_#{database}"
+        FileUtils.mkdir_p(test_dir)
+        AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database).render(test_dir)
+
+        yaml = File.read(File.join(test_dir, "config", "azu.yml"))
+        yaml.should contain(%(  adapter: "#{adapter}"\n))
+        if port
+          yaml.should contain("  port: #{port}\n  database:")
+        else
+          yaml.should_not contain("username:")
+        end
+      end
+    end
+
+    it "gives a MySQL project a MySQL DATABASE_URL in .env.development and .env.test" do
+      test_dir = "./tmp_test_mysql_env"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: "mysql").render(test_dir)
+
+      File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=mysql://root@localhost:3306/myapp_development_db\n")
+      File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=mysql://root@localhost:3306/myapp_test_db\n")
     end
 
     it "uses the mysql and sqlite3 drivers in the initializer" do
@@ -546,7 +587,7 @@ describe AzuCLI::Generate::Project do
 
     it "builds src/api.cr for an api project and has no data volume on postgresql" do
       FileUtils.mkdir_p("./tmp_test_docker_api")
-      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "api", docker_support: true).render("./tmp_test_docker_api")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "api", database: "postgresql", docker_support: true).render("./tmp_test_docker_api")
 
       dockerfile = File.read("./tmp_test_docker_api/Dockerfile")
       dockerfile.should contain("src/api.cr -o bin/myapp")
@@ -592,6 +633,41 @@ describe AzuCLI::Generate::Project do
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", ci_setup: "None").render("./tmp_test_noci")
       Dir.exists?("./tmp_test_noci/.github").should be_false
       FileUtils.rm_rf("./tmp_test_noci")
+    end
+  end
+
+  describe "files per project type" do
+    rendered = ->(type : String, dir : String) do
+      FileUtils.mkdir_p(dir)
+      AzuCLI::Generate::Project.new("mytool", "MyTool", "John Doe", "john@example.com", project_type: type).render(dir)
+      Dir.glob("#{dir}/**/*", match: :dot_files).select { |path| File.file?(path) }.map(&.lchop("#{dir}/")).sort
+    end
+
+    it "gives a cli project only the program, its specs and the project files: no server, database, jobs or assets" do
+      rendered.call("cli", "./tmp_test_files_cli").should eq [
+        ".editorconfig", ".github/workflows/ci.yml", ".gitignore", ".tool-versions", "LICENSE", "README.md",
+        "shard.yml", "spec/mytool_spec.cr", "spec/spec_helper.cr", "src/mytool.cr",
+      ]
+    end
+
+    it "gives a cli project a shard.yml without azu, cql, a database driver or the tasks target" do
+      rendered.call("cli", "./tmp_test_shard_cli")
+      shard = File.read("./tmp_test_shard_cli/shard.yml")
+      shard.should contain("targets:\n  mytool:\n    main: src/mytool.cr\n")
+      %w(azutoolkit/azu azutoolkit/cql crystal-pg crystal-sqlite3 crystal-mysql joobq topia tasks:).each do |name|
+        shard.should_not contain(name)
+      end
+      File.read("./tmp_test_shard_cli/.github/workflows/ci.yml").should_not contain("libsqlite3-dev")
+    end
+
+    it "keeps the server, database, jobs and assets of web and api projects" do
+      {"web" => "src/server.cr", "api" => "src/api.cr"}.each do |type, entry|
+        files = rendered.call(type, "./tmp_test_files_#{type}")
+        [entry, "src/mytool.cr", "src/worker.cr", "src/db/schema.cr", "src/initializers/cql_config.cr", "config/azu.yml",
+         ".env", ".env.development", "src/endpoints/welcome/index_endpoint.cr", "public/assets/app.css"].each do |file|
+          files.should contain(file)
+        end
+      end
     end
   end
 end

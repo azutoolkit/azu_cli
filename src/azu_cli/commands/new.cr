@@ -14,7 +14,8 @@ module AzuCLI
       property email : String = ""
       property license : String = "MIT"
       property project_type : String = "web"
-      property database : String = "postgresql"
+      # SQLite needs no server: `azu new blog && cd blog && azu db:setup && azu serve` works on a fresh machine
+      property database : String = "sqlite"
       property test_framework : String = "spec"
       property ci_setup : String = "GitHub Actions"
       property docker_support : Bool = false
@@ -225,9 +226,11 @@ module AzuCLI
         @project_type = prompt_choice("Project type", PROJECT_TYPES, @project_type)
         Logger.step(6, 9, "Project type: #{@project_type}")
 
-        # Database
-        @database = prompt_choice("Database adapter", ["postgresql", "mysql", "sqlite"], @database)
-        Logger.step(7, 9, "Database: #{@database}")
+        # Database (a cli project has none)
+        unless @project_type == "cli"
+          @database = prompt_choice("Database adapter", ["postgresql", "mysql", "sqlite"], @database)
+          Logger.step(7, 9, "Database: #{@database}")
+        end
 
         # Test framework
         @test_framework = prompt_choice("Test framework", ["spec", "minitest"], @test_framework)
@@ -351,7 +354,7 @@ module AzuCLI
         # Module name (derived from project name) must also be valid
         module_name = name.split(/[-_]/).map(&.capitalize).join
         return false unless module_name.matches?(/^[A-Z][a-zA-Z0-9]*$/)
-        return false if CRYSTAL_RESERVED_WORDS.includes?(module_name.downcase)
+        return false if CRYSTAL_Rhttps://github.com/azutoolkit/azu_cli/pull/44/conflict?name=src%252Fazu_cli%252Fcommands%252Fnew.cr&ancestor_oid=29310eb25dda691830f6111bc0439d7f6dfac357&base_oid=e81ce3fd4c29d9e890ae0bb6fae0de856cf61fd7&head_oid=c452e7cb9bf3d9892b55a670ad468d8956cde491ESERVED_WORDS.includes?(module_name.downcase)
 
         true
       end
@@ -376,10 +379,15 @@ module AzuCLI
       end
 
       PROJECT_TYPES = ["web", "api", "cli"]
+      # The adapters Generate::Project knows, with the aliases it accepts
+      DATABASES = ["sqlite", "sqlite3", "postgresql", "postgres", "pg", "mysql"]
 
       private def delivery_error : String?
         unless PROJECT_TYPES.includes?(@project_type)
           return "Unknown project type '#{@project_type}'. Choose one of: #{PROJECT_TYPES.join(", ")}."
+        end
+        unless @project_type == "cli" || DATABASES.includes?(@database)
+          return "Unknown database adapter '#{@database}'. Choose one of: sqlite, postgresql, mysql."
         end
         unless AzuCLI::Generate::Project::CI_SETUPS.includes?(@ci_setup)
           return "Unknown CI setup '#{@ci_setup}'. Choose one of: #{AzuCLI::Generate::Project::CI_SETUPS.join(", ")}."
@@ -540,7 +548,7 @@ module AzuCLI
       # What to run after `azu new`, in order. `azu db:setup` creates the database and runs the migrations, so it
       # works on a fresh project; the app listens on azu's default port, the PORT of the generated .env.
       def next_steps : Array(String)
-        return ["cd #{@project_name}", "crystal build src/#{@project_name}.cr", "./#{@project_name} --help"] if @project_type == "cli"
+        return ["cd #{@project_name}", "shards build", "./bin/#{@project_name.downcase.gsub(/[^a-z0-9_]/, "_")} --help"] if @project_type == "cli"
 
         url = "http://localhost:#{AzuCLI::Config::Ports::DEV_SERVER}"
         steps = ["cd #{@project_name}", "azu db:setup", "azu serve"]
@@ -594,7 +602,7 @@ module AzuCLI
         puts "  --license LICENSE         License (MIT, Apache-2.0, GPL-3.0, etc.)"
         puts "  --type TYPE               Project type (web, api, cli) [default: web]"
         puts "  --api                     Create API project (shorthand for --type api)"
-        puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: postgresql]"
+        puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: sqlite]"
         puts "  --test TEST               Test framework (spec, minitest) [default: spec]"
         puts "  --ci CI                   CI setup (\"GitHub Actions\" or \"None\") [default: GitHub Actions]"
         puts "  --no-ci                   Skip the CI workflow"

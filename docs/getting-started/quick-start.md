@@ -5,18 +5,18 @@ Create your first Azu application in minutes.
 ## Prerequisites
 
 - [Azu CLI installed](installation.md)
-- Database server running (PostgreSQL, MySQL, or SQLite)
+- Nothing else for the default SQLite database; a running server for `--db postgresql` or `--db mysql`
 
 ## Step 1: Create a New Project
 
 ```bash
-azu new my_blog --db postgres
+azu new my_blog
 ```
 
 This creates a new project with:
 
 - Complete project structure
-- PostgreSQL configuration
+- SQLite configuration (`db/my_blog_development.db`; `--db postgresql` or `--db mysql` for a server)
 - Git repository initialized
 
 ## Step 2: Navigate and Explore
@@ -48,8 +48,7 @@ my_blog/
 ## Step 3: Set Up the Database
 
 ```bash
-azu db:create
-azu db:migrate
+azu db:setup   # creates db/my_blog_development.db and runs the migrations
 ```
 
 ## Step 4: Start the Server

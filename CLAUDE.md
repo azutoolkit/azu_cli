@@ -86,7 +86,7 @@ make clean
    - Database commands in `commands/db/`
    - Job queue commands in `commands/jobs/`
 
-3. **Generators (src/azu_cli/generators/)** (a `Project` generator overrides `rendered_file_entries`; its `filter` method is not called by Teeplate)
+3. **Generators (src/azu_cli/generators/)** (Teeplate renders `rendered_file_entries` and never calls a `filter`: `Project` overrides it to give a cli project only `CLI_FILES` and to skip the delivery files)
 
    - Use Teeplate for file tree generation
    - Each generator inherits from `Teeplate::FileTree`

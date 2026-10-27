@@ -26,11 +26,14 @@ events.
 ### Create a Simple Web Application
 
 ```bash
-# Create a new web application
+# Create a new web application (SQLite: no database server needed)
 azu new my_blog
 
 # Navigate to the project
 cd my_blog
+
+# Create the SQLite database (db/my_blog_development.db) and run the migrations
+azu db:setup
 
 # Start development
 azu serve
@@ -54,14 +57,14 @@ azu new my_cli_tool --type cli
 ### Specify Database
 
 ```bash
-# PostgreSQL (default)
-azu new my_app --db postgres
+# SQLite (default): a file, no server
+azu new my_app
+
+# PostgreSQL
+azu new my_app --db postgresql
 
 # MySQL
 azu new my_app --db mysql
-
-# SQLite
-azu new my_app --db sqlite
 ```
 
 ## Command Options
@@ -70,7 +73,7 @@ azu new my_app --db sqlite
 | -------------------------- | -------------------------------------------------------- | -------------- |
 | `--type <type>`            | Project type (web, api, cli)                             | web            |
 | `--api`                    | Shorthand for `--type api`                               |                |
-| `--db <db>`                | Database adapter (postgresql, mysql, sqlite)             | postgresql     |
+| `--db <db>`                | Database adapter (sqlite, postgresql, mysql)             | sqlite         |
 | `--test <framework>`       | Test framework (spec, minitest)                          | spec           |
 | `--docker`                 | Generate a `Dockerfile` and `.dockerignore` (web, api)   | off            |
 | `--ci <setup>`, `--no-ci`  | `GitHub Actions` or `None`                               | GitHub Actions |
@@ -147,31 +150,35 @@ Command-line applications and tools.
 
 **Features:**
 
-- Command-line interface
-- No web server or database (unless added)
-- Focused on CLI development
+- An `OptionParser` program with `--help`, `--version` (and, with the example, `--hello NAME`)
+- No web server, database, background jobs, `.env` or assets; no dependencies in `shard.yml` (`--db` is ignored)
+- `shards build` builds `bin/<name>`
 
 **Generated Structure:**
 
 ```
 my_cli_tool/
 ├── src/
-│   ├── my_cli_tool.cr         # Main application
-│   ├── commands/              # CLI commands
-│   ├── services/              # Business logic
-│   └── utils/                 # Utilities
-├── spec/                      # Test files
-└── bin/                       # Executable
+│   └── my_cli_tool.cr         # The program (MyCliTool.run)
+├── spec/
+│   ├── spec_helper.cr
+│   └── my_cli_tool_spec.cr
+├── shard.yml                  # target my_cli_tool: src/my_cli_tool.cr
+├── README.md, LICENSE, .gitignore, .editorconfig, .tool-versions
+└── .github/workflows/ci.yml   # unless --no-ci
 ```
 
 ## Database Options
 
+`azu new` used PostgreSQL by default before; it now uses SQLite, so a new project runs without a database server.
+Pass `--db postgresql` (or `--db mysql`) for a server database.
+
 ### PostgreSQL (`--db postgresql`)
 
-**Recommended for production applications.**
+**For production applications with a database server.**
 
 ```bash
-azu new my_app --db postgres
+azu new my_app --db postgresql
 ```
 
 **Features:**
@@ -205,13 +212,16 @@ azu new my_app --db mysql
 - MySQL server installed
 - Database user with create privileges
 
-### SQLite (`--db sqlite`)
+### SQLite (`--db sqlite`, the default)
 
 **Perfect for development, prototypes, and simple applications.**
 
 ```bash
-azu new my_app --db sqlite
+azu new my_app
 ```
+
+`.env.development` and `.env.test` point `DATABASE_URL` at `db/my_app_development.db` and `db/my_app_test.db`;
+`azu db:setup` creates the file. The generated CI workflow needs no database service.
 
 **Features:**
 
@@ -304,22 +314,21 @@ Azu::Server.start
 name: my_app
 version: 0.1.0
 
+targets:
+  my_app:
+    main: src/server.cr
+
 dependencies:
   azu:
     github: azutoolkit/azu
-    version: ~> 1.0.0
+    version: ~> 0.5.118
   cql:
     github: azutoolkit/cql
-    version: ~> 0.8.0
-
-development_dependencies:
-  ameba:
-    github: crystal-ameba/ameba
-    version: ~> 1.4.0
-
-targets:
-  my_app:
-    main: src/my_app.cr
+    version: 0.0.604
+  # ... session, joobq, redis, topia
+  sqlite3: # pg ~> 0.31.0 with --db postgresql, mysql ~> 0.18.0 with --db mysql
+    github: crystal-lang/crystal-sqlite3
+    version: ~> 0.24.0
 ```
 
 **`.env`, `.env.development`, `.env.test`, `.env.example`** - Environment files. The app (and every `azu` command
@@ -350,8 +359,7 @@ A Crystal web application built with Azu.
 2. Setup database:
 
    ```bash
-   azu db:create
-   azu db:migrate
+   azu db:setup
    ```
 
 3. Start development server:
@@ -372,11 +380,11 @@ A Crystal web application built with Azu.
 **`src/initializers/cql_config.cr`** - Azu + CQL setup:
 
 ```crystal
-require "pg"
+require "sqlite3" # "pg" with --db postgresql, "mysql" with --db mysql
 require "azu/cql"
 
 Azu::CQL.configure do |c|
-  c.db = ENV["DATABASE_URL"]? || "postgresql://localhost/my_app_#{ENV["CRYSTAL_ENV"]? || "development"}"
+  c.db = ENV["DATABASE_URL"]? || "sqlite3://./db/my_app_#{ENV["CRYSTAL_ENV"]? || "development"}.db"
   c.pool.size = 10
 end
 
@@ -406,7 +414,7 @@ Tables used by models must be declared in `src/db/schema.cr`; migrations are run
 
 ```bash
 # Create blog with PostgreSQL
-azu new my_blog --db postgres --type web
+azu new my_blog --db postgresql --type web
 
 cd my_blog
 
@@ -426,7 +434,7 @@ azu serve
 
 ```bash
 # Create API service
-azu new user_api --type api --db postgres
+azu new user_api --type api --db postgresql
 
 cd user_api
 
@@ -451,7 +459,7 @@ azu new file_processor --type cli
 cd file_processor
 
 # Build and run
-crystal build src/file_processor.cr -o bin/file_processor
+shards build
 ./bin/file_processor --help
 ```
 
@@ -471,11 +479,10 @@ After creating a new project:
    shards install
    ```
 
-3. **Setup database (if applicable):**
+3. **Setup database (SQLite needs no server; with `--db postgresql` or `mysql`, start the server first):**
 
    ```bash
-   azu db:create
-   azu db:migrate
+   azu db:setup
    ```
 
 4. **Start development:**
@@ -497,7 +504,8 @@ Check the permissions of the directory you run `azu new` in, or run it from anot
 
 ### Database Connection Error
 
-Ensure the database server is running and the user can create databases, or use `--db sqlite`.
+With `--db postgresql` or `--db mysql`, ensure the database server is running and the user can create databases, or
+use the default SQLite.
 
 ## Best Practices
 
