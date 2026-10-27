@@ -58,8 +58,8 @@ Definitions and explanations of terms used throughout the Azu CLI documentation.
 
 | Azu CLI Version         | Crystal Version | Azu Framework | CQL ORM | Session   |
 | ----------------------- | --------------- | ------------- | ------- | --------- |
-| releases after 0.1.43   | 1.22.1+         | ~> 0.10.1     | 0.0.604 | ~> 1.1    |
-| 0.1.43 and earlier      | 1.22.1+         | ~> 0.5.118    | 0.0.604 | ~> 1.0.31 |
+| releases after 0.1.44   | 1.22.1+         | ~> 0.10.1     | 0.0.604 | ~> 1.1    |
+| 0.1.44 and earlier      | 1.22.1+         | ~> 0.5.118    | 0.0.604 | ~> 1.0.31 |
 
 `~> 0.10.1` is `>= 0.10.1, < 0.11.0`: azu is 0.x and can change its API between minor versions, so a project takes
 the next minor by editing its `shard.yml` (see azu's `docs/reference/breaking-changes.md`), not on `shards update`.
