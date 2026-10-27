@@ -6,7 +6,6 @@ module <%= app_module %>
     get "/register"
 
     def call : Registrations::NewPage
-      content_type "text/html"
       Registrations::NewPage.new(csrf_tag, flash_messages)
     end
   end

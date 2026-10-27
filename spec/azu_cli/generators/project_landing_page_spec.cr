@@ -119,13 +119,17 @@ describe "Generated project landing page" do
       end
     end
 
-    # Azu leaves the Content-Type to the endpoint and the app sends nosniff: without it a browser shows the page as text
-    it "answers / as HTML and /health as JSON" do
+    # Negotiable sets the Content-Type; a plain Azu::Response sets none, and with nosniff a browser shows the page as text
+    it "answers / as negotiated HTML and /health as negotiated JSON" do
       render_landing_project("web") do |dir|
-        File.read(File.join(dir, "src/endpoints/welcome/index_endpoint.cr")).should contain(%(def call : Welcome::IndexPage\n      content_type "text/html"\n))
+        page = File.read(File.join(dir, "src/pages/welcome/index_page.cr"))
+        page.should contain("include Azu::Response::Negotiable\n")
+        page.should contain("def render_html : String\n")
       end
       render_landing_project("api") do |dir|
-        File.read(File.join(dir, "src/endpoints/health/health_endpoint.cr")).should contain(%(def call : HealthPage\n      content_type "application/json"\n))
+        page = File.read(File.join(dir, "src/pages/health/health_page.cr"))
+        page.should contain("include Azu::Response::Negotiable\n")
+        page.should contain("def render_json : String\n")
       end
     end
   end

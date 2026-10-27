@@ -97,12 +97,12 @@ describe AzuCLI::OpenAPI::ResponseGenerator do
         # Check file content
         content = File.read(output_path)
         content.should contain("struct Users::UsersShowPage")
-        content.should contain("include Azu::Response")
+        content.should contain("include Azu::Response::Negotiable")
         content.should contain("include JSON::Serializable")
         content.should contain("property id : Int32")
         content.should contain("property name : String")
         content.should contain("property email : String?")
-        content.should contain("def render : String")
+        content.should contain("def render_json : String")
       end
 
       # Cleanup temp directory
@@ -137,9 +137,9 @@ describe AzuCLI::OpenAPI::ResponseGenerator do
         # Check file content
         content = File.read(output_path)
         content.should contain("struct Users::UsersIndexPage")
-        content.should contain("include Azu::Response")
+        content.should contain("include Azu::Response::Negotiable")
         content.should contain("include JSON::Serializable")
-        content.should contain("def render : String")
+        content.should contain("def render_json : String")
       end
 
       # Cleanup temp directory

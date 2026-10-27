@@ -5,7 +5,6 @@ module <%= @module_name %>
     get "/"
 
     def call : Welcome::IndexPage
-      content_type "text/html"
       Welcome::IndexPage.new(
         csrf_token: csrf_token,
         csrf_tag: csrf_tag,

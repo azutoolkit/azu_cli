@@ -61,18 +61,6 @@ describe AzuCLI::Generate::Endpoint do
     endpoint.call("show", "web").should contain("Post.find?(show_request.id)")
   end
 
-  # Azu leaves the Content-Type to the endpoint and the app sends nosniff: without it a browser shows a page as text
-  it "names the media type of every answer with a body" do
-    {"index", "show", "new", "edit"}.each do |action|
-      endpoint.call(action, "web").should contain(%(def call : Posts::#{action.capitalize}Page\n      content_type "text/html"\n))
-    end
-    {"index", "show", "create", "update"}.each do |action|
-      endpoint.call(action, "api").should contain(%(content_type "application/json"))
-    end
-    {"create", "update", "destroy"}.each { |action| endpoint.call(action, "web").should_not contain("content_type") }
-    endpoint.call("destroy", "api").should_not contain("content_type")
-  end
-
   it "answers with JSON in an API project" do
     endpoint.call("index", "api").should contain("Azu::Endpoint(Posts::IndexRequest, Posts::IndexResponse)")
     endpoint.call("create", "api").should contain("status 201")

@@ -1,6 +1,6 @@
 module <%= @module_name %>
   struct Welcome::IndexPage
-    include Azu::Response
+    include Azu::Response::Negotiable
     include Azu::Templates::Renderable
 
     # Version of the Azu shard this app was compiled against, read at compile time from the
@@ -25,7 +25,7 @@ module <%= @module_name %>
                    @csrf_metatag : String = "")
     end
 
-    def render
+    def render_html : String
       view data: {
         "project"         => @project,
         "project_title"   => "<%= @module_name %>",
