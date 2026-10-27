@@ -47,7 +47,7 @@ The first of these that is set wins:
 | `AZU_DB_ADAPTER`                                             | The adapter. Without it, the driver in `shard.yml` decides (`pg`, then `sqlite3` or `mysql`) |
 | `AZU_DB_POOL_SIZE`, `AZU_DB_POOL_TIMEOUT`, `AZU_DB_CHECKOUT_TIMEOUT` | Pool size (10) and timeouts in seconds (5)   |
 
-Without a name, the database is `<project>_<environment>`, from the name of the current directory. The environment is `AZU_ENV`, then `CRYSTAL_ENV`, then `development`. The CLI loads `.env`, then `.env.<environment>`, before the command starts; see [environment files](../configuration/environment.md).
+Without a name, the database is `<project>_<environment>`, from the name of the current directory. The environment is `AZU_ENV`, then `CRYSTAL_ENV`, then `development`. Before the command starts, the CLI loads the project's `.env` files for that environment; see [environment files](../configuration/environment.md). A variable already set in the shell wins over them.
 
 ### azu db:create
 
