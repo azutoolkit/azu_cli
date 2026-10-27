@@ -285,7 +285,7 @@ module AzuCLI
 
       # "exited with code 1" or "was killed by SEGV" (a process that died from a signal has no exit code).
       def self.describe_exit(status : Process::Status) : String
-        status.normal_exit? ? "exited with code #{status.exit_code}" : "was killed by #{status.exit_signal}"
+        status.normal_exit? ? "exited with code #{status.exit_code}" : "was killed by #{status.exit_signal?}"
       end
 
       private def report_exit : Nil

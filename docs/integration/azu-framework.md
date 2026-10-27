@@ -519,11 +519,11 @@ end
 # Performance monitoring
 class PerformanceMiddleware < Azu::Middleware
   def call(context)
-    start_time = Time.monotonic
+    start_time = Time.instant
 
     call_next(context)
 
-    duration = Time.monotonic - start_time
+    duration = Time.instant - start_time
     Azu.logger.info "Request completed in #{duration.total_milliseconds}ms"
   end
 end
@@ -581,7 +581,6 @@ azu framework info
 4. **Secrets**: Manage secrets securely using environment variables
 
 ## Migration from Other Frameworks
-
 
 ## Support and Resources
 

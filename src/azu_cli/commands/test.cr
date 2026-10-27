@@ -59,7 +59,7 @@ module AzuCLI
 
         output = IO::Memory.new
         error = IO::Memory.new
-        start_time = Time.monotonic
+        start_time = Time.instant
 
         # The specs run as `test` whatever the shell says: .env.test (loaded at startup for this command) names
         # the test database.
@@ -71,7 +71,7 @@ module AzuCLI
           error: error
         )
 
-        duration = (Time.monotonic - start_time).total_seconds
+        duration = (Time.instant - start_time).total_seconds
 
         # Display output
         puts output.to_s unless output.empty?
