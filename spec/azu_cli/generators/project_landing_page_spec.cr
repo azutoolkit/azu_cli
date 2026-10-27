@@ -2,11 +2,11 @@ require "../../spec_helper"
 require "file_utils"
 require "teeplate"
 
-private def render_landing_project(type : String, &)
+private def render_landing_project(type : String, project : String = "blog", module_name : String = "Blog", &)
   dir = File.join(Dir.tempdir, "azu_landing_#{type}_#{Time.utc.to_unix_ms}_#{Random.rand(100000)}")
   FileUtils.mkdir_p(dir)
   begin
-    AzuCLI::Generate::Project.new("blog", "Blog", "Jane", "jane@example.com", project_type: type).render(dir)
+    AzuCLI::Generate::Project.new(project, module_name, "Jane", "jane@example.com", project_type: type).render(dir)
     yield dir
   ensure
     FileUtils.rm_rf(dir)
@@ -28,6 +28,18 @@ describe "Generated project landing page" do
           public/assets/favicon.svg
           src/pages/welcome/index_page.cr
         ].each { |path| File.exists?(File.join(dir, path)).should be_true }
+      end
+    end
+
+    # Azu finds a page's template by the page's type name (`Azu::Templates::Renderable#page_path`), so the landing
+    # template sits under the module name underscored, also when that is not the project name
+    it "puts the landing template where Azu looks for the welcome page" do
+      {"blog" => "BlogApp", "blog-app" => "BlogApp", "myapp" => "MyApp", "shop" => "Shop"}.each do |project, module_name|
+        render_landing_project("web", project, module_name) do |dir|
+          File.read(File.join(dir, "src/pages/welcome/index_page.cr")).should contain("module #{module_name}\n  struct Welcome::IndexPage\n")
+          page_path = "#{module_name}::Welcome::IndexPage".split("::").join("/").underscore.downcase
+          Dir.glob(File.join(dir, "public/templates/*/welcome/index_page.jinja")).should eq([File.join(dir, "public/templates/#{page_path}.jinja")])
+        end
       end
     end
 

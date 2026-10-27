@@ -9,7 +9,7 @@ module AzuCLI
     # changes anything, and none prints the value of a variable or the password of a URL.
     class Checks
       CONNECT_TIMEOUT = 3.seconds
-      DEFAULT_PORT    = 4000
+      DEFAULT_PORT    = AzuCLI::Config::Ports::DEV_SERVER
       # Variables the generated app reads that must not keep an example or a short value.
       SECRETS                = {"CSRF_SECRET" => nil, "SESSION_SECRET" => "src/initializers/session.cr"}
       PLACEHOLDER            = /change.?me|secret|password|default|example|xxx|todo|replace/i

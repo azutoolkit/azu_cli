@@ -428,7 +428,7 @@ info:
   description: API documentation for blog_api
   version: 1.0.0
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:4000
     description: Development server
 paths:
   /health:
@@ -481,14 +481,14 @@ azu serve
 crystal run src/api.cr
 ```
 
-Visit http://localhost:3000/api/docs/ui for Swagger UI.
+Visit http://localhost:4000/api/docs/ui for Swagger UI.
 
 ## Testing the API
 
 ### Health Check
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:4000/health
 ```
 
 Response:
@@ -504,13 +504,13 @@ Response:
 ### List Posts
 
 ```bash
-curl http://localhost:3000/posts?page=1&per_page=10
+curl http://localhost:4000/posts?page=1&per_page=10
 ```
 
 ### Create Post (with auth)
 
 ```bash
-curl -X POST http://localhost:3000/posts \
+curl -X POST http://localhost:4000/posts \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -523,7 +523,7 @@ curl -X POST http://localhost:3000/posts \
 ### Get Single Post
 
 ```bash
-curl http://localhost:3000/posts/1
+curl http://localhost:4000/posts/1
 ```
 
 ## See Also

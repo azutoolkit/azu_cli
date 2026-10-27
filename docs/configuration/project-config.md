@@ -545,7 +545,7 @@ project:
 
 development:
   auto_reload: false
-  port: <%= ENV["PORT"] || 3000 %>
+  port: <%= ENV["PORT"] || 4000 %>
   host: 0.0.0.0
 
 build:

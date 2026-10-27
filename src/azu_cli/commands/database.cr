@@ -281,6 +281,17 @@ module AzuCLI
         false
       end
 
+      protected def sqlite? : Bool
+        @adapter.in?("sqlite", "sqlite3")
+      end
+
+      # An empty file is an empty SQLite database
+      protected def create_sqlite_database(db_name : String) : Nil
+        path = sqlite_path(db_name)
+        Dir.mkdir_p(File.dirname(path))
+        File.touch(path)
+      end
+
       # Get migrations directory
       protected def migrations_dir : String
         "./#{AzuCLI::Config::Paths::MIGRATIONS}"

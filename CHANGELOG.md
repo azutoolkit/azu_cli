@@ -10,6 +10,20 @@
 - Changed: `scripts/e2e_generated_app.sh` generates a job with a queue and type-checks (`crystal build --no-codegen`) the worker of `azu new`, then the files of `azu generate joobq --force`; with `E2E_REDIS_URL` it also builds a worker that enqueues the job, checks the job ran, and that SIGTERM stops the worker
 - Migration for apps generated before: in jobs, replace `@expires = N.<unit>.total_seconds.to_i` by `@expires = N.<unit>.from_now.to_unix_ms`; in `src/worker.cr` replace `JoobQ::Worker.start` or the `JoobQ.config.redis_url` line by `JoobQ.forge`; remove `config.redis_url = ...` and map your Redis URL to `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASS` before `require "joobq"`; replace `queue "name", n, Job` in `JoobQ.configure` by the two queue lines above
 
+## Unreleased - First run: db:migrate and the port
+
+- Fixed: `azu db:migrate` straight after `azu new` failed. On SQLite it now creates the database file when it is missing (as `azu db:create` does); a server database (PostgreSQL, MySQL) is never created by `db:migrate`, which still stops and says to run `azu db:create` or `azu db:setup`. A project without a migration yet is no longer an error: `db:migrate` (and so `db:setup`) answers "No migrations to run" with exit 0. `--dry-run` creates nothing (it reports the file it would create). `db:verify` and `db:rollback` still stop when there is no migration
+- Fixed: the next steps of `azu new` said `Visit: http://localhost:3000`; the app listens on 4000 (azu's default, the `PORT` of the generated `.env`). They now read cd, `azu db:setup`, `azu serve`, `http://localhost:4000` (a server database adds that it must be running), and the generated README, `config/openapi.yml`, `config/api.yml`, the mailer preview comment and the docs say 4000
+- Changed: the port lives in one place, `AzuCLI::Config::Ports::DEV_SERVER`: the project templates (`.env`, `.env.example`, `Dockerfile`, `config/azu.yml`, README), `azu serve`, `azu dev`, `azu doctor` and the hints read it
+- Changed: `scripts/e2e_generated_app.sh` checks that `azu new` points at the `PORT` of `.env` and, on SQLite, runs `azu db:migrate` right after `azu new`
+
+## Unreleased - A module name of your own (`azu new --module`)
+
+- Fixed: `azu new` put the welcome template under the project name (`public/templates/<project>/welcome/index_page.jinja`), while Azu looks for `<Module>::Welcome::IndexPage` under the module name underscored (`Azu::Templates::Renderable#page_path`). Whenever the two differ, `GET /` answered 500 with `Crinja::TemplateNotFoundError`: with `--module BlogApp` for `blog`, a hyphenated name (`blog-app` gives `BlogApp`, so `blog_app/`), or `myapp` with `MyApp`. The template now goes to `public/templates/<module_name.underscore>/`, the folder the scaffold and auth generators already use
+- Fixed: the generators run inside a project (scaffold, auth, channel, `azu console`) took the module from the shard name (`blog` gave `Blog`), so in a project made with `--module BlogApp` a scaffold wrote `module Blog` and `BlogDB`, which do not compile. `Utils.project_module_name` now reads the module `src/<project>.cr` declares and falls back to the shard name in PascalCase
+- Verified: `azu new blog --module BlogApp --db sqlite` with `azu generate scaffold Post title:string` compiles and answers 200 on `/` and `/posts`
+- Migration for apps generated before: if `public/templates/<project>/welcome/` is not the module name underscored, move `index_page.jinja` to `public/templates/<module_name.underscore>/welcome/` (for `BlogApp`, `public/templates/blog_app/welcome/`); files an older CLI generated with the shard-name module (`module Blog` in a `BlogApp` app) need `module BlogApp` (and `BlogAppDB`)
+
 ## Unreleased - `session:setup` writes code that compiles
 
 - Fixed: `azu session:setup` generated an initializer against an API the session shard does not have
