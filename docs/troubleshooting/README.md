@@ -218,7 +218,7 @@ Commit `shard.lock` once it exists.
 
 Cause: the project uses CQL and no `DATABASE_URL` reaches the process. Variables come from the shell and from the `.env` files.
 
-Fix: set `DATABASE_URL` in `.env`, using the names in `.env.example` as the guide. More in [environment variables](../configuration/environment.md).
+Fix: set `DATABASE_URL` in `.env`, using the names in `.env.example` as the guide. More in [configuration](../advanced/configuration.md).
 
 </details>
 

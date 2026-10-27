@@ -1,31 +1,106 @@
+---
+description: Open Crystal's interpreter with your app loaded, to run code against its models and configuration without starting the server.
+---
+
 # azu console
 
-Opens Crystal's interpreter (`crystal i`) with the application loaded.
+## Overview & visual demo
+
+`azu console` loads the app in Crystal's interpreter (`crystal i`) without starting its server, and leaves you at a prompt with the app loaded. It is the interpreter, not a Rails-style console: it needs a Crystal built with the interpreter, which the official Docker images are not, and nothing reloads while it runs. There is no concise twin for this page.
+
+<figure><img src="../assets/terminal-ui/14-doctor.png" alt="The azu doctor card for a project, with the crystal and shards versions and the database check"><figcaption><p><code>azu doctor</code> on a project. It reports the Crystal toolchain that <code>azu console</code> runs on. The console also needs the interpreter, which doctor's version line does not show.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu console"] --> B{"crystal i --help works?"}
+  B -->|no| C["Explain how to get it, exit 2"]
+  B -->|yes| D["Write .azu_console_*.cr"]
+  D --> E["crystal i: require the app, stop at debugger"]
+  E --> F["You type Crystal at the prompt"]
+  F -->|exit| G["Delete the scratch file"]
+```
+
+## Quickstart & command syntax
 
 ```bash
+cd blog
 azu console
 ```
 
-The command writes a scratch file in the project directory that requires `src/<project name>.cr` (the server is not
-started) and ends with `debugger`, runs `crystal i` on it, so you land at a prompt inside the loaded app, and deletes
-the file afterwards. Type `exit` to leave.
+At the prompt, type Crystal code against the loaded app. `exit` leaves.
 
-## Limits
+| Option | Meaning | Default |
+| --- | --- | --- |
+| none | The command takes no options | |
 
-Loading the application runs the top-level code of `src/<project name>.cr` (initializers, `.env` loading, database
-connections), and what you type runs against whatever the environment points at: do not use it against production by
-accident. The scratch file (`.azu_console_<random>.cr`, created exclusively, owner-only) is git-ignored in generated projects (add `/.azu_console_*.cr` to the `.gitignore` of an existing project) and deleted when the command ends. After a crash or SIGKILL it can remain; delete it. Ctrl-C goes to the interpreter, not to the CLI.
+Exit codes: `0` the session ended, `1` this is not a project or the interpreter failed (its exit code is used), `2` this Crystal has no interpreter, or invalid usage.
 
-This is the interpreter, not a Rails-style console, and it is not a mock of one:
+## Realistic output
 
-- It needs a Crystal built **with** the interpreter (`crystal i --help` must work). The packages from
-  crystal-lang.org/install and Homebrew include it; **the official Docker images do not**. Without it the command prints
-  how to get it and exits with **2**.
+{% code title="terminal: azu console (a Crystal without the interpreter)" %}
+```text
+[hh:mm:ss] [INFO ] Install a Crystal that includes it (the packages from crystal-lang.org/install and Homebrew do; the official Docker images do not),
+[hh:mm:ss] [INFO ] check with 'crystal i --help', then run 'azu console' again.
+[hh:mm:ss] [INFO ] Meanwhile 'azu routes' lists the routes and 'crystal run' of a script that requires ./src/blog runs code with the app loaded.
+ERROR: this Crystal has no interpreter (crystal i), so 'azu console' cannot open a REPL
+```
+{% endcode %}
+
+*The three hints go to stdout as log lines, and the error to stderr. `hh:mm:ss` stands for the time. The exit code is 2.*
+
+{% code title="scratch file that azu console writes for the blog project" %}
+```crystal
+require "./src/blog.cr"
+
+puts "Azu console: Blog is loaded. Type Crystal code; `exit` leaves."
+debugger
+```
+{% endcode %}
+
+*The script the command runs with `crystal i`. It is written with an exclusive, owner-only name (`.azu_console_<random>.cr`) and deleted when the command ends.*
+
+{% code title="terminal: azu console (outside a project)" %}
+```text
+ERROR: ./src/blog.cr not found: run 'azu console' in the root of an Azu project
+```
+{% endcode %}
+
+*The command needs `src/<project>.cr` in the current directory. The exit code is 1.*
+
+## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** for a quick look at the routes, `azu routes` compiles the app and prints the table without opening a prompt.
+{% endhint %}
+
+{% hint style="success" %}
+Restart the console after you change code. Nothing reloads while it runs.
+{% endhint %}
+
+{% hint style="warning" %}
+The console has no `--env` option, and an unknown option is a usage error. Set `CRYSTAL_ENV` in your shell, and check which `.env` files apply, before you open it.
+{% endhint %}
+
+{% hint style="danger" %}
+Don't use it against production by accident. Loading the app runs its top-level code, and what you type runs against whatever database the environment points to.
+{% endhint %}
+
+<details>
+
+<summary>Limits</summary>
+
+- It needs a Crystal built with the interpreter: `crystal i --help` must work. The packages from crystal-lang.org/install and Homebrew include it. The official Docker images do not, and the command then exits with 2.
 - Code that links native libraries (SQLite, OpenSSL, libpq) runs only if the shared libraries are installed.
 - The interpreter is slower than compiled code and does not support every Crystal feature, so some apps do not load in it.
-- Nothing is reloaded: restart the console after changing code.
+- Nothing is reloaded. Restart the console after you change code.
+- Ctrl-C goes to the interpreter, not to the CLI.
 
-## Exit codes
+</details>
 
-`0` the session ended, `1` not a project or the interpreter failed (its exit code is used), `2` no interpreter in this
-Crystal, or invalid usage.
+<details>
+
+<summary>Scratch file and .gitignore</summary>
+
+The scratch file is deleted when the command ends. After a crash or SIGKILL it can remain; delete it. Generated projects git-ignore `/.azu_console_*.cr`. In an older project, add that line to `.gitignore`.
+
+</details>
