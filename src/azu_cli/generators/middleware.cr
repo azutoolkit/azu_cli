@@ -141,6 +141,12 @@ module AzuCLI
         AUTHZ
       end
 
+      # The logging and custom logic call the next handler themselves (the first times the call, the second
+      # catches errors around it); the template only adds the call for the other types.
+      def calls_next? : Bool
+        middleware_logic.includes?("call_next(context)")
+      end
+
       # Logging middleware logic
       private def logging_logic : String
         <<-LOG

@@ -9,8 +9,10 @@ class <%= middleware_class_name %>
     end
 
     <%= middleware_logic %>
+<% unless calls_next? -%>
 
     call_next(context)
+<% end -%>
   end
 
 <%= private_methods %>

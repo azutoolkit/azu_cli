@@ -279,6 +279,24 @@ describe AzuCLI::Generate::Middleware do
       end
     end
 
+    it "calls the next handler once on the path that is not skipped, for every middleware type" do
+      %w(authentication authorization logging cors rate_limiting custom).each do |type|
+        generator = AzuCLI::Generate::Middleware.new("Sample", type)
+
+        temp_dir = File.join(Dir.tempdir, "middleware_generator_test_#{Random::Secure.hex(8)}")
+        Dir.mkdir_p(temp_dir)
+        begin
+          generator.render(temp_dir)
+
+          content = File.read(File.join(temp_dir, "sample_middleware.cr"))
+          # One call in the skipped-path branch, one for everything else
+          content.scan("call_next(context)").size.should eq(2), "#{type} middleware calls call_next #{content.scan("call_next(context)").size} times"
+        ensure
+          FileUtils.rm_rf(temp_dir)
+        end
+      end
+    end
+
     it "generates an authorization middleware with custom skip paths" do
       skip_paths = ["/api/public", "/docs"]
       generator = AzuCLI::Generate::Middleware.new("Authorization", "authorization", skip_paths)
