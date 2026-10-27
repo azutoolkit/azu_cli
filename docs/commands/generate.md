@@ -23,12 +23,35 @@ azu generate <generator_type> <name> [attributes] [options]
 | `migration`  | `mig`             | Database migration files                            |
 | `scaffold`   |                   | Complete CRUD resource (all of the above)           |
 
+## Preview, menu and undo
+
+On a terminal, `azu generate` shows what it is about to do before it does it:
+
+1. The generator runs in a copy of the project (in the temp directory; `lib/` is linked, `bin/`, `.git/`, `tmp/`,
+   `log/` and database files are left out).
+2. A file browser lists every file it would create (`+`) and change (`~`); the right side shows the selected file, or
+   its diff. Meanwhile the project is type-checked with those files (`crystal build --no-codegen`), and the result
+   shows under the list.
+3. Enter writes exactly the files shown (each through a temporary file and a rename); Esc writes nothing.
+
+`azu generate` with no arguments opens a menu: the generator, then its name and fields, then the same preview.
+
+Each write through the preview keeps an undo record outside the project, in `$XDG_STATE_HOME/azu` (default
+`~/.local/state/azu`). `azu undo` deletes the files it created and puts back the files it changed; a file you edited
+since is left as it is and listed. `azu undo --dry-run` shows what it would do, `azu undo --list` lists the records.
+
+Through a pipe or in CI, without `--dry-run` or `--check`, `azu generate` writes directly, as before.
+
 ## Global Options
 
 | Option          | Description                                | Default |
 | --------------- | ------------------------------------------ | ------- |
 | `--force`       | Overwrite existing files without prompting | false   |
 | `--skip-tests`  | `generate model`: don't generate the migration | false   |
+| `--dry-run`     | List the files it would write and the diffs of the files it would change; write nothing | false |
+| `--check`       | Type-check the project with the generated files; write nothing when it does not compile | false |
+| `--yes`         | Write without asking (on a terminal the plan is still printed) | false |
+| `--ui MODE`     | `rich` (the preview) or `plain`            | rich on a terminal |
 | `--help`        | Show help for the generator                |         |
 
 ## Endpoint Generator

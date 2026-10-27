@@ -7,6 +7,7 @@ require "./azu_cli/dot_env"
 require "./azu_cli/config"
 require "./azu_cli/config/**"
 require "./azu_cli/logger"
+require "./azu_cli/ui"
 require "./azu_cli/utils"
 require "./azu_cli/process_tree"
 require "./azu_cli/scratch_file"
@@ -68,9 +69,18 @@ module AzuCLI
   end
 
   # Main CLI entry point using Topia
+  # `--ui json`, `--ui=json` or AZU_UI=json.
+  def self.json_output?(args : Array(String)) : Bool
+    return true if ENV["AZU_UI"]? == "json" || args.includes?("--ui=json")
+    args.each_cons_pair.any? { |flag, value| flag == "--ui" && value == "json" }
+  end
+
   def self.run
     # The environment first: the configuration below reads AZU_ENV, DATABASE_URL and friends
     load_project_env(ARGV)
+
+    # NDJSON on stdout must not carry the CLI's own log lines (warnings and errors still go to stderr)
+    ENV["AZU_QUIET"] = "1" if json_output?(ARGV)
 
     # Initialize configuration and logging
     Config.load!

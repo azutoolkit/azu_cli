@@ -422,7 +422,7 @@ class Compiler
   def compile : Bool
     Azu::Logger.info("Compiling application...")
 
-    start_time = Time.monotonic
+    start_time = Time.instant
 
     # Build command
     command = build_compile_command
@@ -430,7 +430,7 @@ class Compiler
     # Execute compilation
     result = Process.run(command, shell: true, error: Process::Redirect::Pipe)
 
-    duration = Time.monotonic - start_time
+    duration = Time.instant - start_time
 
     if result.success?
       Azu::Logger.info("Compilation successful (#{duration.total_milliseconds}ms)")
