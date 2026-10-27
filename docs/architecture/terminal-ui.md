@@ -1,10 +1,19 @@
 # Terminal UI: the azu HUD
 
-Status: **proposal**. Nothing on this page is implemented yet. It describes how `azu new`, `azu dev` and
-`azu generate` would look and work, the Crystal engine needed to draw them, and five larger features the
-engine makes possible. Each part says what the code does today and what has to be built.
+Status: **partly implemented.** The engine (section 3) and the three screens are built; some features of the
+mockups are still proposals. What exists:
 
-The design has three goals:
+| Part | Where | State |
+| ---- | ----- | ----- |
+| Engine: terminal, tokens, glyphs, frame, renderers, input, event loop, reporters | `src/azu_cli/ui/` | Built, as in section 3 |
+| `azu new` wizard, review, progress card, done card | `commands/new.cr`, `commands/new_wizard.cr` | Built. The steps are the existing options; the Driver and Frontend steps of the mockups are not (no such generator options exist) |
+| `azu dev` dashboard: build stages and history, app, requests, SQL, jobs, log, failed-build card | `dev_server/hud.cr`, `dev_server/telemetry.cr`, `commands/dev.cr` | Built. Spark tab, `[o]` open in editor, `[s]` SVG snapshot and the command palette are not |
+| App telemetry over `AZU_TELEMETRY_SOCKET` | azu `src/azu/dev/telemetry.cr` | Built (azu branch `claude/pensive-davinci-equizt`); generated projects need an azu release that has it |
+| `azu generate` preview, menu, `--dry-run`, `--check`, `azu undo` | `generate_plan.cr`, `generate_preview.cr`, `commands/generate_flow.cr`, `commands/undo.cr` | Built (innovation 3) |
+| Innovations 1, 2, 4 (budgets), 5 | — | Proposals |
+
+The mockups below are the original design; the built screens follow them, with the differences listed above. The
+design has three goals:
 
 1. **Show what is happening.** A build, a request, a query or a job shows up on screen as it happens,
    so you don't have to scroll back through logs to find it.
@@ -181,7 +190,7 @@ renders (see 3.6), so the preview always matches what gets written.
 The *Needs on this machine* checks reuse `azu doctor`'s `Diagnostics::System` checks, which have no side
 effects. A failed check that only affects a later step is shown as `▲ amber` and does not block. `[c] Copy
 as command` copies the same choices as flags, for example
-`azu new blog --type web --database postgresql --docker --ci "GitHub Actions" --joobq --yes`. The wizard
+`azu new blog --type web --db postgresql --docker --ci "GitHub Actions" --joobq --yes`. The wizard
 is only a way to build those flags. It has no option you can't pass as a flag, so a scripted run and the
 wizard always produce the same project.
 

@@ -8,6 +8,19 @@ The `azu new` command creates a new Azu project from scratch. This is the primar
 azu new <project_name> [options]
 ```
 
+## The wizard
+
+Run without `--yes` on a terminal, `azu new` opens a wizard: module, author, email, license, type, database, tests,
+jobs and extras (Docker, GitHub Actions, git, example code), with the answers so far beside each step. Steps that do not
+apply are skipped (a `cli` project has no database or jobs step). The review screen shows what will happen, checks
+that `crystal`, `shards` and `git` are on the `PATH`, and prints the same choices as one `azu new … --yes` command
+line. Then a live card follows the work (files, `.env` secrets, git, `shards install` with a count, type-check) and a
+last card lists the next steps.
+
+Keys: arrows (or `j`/`k`) move, Space toggles, Enter goes on, Shift-Tab goes back, Esc cancels (nothing is written).
+`--ui plain` (or `AZU_UI=plain`, or no terminal) uses line prompts and one line per step; `--ui json` prints NDJSON
+events.
+
 ## Basic Usage
 
 ### Create a Simple Web Application

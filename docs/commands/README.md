@@ -11,7 +11,8 @@ Azu CLI provides a comprehensive set of commands to help you develop, manage, an
 
 ### Code Generation
 
-- [`azu generate`](generate.md) - Generate application components
+- [`azu generate`](generate.md) - Generate application components (previewed on a terminal)
+- [`azu undo`](generate.md#preview-menu-and-undo) - Revert the files of the last `azu generate`
 
 ### Development Tools
 

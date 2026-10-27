@@ -9,6 +9,7 @@ options: use `azu help` and `azu version`.
 ```bash
 azu new <name> [options]      # Create new project
 azu init                      # Initialize in existing project
+azu undo [--dry-run|--list]   # Revert the files of the last azu generate
 azu serve [options]           # Start the development server (aliases: server, s)
 azu dev [options]             # Run the app; rebuild (not a release build) and restart when the code changes
 azu routes [options]          # List the routes: method, path, endpoint, request/response types, helpers
@@ -32,6 +33,11 @@ azu test [options]            # Run specs (alias: t)
 | `--joobq` / `--no-joobq`       | Include JoobQ                                               |
 | `--name`, `--module`, `--author`, `--email`, `--license` | Project metadata                  |
 | `--yes`                        | Non-interactive mode                                        |
+| `--ui MODE`                    | `rich` (live progress cards), `plain` (one line per step) or `json` (NDJSON events) |
+
+Without `--yes` on a terminal, `azu new` opens a wizard: one step per option above, a review with the same choices as
+one command line, then a live progress card (files, secrets, git, shards, type-check). Without a terminal it prompts
+line by line as before.
 
 ### `azu serve` Options
 
@@ -40,7 +46,10 @@ azu test [options]            # Run specs (alias: t)
 ### `azu dev` Options
 
 `--port PORT`, `--host HOST`, `--env NAME` (each only overrides what your environment or `.env` files say when given; without `--host` or `HOST`, `azu serve` leaves the host to the app),
-`--debounce MS` (default 300), `--interval MS` (polling interval, default 250). `src/**`, `config/**`, `shard.yml` and
+`--debounce MS` (default 300), `--interval MS` (polling interval, default 250), `--ui rich|plain`. On a terminal of
+at least 60x16 (not CI) `azu dev` opens a dashboard: build with compiler stages, app (pid, uptime, restarts, crashes,
+memory), requests and SQL from the app (azu's `Dev::Telemetry` over `AZU_TELEMETRY_SOCKET`), JoobQ queues, the app's
+log; keys `1`-`5` panels, `r` rebuild, `l` log, `c` clear log, `q` quit. `--ui plain` keeps the line output. `src/**`, `config/**`, `shard.yml` and
 `shard.lock` changes build and restart; `public/templates/**` changes neither build nor restart; `.env*` changes restart
 without a build. A failed build keeps the running app. See [docs/commands/dev.md](docs/commands/dev.md).
 
@@ -107,7 +116,13 @@ azu generate <type> <name> [attribute:type...] [options]     # alias: azu g
 | `seed`, `template`, `api_resource` | Seed file; template; API resource | `azu generate seed Users`             |
 
 Options: `--force`, `--skip-tests` (model: no migration), `--skip COMPONENTS`, `--api-only`, `--web-only`,
-`--strategy session`, `--type`, `--record`.
+`--strategy session`, `--type`, `--record`, `--dry-run` (show the files and diffs, write nothing), `--check` (type-check
+the project with the generated files first), `--yes` (write without asking), `--ui rich|plain`.
+
+On a terminal, `azu generate` runs the generator in a copy of the project first and shows every file it would write
+and the diff of every file it would change, type-checking in the background; Enter writes exactly those files.
+`azu generate` with no arguments opens a menu. `azu undo` reverts the last such write (files you edited since are left
+as they are). Through a pipe or in CI, without `--dry-run` or `--check`, it generates directly as before.
 
 Attribute types: `string`, `text`, `int32`, `int64`, `float64`, `bool`, `time`, `uuid`; `name:type:unique`,
 `name:type:index`; `user_id:references` / `user_id:int64:ref:users` for foreign keys.
@@ -183,7 +198,9 @@ docker run -p 4000:4000 -e CSRF_SECRET=$(openssl rand -hex 32) my_app
 
 ## Environment Variables
 
-The CLI reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`. A
+The CLI reads `DATABASE_URL`, `CRYSTAL_ENV` (and `AZU_ENV` in some commands), `REDIS_URL`, `JOOBQ_REDIS_URL`; for
+its output `AZU_UI` (`rich`, `plain`, `json`), `NO_COLOR`, `FORCE_COLOR`, `CI`, `AZU_REDUCED_MOTION=1` (no spinners)
+and `AZU_AMBIGUOUS_WIDE=1` (ASCII glyphs); `XDG_STATE_HOME` for the undo records. A
 generated app reads `PORT`, `HOST` (the generated `.env` leaves it unset, so azu binds `127.0.0.1` in development and `0.0.0.0` elsewhere; `.env.example` has it commented; the production `Dockerfile` sets `0.0.0.0`; in a development container pass `-e HOST=0.0.0.0`), `DATABASE_URL`, `CSRF_SECRET` and, with authentication, `SESSION_SECRET`;
 in production (`CRYSTAL_ENV=production`) it refuses to boot without the secrets.
 

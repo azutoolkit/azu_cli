@@ -1,5 +1,26 @@
 # Changelog - Azu CLI
 
+## Unreleased - Terminal UI: the azu new wizard, the azu dev dashboard, previews for azu generate
+
+- Added: `src/azu_cli/ui`, a terminal UI engine built on the standard library only: terminal detection (color depth from
+  `COLORTERM`/`TERM`, `NO_COLOR`, `FORCE_COLOR`, UTF-8 and CJK locales), design tokens with a 16/256/true-color mapping
+  and an ASCII glyph fallback, a cell frame with cards, a diffing full-screen renderer and an inline renderer (both with
+  synchronized output), a key parser and a fiber event loop. `UI::Reporter` shows a command's steps as a live card
+  (`rich`), one line per step (`plain`) or NDJSON (`json`); `--ui` and `AZU_UI` choose
+- Added: `azu new` on a terminal opens a wizard (one step per existing option, a review with the same choices as one
+  command line), then a live progress card (files, secrets, git, shards with a count, type-check) and a done card.
+  `--yes`, pipes and CI keep the previous flow; the shards and type-check output is shown when they fail
+- Added: `azu dev` on a terminal of at least 60x16 opens a dashboard (build stages from `crystal build --progress`,
+  build history, app pid/uptime/restarts/crashes/RSS, requests and SQL with N+1 alerts from the app, JoobQ queue sizes,
+  the app's log, a failed-build card with the error location while the previous build keeps serving). The app reports
+  through a Unix socket (`AZU_TELEMETRY_SOCKET`, mode 0600) when it uses an azu with `Dev::Telemetry` (azu branch
+  `claude/pensive-davinci-equizt`); without it the panels say so. `--ui plain` keeps the line output
+- Added: `azu generate` on a terminal previews every file it would write and the diff of every file it would change
+  (rendered in a copy of the project), type-checks in the background and writes on Enter exactly what was shown;
+  `--dry-run`, `--check`, `--yes`; no arguments open a menu. `azu undo` reverts the last write (`--dry-run`, `--list`),
+  leaving files edited since
+- Changed: the CLI's log output is synchronous, so a log line is never written in the middle of a live card
+
 ## Unreleased - Generated pages render in the browser
 
 - Fixed: every page of a generated app (`/`, the scaffold pages, `/login`, `/register`, `/account`) showed in the browser as HTML source. The pages included a plain `Azu::Response`, whose `write_to` writes the body and no Content-Type, and the generated app mounts `Azu::Handler::SecurityHeaders`, whose `X-Content-Type-Options: nosniff` stops the browser from guessing. The generated pages now include `Azu::Response::Negotiable` and define `render_html`, the JSON answers (`/health`, the API scaffold's responses, the `azu openapi:generate` responses) define `render_json`: Negotiable sets `text/html; charset=utf-8` or `application/json` and `Vary: Accept`

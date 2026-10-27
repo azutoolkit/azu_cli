@@ -367,6 +367,24 @@ Generators extend `Teeplate::FileTree`:
 - Generated authentication throttles through its own `AuthThrottle` (`templates/auth/src/services`), not `Azu::Handler::Throttle`
   (that one keys by address only, on every path)
 
+## Terminal UI (`src/azu_cli/ui`, design in `docs/architecture/terminal-ui.md`)
+
+- Standard library only (plus one `ioctl` binding). `UI::Terminal` detects color depth (`NO_COLOR` wins, `FORCE_COLOR`,
+  `COLORTERM`/`TERM`), UTF-8 (ASCII glyphs otherwise, and in CJK locales), size; `Terminal.fake` for specs
+- Screens are `UI::Screen`s: `update(event) -> Action` and `view(frame)`, no I/O, so specs drive them with keys and
+  messages and compare `frame.to_text` (see `spec/azu_cli/ui`, `spec/azu_cli/dev_server/hud_spec.cr`). Never put a
+  two-column glyph (emoji, CJK) in a frame: `Frame#text` replaces it with `?`
+- `UI::Program` reads keys from `/dev/tty` in raw mode (no `\n` → CR: the inline renderer writes `\r\n`); inline frames
+  leave the last column free. Anything printed to stdout while an inline frame is live shifts it: the CLI's log backend
+  is synchronous for that reason
+- Commands report through `UI::Reporter` (`rich` card, `plain` lines, `json` NDJSON), chosen by `--ui`/`AZU_UI`, else
+  rich only on a terminal with color, not in CI. Pipes and `--yes` must keep working without a terminal
+- `azu dev`'s dashboard (`dev_server/hud.cr`) gets build/app/log events from `Commands::Dev` and telemetry from the app
+  over `AZU_TELEMETRY_SOCKET` (azu's `Dev::Telemetry`, JSON lines, `"v": 1`; unknown fields ignored)
+- `azu generate` on a terminal (or with `--dry-run`/`--check`) runs itself in a shadow copy (`GeneratePlan`,
+  `AZU_GENERATE_SHADOW=1` marks the inner run) and writes exactly what the preview showed; `azu undo` uses the records in
+  `$XDG_STATE_HOME/azu`
+
 ## Environment files (`.env`)
 
 - The generated app file starts with `require "azu/env"; Azu::Env.load_all` BEFORE `require "azu"` (Azu::CONFIG reads
