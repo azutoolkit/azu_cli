@@ -18,14 +18,17 @@ azu session:setup --backend memory   # in-process, one instance only (developmen
 | `--force`          | `-f`  | Replace an existing initializer          | `false`  |
 
 Any other backend, an unknown option, an argument or a `--backend` without a value is refused with exit code 2
-(the session shard has no database store).
+(the session shard has no database store). `-h` / `--help` shows the help and changes nothing.
 
 It refuses (exit code 1, nothing written) when:
 
 - `src/initializers/session.cr` exists: run again with `--force` to replace it (what you added to `UserSession` is lost);
-- `src/initializers/session.cr` was written by `azu generate auth`, even with `--force`: its `UserSession` has the
-  `user_id` and `authenticated?` that sign-in needs, and the session is set up already. To change its store, edit
-  `config.store` in that file;
+- authentication is generated (`src/endpoints/sessions` or `src/services/auth_throttle.cr` exists), even with
+  `--force` and even when its initializer was deleted: sign-in needs the `UserSession` of `azu generate auth`
+  (`user_id`, `authenticated?`). To change its store, edit `config.store` in `src/initializers/session.cr`;
+- `src/initializers/session.cr` looks like it was written by `azu generate auth` (its marker line, or a
+  `def authenticated?`), even with `--force`. To change its store, edit `config.store`; to have `session:setup`
+  write a new one, delete the file and run it again;
 - `src/<project>.cr` is missing, or has no `Azu::Handler::RequestId.new,` line to put the session handler after:
   add `Session::SessionHandler(UserSession).new(Session.session),` to its handlers yourself.
 
@@ -72,12 +75,17 @@ azu session:clear --backend redis    # instead of reading src/initializers/sessi
 | `--backend <type>` | `-b`  | `cookie`, `redis` or `memory`                       |
 | `--force`          | `-f`  | Do not ask first                                    |
 
-The backend is `--backend`, or the store `src/initializers/session.cr` uses, or `SESSION_BACKEND`; when none of
-them says, the command refuses. An unknown backend or option is refused with exit code 2.
+The backend is `--backend`, or the store `src/initializers/session.cr` sets (its `config.store =` or
+`Session.use_store(` lines, over several lines too; comments do not count), or `SESSION_BACKEND` when the file sets
+none. When none of them says, or the file's lines name different stores or one that is not the session shard's, the
+command refuses (exit code 1). An unknown backend or option, or an argument, is refused with exit code 2; `-h` /
+`--help` shows the help.
 
 - Redis: deletes every `session:*` key (the keys the session shard's `RedisStore` writes) in the database of
   `REDIS_URL` (default `redis://localhost:6379`), with `SCAN`, never `KEYS`. The prefix is not per app: an app
-  sharing that Redis database loses its sessions too.
+  sharing that Redis database loses its sessions too. Before deleting, with or without `--force`, it prints the
+  target (the password in `REDIS_URL` shown as `***`) and says so. A `REDIS_URL` that is not
+  `redis://host[:port][/database]` is refused (exit code 1).
 - Cookie sessions live in the browsers, so the command cannot clear them and says so (exit code 1) without asking:
   change `SESSION_SECRET` and restart, and every existing cookie stops working.
 - Memory sessions live in the app process: the command says so (exit code 1); restart the app to end them.

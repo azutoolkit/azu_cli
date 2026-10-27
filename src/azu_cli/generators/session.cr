@@ -23,15 +23,23 @@ module AzuCLI
         end
       end
 
-      # Why the session cannot be set up in `root`, if it cannot: the initializer exists (replaced only with
-      # `force`, never when authentication wrote it) or the app file has no place for the session handler.
+      # Why the session cannot be set up in `root`, if it cannot: authentication is generated (its files, or an
+      # initializer that looks like its own), the initializer exists (replaced only with `force`) or the app file
+      # has no place for the session handler.
       def self.conflict(root : String = ".", force : Bool = false) : String?
+        auth_files = AUTH_FILES.select { |path| File.exists?(File.join(root, path)) }
+        unless auth_files.empty?
+          return "#{auth_files.join(" and ")} #{auth_files.size == 1 ? "is" : "are"} from `azu generate auth`, which needs its own " \
+                 "UserSession (user_id, authenticated?) in #{INITIALIZER}: session:setup will not write that file, even with " \
+                 "--force. To change the session store, edit `config.store` in it#{File.exists?(File.join(root, INITIALIZER)) ? "" : " (restore it from version control first)"}."
+        end
+
         initializer = File.join(root, INITIALIZER)
         if File.exists?(initializer)
-          if auth_initializer?(root, File.read(initializer))
-            return "#{INITIALIZER} was written by `azu generate auth`: its UserSession has the user_id and authenticated? " \
-                   "that sign-in needs, so session:setup will not replace it, even with --force. The session is set up " \
-                   "already; to change its store, edit `config.store` in that file (Session::RedisStore or Session::MemoryStore)."
+          if reason = auth_initializer_reason(File.read(initializer))
+            return "#{INITIALIZER} looks like it was written by `azu generate auth` (#{reason}), so session:setup will not " \
+                   "replace it, even with --force: sign-in needs that UserSession. To change its store, edit `config.store` " \
+                   "in it; to have session:setup write a new one, delete the file and run it again (what UserSession has is lost)."
           end
           return "#{INITIALIZER} exists: run again with --force to replace it (what you added to UserSession is lost)." unless force
         end
@@ -44,9 +52,13 @@ module AzuCLI
         end
       end
 
-      def self.auth_initializer?(root : String, source : String) : Bool
-        source.includes?(Auth::INITIALIZER_MARKER) || source.includes?("def authenticated?") ||
-          AUTH_FILES.any? { |path| File.exists?(File.join(root, path)) }
+      # Why an initializer looks like the one `azu generate auth` writes, or nil.
+      def self.auth_initializer_reason(source : String) : String?
+        if source.includes?(Auth::INITIALIZER_MARKER)
+          "it starts with its marker line"
+        elsif source.includes?("def authenticated?")
+          "its UserSession defines authenticated?"
+        end
       end
 
       def store_type : String

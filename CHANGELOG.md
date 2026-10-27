@@ -14,6 +14,17 @@
   cleared (exit 1) before asking anything. The Redis path deleted `<project>:session:*`, which the session shard never
   writes: it deletes `session:*` (`RedisStore#prefixed`) with `SCAN` instead of `KEYS`; with no initializer and no
   `SESSION_BACKEND` it refuses instead of assuming Redis
+- Fixed: `session:clear` read the backend from any mention of `RedisStore` in `src/initializers/session.cr`, comments
+  included. The initializer of `azu generate auth` (a `CookieStore`) mentions `Session::RedisStore` in a comment, so
+  in every project with generated authentication `session:clear` deleted every `session:*` key of the Redis at
+  `REDIS_URL`. It now reads the store from the `config.store =` and `Session.use_store(` lines only (comments
+  ignored, over several lines), and refuses (exit 1) when they name different stores or one that is not the shard's
+- Fixed: `session:clear` prints the Redis target, its password as `***`, and that every `session:*` key in that
+  database goes, other apps' sessions included, also with `--force`; a `REDIS_URL` that is not a redis URL is a clean
+  error (exit 1) instead of `Invalid Int32`; it refuses an argument (exit 2)
+- Fixed: `session:setup -h` and `session:clear -h` ran the command; they show the help
+- Fixed: `session:setup` refuses (exit 1, even with `--force`) when auth's endpoints or throttle exist although its
+  initializer was deleted. An initializer that only looks like auth's says so and how to replace it (delete the file)
 - Docs: `docs/commands/session.md` used `Session.session.authenticate`, which the session shard does not have; it
   shows `Session.session.regenerate_id`, as the generated authentication does
 

@@ -27,7 +27,7 @@ module AzuCLI
         end
 
         def execute : Result
-          return show_help_result if has_option?("help")
+          return show_help_result if has_option?("help") || has_option?("h")
           if problem = usage_problem
             return usage_error("#{problem}. #{USAGE}")
           end
@@ -75,10 +75,12 @@ module AzuCLI
 
             Options:
               -b, --backend <type>  cookie (default), redis or memory
-              -f, --force           Replace an existing src/initializers/session.cr (never the one of azu generate auth)
-              --help                Show this help
+              -f, --force           Replace an existing src/initializers/session.cr (never one that looks like
+                                    azu generate auth's, nor when auth's endpoints or throttle exist)
+              -h, --help            Show this help
 
-            Exit codes: 0 done, 1 refused (the initializer exists, no place for the handler), 2 invalid usage.
+            Exit codes: 0 done, 1 refused (the initializer exists, authentication is generated, no place for the
+            handler), 2 invalid usage.
             HELP
         end
 

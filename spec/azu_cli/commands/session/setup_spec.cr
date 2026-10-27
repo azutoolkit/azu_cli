@@ -43,11 +43,38 @@ describe AzuCLI::Commands::Session::Setup do
     end
   end
 
-  it "recognises an older auth initializer by its authenticated? method" do
+  it "recognises an older auth initializer by its authenticated? method, and says how to replace it" do
     initializer = "class UserSession < Session::Base\n  property user_id : Int64? = nil\n\n  def authenticated? : Bool\n    !user_id.nil?\n  end\nend\n"
     in_tmp_project(files: {"src/blog.cr" => APP_FILE, "src/initializers/session.cr" => initializer}) do
-      setup(["-f"]).error.should contain("azu generate auth")
+      error = setup(["-f"]).error.to_s
+      error.should contain("looks like it was written by `azu generate auth`")
+      error.should contain("delete")
+      error.should contain("config.store")
       File.read("src/initializers/session.cr").should eq initializer
+    end
+  end
+
+  it "refuses (exit 1), even with --force, when auth's files exist and its initializer was deleted" do
+    {"src/services/auth_throttle.cr" => "", "src/endpoints/sessions/create_endpoint.cr" => ""}.each do |path, content|
+      in_tmp_project(files: {"src/blog.cr" => APP_FILE, path => content}) do
+        result = setup(["--force"])
+        result.success?.should be_false
+        result.exit_code.should eq 1
+        result.error.should contain(path.starts_with?("src/endpoints") ? "src/endpoints/sessions" : path)
+        File.exists?("src/initializers/session.cr").should be_false
+        File.exists?(".env").should be_false
+      end
+    end
+  end
+
+  it "shows the help for -h and --help without writing anything" do
+    in_tmp_project(files: {"src/blog.cr" => APP_FILE}) do
+      ["-h", "--help"].each do |flag|
+        result, output = run_command(AzuCLI::Commands::Session::Setup.new, [flag])
+        result.success?.should be_true
+        output.should contain("Usage: azu session:setup")
+      end
+      File.exists?("src/initializers/session.cr").should be_false
     end
   end
 
