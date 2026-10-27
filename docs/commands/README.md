@@ -374,7 +374,8 @@ azu openapi:generate api-spec.yaml --endpoints-only
 
 #### `azu openapi:export`
 
-Exports an OpenAPI specification from existing code.
+Writes the OpenAPI 3.1 document Azu builds from the app's endpoint contracts (`--output`, `--format`, `--project`,
+`--version`); the app is compiled to get it.
 
 **Quick Examples:**
 

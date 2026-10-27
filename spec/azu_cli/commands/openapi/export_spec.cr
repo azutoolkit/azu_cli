@@ -143,6 +143,26 @@ describe AzuCLI::Commands::OpenAPI::Export do
       end
     end
 
+    it "creates the directory of the output file, and answers 1 when it cannot write it" do
+      with_export_project do |dir|
+        run_export(dir, ["--output", "docs/api/openapi.json"])[:result].success?.should be_true
+        File.exists?(File.join(dir, "docs/api/openapi.json")).should be_true
+
+        File.write(File.join(dir, "taken"), "")
+        result = run_export(dir, ["--output", "taken/openapi.json"])[:result]
+        result.exit_code.should eq 1
+        result.error.should contain "taken/openapi.json"
+      end
+    end
+
+    it "shows the help for -h and --help" do
+      with_export_project do |dir|
+        run_export(dir, ["-h"])[:result].success?.should be_true
+        run_export(dir, ["--help"])[:result].success?.should be_true
+        File.exists?(File.join(dir, "openapi.yaml")).should be_false
+      end
+    end
+
     it "refuses an unknown format or option with exit code 2" do
       with_export_project do |dir|
         run_export(dir, ["--format", "xml"])[:result].exit_code.should eq 2
