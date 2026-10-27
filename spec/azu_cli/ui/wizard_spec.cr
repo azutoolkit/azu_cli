@@ -72,13 +72,13 @@ describe AzuCLI::UI::Wizard do
     wizard = AzuCLI::Commands::NewWizard.new(command)
     screen = wizard.screen
     5.times { screen.update(key(TUI::KeyCode::Enter)) } # through the type: web
-    2.times { screen.update(key(TUI::KeyCode::Down)) }  # sqlite
+    screen.update(key(TUI::KeyCode::Down))              # from the default, SQLite, to PostgreSQL
     wizard.apply
-    command.database.should eq "sqlite"
+    command.database.should eq "postgresql"
     command.git_init.should be_false
     line = wizard.command_line
     line.should start_with "azu new blog --module Blog"
-    line.should contain "--db sqlite"
+    line.should contain "--db postgresql"
     line.should contain "--no-git"
     line.should end_with "--yes"
   end

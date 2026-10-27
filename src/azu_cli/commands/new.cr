@@ -14,7 +14,8 @@ module AzuCLI
       property email : String = ""
       property license : String = "MIT"
       property project_type : String = "web"
-      property database : String = "postgresql"
+      # SQLite needs no server: `azu new blog && cd blog && azu db:setup && azu serve` works on a fresh machine
+      property database : String = "sqlite"
       property test_framework : String = "spec"
       property ci_setup : String = "GitHub Actions"
       property docker_support : Bool = false
@@ -225,9 +226,11 @@ module AzuCLI
         @project_type = prompt_choice("Project type", PROJECT_TYPES, @project_type)
         Logger.step(6, 9, "Project type: #{@project_type}")
 
-        # Database
-        @database = prompt_choice("Database adapter", ["postgresql", "mysql", "sqlite"], @database)
-        Logger.step(7, 9, "Database: #{@database}")
+        # Database (a cli project has none)
+        unless @project_type == "cli"
+          @database = prompt_choice("Database adapter", ["postgresql", "mysql", "sqlite"], @database)
+          Logger.step(7, 9, "Database: #{@database}")
+        end
 
         # Test framework
         @test_framework = prompt_choice("Test framework", ["spec", "minitest"], @test_framework)
@@ -364,22 +367,29 @@ module AzuCLI
           {"Author", "#{@author} <#{@email}>"},
           {"License", @license},
           {"Type", @project_type},
-          {"Database", @database},
           {"Tests", @test_framework},
           {"CI", @ci_setup},
           {"Docker", @docker_support ? "yes" : "no"},
           {"Git", @git_init ? "init + first commit" : "no"},
           {"Example", @include_example ? "yes" : "no"},
         ]
-        rows << {"Jobs", @include_joobq ? "JoobQ" : "none"} unless @project_type == "cli"
+        unless @project_type == "cli" # a cli project has no database and no jobs
+          rows.insert(4, {"Database", @database})
+          rows << {"Jobs", @include_joobq ? "JoobQ" : "none"}
+        end
         ui.panel("Project", rows.map { |(label, value)| [UI::Seg[label.ljust(10), UI::Token::Muted], UI::Seg[value]] })
       end
 
       PROJECT_TYPES = ["web", "api", "cli"]
+      # The adapters Generate::Project knows, with the aliases it accepts
+      DATABASES = ["sqlite", "sqlite3", "postgresql", "postgres", "pg", "mysql"]
 
       private def delivery_error : String?
         unless PROJECT_TYPES.includes?(@project_type)
           return "Unknown project type '#{@project_type}'. Choose one of: #{PROJECT_TYPES.join(", ")}."
+        end
+        unless @project_type == "cli" || DATABASES.includes?(@database)
+          return "Unknown database adapter '#{@database}'. Choose one of: sqlite, postgresql, mysql."
         end
         unless AzuCLI::Generate::Project::CI_SETUPS.includes?(@ci_setup)
           return "Unknown CI setup '#{@ci_setup}'. Choose one of: #{AzuCLI::Generate::Project::CI_SETUPS.join(", ")}."
@@ -540,7 +550,7 @@ module AzuCLI
       # What to run after `azu new`, in order. `azu db:setup` creates the database and runs the migrations, so it
       # works on a fresh project; the app listens on azu's default port, the PORT of the generated .env.
       def next_steps : Array(String)
-        return ["cd #{@project_name}", "crystal build src/#{@project_name}.cr", "./#{@project_name} --help"] if @project_type == "cli"
+        return ["cd #{@project_name}", "shards build", "./bin/#{@project_name.downcase.gsub(/[^a-z0-9_]/, "_")} --help"] if @project_type == "cli"
 
         url = "http://localhost:#{AzuCLI::Config::Ports::DEV_SERVER}"
         steps = ["cd #{@project_name}", "azu db:setup", "azu serve"]
@@ -594,7 +604,7 @@ module AzuCLI
         puts "  --license LICENSE         License (MIT, Apache-2.0, GPL-3.0, etc.)"
         puts "  --type TYPE               Project type (web, api, cli) [default: web]"
         puts "  --api                     Create API project (shorthand for --type api)"
-        puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: postgresql]"
+        puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: sqlite]"
         puts "  --test TEST               Test framework (spec, minitest) [default: spec]"
         puts "  --ci CI                   CI setup (\"GitHub Actions\" or \"None\") [default: GitHub Actions]"
         puts "  --no-ci                   Skip the CI workflow"

@@ -26,10 +26,9 @@ sudo make install
 ## Quick Start
 
 ```bash
-# Create a new project (SQLite needs no database server)
-azu new my_app --db sqlite
+# Create a new project (SQLite by default: no database server needed; `--db postgresql` or `--db mysql` for a server)
+azu new my_app
 cd my_app
-shards install
 
 # Generate a CRUD resource, create and migrate the database
 azu generate scaffold Post title:string content:text published:bool
@@ -69,7 +68,7 @@ azu generate job SendEmail user_id:int64
 ## Delivery
 
 ```bash
-azu new my_app --db sqlite --docker   # Dockerfile + .dockerignore (production image, non-root, /health check)
+azu new my_app --docker               # Dockerfile + .dockerignore (production image, non-root, /health check)
 azu new my_app --no-ci                # skip the GitHub Actions workflow
 ```
 

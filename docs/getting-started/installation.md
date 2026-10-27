@@ -41,9 +41,10 @@ make clean crystal
 
 ### Database (Optional)
 
-Azu applications typically use a database. Install one of the supported databases:
+`azu new` uses SQLite by default, which needs only the SQLite library (`libsqlite3-dev` on Ubuntu/Debian, `sqlite`
+with Homebrew) and no server. For `--db postgresql` or `--db mysql`, install that server:
 
-**PostgreSQL (Recommended):**
+**PostgreSQL:**
 
 ```bash
 # macOS
@@ -211,7 +212,6 @@ Create a global configuration file:
 mkdir -p ~/.config/azu
 cat > ~/.config/azu/config.yml << EOF
 # Global Azu CLI configuration
-default_database: postgres
 default_template: web
 editor: code  # or vim, nano, etc.
 git_auto_init: true

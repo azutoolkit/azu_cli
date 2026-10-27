@@ -12,13 +12,15 @@ project:
 
 # Database configuration
 database:
-  adapter: "postgresql"
+  adapter: "<%= database_adapter_uri_prefix %>"
   url: "${DATABASE_URL}"
+<% unless database_adapter == "sqlite3" -%>
   host: "localhost"
-  port: 5432
+  port: <%= database_adapter == "mysql" ? 3306 : 5432 %>
   database: "<%= @project %>_development"
-  username: "postgres"
+  username: "<%= database_adapter == "mysql" ? "root" : "postgres" %>"
   password: ""
+<% end -%>
 
 # Server configuration
 server:

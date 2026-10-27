@@ -21,9 +21,9 @@ module AzuCLI
           UI::Option.new("cli", "cli", "a command", "A command-line program: no server, no database setup."),
         ], command.project_type)
         @database_step = UI::ChoiceStep.new("Database", "Where does CQL keep your data?", [
+          UI::Option.new("sqlite", "SQLite", "a file, no server", "A file in the project: nothing to install or run."),
           UI::Option.new("postgresql", "PostgreSQL", "needs a server", "azu db:setup needs a running PostgreSQL; DATABASE_URL goes into .env.development."),
           UI::Option.new("mysql", "MySQL", "needs a server", "azu db:setup needs a running MySQL; DATABASE_URL goes into .env.development."),
-          UI::Option.new("sqlite", "SQLite", "a file, no server", "A file in the project: nothing to install or run."),
         ], command.database, skip: -> { cli? })
         @tests_step = UI::ChoiceStep.new("Tests", "Which test framework?", [
           UI::Option.new("spec", "spec", "Crystal's built-in"),
