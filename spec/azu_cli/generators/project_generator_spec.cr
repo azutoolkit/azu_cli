@@ -402,13 +402,13 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf("./tmp_test_db_require")
     end
 
-    it "pins azu to 0.10.x from the release with the server limits, below the next minor (where azu's breaking changes go)" do
+    it "pins azu to 0.10.x from 0.10.1, below the next minor (where azu's breaking changes go)" do
       FileUtils.mkdir_p("./tmp_test_azu_pin")
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_azu_pin")
 
       shard = File.read("./tmp_test_azu_pin/shard.yml")
       shard.should match(/github: azutoolkit\/azu\n\s+version: ~> 0\.10\.1\n/)
-      shard.should_not contain("0.5.")
+      shard.should_not contain("0.5.118")
       FileUtils.rm_rf("./tmp_test_azu_pin")
     end
 

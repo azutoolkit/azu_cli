@@ -16,8 +16,8 @@ targets:
 
 dependencies:
   # ~> 0.10.1 is >= 0.10.1, < 0.11.0. azu is 0.x and its API can change between minor versions (see its
-  # docs/reference/breaking-changes.md), so take a newer minor deliberately. 0.10.1 is the first release with the
-  # server limits (timeouts, body framing); 0.6 to 0.10 add CORS, the CSRF body cap, upload limits and problem+json.
+  # docs/reference/breaking-changes.md), so take a newer minor deliberately. 0.6 to 0.10 add CORS, the CSRF body
+  # cap, upload and server limits and problem+json; 0.10.1 frames chunked bodies under the limits and has Dev::Telemetry.
   azu:
     github: azutoolkit/azu
     version: ~> 0.10.1
