@@ -75,15 +75,15 @@ azu session:clear --backend redis    # instead of reading src/initializers/sessi
 | `--backend <type>` | `-b`  | `cookie`, `redis` or `memory`                       |
 | `--force`          | `-f`  | Do not ask first                                    |
 
-The backend is `--backend`, or the store `src/initializers/session.cr` sets, or `SESSION_BACKEND` when the file sets
-none. The command deletes data on that answer, so it reads the file strictly: a store counts only as
-`Session.use_store(Session::<Store>(UserSession))` or `config.store = Session::<Store>(UserSession).new(...)` (the
-forms `azu session:setup` and `azu generate auth` write, over several lines too) at the top level or in a `do` block,
-and comments, strings, heredocs and other literals do not count. It refuses (exit code 1), whatever `SESSION_BACKEND`
-says, when the stores in the file differ, when anything else sets a store (`config.store ||=`, a store that is not
-`Session::...`, one behind an `if` or in a `def`, ...) or when it cannot read the file; pass `--backend` then. When
-nothing says which backend, it refuses too. An unknown backend or option, or an argument, is refused with exit code 2; `-h` /
-`--help` shows the help.
+The backend is `--backend`. Without it, the command infers the backend only when `src/initializers/session.cr` is,
+as written, a file the generators write for this project: what `azu session:setup --backend cookie|redis|memory`
+writes (its session key holds the project name from `shard.yml`) or what `azu generate auth` writes (cookie, with or
+without its first marker line). The comparison is exact, apart from CRLF line ends and whitespace or blank lines at the
+end of the file. Any other file (a comment added, a store changed, a guard, a file from another azu_cli version)
+makes it refuse with exit code 1 and ask for `--backend`, whatever `SESSION_BACKEND` says: the command deletes data on
+this answer, so it does not guess what edited code does. `SESSION_BACKEND` is used only when there is no
+`src/initializers/session.cr`; with neither, it refuses too. An unknown backend or option, or an argument, is refused
+with exit code 2; `-h` / `--help` shows the help.
 
 - Redis: deletes every `session:*` key (the keys the session shard's `RedisStore` writes) in the database of
   `REDIS_URL` (default `redis://localhost:6379`), with `SCAN`, never `KEYS`. The prefix is not per app: an app
@@ -91,6 +91,10 @@ nothing says which backend, it refuses too. An unknown backend or option, or an 
   target as `redis://host:port/database` (never the user or password in `REDIS_URL`) and says so. A `REDIS_URL` that is
   not `redis[s]://[[user]:password@]host[:port][/database]` (an IPv6 host in brackets, an `@` in the password as `%40`)
   is refused (exit code 1); a database the server does not have (16 by default, 0 to 15) fails before deleting anything.
+  `user:password@` authenticates as that ACL user (`AUTH user password`, Redis 6+), `:password@` with the password only
+  (`AUTH password`), and userinfo without a `:` sends no `AUTH`. It waits 5 seconds to connect (the TLS handshake of
+  `rediss://` included) and 10 seconds for each reply, then stops with exit code 1 (for instance `rediss://` against a
+  plain Redis port).
 - Cookie sessions live in the browsers, so the command cannot clear them and says so (exit code 1) without asking:
   change `SESSION_SECRET` and restart, and every existing cookie stops working.
 - Memory sessions live in the app process: the command says so (exit code 1); restart the app to end them.

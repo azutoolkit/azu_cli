@@ -17,18 +17,21 @@
 - Fixed: `session:clear` read the backend from any mention of `RedisStore` in `src/initializers/session.cr`, comments
   included. The initializer of `azu generate auth` (a `CookieStore`) mentions `Session::RedisStore` in a comment, so
   in every project with generated authentication `session:clear` deleted every `session:*` key of the Redis at
-  `REDIS_URL`. It now reads the code of the initializer (comments, strings, chars, heredocs, `%` literals and regexes
-  are not code) and takes a store only from `Session.use_store(Session::<Store>(T))` or
-  `config.store = Session::<Store>(T).new(...)` at the top level or in a `do` block (`Session::` required, so
-  `MyApp::RedisStore` is not the shard's). It refuses (exit 1, also with `SESSION_BACKEND` set) when the stores
-  differ, when anything else sets a store (`config.store ||=`, `config.store = (...)`, a variable, `store:`, a store
-  behind an `if`, in a `def` or a `{ }` block) and when it cannot read the file (an unterminated literal or heredoc,
-  unbalanced `end`s, macro conditionals, `=begin`)
+  `REDIS_URL`. Without `--backend` it now infers the backend only when the initializer is, as written (CRLF line ends
+  and trailing whitespace aside), a file `azu session:setup --backend cookie|redis|memory` writes for the project or
+  the one `azu generate auth` writes (cookie, with or without its marker line), compared with the generators' output
+  rendered in memory. Any other initializer, edited or unknown, is refused (exit 1, also with `SESSION_BACKEND` set):
+  deleting data has to fail closed, and reading what edited Crystal does takes the compiler. `SESSION_BACKEND` is used
+  only when there is no initializer
 - Fixed: `session:clear` prints the Redis target as `scheme://host:port/database` (never the user or password, nor
   the URL as given, also in errors), and that every `session:*` key in that database goes, other apps' sessions
   included, also with `--force`; it connects to a bracketed IPv6 host; a `REDIS_URL` it cannot read (two `@`, no host,
   a port outside 1..65535, a database that is not a number) is a clean error (exit 1) instead of `Invalid Int32`, and a
   database the server does not have says so; it refuses an argument (exit 2)
+- Fixed: `session:clear` waited for ever on a Redis that does not answer (`rediss://` against a plain port hung for
+  minutes): it waits 5 seconds to connect and 10 for each reply, then exits 1. A `REDIS_URL` user was dropped: it now
+  sends `AUTH user password` (Redis 6 ACLs), and never reconnects on its own, so a lost connection cannot come back
+  unauthenticated or on database 0
 - Fixed: `session:setup -h` and `session:clear -h` ran the command; they show the help
 - Fixed: `session:setup` refuses (exit 1, even with `--force`) when auth's endpoints or throttle exist although its
   initializer was deleted. An initializer that only looks like auth's says so and how to replace it (delete the file)

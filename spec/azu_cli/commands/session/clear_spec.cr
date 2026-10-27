@@ -1,6 +1,7 @@
 require "../../../spec_helper"
 require "../../../support/command_helpers"
 require "../../../support/generator_helpers"
+require "../../../support/fake_redis"
 
 include CommandHelpers
 include GeneratorHelpers
@@ -16,6 +17,47 @@ end
 
 # A port nothing listens on: a spec that reached Redis by mistake fails instead of deleting keys.
 private NO_REDIS = "redis://127.0.0.1:1/15"
+
+# Runs the block with the environment variable `name` set to `value` (unset when nil), then puts the old value back.
+private def with_env(name : String, value : String?, &)
+  old = ENV[name]?
+  value ? (ENV[name] = value) : ENV.delete(name)
+  yield
+ensure
+  old ? (ENV[name] = old) : ENV.delete(name)
+end
+
+# Writes the initializer `azu session:setup --backend <backend>` writes in the project in the current directory.
+private def write_setup_initializer(backend : String) : Nil
+  AzuCLI::Generate::Session.new(project: AzuCLI::Generate::Session.project_name, backend: backend)
+    .render(".", force: true, interactive: false)
+end
+
+# Compilable initializer code the store tokenizer that session:clear used to have misread (from its review's
+# oracle corpus): it took `redis` from each, while Crystal sets the cookie store or no store at all. Every one is
+# an edit, so the command now refuses it before any connection.
+private HAND_EDITED = {
+  "and_guard"           => "false && config.store = Session::RedisStore(U).new\n",
+  "and_guard_ml"        => "x = false &&\n  config.store = Session::RedisStore(U).new\n",
+  "and_use_store"       => "false && Session.use_store(Session::RedisStore(U))\n",
+  "or_guard"            => "true || Session.use_store(Session::RedisStore(U))\n",
+  "bare_heredoc_op"     => "Session.use_store(Session::RedisStore(U))\nX = 1\nx = [] of Int32\nx <<X\nSession.use_store(Session::CookieStore(U))\nX\n",
+  "squiggly"            => "Session.use_store(Session::RedisStore(U))\nx = [] of Int32\nX = 1\nx <<~X\nSession.use_store(Session::CookieStore(U))\nX\n",
+  "div_regex"           => "a = 4\nb = 2\nconfig.store = Session::RedisStore(U).new\nx = a /b; config.store = Session::CookieStore(U).new #/\n",
+  "div_regex2"          => "a = 4\nb = 2\nSession.use_store(Session::RedisStore(U))\nx = a /b; Session.use_store(Session::CookieStore(U)) # /\n",
+  "heredoc_trailing_ws" => "x = <<-EOS\nEOS   \nconfig.store = Session::RedisStore(U).new\nEOS\n",
+  "macro_expr"          => "Session.use_store(Session::RedisStore(U))\n{{ \"Session.use_store(Session::CookieStore(U))\".id }}\n",
+  "proc_do"             => "f = -> do\n  Session.use_store(Session::RedisStore(U))\nend\n",
+  "proc_new_do"         => "f = Proc(Nil).new do\n  Session.use_store(Session::RedisStore(U))\nend\n",
+  "times0_do"           => "0.times do\n  Session.use_store(Session::RedisStore(U))\nend\n",
+  "require"             => "Session.use_store(Session::RedisStore(U))\nrequire \"./other\"\n",
+  "rescue_in_do"        => "Session.configure do |config|\n  1\nrescue\n  config.store = Session::RedisStore(U).new\nend\n",
+  "ternary_if"          => "x = true ? nil : if false\n  Session.use_store(Session::RedisStore(U))\n  p if false\nend\n",
+  "ternary_if_ret"      => "x = true ? nil : if false\n  Session.use_store(Session::RedisStore(U))\n  puts if false\nend\n",
+  "ternary_q_if"        => "x = false ? if false\n  Session.use_store(Session::RedisStore(U))\n  p if false\nend : nil\n",
+  "crlf"                => "Session.use_store(Session::RedisStore(U))\r\nx = 1\r\n",
+  "end_marker"          => "__END__\nSession.use_store(Session::RedisStore(U))\n",
+}
 
 describe AzuCLI::Commands::Session::Clear do
   describe "#initialize" do
@@ -89,17 +131,11 @@ describe AzuCLI::Commands::Session::Clear do
     end
 
     it "explains a memory backend without asking" do
-      in_tmp_project(files: {"src/initializers/session.cr" => "Session.use_store(Session::MemoryStore(UserSession))\n"}) do
+      in_tmp_project do
+        write_setup_initializer("memory")
         result, _ = run_command(AzuCLI::Commands::Session::Clear.new, [] of String)
         result.success?.should be_false
         result.error.should contain("Memory sessions")
-      end
-    end
-
-    it "reads the backend from the initializer" do
-      in_tmp_project(files: {"src/initializers/session.cr" => "Session.use_store(Session::CookieStore(UserSession))\n"}) do
-        result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
-        result.error.should contain("Cookie sessions")
       end
     end
 
@@ -113,41 +149,9 @@ describe AzuCLI::Commands::Session::Clear do
       end
     end
 
-    it "refuses when it cannot tell the backend" do
+    it "refuses when there is no initializer and no SESSION_BACKEND" do
       in_tmp_project do
-        result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
-        result.success?.should be_false
-        result.error.should contain("--backend")
-      end
-    end
-  end
-
-  describe "backend detection" do
-    it "reads cookie from the initializer `azu generate auth` writes (its comment names Session::RedisStore)" do
-      in_generated_project do
-        File.write("src/blog.cr", "handlers = [\n  Azu::Handler::RequestId.new,\n]\n")
-        AzuCLI::Generate::Auth.new.render(File.expand_path("."), force: true, interactive: false)
-        File.read("src/initializers/session.cr").should contain("Session::RedisStore")
-
-        AzuCLI::Commands::Session::Clear.store_backends(File.read("src/initializers/session.cr")).should eq ["cookie"]
-        with_redis_url(NO_REDIS) do
-          result, _ = run_command(AzuCLI::Commands::Session::Clear.new, [] of String)
-          result.success?.should be_false
-          result.error.should contain("Cookie sessions")
-        end
-      end
-    end
-
-    it "ignores a store named only in a comment" do
-      source = "# switch to Session::RedisStore for revocation\n# config.store = Session::RedisStore(UserSession).new\n" \
-               "Session.configure do |config|\n  config.store = Session::CookieStore(UserSession).new # not RedisStore\nend\n"
-      AzuCLI::Commands::Session::Clear.store_backends(source).should eq ["cookie"]
-      AzuCLI::Commands::Session::Clear.store_backends("# Session.use_store(Session::RedisStore(UserSession))\n").should be_empty
-    end
-
-    it "refuses an initializer whose RedisStore is only in a comment" do
-      in_tmp_project(files: {"src/initializers/session.cr" => "# use Session::RedisStore\nrequire \"session\"\n"}) do
-        with_redis_url(NO_REDIS) do
+        with_env("SESSION_BACKEND", nil) do
           result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
           result.success?.should be_false
           result.exit_code.should eq 1
@@ -156,54 +160,103 @@ describe AzuCLI::Commands::Session::Clear do
       end
     end
 
-    it "reads the multi-line forms the generators emit" do
-      AzuCLI::Commands::Session::Clear.store_backends(
-        "Session.use_store(\n  Session::RedisStore(UserSession)\n)\nSession.configure do |config|\n  config.store =\n    Session::RedisStore(UserSession).new(Redis.new(url: \"redis://x#y\"))\nend\n"
-      ).should eq ["redis"]
-    end
-
-    it "reads the backend of every initializer session:setup writes" do
-      AzuCLI::Generate::Session::BACKENDS.each do |backend|
+    it "takes SESSION_BACKEND when there is no initializer" do
+      FakeRedis.open do |redis|
         in_tmp_project do
-          AzuCLI::Generate::Session.new(project: "blog", backend: backend).render(".", force: true, interactive: false)
-          AzuCLI::Commands::Session::Clear.store_backends(File.read("src/initializers/session.cr")).should eq [backend]
-        end
-      end
-    end
-
-    it "refuses, even with SESSION_BACKEND=redis, an initializer whose store it cannot read" do
-      ["config.store = (Session::CookieStore(U).new)\nputs \"use config.store = Session::RedisStore for revocation\"\n",
-       "config.store ||= Session::RedisStore(U).new\n",
-       "config.store = MyApp::RedisStore.new\n",
-       "DOC = <<-TXT\n  config.store = Session::RedisStore(U).new\n",
-       "if ENV[\"R\"]?\n  Session.use_store(Session::RedisStore(U))\nend\n"].each do |source|
-        in_tmp_project(files: {"src/initializers/session.cr" => source}) do
-          with_redis_url(NO_REDIS) do
-            old = ENV["SESSION_BACKEND"]?
-            ENV["SESSION_BACKEND"] = "redis"
-            begin
-              result, output = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
-              result.success?.should be_false
-              result.exit_code.should eq 1
-              result.error.should contain("--backend")
-              output.should_not contain("deletes")
-            ensure
-              old ? (ENV["SESSION_BACKEND"] = old) : ENV.delete("SESSION_BACKEND")
+          with_env("SESSION_BACKEND", "redis") do
+            with_redis_url(redis.url) do
+              result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
+              result.success?.should be_true
+              redis.commands.map(&.first).should contain("SCAN")
             end
           end
         end
       end
     end
+  end
 
-    it "refuses an initializer whose stores disagree or are not the shard's" do
-      ["Session.use_store(Session::CookieStore(UserSession))\nconfig.store = Session::RedisStore(UserSession).new\n",
-       "config.store = MyStore.new\n"].each do |source|
-        in_tmp_project(files: {"src/initializers/session.cr" => source}) do
-          with_redis_url(NO_REDIS) do
-            result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
-            result.success?.should be_false
-            result.exit_code.should eq 1
-            result.error.should contain("--backend")
+  describe "backend detection" do
+    it "infers the backend of each file session:setup writes for the project, and deletes only session:* on redis" do
+      FakeRedis.open do |redis|
+        with_redis_url(redis.url("/4")) do
+          {"cookie" => "Cookie sessions", "memory" => "Memory sessions"}.each do |backend, message|
+            in_tmp_project do
+              write_setup_initializer(backend)
+              result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
+              result.exit_code.should eq 1
+              result.error.should contain(message)
+            end
+          end
+          redis.connections.should eq 0
+
+          in_tmp_project do
+            write_setup_initializer("redis")
+            File.write("src/initializers/session.cr", File.read("src/initializers/session.cr").gsub("\n", "\r\n") + "\r\n")
+            result, output = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
+            result.success?.should be_true
+            output.should contain("database 4 of redis://127.0.0.1:#{redis.port}/4")
+            output.should contain("other apps")
+            redis.commands.should eq [["SELECT", "4"], ["SCAN", "0", "MATCH", "session:*", "COUNT", "100"]]
+          end
+        end
+      end
+    end
+
+    it "reads the initializer of azu generate auth as cookie (its comment names Session::RedisStore)" do
+      FakeRedis.open do |redis|
+        in_generated_project do
+          File.write("src/blog.cr", "handlers = [\n  Azu::Handler::RequestId.new,\n]\n")
+          AzuCLI::Generate::Auth.new.render(File.expand_path("."), force: true, interactive: false)
+          File.read("src/initializers/session.cr").should contain("Session::RedisStore")
+
+          with_redis_url(redis.url) do
+            with_env("SESSION_BACKEND", "redis") do
+              [[] of String, ["--force"]].each do |args|
+                result, _ = run_command(AzuCLI::Commands::Session::Clear.new, args)
+                result.exit_code.should eq 1
+                result.error.should contain("Cookie sessions")
+              end
+            end
+          end
+          redis.connections.should eq 0
+        end
+      end
+    end
+
+    it "refuses, with SESSION_BACKEND=redis too, every hand-edited initializer, and connects to nothing" do
+      FakeRedis.open do |redis|
+        with_redis_url(redis.url) do
+          with_env("SESSION_BACKEND", "redis") do
+            HAND_EDITED.each do |name, fragment|
+              in_tmp_project do
+                write_setup_initializer("redis")
+                generated = File.read("src/initializers/session.cr")
+                [fragment, generated + fragment, fragment + generated].each do |source|
+                  File.write("src/initializers/session.cr", source)
+                  result, output = run_command(AzuCLI::Commands::Session::Clear.new, ["--force"])
+                  fail "#{name} was not refused" unless result.exit_code == 1
+                  result.error.should contain("Pass --backend cookie|redis|memory")
+                  result.error.should contain("edited")
+                  output.should_not contain("deletes")
+                end
+              end
+            end
+          end
+        end
+        redis.connections.should eq 0
+      end
+    end
+
+    it "still clears with an explicit --backend redis when the initializer was edited" do
+      FakeRedis.open do |redis|
+        in_tmp_project do
+          write_setup_initializer("redis")
+          File.write("src/initializers/session.cr", "# mine\n" + File.read("src/initializers/session.cr"))
+          with_redis_url(redis.url) do
+            result, output = run_command(AzuCLI::Commands::Session::Clear.new, ["--backend", "redis", "--force"])
+            result.success?.should be_true
+            output.should contain("other apps")
+            redis.commands.map(&.first).should eq ["SELECT", "SCAN"]
           end
         end
       end
@@ -277,6 +330,65 @@ describe AzuCLI::Commands::Session::Clear do
           result.error.should contain("REDIS_URL")
         end
       end
+    end
+  end
+
+  describe "Redis connection" do
+    it "authenticates as the URL's user (AUTH user password), with the password only, or not at all" do
+      {"alice:al%40icepw@" => ["AUTH", "alice", "al@icepw"], ":pw@" => ["AUTH", "pw"]}.each do |userinfo, auth|
+        FakeRedis.open do |redis|
+          with_redis_url(redis.url("/2", userinfo)) do
+            result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--backend", "redis", "--force"])
+            result.success?.should be_true
+            redis.commands.first(2).should eq [auth, ["SELECT", "2"]]
+          end
+        end
+      end
+      FakeRedis.open do |redis|
+        with_redis_url(redis.url("/0", "alice@")) do
+          run_command(AzuCLI::Commands::Session::Clear.new, ["--backend", "redis", "--force"])
+          redis.commands.first.should eq ["SELECT", "0"]
+        end
+      end
+    end
+
+    it "says the server has no such database, and deletes nothing" do
+      FakeRedis.open do |redis|
+        with_redis_url(redis.url("/16", ":sekritpw@")) do
+          result, _ = run_command(AzuCLI::Commands::Session::Clear.new, ["--backend", "redis", "--force"])
+          result.exit_code.should eq 1
+          result.error.should contain("has no database 16")
+          result.error.should contain("Nothing was deleted")
+          result.error.should_not contain("sekritpw")
+          redis.commands.map(&.first).should_not contain("SCAN")
+        end
+      end
+    end
+
+    it "gives up on a server that does not answer, plain or TLS, with exit 1" do
+      ["redis", "rediss"].each do |scheme|
+        FakeRedis.open(silent: true) do |redis|
+          with_redis_url(redis.url("/0", ":pw@", scheme)) do
+            command = AzuCLI::Commands::Session::Clear.new
+            command.connect_timeout = 300.milliseconds
+            command.command_timeout = 300.milliseconds
+            done = Channel({AzuCLI::Commands::Result, String}).new(1)
+            spawn { done.send(run_command(command, ["--backend", "redis", "--force"])) }
+            result = select
+            when outcome = done.receive then outcome.first
+            when timeout(5.seconds) then fail "#{scheme}:// still waiting after 5 seconds"
+            end
+            result.exit_code.should eq 1
+            result.error.should contain("did not answer")
+            result.error.should contain("Nothing was deleted")
+          end
+        end
+      end
+    end
+
+    it "waits 5 seconds to connect and 10 for each command by default" do
+      command = AzuCLI::Commands::Session::Clear.new
+      {command.connect_timeout, command.command_timeout}.should eq({5.seconds, 10.seconds})
     end
   end
 

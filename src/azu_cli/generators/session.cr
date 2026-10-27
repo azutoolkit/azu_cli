@@ -1,4 +1,5 @@
 require "teeplate"
+require "yaml"
 require "./session_wiring"
 require "./auth"
 
@@ -59,6 +60,13 @@ module AzuCLI
         elsif source.includes?("def authenticated?")
           "its UserSession defines authenticated?"
         end
+      end
+
+      # The project name the initializer's session key is made from: shard.yml's `name`, else the directory's.
+      def self.project_name(root : String = ".") : String
+        shard_yml = File.join(root, "shard.yml")
+        name = YAML.parse(File.read(shard_yml))["name"]?.try(&.as_s?) if File.exists?(shard_yml)
+        name || File.basename(File.expand_path(root))
       end
 
       def store_type : String

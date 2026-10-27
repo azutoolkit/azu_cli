@@ -3,9 +3,11 @@ require "uri"
 module AzuCLI
   module Commands
     module Session
-      # The Redis server and database a `redis[s]://[[user]:password@]host[:port][/database]` URL names. It prints
-      # as scheme://host:port/database only: never the userinfo, never the URL as given, and a URL it cannot read
-      # is answered with a reason that quotes none of it.
+      # The Redis server and database a `redis[s]://[[user]:password@]host[:port][/database]` URL names, and how
+      # to authenticate: `user:password@` is `AUTH user password` (a Redis 6 ACL user), `:password@` is
+      # `AUTH password`, and userinfo without a `:` sends no AUTH. It prints as scheme://host:port/database only:
+      # never the userinfo, never the URL as given, and a URL it cannot read is answered with a reason that quotes
+      # none of it.
       struct RedisTarget
         DEFAULT_PORT = 6379
         HOSTNAME     = /\A[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?\z/
@@ -13,11 +15,12 @@ module AzuCLI
 
         getter host : String
         getter port : Int32
+        getter username : String?
         getter password : String?
         getter database : Int32
         getter? ssl : Bool
 
-        def initialize(@host, @port, @password, @database, @ssl)
+        def initialize(@host, @port, @password, @database, @ssl, @username = nil)
         end
 
         # The target, or why `url` is not one.
@@ -32,7 +35,8 @@ module AzuCLI
           return host unless port
           database = database_index(match[3]?)
           return database if database.is_a?(String)
-          new(host, port, password(userinfo), database, match[1].downcase == "rediss")
+          username, password = credentials(userinfo)
+          new(host, port, password, database, match[1].downcase == "rediss", username)
         end
 
         # {host, port}, or {reason, nil}.
@@ -59,10 +63,18 @@ module AzuCLI
           index || "its database is not a number (0 to 15 on a default server)"
         end
 
-        private def self.password(userinfo : String) : String?
-          _, colon, password = userinfo.partition(':')
-          return if colon.empty? || password.empty?
-          URI.decode(password)
+        # {user, password}: both nil without a password, the user nil when it is empty.
+        private def self.credentials(userinfo : String) : {String?, String?}
+          user, colon, password = userinfo.partition(':')
+          return {nil, nil} if colon.empty? || password.empty?
+          {user.empty? ? nil : URI.decode(user), URI.decode(password)}
+        end
+
+        # The arguments of the AUTH command to send first, or nil when the URL has no password.
+        def auth_arguments : Array(String)?
+          secret = password
+          return unless secret
+          (user = username) ? [user, secret] : [secret]
         end
 
         def to_s(io : IO) : Nil

@@ -50,6 +50,19 @@ describe AzuCLI::Commands::Session::RedisTarget do
     end
   end
 
+  it "keeps the user name for AUTH: user and password, the password alone, or nothing" do
+    {
+      "redis://alice:alicepw@host" => {"alice", ["alice", "alicepw"]},
+      "redis://al%3Ai:p%40w@host"  => {"al:i", ["al:i", "p@w"]},
+      "redis://:pw@host"           => {nil, ["pw"]},
+      "redis://alice@host"         => {nil, nil},
+      "redis://alice:@host"        => {nil, nil},
+      "redis://host"               => {nil, nil},
+    }.each do |url, (username, arguments)|
+      {target(url).username, target(url).auth_arguments}.should eq({username, arguments})
+    end
+  end
+
   it "masks the password in a server or socket error" do
     target("redis://:hunter2@host").scrub("AUTH hunter2 failed").should eq "AUTH *** failed"
     target("redis://host").scrub("refused").should eq "refused"

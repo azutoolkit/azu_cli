@@ -1,6 +1,5 @@
 require "../base"
 require "../../generators/session"
-require "yaml"
 
 module AzuCLI
   module Commands
@@ -33,7 +32,7 @@ module AzuCLI
           end
 
           generator = begin
-            AzuCLI::Generate::Session.new(project: get_project_name, backend: @backend)
+            AzuCLI::Generate::Session.new(project: AzuCLI::Generate::Session.project_name, backend: @backend)
           rescue ex : ArgumentError
             return usage_error(ex.message.to_s)
           end
@@ -82,14 +81,6 @@ module AzuCLI
             Exit codes: 0 done, 1 refused (the initializer exists, authentication is generated, no place for the
             handler), 2 invalid usage.
             HELP
-        end
-
-        private def get_project_name : String
-          if File.exists?("./shard.yml")
-            shard_yml = YAML.parse(File.read("./shard.yml"))
-            return shard_yml["name"].as_s
-          end
-          Dir.current.split("/").last
         end
       end
     end
