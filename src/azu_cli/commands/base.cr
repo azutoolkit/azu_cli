@@ -154,6 +154,19 @@ module AzuCLI
         nil
       end
 
+      # The value of `--long value`, `--long=value` or `-s value` as given: "" when the option has no value
+      # (it ends the arguments or another option follows), nil when it is absent.
+      def value_option(long : String, short : String? = nil) : String?
+        @all_args.each_with_index do |arg, index|
+          return arg.split("=", 2)[1] if arg.starts_with?("--#{long}=")
+          next unless arg == "--#{long}" || (short && arg == "-#{short}")
+
+          following = @all_args[index + 1]?
+          return following && !following.starts_with?("-") ? following : ""
+        end
+        nil
+      end
+
       # Error result
       def error(message : String) : Result
         Logger.error(message)
