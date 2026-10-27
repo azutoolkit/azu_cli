@@ -19,6 +19,12 @@ module AzuCLI
         @endpoint_type == "api"
       end
 
+      # What a read action answers with. Azu leaves the Content-Type to the endpoint (`content_type`), and the
+      # generated app sends `X-Content-Type-Options: nosniff`, so without it a browser shows the page as text
+      def media_type : String
+        api? ? "application/json" : "text/html"
+      end
+
       def verb : String
         case @action
         when "create"  then "post"

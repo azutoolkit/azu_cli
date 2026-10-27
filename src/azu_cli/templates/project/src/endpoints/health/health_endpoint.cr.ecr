@@ -5,6 +5,7 @@ module <%= @module_name %>::Health
     get "/health"
 
     def call : HealthPage
+      content_type "application/json"
       HealthPage.new(
         status: "ok",
         version: <%= @module_name %>::VERSION,

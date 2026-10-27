@@ -1,5 +1,11 @@
 # Changelog - Azu CLI
 
+## Unreleased - Generated pages render in the browser
+
+- Fixed: every page of a generated app (`/`, the scaffold pages, `/login`, `/register`, `/account`) showed in the browser as HTML source. Azu leaves the Content-Type to the endpoint (`content_type "text/html"`, as its example app does), the generated endpoints never set it, and the generated app mounts `Azu::Handler::SecurityHeaders`, whose `X-Content-Type-Options: nosniff` stops the browser from guessing. The generated endpoints now set `text/html` for a page and `application/json` for JSON (`/health`, the API scaffold's reads, its 201 create and its update); redirects and 204s have no body and set none
+- Changed: `scripts/e2e_generated_app.sh` checks the Content-Type of `/`, `/health`, the scaffold pages (web: HTML, api: JSON), `/login` and `/register`
+- Migration for apps generated before: add `content_type "text/html"` as the first line of `call` in every endpoint that returns a page, and `content_type "application/json"` in `/health` and the JSON endpoints. From the project directory, on macOS or Linux: `grep -rlE '^    def call : \S+Page$' src/endpoints | grep -v /health/ | xargs perl -0pi -e 's/^(    def call : \S+Page\n)(?!      content_type)/$1      content_type "text\/html"\n/mg'`, then rebuild
+
 ## Unreleased - azu new usage errors, e2e_docker CA path
 
 - Fixed: `azu new` with an unknown `--type`, an unknown `--ci` or `--docker` for a cli project exits with 2 (invalid usage), like the other usage errors; it exited with 1

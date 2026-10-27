@@ -5,6 +5,7 @@ module <%= app_module %>
     get "<%= route %>"
 
     def call : <%= response_type %>
+      content_type "<%= media_type %>"
       record = <%= find_record %>
 <% if api? -%>
       <%= response_type %>.new(record)
