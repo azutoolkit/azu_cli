@@ -554,5 +554,5 @@ The `azu new` command is your starting point for all Azu applications. Choose th
 **Next Steps:**
 
 - [Project Structure](../getting-started/project-structure.md) - Understand the generated structure
-- [Quick Start](../getting-started/quick-start.md) - Build your first feature
+- [Quick Start](../getting-started/quickstart.md) - Build your first feature
 - [Database Commands](database.md) - Manage your database

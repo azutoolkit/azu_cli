@@ -162,6 +162,6 @@ end
 
 ## Related Documentation
 
-- [Getting Started](../getting-started/quick-start.md)
+- [Getting Started](../getting-started/quickstart.md)
 - [Generators](../generators/README.md)
 - [Commands](../commands/README.md)

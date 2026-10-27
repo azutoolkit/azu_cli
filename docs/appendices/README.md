@@ -412,7 +412,7 @@ When reporting issues, include:
 
 ## Related Documentation
 
-- [Getting Started](getting-started/quick-start.md) - Quick start guide
+- [Getting Started](getting-started/quickstart.md) - Quick start guide
 - [Command Reference](commands/README.md) - CLI commands
 - [Generators](generators/README.md) - Code generation
 - [Workflows](examples/README.md) - Development workflows

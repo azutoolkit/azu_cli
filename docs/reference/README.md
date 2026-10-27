@@ -679,7 +679,7 @@ development_dependencies:
 
 ## Related Documentation
 
-- [Getting Started](getting-started/quick-start.md) - Quick start guide
+- [Getting Started](getting-started/quickstart.md) - Quick start guide
 - [Command Reference](commands/README.md) - Detailed command documentation
 - [Generators](generators/README.md) - Generator documentation
 - [Workflows](examples/README.md) - Development workflows
