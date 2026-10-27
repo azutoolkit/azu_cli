@@ -27,7 +27,7 @@ value and a 16-color value. The engine picks one set when it starts (see 2.2).
 | ----------- | ---------- | --- | ------------ | ----------------------------------------------- |
 | `backplate` | `#0B0E14`  | 233 | (default bg) | HUD background (full-screen mode only)          |
 | `text`      | `#C9D1D9`  | 252 | white        | Body text                                       |
-| `muted`     | `#6E7681`  | 243 | bright black | Labels, timestamps, key hints                   |
+| `muted`     | `#8B949E`  | 246 | bright black | Labels, timestamps, key hints                   |
 | `faint`     | `#2A313C`  | 236 | bright black | Card borders, rules, the empty part of a gauge  |
 | `cyan`      | `#22D3EE`  | 44  | cyan         | Focus, the selected item, live values, spinners |
 | `purple`    | `#A78BFA`  | 141 | magenta      | Card titles, the brand ▲, the end of gradients  |
