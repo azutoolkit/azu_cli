@@ -94,7 +94,7 @@ azu undo         # take the last generate back
 | Command         | What you get                                         | Details                                          |
 | --------------- | ---------------------------------------------------- | ------------------------------------------------ |
 | `azu routes`    | Verb, path, endpoint, request and response types     | [azu routes](../command-reference/azu-routes.md) |
-| `azu doctor`    | 9 checks, nothing changed                            | [azu doctor](../commands/doctor.md)              |
+| `azu doctor`    | 9 checks, nothing changed                            | [azu doctor](../command-reference/azu-doctor.md)              |
 | `azu undo`      | Reverts the last preview-written generate            | [azu generate](../command-reference/azu-generate.md) |
 
 ## Realistic output

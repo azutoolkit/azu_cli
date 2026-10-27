@@ -6,7 +6,7 @@ description: Prepare an existing Crystal project for the Azu CLI by writing conf
 
 ## Overview & visual demo
 
-`azu init` turns an existing Crystal project, one with a `shard.yml` in the current directory, into one the Azu CLI can work in. It writes `config/azu.yml` if it is missing and creates the directories the generators write to. It writes no application code and does not touch `shard.yml`. To start a project from scratch, use [azu new](new.md).
+`azu init` turns an existing Crystal project, one with a `shard.yml` in the current directory, into one the Azu CLI can work in. It writes `config/azu.yml` if it is missing and creates the directories the generators write to. It writes no application code and does not touch `shard.yml`. To start a project from scratch, use [azu new](azu-new.md).
 
 <figure><img src="../assets/terminal-ui/04-new-progress.png" alt="The azu new progress card, with a spinner on the step that is running"><figcaption><p>The progress card of <code>azu new</code>. <code>azu init</code> has no card: it prints the plain lines shown under Realistic output.</p></figcaption></figure>
 
@@ -82,7 +82,7 @@ Commit `config/azu.yml`. `azu init` never overwrites an existing one, so your ed
 {% endhint %}
 
 {% hint style="danger" %}
-Don't expect `azu init` to scaffold an app. It creates empty directories and a config file. Use [azu new](new.md) for a project that runs.
+Don't expect `azu init` to scaffold an app. It creates empty directories and a config file. Use [azu new](azu-new.md) for a project that runs.
 {% endhint %}
 
 <details>

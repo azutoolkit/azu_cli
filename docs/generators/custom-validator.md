@@ -110,7 +110,7 @@ Write one check per `if` and add one `Schema::Error` per problem, with the field
 {% endhint %}
 
 {% hint style="info" %}
-**Pro tip:** generate it with `--record` set to the model you will validate. The constructor then types `@record` for you, and `@record.field?` works the way the comment block shows.
+**Pro tip:** pass `--record` the model you will validate. The constructor then types `@record` as that model, so the checks you write against it compile against the right type.
 {% endhint %}
 
 {% hint style="warning" %}
@@ -118,7 +118,7 @@ Pass the name without the suffix. `azu g validator EmailValidator` writes `class
 {% endhint %}
 
 {% hint style="warning" %}
-The uniqueness pattern in the comment does a query. Run it in the service that saves the record, not in every validation, or the check and the save can disagree under concurrent writes.
+The uniqueness pattern in the comment is a query, so two requests can both pass it at once. For a hard guarantee, declare the column `unique` (`email:string:unique` on the [scaffold](scaffold.md)) so the database refuses the second row.
 {% endhint %}
 
 {% hint style="danger" %}

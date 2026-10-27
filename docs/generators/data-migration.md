@@ -142,7 +142,7 @@ Data and schema migrations share one version sequence: the generator takes the t
 
 <summary>Related</summary>
 
-- [Migration](migration.md) for schema changes, and [database commands](../commands/database.md) for `db:data:migrate` options.
+- [Migration](migration.md) for schema changes, and [database commands](../command-reference/azu-db.md) for `db:data:migrate` options.
 - [azu undo](../command-reference/azu-generate.md) removes a generated file you have not edited since.
 
 </details>

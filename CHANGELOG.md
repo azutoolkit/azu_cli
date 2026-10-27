@@ -2,6 +2,15 @@
 
 ## Unreleased - generated projects depend on azu 0.10 and session 1.1
 
+- Docs: rewritten for GitBook (`.gitbook.yaml` points GitBook at `docs/`). Every page has one layout (overview with a
+  screenshot and a diagram, quickstart with a flags table, realistic output, do's and don'ts), and the command pages live
+  in `docs/command-reference/azu-<command>.md`. `scripts/check_docs.py` (run by `.github/workflows/docs.yaml`) checks
+  the layout, the GitBook tags, the links, `SUMMARY.md` and that every `azu <command>` shown is registered. Removed
+  pages that described features that do not exist (a `config/application.yml` configuration system, integration
+  guides, examples, a hot-reload page) and indexes of pages that were never written; `docs/commands/*` moved to
+  `docs/command-reference/`, `docs/architecture/*` to `docs/cli-architecture/`. The writing rules are in
+  `docs/contributing/documentation.md`.
+
 - Changed (visible to new projects): `azu new` pins `azu ~> 0.10.1` (`>= 0.10.1, < 0.11.0`) instead of `~> 0.5.118`,
   which resolved to 0.5.136, and `session ~> 1.1` instead of `~> 1.0.31`, which resolved to session's stray `v1.0.32`
   tag. New apps get azu's fixes from 0.6.0 on (CORS, the CSRF body cap, Throttle behind proxies, upload limits, server

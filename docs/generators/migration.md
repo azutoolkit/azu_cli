@@ -197,6 +197,6 @@ azu db:rollback --steps 2     # undo the newest two
 azu db:status                 # what is applied
 ```
 
-See [database commands](../commands/database.md) for the rest.
+See [database commands](../command-reference/azu-db.md) for the rest.
 
 </details>

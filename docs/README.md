@@ -55,7 +55,7 @@ azu db:migrate
 | Generate models, endpoints, CRUD | `azu generate <type> <name> [fields]`            | [azu generate](command-reference/azu-generate.md)                  |
 | See every route                  | `azu routes`                                     | [azu routes](command-reference/azu-routes.md)                      |
 | Ship a build                     | `shards build --production`, `azu new --docker`  | [Production builds](command-reference/building-for-production.md)  |
-| Check your environment           | `azu doctor`                                     | [azu doctor](commands/doctor.md)                                   |
+| Check your environment           | `azu doctor`                                     | [azu doctor](command-reference/azu-doctor.md)                                   |
 
 ## Realistic output
 

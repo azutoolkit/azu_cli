@@ -342,7 +342,7 @@ Fix: `unset DATABASE_URL`, then run `azu test` again.
 
 Cause: `azu db:create` found the database.
 
-Fix: if you want the database dropped and recreated, run `azu db:create --force`. That destroys its data. To keep the data, leave it alone and run `azu db:migrate`. More in [database commands](../commands/database.md).
+Fix: if you want the database dropped and recreated, run `azu db:create --force`. That destroys its data. To keep the data, leave it alone and run `azu db:migrate`. More in [database commands](../command-reference/azu-db.md).
 
 </details>
 
@@ -362,7 +362,7 @@ Fix: choose another name. Do not delete a migration that has already run: check 
 
 Cause: `azu generate` writes over existing files only with `--force` (its help text: "Overwrite existing files").
 
-Fix: preview first with `azu generate ... --dry-run`. On a terminal, `azu generate` also shows the file list and diff before it writes. Run `azu undo` to revert the last generate that was written through the preview. `azu undo --dry-run` shows what it would do. Writes through a pipe or in CI skip the preview, so they keep no undo record. More in [generate](../commands/generate.md).
+Fix: preview first with `azu generate ... --dry-run`. On a terminal, `azu generate` also shows the file list and diff before it writes. Run `azu undo` to revert the last generate that was written through the preview. `azu undo --dry-run` shows what it would do. Writes through a pipe or in CI skip the preview, so they keep no undo record. More in [generate](../command-reference/azu-generate.md).
 
 </details>
 
@@ -384,7 +384,7 @@ Fix: revert the files with git (`git status`, then `git checkout -- <file>` for 
 
 Cause: some Crystal builds, including the official Docker images, ship without the interpreter. `azu console` exits with `2` rather than pretending.
 
-Fix: install a Crystal that includes it, from [crystal-lang.org/install](https://crystal-lang.org/install/) or Homebrew, then check with `crystal i --help`. Until then, `azu routes` lists the routes. More in [console](../commands/console.md).
+Fix: install a Crystal that includes it, from [crystal-lang.org/install](https://crystal-lang.org/install/) or Homebrew, then check with `crystal i --help`. Until then, `azu routes` lists the routes. More in [console](../command-reference/azu-console.md).
 
 </details>
 

@@ -72,6 +72,8 @@ src/components/user_card.cr
 ```
 {% endcode %}
 
+*One file: the component class.*
+
 {% code title="src/components/user_card.cr" %}
 ```crystal
 class UserCardComponent
