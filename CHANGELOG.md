@@ -1,5 +1,26 @@
 # Changelog - Azu CLI
 
+## Unreleased - generated projects depend on azu 0.10 and session 1.1
+
+- Docs: rewritten for GitBook and limited to using the CLI (`.gitbook.yaml` points GitBook at `docs/`). Every page has one
+  layout (overview with a screenshot and a diagram, quickstart with a flags table, realistic output, do's and don'ts),
+  and the command pages live in `docs/command-reference/azu-<command>.md`. `scripts/check_docs.py` (run by
+  `.github/workflows/docs.yaml`) checks the layout, the GitBook tags, the links, `SUMMARY.md` and that every
+  `azu <command>` shown is registered. Pages that described features that do not exist (a `config/application.yml`
+  system, integration guides, examples, a hot-reload page) are removed. Pages about how the CLI is built moved out of
+  `docs/` to `design/` (command lifecycle, generator system, template engine, terminal UI design), the contributor guide to
+  `CONTRIBUTING.md` and the docs style guide to `design/writing-docs.md`; none of them are published.
+
+- Changed (visible to new projects): `azu new` pins `azu ~> 0.10.1` (`>= 0.10.1, < 0.11.0`) instead of `~> 0.5.118`,
+  which resolved to 0.5.136, and `session ~> 1.1` instead of `~> 1.0.31`, which resolved to session's stray `v1.0.32`
+  tag. New apps get azu's fixes from 0.6.0 on (CORS, the CSRF body cap, Throttle behind proxies, upload limits, server
+  timeouts, problem+json errors) and session 1.1's expiry and secret fixes. The generated code needed no change for
+  them. The server limits are on by default (a 30 s read timeout, then at least 1 KB/s of body): an app with slow
+  uploads or long requests raises them with `SERVER_READ_TIMEOUT`, `SERVER_MIN_BODY_RATE` and the other `SERVER_*`. 0.10.1 is also the first azu with `Dev::Telemetry`, so the `azu dev` dashboard of a new project shows its
+  requests and SQL. Projects generated before keep their pins: edit `shard.yml` and run `shards update azu session`
+  to move, after reading azu's `docs/reference/breaking-changes.md`. `cql` (exactly 0.0.604) and `joobq` (`~> 0.4.2`)
+  are unchanged
+
 ## Unreleased - Terminal UI: the azu new wizard, the azu dev dashboard, previews for azu generate
 
 - Added: `src/azu_cli/ui`, a terminal UI engine built on the standard library only: terminal detection (color depth from

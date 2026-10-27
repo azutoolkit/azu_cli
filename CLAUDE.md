@@ -367,7 +367,7 @@ Generators extend `Teeplate::FileTree`:
 - Generated authentication throttles through its own `AuthThrottle` (`templates/auth/src/services`), not `Azu::Handler::Throttle`
   (that one keys by address only, on every path)
 
-## Terminal UI (`src/azu_cli/ui`, design in `docs/architecture/terminal-ui.md`)
+## Terminal UI (`src/azu_cli/ui`, design in `design/terminal-ui.md`)
 
 - Standard library only (plus one `ioctl` binding). `UI::Terminal` detects color depth (`NO_COLOR` wins, `FORCE_COLOR`,
   `COLORTERM`/`TERM`), UTF-8 (ASCII glyphs otherwise, and in CJK locales), size; `Terminal.fake` for specs

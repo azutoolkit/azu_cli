@@ -51,21 +51,21 @@ at least 60x16 (not CI) `azu dev` opens a dashboard: build with compiler stages,
 memory), requests and SQL from the app (azu's `Dev::Telemetry` over `AZU_TELEMETRY_SOCKET`), JoobQ queues, the app's
 log, and the CLI's own commands (panel `2`: doctor, routes, db:status, test, db:migrate, session:clear, config:*, version, completion, re-run when what they read changes), a console with the app loaded (panel `3`, like rails console; Ctrl-O opens `crystal i` when the compiler has it); keys `1`-`7` panels, `r` rebuild, `l` log, `c` clear log, `q` quit. `--ui plain` keeps the line output. `src/**`, `config/**`, `shard.yml` and
 `shard.lock` changes build and restart; `public/templates/**` changes neither build nor restart; `.env*` changes restart
-without a build. A failed build keeps the running app. See [docs/commands/dev.md](docs/commands/dev.md).
+without a build. A failed build keeps the running app. See [docs/command-reference/azu-dev.md](docs/command-reference/azu-dev.md).
 
 ### `azu routes` Options
 
 `--format table|json` (default `table`), `--method METHOD`, `--path TEXT` (substring), `--ui rich|plain` (a card on a
 color terminal by default). Exit 0, 1 (the app could not
-be loaded), 2 (invalid usage). See [docs/commands/routes.md](docs/commands/routes.md).
+be loaded), 2 (invalid usage). See [docs/command-reference/azu-routes.md](docs/command-reference/azu-routes.md).
 
 ### `azu doctor` Options
 
-`--json`, `--ui rich|plain` (a card on a color terminal by default). Exit 0 (warnings allowed) or 1 (a check failed). See [docs/commands/doctor.md](docs/commands/doctor.md).
+`--json`, `--ui rich|plain` (a card on a color terminal by default). Exit 0 (warnings allowed) or 1 (a check failed). See [docs/command-reference/azu-doctor.md](docs/command-reference/azu-doctor.md).
 
 ### `azu console`
 
-No options. Needs a Crystal built with the interpreter, else exits 2. See [docs/commands/console.md](docs/commands/console.md).
+No options. Needs a Crystal built with the interpreter, else exits 2. See [docs/command-reference/azu-console.md](docs/command-reference/azu-console.md).
 
 ### `azu test` Options
 

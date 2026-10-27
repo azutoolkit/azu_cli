@@ -1,454 +1,153 @@
-# Middleware Generator
+---
+description: Generate an HTTP::Handler skeleton for authentication, authorization, rate limiting, CORS or logging, and what it does before you edit it.
+---
 
-The Middleware Generator creates middleware components that can be used to process HTTP requests and responses in your Azu application.
+# Middleware
 
-## Usage
+`azu g middleware` writes one `HTTP::Handler` class to `src/middleware/<name>_middleware.cr`. `--type` picks the skeleton: `authentication` (the default), `authorization`, `logging`, `cors` or `rate_limiting`. Any other value gets a custom skeleton. The skeletons are starting points, not finished security code, and the generator doesn't register the handler for you.
 
-```bash
-azu generate middleware MIDDLEWARE_NAME [OPTIONS]
+## Overview & visual demo
+
+<figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu, with middleware listed as an HTTP handler"><figcaption><p><code>azu g</code> lists <code>middleware</code> as an HTTP handler. Pick it, then give it a name and a type.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["Request"] --> B{"public_path?"}
+  B -->|yes| C["call_next"]
+  B -->|no| D["skeleton logic, may answer and return"]
+  D --> C
+  C --> E["next handler in the chain"]
 ```
 
-## Description
-
-Middleware in Azu applications provides a way to process HTTP requests and responses before they reach your endpoints or after they leave them. Common uses include authentication, logging, CORS handling, and request/response transformation.
-
-## Options
-
-- `MIDDLEWARE_NAME` - Name of the middleware to generate (required)
-- `-d, --description DESCRIPTION` - Description of the middleware
-- `-t, --template TEMPLATE` - Template to use (default: basic)
-- `-f, --force` - Overwrite existing files
-- `-h, --help` - Show help message
-
-## Examples
-
-### Generate a basic middleware
+## Quickstart & command syntax
 
 ```bash
-azu generate middleware AuthMiddleware
+azu g middleware Authentication
+azu g middleware Authorization --type authorization
+azu g middleware RateLimit --type rate_limiting
+azu g middleware Cors --type cors
 ```
 
-This creates:
-
-- `src/middleware/auth_middleware.cr` - The middleware class
-- `spec/middleware/auth_middleware_spec.cr` - Test file
-
-### Generate middleware with description
-
+{% tabs %}
+{% tab title="Authentication" %}
 ```bash
-azu generate middleware CorsMiddleware --description "Handles CORS headers for cross-origin requests"
+azu g middleware Authentication                       # --type authentication is the default
 ```
+{% endtab %}
 
-### Generate specific middleware types
-
+{% tab title="Rate limit" %}
 ```bash
-azu generate middleware LoggingMiddleware --template logging
-azu generate middleware RateLimitMiddleware --template rate_limit
+azu g middleware RateLimit --type rate_limiting       # writes rate_limit_middleware.cr, class RateLimitMiddleware
 ```
+{% endtab %}
 
-## Generated Files
+{% tab title="Dry run" %}
+```bash
+azu g middleware Authentication --dry-run             # list the file and its diff, write nothing
+```
+{% endtab %}
+{% endtabs %}
 
-### Middleware Class (`src/middleware/MIDDLEWARE_NAME.cr`)
+| Part           | Meaning                                                                                      | Default          |
+| -------------- | -------------------------------------------------------------------------------------------- | ---------------- |
+| `name`         | CamelCase name. The class is `<Name>Middleware`. The generator doesn't check the name       | required         |
+| `--type`       | `authentication`, `authorization`, `logging`, `cors` or `rate_limiting`. Anything else gets the custom skeleton | `authentication` |
+| `--force`      | Overwrite an existing file without asking                                                    | off              |
+| `--dry-run`    | List files and diffs, write nothing                                                          | off              |
 
+## Realistic output
+
+{% code title="generated files" %}
+```text
+src/middleware/authentication_middleware.cr
+```
+{% endcode %}
+
+{% code title="src/middleware/authentication_middleware.cr" %}
 ```crystal
-# <%= @description || @name.underscore.humanize %> middleware
-class <%= @name %>Middleware
-  include Azu::Middleware
+class AuthenticationMiddleware
+  include HTTP::Handler
 
-  def initialize
-  end
-
-  def call(context : Azu::Context) : Azu::Context
-    # Process the request before it reaches the endpoint
-    # You can modify the context here
-
-    # Call the next middleware or endpoint
-    context = call_next(context)
-
-    # Process the response after it leaves the endpoint
-    # You can modify the response here
-
-    context
-  end
-end
-```
-
-### Test File (`spec/middleware/MIDDLEWARE_NAME_spec.cr`)
-
-```crystal
-require "../spec_helper"
-
-describe <%= @name %>Middleware do
-  describe "#call" do
-    it "processes the request and response" do
-      middleware = <%= @name %>Middleware.new
-      context = Azu::Context.new
-
-      result = middleware.call(context)
-
-      result.should be_a(Azu::Context)
+  def call(context)
+    # Skip middleware for certain paths
+    if public_path?(context.request.path)
+      call_next(context)
+      return
     end
-  end
-end
-```
 
-## Middleware Patterns
-
-### Basic Middleware Pattern
-
-```crystal
-class LoggingMiddleware
-  include Azu::Middleware
-
-  def call(context : Azu::Context) : Azu::Context
-    start_time = Time.utc
-
-    # Process request
-    context = call_next(context)
-
-    # Log response
-    duration = Time.utc - start_time
-    Log.info { "Request processed in #{duration.total_milliseconds}ms" }
-
-    context
-  end
-end
-```
-
-### Authentication Middleware
-
-```crystal
-class AuthMiddleware
-  include Azu::Middleware
-
-  def call(context : Azu::Context) : Azu::Context
-    token = context.request.headers["Authorization"]?
+    # Check for authentication token
+    token = extract_token(context.request)
 
     unless token && valid_token?(token)
-      context.response.status_code = 401
+      context.response.status = HTTP::Status::UNAUTHORIZED
       context.response.content_type = "application/json"
-      context.response.print({error: "Unauthorized"}.to_json)
-      return context
+      context.response.print({
+        "error" => "Authentication required",
+        "message" => "Please provide a valid authentication token"
+      }.to_json)
+      return
+    end
+
+    # Add user information to context
+    if user = get_user_from_token(token)
+      context.set("current_user", user)
     end
 
     call_next(context)
+  end
+
+  private def public_path?(path : String) : Bool
+    public_paths = ["/", "/login", "/register", "/health", "/assets"]
+    public_paths.any? { |public_path| path.starts_with?(public_path) }
+  end
+
+  private def extract_token(request : HTTP::Request) : String?
+    # Try Authorization header first
+    if auth_header = request.headers["Authorization"]?
+      if auth_header.starts_with?("Bearer ")
+        return auth_header[7..-1]
+      end
+    end
+
+    # Try query parameter
+    request.query_params["token"]?
   end
 
   private def valid_token?(token : String) : Bool
-    # Token validation logic
-    token.starts_with?("Bearer ")
+    # Implement your token validation logic
+    # This could check JWT, database tokens, etc.
+    token.size > 10 # Simple validation for demo
+  end
+
+  private def get_user_from_token(token : String) : User?
+    # Implement user lookup from token
+    # This would typically decode JWT or query database
+    User.first? # Simple demo
   end
 end
 ```
+{% endcode %}
 
-### CORS Middleware
+*The authentication skeleton as generated. Its placeholders are the three methods at the bottom, and the skip list at the top of `public_path?`.*
 
-```crystal
-class CorsMiddleware
-  include Azu::Middleware
+## Do's and don'ts
 
-  def initialize(@allowed_origins : Array(String) = ["*"])
-  end
+{% hint style="info" %}
+**Pro tip:** the name is the class, so `RateLimit --type rate_limiting` gives `RateLimitMiddleware`. Use a plain CamelCase name.
+{% endhint %}
 
-  def call(context : Azu::Context) : Azu::Context
-    origin = context.request.headers["Origin"]?
+{% hint style="success" %}
+Register the handler in `def self.handlers` in `src/<app>.cr`. The generator doesn't add it, so a middleware file on its own does nothing.
+{% endhint %}
 
-    if origin && @allowed_origins.includes?("*") || @allowed_origins.includes?(origin)
-      context.response.headers["Access-Control-Allow-Origin"] = origin
-    end
+{% hint style="warning" %}
+The `logging` skeleton, and any type the generator doesn't know, calls `call_next` twice: once in its logic and again at the end of `call`. The rest of the chain then runs twice. Remove one call before you use it. `--type auth` is not a type; it gets this custom skeleton, though older help text lists it.
+{% endhint %}
 
-    context.response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    context.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+{% hint style="danger" %}
+As generated, the default skip list starts with `"/"`, and every path starts with `/`. `public_path?` is true for every request, so the token check never runs. Trim the list to the paths you mean to make public before you register the handler.
+{% endhint %}
 
-    if context.request.method == "OPTIONS"
-      context.response.status_code = 200
-      return context
-    end
-
-    call_next(context)
-  end
-end
-```
-
-### Rate Limiting Middleware
-
-```crystal
-class RateLimitMiddleware
-  include Azu::Middleware
-
-  def initialize(@requests_per_minute : Int32 = 100)
-    @requests = {} of String => Array(Time)
-  end
-
-  def call(context : Azu::Context) : Azu::Context
-    client_ip = context.request.remote_address.try(&.address) || "unknown"
-
-    if rate_limited?(client_ip)
-      context.response.status_code = 429
-      context.response.content_type = "application/json"
-      context.response.print({error: "Rate limit exceeded"}.to_json)
-      return context
-    end
-
-    record_request(client_ip)
-    call_next(context)
-  end
-
-  private def rate_limited?(client_ip : String) : Bool
-    requests = @requests[client_ip]? || [] of Time
-    requests.select { |time| time > 1.minute.ago }.size >= @requests_per_minute
-  end
-
-  private def record_request(client_ip : String)
-    @requests[client_ip] ||= [] of Time
-    @requests[client_ip] << Time.utc
-  end
-end
-```
-
-## Using Middleware
-
-### Global Middleware
-
-Register middleware globally in your application:
-
-```crystal
-class Application < Azu::Application
-  middleware LoggingMiddleware.new
-  middleware CorsMiddleware.new
-  middleware AuthMiddleware.new
-
-  # Your routes here
-end
-```
-
-### Route-Specific Middleware
-
-Apply middleware to specific routes:
-
-```crystal
-class Application < Azu::Application
-  # Public routes
-  get "/", WelcomeController, :index
-  get "/login", AuthController, :login
-
-  # Protected routes
-  group middleware: [AuthMiddleware.new] do
-    get "/dashboard", DashboardController, :index
-    get "/profile", ProfileController, :show
-  end
-end
-```
-
-### Conditional Middleware
-
-Apply middleware conditionally:
-
-```crystal
-class Application < Azu::Application
-  middleware LoggingMiddleware.new
-
-  # Only apply auth middleware in production
-  if ENV["ENV"]? == "production"
-    middleware RateLimitMiddleware.new
-  end
-end
-```
-
-## Best Practices
-
-### 1. Keep Middleware Focused
-
-Each middleware should have a single responsibility:
-
-```crystal
-# Good: Focused on logging
-class LoggingMiddleware
-  def call(context : Azu::Context) : Azu::Context
-    # Only handle logging
-  end
-end
-
-# Good: Focused on authentication
-class AuthMiddleware
-  def call(context : Azu::Context) : Azu::Context
-    # Only handle authentication
-  end
-end
-```
-
-### 2. Handle Errors Gracefully
-
-```crystal
-class ErrorHandlingMiddleware
-  include Azu::Middleware
-
-  def call(context : Azu::Context) : Azu::Context
-    call_next(context)
-  rescue ex : Exception
-    Log.error { "Unhandled error: #{ex.message}" }
-
-    context.response.status_code = 500
-    context.response.content_type = "application/json"
-    context.response.print({error: "Internal server error"}.to_json)
-
-    context
-  end
-end
-```
-
-### 3. Use Configuration
-
-Make middleware configurable:
-
-```crystal
-class ConfigurableMiddleware
-  include Azu::Middleware
-
-  def initialize(@config : Hash(String, String))
-  end
-
-  def call(context : Azu::Context) : Azu::Context
-    # Use configuration
-    context
-  end
-end
-
-# Usage
-middleware ConfigurableMiddleware.new({
-  "timeout" => "30s",
-  "retries" => "3"
-})
-```
-
-### 4. Performance Considerations
-
-```crystal
-class PerformanceMiddleware
-  include Azu::Middleware
-
-  def call(context : Azu::Context) : Azu::Context
-    # Avoid expensive operations in middleware
-    # Use caching when appropriate
-    # Keep middleware lightweight
-
-    call_next(context)
-  end
-end
-```
-
-## Testing Middleware
-
-### Unit Testing
-
-```crystal
-describe LoggingMiddleware do
-  describe "#call" do
-    it "logs request information" do
-      middleware = LoggingMiddleware.new
-      context = Azu::Context.new
-
-      # Mock logging
-      Log.should_receive(:info).with(/Request processed/)
-
-      middleware.call(context)
-    end
-  end
-end
-```
-
-### Integration Testing
-
-```crystal
-describe "Middleware integration" do
-  it "applies middleware in correct order" do
-    app = Application.new
-
-    # Test that middleware is applied correctly
-    response = app.handle_request("GET", "/")
-
-    response.headers["X-Processed-By"].should eq("LoggingMiddleware")
-  end
-end
-```
-
-## Common Middleware Types
-
-### 1. Authentication & Authorization
-
-```crystal
-class JwtAuthMiddleware
-  include Azu::Middleware
-
-  def call(context : Azu::Context) : Azu::Context
-    token = extract_token(context.request)
-
-    if token && valid_jwt?(token)
-      context.current_user = decode_user(token)
-      call_next(context)
-    else
-      unauthorized_response(context)
-    end
-  end
-end
-```
-
-### 2. Request/Response Transformation
-
-```crystal
-class JsonMiddleware
-  include Azu::Middleware
-
-  def call(context : Azu::Context) : Azu::Context
-    # Parse JSON request body
-    if context.request.content_type.try(&.includes?("application/json"))
-      body = context.request.body.try(&.gets_to_end)
-      context.params = JSON.parse(body).as_h if body
-    end
-
-    call_next(context)
-  end
-end
-```
-
-### 3. Monitoring & Metrics
-
-```crystal
-class MetricsMiddleware
-  include Azu::Middleware
-
-  def call(context : Azu::Context) : Azu::Context
-    start_time = Time.utc
-
-    context = call_next(context)
-
-    duration = Time.utc - start_time
-    record_metric(context.request.path, context.response.status_code, duration)
-
-    context
-  end
-end
-```
-
-## Related Commands
-
-- `azu generate endpoint` - Generate API endpoints
-- `azu generate service` - Generate business logic services
-- `azu generate contract` - Generate validation contracts
-- `azu generate model` - Generate data models
-
-## Templates
-
-The middleware generator supports different templates:
-
-- `basic` - Simple middleware with basic structure
-- `auth` - Authentication middleware template
-- `cors` - CORS handling middleware
-- `logging` - Request/response logging middleware
-- `rate_limit` - Rate limiting middleware
-
-To use a specific template:
-
-```bash
-azu generate middleware ApiKeyAuth --template auth
-```
+{% hint style="danger" %}
+The token logic is a placeholder. `valid_token?` accepts any token longer than 10 characters, and `get_user_from_token` returns `User.first?`. Replace both before the app handles real users.
+{% endhint %}

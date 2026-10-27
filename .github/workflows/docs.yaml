@@ -1,0 +1,21 @@
+name: Docs
+
+on:
+  push:
+    branches: [master]
+    paths: ["docs/**", "scripts/check_docs.py", "src/azu_cli/cli.cr", ".gitbook.yaml"]
+  pull_request:
+    branches: [master]
+    paths: ["docs/**", "scripts/check_docs.py", "src/azu_cli/cli.cr", ".gitbook.yaml"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: GitBook structure and links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the docs
+        run: python3 scripts/check_docs.py

@@ -1,64 +1,119 @@
-# JoobQ Integration Generator
+---
+description: Set up JoobQ background jobs in an existing project, and generate job classes with typed parameters that a worker runs.
+---
 
-The JoobQ generator sets up complete background job processing infrastructure using the modern [JoobQ](https://github.com/azutoolkit/joobq) library for Crystal.
+# JoobQ
 
-## Overview
+`azu g joobq` adds JoobQ to a project: three YAML configs (development, production and test), an initializer that reads `REDIS_URL`, an example job and `src/worker.cr`. `azu g job` writes one `JoobQ::Job` struct per job, with typed parameters. A worker started with `azu jobs:worker` runs the queues the initializer registers.
 
-JoobQ is a fast, efficient asynchronous reliable job queue and job scheduler library. It enables you to:
+## Overview & visual demo
 
-- Process background jobs asynchronously
-- Schedule jobs to run at specific times
-- Retry failed jobs automatically
-- Monitor job performance and errors
-- Scale job processing horizontally
+<figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing job as a JoobQ job and joobq as JoobQ setup"><figcaption><p><code>azu g</code> lists <code>joobq</code> as JoobQ setup and <code>job</code> as a JoobQ job. <code>joobq</code> takes no name.</p></figcaption></figure>
 
-## Basic Usage
-
-### Setup JoobQ in an Existing Project
-
-```bash
-azu generate joobq
+```mermaid
+flowchart LR
+  A["azu g joobq"] --> B["config/joobq.<env>.yml, initializer, worker"]
+  C["azu g job SendWelcome user_id:int64"] --> D["src/jobs/send_welcome_job.cr"]
+  D --> E["Register it in src/initializers/joobq.cr"]
+  B --> E
+  E --> F["azu jobs:worker runs the queues"]
 ```
 
-This command creates:
-
-- `config/joobq.development.yml` - Development configuration
-- `src/initializers/joobq.cr` - JoobQ initializer
-- `src/jobs/example_job.cr` - Example job (optional)
-
-### Generate a Background Job
+## Quickstart & command syntax
 
 ```bash
-# Simple job without parameters
-azu generate job SendEmail
-
-# Job with parameters
-azu generate job ProcessPayment user_id:int32 amount:float64
-
-# Job with custom queue and retry settings
-azu generate job ImportData file_path:string --queue=imports --retries=5
+azu g joobq
+azu g job SendWelcome user_id:int64
+azu jobs:worker
 ```
 
-## Command Options
+{% tabs %}
+{% tab title="Setup" %}
+```bash
+azu g joobq      # no name; writes the config, initializer, worker and example job
+```
 
-### JoobQ Setup Options
+Existing files are kept unless you pass `--force`.
+{% endtab %}
 
-- `--project NAME` - Project name (defaults to current directory name)
-- `--redis URL` - Redis connection URL (defaults to `redis://localhost:6379`)
-- `--no-example` - Skip creating example job
+{% tab title="Job" %}
+```bash
+azu g job SendWelcome user_id:int64
+azu g job ProcessPayment user_id:int64 amount:float64
+```
 
-### Job Generator Options
+The class is `SendWelcomeJob`. The file is `send_welcome_job.cr`.
+{% endtab %}
 
-- `--queue QUEUE_NAME` - Queue name (default: `default`)
-- `--retries COUNT` - Number of retries on failure (default: `3`)
-- `--expires DURATION` - Job expiration time (default: `1.days`)
+{% tab title="Redis" %}
+```bash
+REDIS_URL=redis://localhost:6379 azu jobs:worker
+```
 
-## Generated Structure
+The initializer reads `REDIS_URL` (default `redis://localhost:6379`). The generator has no `--redis` flag, so set the URL in the environment or in `.env`.
+{% endtab %}
+{% endtabs %}
 
-### Configuration File
+**`azu g joobq`** takes no options beyond the global ones. **`azu g job`** takes these:
 
+| Argument or option | Meaning | Default |
+| --- | --- | --- |
+| `name` | Letters, digits and underscores, starting with a letter. The class gets a `Job` suffix | required |
+| `param:type` | A property and a constructor argument. Known types: `string`, `text`, `int32`, `int64`, `float32`, `float64`, `bool`, `time`, `date`, `array`, `hash`, `json`. Any other type becomes `String`. A trailing `?` makes it nilable | none |
+| `--force` | Overwrite the file if it exists | off |
+
+Every generated job uses the queue `default`, three retries and a one-day expiry. The CLI has no option for them, so change the file to set your own.
+
+## Realistic output
+
+{% code title="src/initializers/joobq.cr" %}
+```crystal
+# JoobQ's Redis store reads REDIS_HOST, REDIS_PORT and REDIS_PASS. REDIS_URL (`azu jobs:worker` sets it) supplies the
+# ones that are not set; this runs before JoobQ builds a store, so enqueue, delay and the workers share one Redis.
+redis = URI.parse(ENV["REDIS_URL"]? || "redis://localhost:6379")
+ENV["REDIS_HOST"] ||= redis.host || "localhost"
+redis.port.try { |port| ENV["REDIS_PORT"] ||= port.to_s }
+redis.password.try { |password| ENV["REDIS_PASS"] ||= password }
+
+require "joobq"
+require "../jobs/**"
+
+# Queues name their job classes (config/joobq.<CRYSTAL_ENV>.yml, or the queue_configs below): register each one.
+JoobQ::QueueFactory.register_job_type(ExampleJob)
+# JoobQ::QueueFactory.register_job_type(EmailJob)
+
+environment = ENV["CRYSTAL_ENV"]? || "development"
+config_file = "config/joobq.#{environment}.yml"
+
+if File.exists?(config_file)
+  JoobQ.initialize_config_with(:file, config_file)
+else
+  Log.warn { "JoobQ config file not found: #{config_file}, using defaults" }
+
+  JoobQ.configure do |config|
+    config.default_queue = "default"
+    config.retries = 5
+    config.timeout = 30.seconds
+    config.time_location = "UTC"
+    config.worker_batch_size = 50
+    config.rest_api_enabled = true
+  end
+  # JoobQ.forge starts the queues listed in queue_configs
+  JoobQ.config.queue_configs["default"] = {job_class_name: "ExampleJob", workers: 3, throttle: nil}
+end
+
+# Disable REST API for worker processes
+if ARGV.includes?("--worker")
+  JoobQ.config.rest_api_enabled = false
+  Log.info { "JoobQ REST API disabled for worker process" }
+end
+```
+{% endcode %}
+
+*The initializer `azu g joobq` writes. It loads the YAML for the environment, or falls back to the inline settings if there is no file.*
+
+{% code title="config/joobq.development.yml (excerpt)" %}
 ```yaml
-# config/joobq.development.yml
 joobq:
   settings:
     default_queue: "default"
@@ -67,432 +122,159 @@ joobq:
     timezone: "UTC"
     worker_batch_size: 50
 
+  # Queue configurations
+  # Define job queues with their specific job classes and worker counts
   queues:
     default:
       job_class: "ExampleJob"
       workers: 3
 
+    # Example: Email queue
+    # email:
+    #   job_class: "EmailJob"
+    #   workers: 3
+
+    # Example: Mailer queue
     mailers:
       job_class: "MailerJob"
       workers: 2
-
-  middlewares:
-    - type: "throttle"
-    - type: "retry"
-    - type: "timeout"
-
-  error_monitoring:
-    alert_thresholds:
-      error: 10
-      warn: 50
-      info: 100
-    time_window: "5 minutes"
-    max_recent_errors: 200
-
-  features:
-    rest_api: true
-    stats: true
-
-  redis:
-    host: "localhost"
-    port: 6379
-    password: ""
-    pool_size: 200
-    pool_timeout: 2.0
-
-  pipeline:
-    batch_size: 500
-    timeout: 2.0
-    max_commands: 2000
 ```
+{% endcode %}
 
-### Initializer File
+*The development config. The `mailers` queue names a `MailerJob` the generator does not write: point it at a job you have, or delete it. The production and test files list more sample queues in the same way.*
 
+{% code title="src/worker.cr" %}
 ```crystal
-# src/initializers/joobq.cr
-# JoobQ's Redis store reads REDIS_HOST, REDIS_PORT and REDIS_PASS; REDIS_URL (`azu jobs:worker` sets it) fills them
-# before JoobQ builds a store
-redis = URI.parse(ENV["REDIS_URL"]? || "redis://localhost:6379")
-ENV["REDIS_HOST"] ||= redis.host || "localhost"
-redis.port.try { |port| ENV["REDIS_PORT"] ||= port.to_s }
-redis.password.try { |password| ENV["REDIS_PASS"] ||= password }
+require "./initializers/joobq"
+require "./jobs/**"
 
-require "joobq"
+# JoobQ worker: runs the queues configured in src/initializers/joobq.cr (and config/joobq.<env>.yml).
+# Start it with `azu jobs:worker`, or `crystal run src/worker.cr -- --worker`.
+# Redis: REDIS_URL, else the URL in src/initializers/joobq.cr
 
-# Require all job classes
-require "../jobs/**"
+Log.info { "Starting JoobQ workers for queues: #{JoobQ.queues.keys.join(", ")}" }
 
-# Register job types
-JoobQ::QueueFactory.register_job_type(ExampleJob)
-JoobQ::QueueFactory.register_job_type(EmailJob)
-
-# Initialize from YAML config
-environment = ENV["CRYSTAL_ENV"]? || "development"
-JoobQ.initialize_config_with(:file, "config/joobq.#{environment}.yml")
-
-# Disable REST API for worker processes
-if ARGV.includes?("--worker")
-  JoobQ.config.rest_api_enabled = false
+{Signal::INT, Signal::TERM}.each do |signal|
+  signal.trap do
+    Log.info { "Stopping JoobQ workers" }
+    exit
+  end
 end
+
+# Starts the queues and blocks
+JoobQ.forge
 ```
+{% endcode %}
 
-### Job Structure
+*The worker entry point. It is written only when the file does not exist.*
 
+<details>
+
+<summary>A generated job: src/jobs/send_welcome_job.cr</summary>
+
+`azu g job SendWelcome user_id:int64` writes this. The enqueue examples in the header come from the parameters.
+
+{% code title="src/jobs/send_welcome_job.cr" %}
 ```crystal
-# src/jobs/send_email_job.cr
-struct SendEmailJob
+# SendWelcomeJob - Background Job
+# Generated by Azu CLI
+#
+# This job is configured to:
+# - Run in queue: default
+# - Retry up to 3 times on failure
+# - Expire after 1.days
+#
+# To enqueue this job:
+#   SendWelcomeJob.enqueue(user_id: value)
+#
+# To run it in 5 minutes:
+#   SendWelcomeJob.delay(for: 5.minutes, user_id: value)
+
+struct SendWelcomeJob
   include JoobQ::Job
 
   # Queue configuration
-  @queue   = "mailers"
+  @queue   = "default"
+  # Number of retries on failure
   @retries = 3
-  @expires = 1.hour.from_now.to_unix_ms # a Unix time in milliseconds, as JoobQ stores it
+  # A job not run within 1.days expires (JoobQ stores the Unix time in milliseconds)
+  @expires = 1.days.from_now.to_unix_ms
+
 
   # Job parameters
-  property to : String
-  property subject : String
-  property body : String
-
-  def initialize(@to : String, @subject : String, @body : String)
-  end
-
-  # Perform the job
-  def perform
-    # Send email logic here
-    Log.info { "Sending email to #{@to}" }
-
-    # Your email sending code...
-
-    Log.info { "Email sent successfully" }
-  rescue ex : Exception
-    Log.error(exception: ex) { "Failed to send email" }
-    raise ex  # Re-raise for retry mechanism
-  end
-end
-```
-
-## Working with Jobs
-
-### Enqueue Jobs
-
-```crystal
-# Enqueue immediately
-SendEmailJob.enqueue(
-  to: "user@example.com",
-  subject: "Welcome!",
-  body: "Thanks for signing up"
-)
-
-# Run it in 5 minutes
-SendEmailJob.delay(
-  for: 5.minutes,
-  to: "user@example.com",
-  subject: "Welcome!",
-  body: "Thanks for signing up"
-)
-
-# Run it every hour (JoobQ's recurring scheduler)
-SendEmailJob.schedule(
-  every: 1.hour,
-  to: "team@example.com",
-  subject: "Hourly report",
-  body: "..."
-)
-```
-
-`enqueue` and `delay` pass their arguments to the job's `initialize`; the queue, retries and expiry are the
-job's `@queue`, `@retries` and `@expires`. A worker runs a job once a queue does. `JoobQ.forge` starts the queues
-of `queue_configs` (the YAML `queues:` section fills it too); in joobq 0.4.2 the `queue` macro of `JoobQ.configure`
-does not reach the worker:
-
-```crystal
-# src/initializers/joobq.cr
-JoobQ::QueueFactory.register_job_type(SendEmailJob)
-JoobQ.config.queue_configs["mailers"] = {job_class_name: "SendEmailJob", workers: 2, throttle: nil}
-```
-
-### Start Workers
-
-```bash
-# Start worker from CLI
-azu jobs:worker
-
-# Start with options
-azu jobs:worker --workers=5 --queues=default,mailers --verbose
-
-# Start worker directly
-crystal run src/worker.cr -- --worker
-
-# In production with environment
-CRYSTAL_ENV=production crystal run src/worker.cr -- --worker  # also needs CSRF_SECRET: the worker loads the app file
-```
-
-### Job Queue Commands
-
-```bash
-# Start worker processes
-azu jobs:worker --workers=5
-
-# Check job status
-azu jobs:status
-
-# Clear all jobs from queue
-azu jobs:clear
-
-# Retry failed jobs
-azu jobs:retry
-
-# Start JoobQ web UI (if available)
-azu jobs:ui
-```
-
-## Configuration
-
-### Environment-Specific Configs
-
-Create separate configuration files for each environment:
-
-- `config/joobq.development.yml` - Development settings
-- `config/joobq.test.yml` - Test settings
-- `config/joobq.production.yml` - Production settings
-
-The initializer automatically loads the correct config based on `AZU_ENV` or `CRYSTAL_ENV` (Azu itself reads only `CRYSTAL_ENV`).
-
-### Queue Configuration
-
-Define multiple queues with different priorities:
-
-```yaml
-queues:
-  critical:
-    job_class: "CriticalJob"
-    workers: 5 # More workers for high priority
-
-  default:
-    job_class: "DefaultJob"
-    workers: 3
-
-  low_priority:
-    job_class: "LowPriorityJob"
-    workers: 1
-```
-
-### Middleware
-
-JoobQ supports several middleware types:
-
-- **throttle** - Rate limiting for job processing
-- **retry** - Automatic retry with exponential backoff
-- **timeout** - Job timeout enforcement
-
-### Error Monitoring
-
-Configure error monitoring thresholds:
-
-```yaml
-error_monitoring:
-  alert_thresholds:
-    error: 10 # Alert after 10 errors
-    warn: 50 # Warning after 50 warnings
-    info: 100 # Info after 100 info messages
-  time_window: "5 minutes"
-  max_recent_errors: 200
-```
-
-## REST API
-
-JoobQ provides a REST API for job management (disabled in production by default):
-
-### Endpoints
-
-```bash
-# Get job registry
-curl http://localhost:8080/joobq/jobs/registry
-
-# Enqueue a job
-curl -X POST http://localhost:8080/joobq/jobs \
-  -H "Content-Type: application/json" \
-  -d '{
-    "queue": "email",
-    "job_type": "EmailJob",
-    "data": {
-      "to": "user@example.com",
-      "subject": "Hello"
-    }
-  }'
-
-# Get error statistics
-curl http://localhost:8080/joobq/errors/stats
-
-# Health check
-curl http://localhost:8080/joobq/health/check
-
-# Reprocess busy jobs
-curl -X POST http://localhost:8080/joobq/queues/default/reprocess
-```
-
-## Performance
-
-JoobQ is designed for high performance:
-
-- Processes up to **35,000 jobs/second** in benchmarks
-- Efficient Redis pipelining
-- Concurrent job processing
-- Minimal memory overhead
-
-### Optimization Tips
-
-1. **Adjust Worker Count**: Match workers to your workload
-2. **Use Batch Processing**: Process multiple items per job when possible
-3. **Optimize Redis Pool**: Increase pool size for high throughput
-4. **Queue Priorities**: Use separate queues for different priorities
-5. **Monitor Performance**: Enable stats and monitor job processing times
-
-## Integration with Azu Framework
-
-### In Endpoints
-
-```crystal
-class Users::CreateEndpoint < Azu::Endpoint(Users::CreateRequest, Users::CreateResponse)
-  def call : Users::CreateResponse
-    user = User.create!(request.to_h)
-
-    # Enqueue welcome email
-    WelcomeEmailJob.enqueue(user_id: user.id)
-
-    Users::CreateResponse.new(user: user)
-  end
-end
-```
-
-### In Models
-
-```crystal
-class User < CQL::Model(Int64)
-  getter id : Int64?
-  getter email : String
-  getter name : String
-
-  def after_create
-    # Schedule job after user is created
-    SendWelcomeEmailJob.delay(
-      for: 5.minutes,
-      user_id: self.id.not_nil!
-    )
-  end
-end
-```
-
-### With Mailers
-
-```crystal
-class UserMailer
-  def welcome_email(user_id : Int64)
-    user = User.find(user_id)
-
-    email = Carbon::Email.new(
-      to: user.email,
-      subject: "Welcome!",
-      text_body: "Thanks for signing up!"
-    )
-
-    email.deliver
-  end
-end
-
-# Job to send emails asynchronously
-struct WelcomeEmailJob
-  include JoobQ::Job
-
-  @queue = "mailers"
-  @retries = 3
-
   property user_id : Int64
 
   def initialize(@user_id : Int64)
   end
 
+
+  # Perform the job
+  # This method is called when the job is processed
   def perform
-    UserMailer.new.welcome_email(@user_id)
-  end
-end
-```
+    Log.info { "Starting SendWelcome job with parameters" }
 
-## Best Practices
+    begin
+      # Log parameter values for debugging
+      Log.info { "Processing user_id: "+@user_id.to_s }
 
-### Job Design
+      # Add your job logic here
+      # Example:
+      # - Process the parameters
+      # - Send emails to users
+      # - Process data based on parameters
+      # - Call external APIs with parameters
 
-1. **Keep Jobs Simple**: One job should do one thing
-2. **Use Idempotent Operations**: Jobs may run multiple times
-3. **Limit Parameters**: Use simple types (Int32, String, Bool)
-4. **Handle Errors Gracefully**: Log errors but let JoobQ retry
-5. **Set Appropriate Timeouts**: Don't let jobs run forever
-
-### Error Handling
-
-```crystal
-struct RobustJob
-  include JoobQ::Job
-
-  def perform
-    # Your job logic
-    process_data
-  rescue ex : SpecificError
-    # Handle specific errors
-    Log.warn { "Specific error: #{ex.message}" }
-    # Don't re-raise if you want to consider this "successful"
+      Log.info { "SendWelcome job completed successfully" }
+    rescue ex
+      Log.error(exception: ex) { "Failed to process SendWelcome job" }
+      raise ex # Let JoobQ handle retries
+    end
+  
   rescue ex : Exception
-    # Log and re-raise for retry
-    Log.error(exception: ex) { "Job failed" }
+    # Log the error and re-raise for JoobQ's retry mechanism
+    Log.error(exception: ex) { "Failed to process SendWelcomeJob" }
     raise ex
   end
 end
+
+# A worker runs it once a queue does; in src/initializers/joobq.cr add
+#   JoobQ::QueueFactory.register_job_type(SendWelcomeJob)
+#   JoobQ.config.queue_configs["default"] = {job_class_name: "SendWelcomeJob", workers: 2, throttle: nil}
 ```
+{% endcode %}
 
-### Monitoring
+*The job as generated: the `perform` body is the stub, and the `rescue` in it re-raises for JoobQ's retry. The stub logs; put the work where the comments say.*
 
-1. Enable stats collection in config
-2. Monitor error rates
-3. Track job processing times
-4. Watch queue depths
-5. Set up alerts for failures
+</details>
 
-## Troubleshooting
+## Do's and don'ts
 
-### Jobs Not Processing
+{% hint style="success" %}
+Register each job class and give its queue a `queue_configs` entry in `src/initializers/joobq.cr`. The generated job's footer shows the two lines. A job whose class is not registered never runs.
+{% endhint %}
 
-- Check Redis connection: `redis-cli ping`
-- Verify workers are running: `ps aux | grep worker`
-- Check job is registered in initializer
-- Review logs for errors
+{% hint style="info" %}
+**Pro tip:** pass only what the job needs. Store an id (`user_id:int64`) and load the record inside `perform`, not a whole object.
+{% endhint %}
 
-### Performance Issues
+{% hint style="warning" %}
+The `--redis`, `--project`, `--no-example`, `--queue`, `--retries` and `--expires` options in older docs do not exist: the command rejects them with `Invalid option`. Set the Redis URL with `REDIS_URL`.
+{% endhint %}
 
-- Increase worker count
-- Optimize job logic
-- Increase Redis pool size
-- Use batch processing
-- Profile slow jobs
+{% hint style="warning" %}
+The YAML files list sample queues (`mailers`; production also has `email` and `critical`) that name job classes the generator does not write. Delete the ones you don't use, or create their classes.
+{% endhint %}
 
-### Connection Issues
+{% hint style="danger" %}
+Don't put a Redis password in `src/initializers/joobq.cr`. The file is committed to git. Keep it in `REDIS_URL`, in the environment or in `.env`, and make sure `.env` is git-ignored.
+{% endhint %}
 
-- Verify Redis URL is correct
-- Check Redis is running
-- Ensure network connectivity
-- Review firewall rules
+<details>
 
-## Examples
+<summary>Related generators and commands</summary>
 
-See complete examples:
+- [Mailer](mailer.md) writes a job that sends an email. Register it the same way.
+- Worker and queue commands are in [background jobs commands](../command-reference/azu-jobs.md).
+- The command's full reference is [azu generate](../command-reference/azu-generate.md).
 
-- [Basic Job Processing](../examples/README.md)
-- [Scheduled Jobs](../examples/README.md)
-- [Email Processing](../examples/README.md)
-- [Data Import](../examples/README.md)
-
-## Related Documentation
-
-- [Job Generator](job.md)
-- [Mailer Generator](mailer.md)
-- [Configuration](../configuration/project-config.md)
-- [JoobQ GitHub](https://github.com/azutoolkit/joobq)
+</details>

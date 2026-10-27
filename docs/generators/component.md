@@ -1,568 +1,138 @@
-# Component Generator
+---
+description: Generate an Azu::Component class with typed properties and a starter content block under src/components.
+---
 
-The Component Generator creates reusable UI components that can be shared across different pages and templates in your Azu application.
+# Component
 
-## Usage
+`azu g component` writes one `Azu::Component` class under `src/components/`. Each `name:type` attribute becomes a typed property, with a default for the types that have one, and the class comes with a placeholder `content` method to replace. The project loads `src/components/**` at boot, so a new component is available to the app without a require.
 
-```bash
-azu generate component COMPONENT_NAME [OPTIONS]
+## Overview & visual demo
+
+<figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing: each file with its line count and a reminder that azu undo reverts them"><figcaption><p>After Enter, <code>azu g</code> lists each file it wrote with its line count. <code>azu undo</code> reverts them.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu g component UserCard name:string age:int32"] --> B["Attributes become typed properties"]
+  B --> C["src/components/user_card.cr"]
+  C --> D["class UserCardComponent < Azu::Component"]
+  D --> E["Project boot requires src/components/**"]
 ```
 
-## Description
-
-Components in Azu applications are reusable UI elements that encapsulate both presentation logic and styling. They can be used across multiple pages to maintain consistency and reduce code duplication. Components can include forms, cards, navigation elements, and other UI patterns.
-
-## Options
-
-- `COMPONENT_NAME` - Name of the component to generate (required)
-- `-d, --description DESCRIPTION` - Description of the component
-- `-t, --template TEMPLATE` - Template to use (default: basic)
-- `-f, --force` - Overwrite existing files
-- `-h, --help` - Show help message
-
-## Examples
-
-### Generate a basic component
+## Quickstart & command syntax
 
 ```bash
-azu generate component UserCard
+azu g component UserCard name:string age:int32 active:bool
+azu g component UserCard name:string --dry-run
 ```
 
-This creates:
-
-- `src/components/user_card.cr` - The component class
-- `src/components/user_card.jinja` - The component template
-- `spec/components/user_card_spec.cr` - Test file
-
-### Generate a component with description
-
+{% tabs %}
+{% tab title="Attributes" %}
 ```bash
-azu generate component NavigationBar --description "Main navigation component with user menu"
+azu g component UserCard name:string age:int32 active:bool tags:array
 ```
 
-### Generate specific component types
+Each attribute is `name:type`. Unknown types become `String`. The types and defaults are in the table below.
+{% endtab %}
 
+{% tab title="Preview" %}
 ```bash
-azu generate component ContactForm --template form
-azu generate component Pagination --template pagination
+azu g component UserCard name:string --dry-run   # list the file, write nothing
 ```
+{% endtab %}
+{% endtabs %}
 
-## Generated Files
+| Argument or option | Meaning | Default |
+| --- | --- | --- |
+| `name` | PascalCase. The class gets a `Component` suffix; the file is the underscored name | required |
+| `name:type` | A property and a constructor argument | none |
+| `--force` | Overwrite the file if it exists | off |
+| `--dry-run` | List the file, write nothing | off |
+| `--yes` | Write without asking (a terminal still shows the preview) | off |
 
-### Component Class (`src/components/COMPONENT_NAME.cr`)
+| Type | Crystal type | Default |
+| --- | --- | --- |
+| `string`, `text` | `String` | none |
+| `int32`, `integer` | `Int32` | `0` |
+| `int64` | `Int64` | none |
+| `float32` | `Float32` | none |
+| `float64`, `float` | `Float64` | none |
+| `bool`, `boolean` | `Bool` | `false` |
+| `time`, `datetime` | `Time` | none |
+| `date` | `Date` | none |
+| `array` | `Array(String)` | `[] of String` |
+| `hash` | `Hash(String, String)` | `{} of String => String` |
+| `json` | `JSON::Any` | none |
+| anything else | `String` | none |
 
+## Realistic output
+
+{% code title="generated files for azu g component UserCard name:string age:int32 active:bool tags:array" %}
+```text
+src/components/user_card.cr
+```
+{% endcode %}
+
+*One file: the component class.*
+
+{% code title="src/components/user_card.cr" %}
 ```crystal
-# <%= @description || @name.underscore.humanize %> component
-class <%= @name %>Component < Azu::Component
-  def initialize
+class UserCardComponent
+  include Azu::Component
+
+
+  property name : String
+  property age : Int32 = 0
+  property active : Bool = false
+  property tags : Array(String) = [] of String
+
+
+  def initialize(@name : String, @age : Int32, @active : Bool, @tags : Array(String))
   end
 
-  def call(context : Azu::Context, **args) : String
-    # Add your component logic here
-    # Example:
-    # @user = args[:user]
-    # @show_avatar = args[:show_avatar]? || true
-
-    render "components/<%= @name.underscore %>.jinja"
-  end
-end
-```
-
-### Component Template (`src/components/COMPONENT_NAME.jinja`)
-
-```jinja
-<!-- <%= @name.underscore.humanize %> component -->
-<div class="<%= @name.underscore %>-component">
-  <!-- Add your component content here -->
-  <h3><%= @name.underscore.humanize %></h3>
-  <p>This is the <%= @name.underscore.humanize %> component.</p>
-</div>
-```
-
-### Test File (`spec/components/COMPONENT_NAME_spec.cr`)
-
-```crystal
-require "../spec_helper"
-
-describe <%= @name %>Component do
-  describe "#call" do
-    it "renders the component" do
-      component = <%= @name %>Component.new
-      context = Azu::Context.new
-
-      result = component.call(context)
-
-      result.should be_a(String)
-      result.should contain("<%= @name.underscore.humanize %>")
+  def content
+    div(class: "bg-white p-4 rounded-lg shadow-md") do
+      h3(class: "text-lg font-semibold mb-2") { text "UserCardComponent" }
+      div(class: "p-4") do
+        text "Component content goes here"
+      end
     end
   end
+
+
 end
 ```
+{% endcode %}
 
-## Component Patterns
+*The blank lines are the template's. The placeholder `content` is the part you replace.*
 
-### Basic Component Pattern
+## Do's and don'ts
 
-```crystal
-class UserCardComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @user = args[:user]
-    @show_avatar = args[:show_avatar]? || true
-    @show_email = args[:show_email]? || false
+{% hint style="success" %}
+Keep a component to the data it shows. Pass each value through the constructor, and give the optional ones a default, as the generator does for `int32`, `bool`, `array` and `hash`.
+{% endhint %}
 
-    render "components/user_card.jinja"
-  end
-end
-```
+{% hint style="info" %}
+**Pro tip:** name the component for what it shows, not where it lives. `UserCard` is a good name; `Page2Sidebar` is not.
+{% endhint %}
 
-### Component with Data Processing
+{% hint style="warning" %}
+Types the generator does not know become `String` without a message. `score:decimal` is a `String`. Check the table above before you rely on a type.
+{% endhint %}
 
-```crystal
-class PostListComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @posts = args[:posts] || Post.all
-    @limit = args[:limit]? || 10
-    @show_author = args[:show_author]? || true
+{% hint style="warning" %}
+The `content` method and the `UserCardComponent` text are placeholders. Replace them before the component goes anywhere a user sees it.
+{% endhint %}
 
-    # Process posts
-    @posts = @posts.limit(@limit)
+{% hint style="danger" %}
+`--force` overwrites `src/components/user_card.cr`. Edit the file after generating; don't regenerate it over your changes.
+{% endhint %}
 
-    render "components/post_list.jinja"
-  end
-end
-```
+<details>
 
-### Form Component Pattern
+<summary>Related generators</summary>
 
-```crystal
-class ContactFormComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @form_data = args[:form_data]? || {} of String => String
-    @errors = args[:errors]? || {} of String => Array(String)
-    @action = args[:action]? || "/contact"
-    @method = args[:method]? || "POST"
+- [Page](page.md) is the server-rendered layer the components sit beside.
+- [Custom validator](custom-validator.md) follows the same skeleton pattern for validation logic.
+- The command's full reference is [azu generate](../command-reference/azu-generate.md).
 
-    render "components/contact_form.jinja"
-  end
-end
-```
-
-### Navigation Component Pattern
-
-```crystal
-class NavigationComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @current_user = context.current_user
-    @current_path = context.request.path
-    @menu_items = build_menu_items
-
-    render "components/navigation.jinja"
-  end
-
-  private def build_menu_items : Array(MenuItem)
-    items = [] of MenuItem
-
-    items << MenuItem.new("Home", "/", "home")
-    items << MenuItem.new("About", "/about", "info")
-
-    if @current_user
-      items << MenuItem.new("Dashboard", "/dashboard", "dashboard")
-      items << MenuItem.new("Profile", "/profile", "user")
-    end
-
-    items
-  end
-end
-```
-
-## Template Patterns
-
-### Basic Component Template
-
-```jinja
-<!-- User Card Component -->
-<div class="user-card">
-  {% if show_avatar %}
-  <div class="user-avatar">
-    <img src="{{ user.avatar_url }}" alt="{{ user.name }}">
-  </div>
-  {% endif %}
-
-  <div class="user-info">
-    <h3>{{ user.name }}</h3>
-    {% if show_email %}
-    <p>{{ user.email }}</p>
-    {% endif %}
-    <p>Joined: {{ user.created_at.strftime("%B %Y") }}</p>
-  </div>
-</div>
-```
-
-### List Component Template
-
-```jinja
-<!-- Post List Component -->
-<div class="post-list">
-  {% for post in posts %}
-  <div class="post-item">
-    <h4><a href="/posts/{{ post.slug }}">{{ post.title }}</a></h4>
-    <p>{{ post.excerpt }}</p>
-
-    {% if show_author %}
-    <div class="post-meta">
-      <span>By {{ post.author.name }}</span>
-      <span>{{ post.created_at.strftime("%B %d, %Y") }}</span>
-    </div>
-    {% endif %}
-  </div>
-  {% endfor %}
-
-  {% if posts.empty? %}
-  <p class="no-posts">No posts found.</p>
-  {% endif %}
-</div>
-```
-
-### Form Component Template
-
-```jinja
-<!-- Contact Form Component -->
-<form method="{{ method }}" action="{{ action }}" class="contact-form">
-  {% if errors %}
-  <div class="form-errors">
-    <ul>
-      {% for field, field_errors in errors %}
-        {% for error in field_errors %}
-        <li>{{ field }}: {{ error }}</li>
-        {% endfor %}
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
-
-  <div class="form-group">
-    <label for="name">Name:</label>
-    <input type="text" id="name" name="name" value="{{ form_data.name }}" required>
-  </div>
-
-  <div class="form-group">
-    <label for="email">Email:</label>
-    <input type="email" id="email" name="email" value="{{ form_data.email }}" required>
-  </div>
-
-  <div class="form-group">
-    <label for="message">Message:</label>
-    <textarea id="message" name="message" rows="5" required>{{ form_data.message }}</textarea>
-  </div>
-
-  <button type="submit" class="btn btn-primary">Send Message</button>
-</form>
-```
-
-### Navigation Component Template
-
-```jinja
-<!-- Navigation Component -->
-<nav class="main-navigation">
-  <div class="nav-brand">
-    <a href="/">My App</a>
-  </div>
-
-  <ul class="nav-menu">
-    {% for item in menu_items %}
-    <li class="nav-item {% if current_path == item.path %}active{% endif %}">
-      <a href="{{ item.path }}" class="nav-link">
-        <i class="icon-{{ item.icon }}"></i>
-        {{ item.label }}
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-
-  {% if current_user %}
-  <div class="nav-user">
-    <span>Welcome, {{ current_user.name }}</span>
-    <a href="/logout" class="btn btn-logout">Logout</a>
-  </div>
-  {% else %}
-  <div class="nav-auth">
-    <a href="/login" class="btn btn-login">Login</a>
-    <a href="/register" class="btn btn-register">Register</a>
-  </div>
-  {% endif %}
-</nav>
-```
-
-## Using Components
-
-### In Pages
-
-Use components in your page classes:
-
-```crystal
-class UsersPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @users = User.all
-    @user_card_component = UserCardComponent.new
-
-    render "pages/users.jinja"
-  end
-end
-```
-
-### In Templates
-
-Include components in your templates:
-
-```jinja
-{% extends "layout.jinja" %}
-
-{% block content %}
-<div class="container">
-  <h1>Users</h1>
-
-  <div class="users-grid">
-    {% for user in users %}
-      {{ user_card_component.call(context, user: user, show_avatar: true, show_email: false) }}
-    {% endfor %}
-  </div>
-</div>
-{% endblock %}
-```
-
-### In Layouts
-
-Use components in your layout templates:
-
-```jinja
-<!DOCTYPE html>
-<html>
-<head>
-  <title>{% block title %}{% endblock %}</title>
-</head>
-<body>
-  {{ navigation_component.call(context) }}
-
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-
-  {{ footer_component.call(context) }}
-</body>
-</html>
-```
-
-## Best Practices
-
-### 1. Keep Components Focused
-
-Each component should have a single responsibility:
-
-```crystal
-# Good: Focused on user display
-class UserCardComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @user = args[:user]
-    render "components/user_card.jinja"
-  end
-end
-
-# Good: Focused on user actions
-class UserActionsComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @user = args[:user]
-    @current_user = context.current_user
-    render "components/user_actions.jinja"
-  end
-end
-```
-
-### 2. Use Flexible Parameters
-
-Make components configurable through parameters:
-
-```crystal
-class PostCardComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @post = args[:post]
-    @show_author = args[:show_author]? || true
-    @show_date = args[:show_date]? || true
-    @show_excerpt = args[:show_excerpt]? || true
-    @truncate_length = args[:truncate_length]? || 150
-
-    render "components/post_card.jinja"
-  end
-end
-```
-
-### 3. Handle Missing Data Gracefully
-
-```crystal
-class UserAvatarComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @user = args[:user]
-    @size = args[:size]? || "medium"
-    @default_avatar = args[:default_avatar]? || "/images/default-avatar.png"
-
-    render "components/user_avatar.jinja"
-  end
-end
-```
-
-### 4. Use Semantic HTML
-
-```jinja
-<!-- Good: Semantic HTML structure -->
-<article class="post-card">
-  <header class="post-header">
-    <h2 class="post-title">{{ post.title }}</h2>
-    <time class="post-date">{{ post.created_at.strftime("%B %d, %Y") }}</time>
-  </header>
-
-  <div class="post-content">
-    {{ post.excerpt }}
-  </div>
-
-  <footer class="post-footer">
-    <a href="/posts/{{ post.slug }}" class="read-more">Read More</a>
-  </footer>
-</article>
-```
-
-## Testing Components
-
-### Unit Testing
-
-```crystal
-describe UserCardComponent do
-  describe "#call" do
-    it "renders user card with avatar" do
-      component = UserCardComponent.new
-      context = Azu::Context.new
-      user = User.new(name: "John Doe", email: "john@example.com")
-
-      result = component.call(context, user: user, show_avatar: true)
-
-      result.should contain("John Doe")
-      result.should contain("john@example.com")
-      result.should contain("user-avatar")
-    end
-
-    it "renders user card without avatar" do
-      component = UserCardComponent.new
-      context = Azu::Context.new
-      user = User.new(name: "John Doe", email: "john@example.com")
-
-      result = component.call(context, user: user, show_avatar: false)
-
-      result.should_not contain("user-avatar")
-    end
-  end
-end
-```
-
-### Integration Testing
-
-```crystal
-describe "Component integration" do
-  it "displays user cards on users page" do
-    get "/users"
-
-    response.status_code.should eq(200)
-    response.body.should contain("user-card")
-    response.body.should contain("John Doe")
-  end
-end
-```
-
-## Common Component Types
-
-### 1. Display Components
-
-Show data in a consistent format:
-
-```crystal
-class DataCardComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @title = args[:title]
-    @value = args[:value]
-    @icon = args[:icon]?
-    @color = args[:color]? || "primary"
-
-    render "components/data_card.jinja"
-  end
-end
-```
-
-### 2. Form Components
-
-Reusable form elements:
-
-```crystal
-class FormFieldComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @name = args[:name]
-    @label = args[:label]
-    @type = args[:type]? || "text"
-    @value = args[:value]?
-    @errors = args[:errors]? || [] of String
-    @required = args[:required]? || false
-
-    render "components/form_field.jinja"
-  end
-end
-```
-
-### 3. Navigation Components
-
-Site navigation elements:
-
-```crystal
-class BreadcrumbComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @items = args[:items] || [] of BreadcrumbItem
-    @separator = args[:separator]? || ">"
-
-    render "components/breadcrumb.jinja"
-  end
-end
-```
-
-### 4. Layout Components
-
-Structural layout elements:
-
-```crystal
-class SidebarComponent < Azu::Component
-  def call(context : Azu::Context, **args) : String
-    @title = args[:title]?
-    @items = args[:items] || [] of SidebarItem
-    @collapsible = args[:collapsible]? || false
-
-    render "components/sidebar.jinja"
-  end
-end
-```
-
-## Related Commands
-
-- `azu generate page` - Generate page components
-- `azu generate endpoint` - Generate API endpoints
-- `azu generate model` - Generate data models
-- `azu generate service` - Generate business logic services
-
-## Templates
-
-The component generator supports different templates:
-
-- `basic` - Simple component with basic structure
-- `card` - Card display component template
-- `form` - Form component template
-- `navigation` - Navigation component template
-- `list` - List display component template
-
-To use a specific template:
-
-```bash
-azu generate component ProductCard --template card
-```
+</details>

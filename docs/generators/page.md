@@ -1,565 +1,138 @@
-# Page Generator
+---
+description: Generate the page response of a read action with its Jinja template, or a JSON response class in an API project.
+---
 
-The Page Generator creates page components that handle the presentation layer of your Azu web application, including HTML templates and page-specific logic.
+# Page
 
-## Usage
+`azu g page` writes the response of one read action. In a web project that's a page class under `src/pages/<plural>/` and its Jinja template under `public/templates/<app>/<plural>/`. In an API project, or with `--api-only`, it writes a JSON response class under `src/responses/` instead. That only covers `index` and `show`.
+
+## Overview & visual demo
+
+<figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing, listing the comment page classes and the Jinja templates under public/templates with their line counts"><figcaption><p>The scaffold writes the page classes and their Jinja templates together. <code>azu g page</code> writes the pair for the one action you name.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["Posts::IndexEndpoint"] --> B["Posts::IndexPage"]
+  B --> C["public/templates/blog/posts/index_page.jinja"]
+  C --> D["HTML response"]
+```
+
+## Quickstart & command syntax
 
 ```bash
-azu generate page PAGE_NAME [OPTIONS]
+azu g page post index title:string body:text
+azu g page post show title:string body:text
+azu g page post new
+azu g page post edit title:string body:text
 ```
 
-## Description
-
-Pages in Azu applications represent the view layer of your web application. They combine HTML templates with Crystal code to render dynamic content and handle user interactions. Pages can include forms, data display, and client-side functionality.
-
-## Options
-
-- `PAGE_NAME` - Name of the page to generate (required)
-- `-d, --description DESCRIPTION` - Description of the page
-- `-t, --template TEMPLATE` - Template to use (default: basic)
-- `-f, --force` - Overwrite existing files
-- `-h, --help` - Show help message
-
-## Examples
-
-### Generate a basic page
-
+{% tabs %}
+{% tab title="Web" %}
 ```bash
-azu generate page WelcomePage
+azu g page post index title:string body:text         # page class and Jinja template
 ```
+{% endtab %}
 
-This creates:
-
-- `src/pages/welcome_page.cr` - The page class
-- `src/pages/welcome_page.jinja` - The HTML template
-- `spec/pages/welcome_page_spec.cr` - Test file
-
-### Generate a page with description
-
+{% tab title="API" %}
 ```bash
-azu generate page UserProfilePage --description "Displays user profile information and settings"
+azu g page post index --api-only                      # src/responses/posts/index_response.cr
+azu g page post show --api-only                       # index_response.cr needs this too
 ```
+{% endtab %}
 
-### Generate specific page types
-
+{% tab title="Dry run" %}
 ```bash
-azu generate page BlogPostPage --template blog
-azu generate page ContactFormPage --template form
+azu g page post index title:string body:text --dry-run
 ```
+{% endtab %}
+{% endtabs %}
 
-## Generated Files
+| Part           | Meaning                                                                          | Default                |
+| -------------- | -------------------------------------------------------------------------------- | ---------------------- |
+| `name`         | Singular or plural resource name                                                 | required               |
+| `action`       | `index`, `show`, `new` or `edit`. With `--api-only`, `index` or `show`           | `index`                |
+| `attributes`   | `name:type[?][:modifier]`. The index table gets one column per attribute         | none                   |
+| `--api-only`   | Writes the JSON response class instead of the page                               | on in an API project   |
+| `--force`      | Overwrite existing files without asking                                          | off                    |
+| `--dry-run`    | List files and diffs, write nothing                                              | off                    |
+| `--check`      | Type-check with the new files; write nothing if it doesn't compile               | off                    |
+| `--yes`        | Write without asking (the plan is still printed on a terminal)                   | off                    |
 
-### Page Class (`src/pages/PAGE_NAME.cr`)
+`new` and `edit` take a `csrf_tag`, which the endpoint passes in. `new` and `edit` templates share a `_form.jinja` partial.
 
+## Realistic output
+
+{% code title="generated files" %}
+```text
+src/pages/posts/index_page.cr
+public/templates/blog/posts/index_page.jinja
+```
+{% endcode %}
+
+{% code title="src/pages/posts/index_page.cr" %}
 ```crystal
-# <%= @description || @name.underscore.humanize %> page
-class <%= @name %>Page < Azu::Page
-  def initialize
-  end
+module Blog
+  struct Posts::IndexPage
+    include Azu::Response::Negotiable
+    include Azu::Templates::Renderable
 
-  def call(context : Azu::Context) : String
-    # Add your page logic here
-    # Example:
-    # @users = User.all
-    # @current_user = context.current_user
+    def initialize(@posts : Array(Post))
+    end
 
-    render "pages/<%= @name.underscore %>.jinja"
-  end
-end
-```
-
-### HTML Template (`src/pages/PAGE_NAME.jinja`)
-
-```jinja
-{% extends "layout.jinja" %}
-
-{% block title %}{{ @name.underscore.humanize }}{% endblock %}
-
-{% block content %}
-<div class="container">
-  <h1>{{ @name.underscore.humanize }}</h1>
-
-  <!-- Add your page content here -->
-  <p>Welcome to the <%= @name.underscore.humanize %> page!</p>
-</div>
-{% endblock %}
-```
-
-### Test File (`spec/pages/PAGE_NAME_spec.cr`)
-
-```crystal
-require "../spec_helper"
-
-describe <%= @name %>Page do
-  describe "#call" do
-    it "renders the page" do
-      page = <%= @name %>Page.new
-      context = Azu::Context.new
-
-      result = page.call(context)
-
-      result.should be_a(String)
-      result.should contain("<%= @name.underscore.humanize %>")
+    def render_html : String
+      view data: {"posts" => @posts.map(&.attributes.transform_keys(&.to_s))}
     end
   end
 end
 ```
+{% endcode %}
 
-## Page Patterns
+*The page turns each record into a hash. `view` renders `public/templates/blog/posts/index_page.jinja` with that data.*
 
-### Basic Page Pattern
+With `--api-only`, the index writes a JSON response that uses the show response for each record:
 
+{% code title="src/responses/posts/index_response.cr" %}
 ```crystal
-class WelcomePage < Azu::Page
-  def call(context : Azu::Context) : String
-    @greeting = "Hello, World!"
-    @current_time = Time.utc
+require "json"
 
-    render "pages/welcome.jinja"
-  end
-end
-```
+module Blog
+  struct Posts::IndexResponse
+    include Azu::Response::Negotiable
 
-### Page with Data Loading
+    @records : Array(Posts::ShowResponse)
 
-```crystal
-class UsersPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @users = User.all
-    @total_count = User.count
-    @current_page = context.params["page"]?.try(&.to_i) || 1
-
-    render "pages/users.jinja"
-  end
-end
-```
-
-### Page with Form Handling
-
-```crystal
-class ContactPage < Azu::Page
-  def call(context : Azu::Context) : String
-    if context.request.method == "POST"
-      handle_form_submission(context)
+    def initialize(records : Array(Post))
+      @records = records.map { |record| Posts::ShowResponse.new(record) }
     end
 
-    @form_data = context.params
-    @errors = context.flash["errors"]?
-
-    render "pages/contact.jinja"
-  end
-
-  private def handle_form_submission(context : Azu::Context)
-    contract = ContactContract.new(context.params.to_h)
-
-    if contract.valid?
-      # Process form data
-      Contact.create(contract.valid_data)
-      context.flash["success"] = "Message sent successfully!"
-      context.redirect("/contact")
-    else
-      context.flash["errors"] = contract.errors
+    def render_json : String
+      @records.to_json
     end
   end
 end
 ```
+{% endcode %}
 
-### Page with Authentication
+*`Posts::ShowResponse` comes from `azu g page post show --api-only`. Generate it, or this file won't compile.*
 
-```crystal
-class DashboardPage < Azu::Page
-  def call(context : Azu::Context) : String
-    user = context.current_user
+## Do's and don'ts
 
-    unless user
-      context.redirect("/login")
-      return ""
-    end
+{% hint style="info" %}
+**Pro tip:** `azu routes` shows the page or response type each endpoint returns. Compare it with the class names you generated.
+{% endhint %}
 
-    @user = user
-    @recent_activity = user.recent_activity
-    @stats = user.statistics
+{% hint style="success" %}
+Pass the same attributes to the page as to the model. The index table gets one column per attribute, so the two lists should match.
+{% endhint %}
 
-    render "pages/dashboard.jinja"
-  end
-end
-```
+{% hint style="warning" %}
+Generate `index` and `show` together for an API. The index response depends on the show response.
+{% endhint %}
 
-## Template Patterns
+{% hint style="warning" %}
+Don't build a `new` or `edit` page without the `csrf_tag`. The endpoint passes it in, and the form's CSRF field is built from it.
+{% endhint %}
 
-### Basic Template
-
-```jinja
-{% extends "layout.jinja" %}
-
-{% block title %}Welcome{% endblock %}
-
-{% block content %}
-<div class="container">
-  <h1>Welcome to Our Application</h1>
-  <p>Current time: {{ current_time }}</p>
-
-  <div class="features">
-    <h2>Features</h2>
-    <ul>
-      <li>Feature 1</li>
-      <li>Feature 2</li>
-      <li>Feature 3</li>
-    </ul>
-  </div>
-</div>
-{% endblock %}
-```
-
-### Template with Data Display
-
-```jinja
-{% extends "layout.jinja" %}
-
-{% block title %}Users{% endblock %}
-
-{% block content %}
-<div class="container">
-  <h1>Users ({{ total_count }})</h1>
-
-  <div class="users-list">
-    {% for user in users %}
-    <div class="user-card">
-      <h3>{{ user.name }}</h3>
-      <p>{{ user.email }}</p>
-      <p>Joined: {{ user.created_at.strftime("%B %d, %Y") }}</p>
-    </div>
-    {% endfor %}
-  </div>
-
-  {% if users.empty? %}
-  <p>No users found.</p>
-  {% endif %}
-</div>
-{% endblock %}
-```
-
-### Template with Forms
-
-```jinja
-{% extends "layout.jinja" %}
-
-{% block title %}Contact Us{% endblock %}
-
-{% block content %}
-<div class="container">
-  <h1>Contact Us</h1>
-
-  {% if errors %}
-  <div class="alert alert-danger">
-    <ul>
-      {% for field, field_errors in errors %}
-        {% for error in field_errors %}
-        <li>{{ field }}: {{ error }}</li>
-        {% endfor %}
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
-
-  <form method="POST" action="/contact">
-    <div class="form-group">
-      <label for="name">Name:</label>
-      <input type="text" id="name" name="name" value="{{ form_data.name }}" required>
-    </div>
-
-    <div class="form-group">
-      <label for="email">Email:</label>
-      <input type="email" id="email" name="email" value="{{ form_data.email }}" required>
-    </div>
-
-    <div class="form-group">
-      <label for="message">Message:</label>
-      <textarea id="message" name="message" rows="5" required>{{ form_data.message }}</textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Send Message</button>
-  </form>
-</div>
-{% endblock %}
-```
-
-### Template with Navigation
-
-```jinja
-{% extends "layout.jinja" %}
-
-{% block title %}Dashboard{% endblock %}
-
-{% block content %}
-<div class="container">
-  <div class="row">
-    <div class="col-md-3">
-      {% include "helpers/_nav.jinja" %}
-    </div>
-
-    <div class="col-md-9">
-      <h1>Welcome, {{ user.name }}!</h1>
-
-      <div class="stats">
-        <div class="stat-card">
-          <h3>Recent Activity</h3>
-          {% for activity in recent_activity %}
-          <div class="activity-item">
-            <span class="activity-time">{{ activity.created_at.strftime("%H:%M") }}</span>
-            <span class="activity-text">{{ activity.description }}</span>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
-```
-
-## Using Pages
-
-### Route Registration
-
-Register pages in your application routes:
-
-```crystal
-class Application < Azu::Application
-  # Basic page routes
-  get "/", WelcomePage
-  get "/users", UsersPage
-  get "/contact", ContactPage
-  get "/dashboard", DashboardPage
-
-  # Pages with parameters
-  get "/users/:id", UserShowPage
-  get "/posts/:slug", PostShowPage
-end
-```
-
-### Page with Parameters
-
-```crystal
-class UserShowPage < Azu::Page
-  def call(context : Azu::Context) : String
-    user_id = context.params["id"]
-    @user = User.find(user_id)
-
-    unless @user
-      context.response.status_code = 404
-      return render "pages/404.jinja"
-    end
-
-    render "pages/user_show.jinja"
-  end
-end
-```
-
-### Page with Flash Messages
-
-```crystal
-class LoginPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @error = context.flash["error"]?
-    @success = context.flash["success"]?
-
-    render "pages/login.jinja"
-  end
-end
-```
-
-## Best Practices
-
-### 1. Keep Pages Focused
-
-Each page should have a single responsibility:
-
-```crystal
-# Good: Focused on user listing
-class UsersPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @users = User.all
-    render "pages/users.jinja"
-  end
-end
-
-# Good: Focused on user details
-class UserShowPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @user = User.find(context.params["id"])
-    render "pages/user_show.jinja"
-  end
-end
-```
-
-### 2. Use Instance Variables for Template Data
-
-```crystal
-class BlogPage < Azu::Page
-  def call(context : Azu::Context) : String
-    # Good: Use instance variables
-    @posts = Post.all
-    @categories = Category.all
-    @current_user = context.current_user
-
-    render "pages/blog.jinja"
-  end
-end
-```
-
-### 3. Handle Errors Gracefully
-
-```crystal
-class PostShowPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @post = Post.find_by(slug: context.params["slug"])
-
-    unless @post
-      context.response.status_code = 404
-      return render "pages/404.jinja"
-    end
-
-    render "pages/post_show.jinja"
-  end
-end
-```
-
-### 4. Use Layouts and Partials
-
-```jinja
-<!-- Use layouts for consistent structure -->
-{% extends "layout.jinja" %}
-
-<!-- Use partials for reusable components -->
-{% include "helpers/_user_card.jinja" %}
-{% include "helpers/_pagination.jinja" %}
-```
-
-## Testing Pages
-
-### Unit Testing
-
-```crystal
-describe WelcomePage do
-  describe "#call" do
-    it "renders welcome page with greeting" do
-      page = WelcomePage.new
-      context = Azu::Context.new
-
-      result = page.call(context)
-
-      result.should contain("Hello, World!")
-      result.should contain("Welcome")
-    end
-  end
-end
-```
-
-### Integration Testing
-
-```crystal
-describe "Page integration" do
-  it "displays users page" do
-    get "/users"
-
-    response.status_code.should eq(200)
-    response.body.should contain("Users")
-  end
-
-  it "handles 404 for missing user" do
-    get "/users/999999"
-
-    response.status_code.should eq(404)
-    response.body.should contain("Not Found")
-  end
-end
-```
-
-## Common Page Types
-
-### 1. List Pages
-
-Display collections of data:
-
-```crystal
-class PostsPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @posts = Post.all.order(created_at: :desc)
-    @total_posts = Post.count
-
-    render "pages/posts.jinja"
-  end
-end
-```
-
-### 2. Show Pages
-
-Display individual records:
-
-```crystal
-class PostShowPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @post = Post.find_by(slug: context.params["slug"])
-    @comments = @post.comments if @post
-
-    render "pages/post_show.jinja"
-  end
-end
-```
-
-### 3. Form Pages
-
-Handle user input:
-
-```crystal
-class NewPostPage < Azu::Page
-  def call(context : Azu::Context) : String
-    if context.request.method == "POST"
-      handle_post_creation(context)
-    end
-
-    @categories = Category.all
-    render "pages/new_post.jinja"
-  end
-end
-```
-
-### 4. Dashboard Pages
-
-Display user-specific information:
-
-```crystal
-class DashboardPage < Azu::Page
-  def call(context : Azu::Context) : String
-    @user = context.current_user
-    @recent_posts = @user.posts.limit(5)
-    @stats = @user.statistics
-
-    render "pages/dashboard.jinja"
-  end
-end
-```
-
-## Related Commands
-
-- `azu generate endpoint` - Generate API endpoints
-- `azu generate model` - Generate data models
-- `azu generate contract` - Generate validation contracts
-- `azu generate service` - Generate business logic services
-
-## Templates
-
-The page generator supports different templates:
-
-- `basic` - Simple page with basic structure
-- `blog` - Blog post page template
-- `form` - Form handling page template
-- `dashboard` - Dashboard page template
-- `list` - List display page template
-
-To use a specific template:
-
-```bash
-azu generate page BlogPostPage --template blog
-```
+{% hint style="danger" %}
+Don't remove the `| e` filters from the generated `.jinja` templates. User values have to be escaped when they're printed into HTML.
+{% endhint %}
