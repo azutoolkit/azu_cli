@@ -498,7 +498,7 @@ describe AzuCLI::Generate::Project do
       web = "./tmp_test_welcome_safe"
       FileUtils.mkdir_p(web)
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "web").render(web)
-      page = File.read("#{web}/public/templates/myapp/welcome/index_page.jinja")
+      page = File.read("#{web}/public/templates/my_app/welcome/index_page.jinja")
       page.should contain("{{ csrf_metatag | safe }}")
       page.should_not contain("{{ csrf_metatag }}")
     end

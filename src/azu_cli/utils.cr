@@ -21,10 +21,12 @@ module AzuCLI
       shard_data["name"]?.try(&.as_s) || "app"
     end
 
-    # Get project module name from shard.yml
-    # Returns PascalCase module name (e.g., "MyProject")
+    # The app's module: the one src/<project>.cr declares (`azu new --module` can pick any), else the
+    # shard name in PascalCase (e.g., "MyProject")
     def project_module_name : String
-      pascal_case(project_name)
+      app_file = File.join("src", "#{project_name}.cr")
+      declared = File.read(app_file)[/^module ([A-Z][A-Za-z0-9]*)[ \t]*$/m, 1]? if File.file?(app_file)
+      declared || pascal_case(project_name)
     end
 
     # Names of the shards the project depends on (shard.yml `dependencies`)

@@ -6,6 +6,12 @@
 - Fixed: the next steps of `azu new` said `Visit: http://localhost:3000`; the app listens on 4000 (azu's default, the `PORT` of the generated `.env`). They now read cd, `azu db:setup`, `azu serve`, `http://localhost:4000` (a server database adds that it must be running), and the generated README, `config/openapi.yml`, `config/api.yml`, the mailer preview comment and the docs say 4000
 - Changed: the port lives in one place, `AzuCLI::Config::Ports::DEV_SERVER`: the project templates (`.env`, `.env.example`, `Dockerfile`, `config/azu.yml`, README), `azu serve`, `azu dev`, `azu doctor` and the hints read it
 - Changed: `scripts/e2e_generated_app.sh` checks that `azu new` points at the `PORT` of `.env` and, on SQLite, runs `azu db:migrate` right after `azu new`
+## Unreleased - A module name of your own (`azu new --module`)
+
+- Fixed: `azu new` put the welcome template under the project name (`public/templates/<project>/welcome/index_page.jinja`), while Azu looks for `<Module>::Welcome::IndexPage` under the module name underscored (`Azu::Templates::Renderable#page_path`). Whenever the two differ, `GET /` answered 500 with `Crinja::TemplateNotFoundError`: with `--module BlogApp` for `blog`, a hyphenated name (`blog-app` gives `BlogApp`, so `blog_app/`), or `myapp` with `MyApp`. The template now goes to `public/templates/<module_name.underscore>/`, the folder the scaffold and auth generators already use
+- Fixed: the generators run inside a project (scaffold, auth, channel, `azu console`) took the module from the shard name (`blog` gave `Blog`), so in a project made with `--module BlogApp` a scaffold wrote `module Blog` and `BlogDB`, which do not compile. `Utils.project_module_name` now reads the module `src/<project>.cr` declares and falls back to the shard name in PascalCase
+- Verified: `azu new blog --module BlogApp --db sqlite` with `azu generate scaffold Post title:string` compiles and answers 200 on `/` and `/posts`
+- Migration for apps generated before: if `public/templates/<project>/welcome/` is not the module name underscored, move `index_page.jinja` to `public/templates/<module_name.underscore>/welcome/` (for `BlogApp`, `public/templates/blog_app/welcome/`); files an older CLI generated with the shard-name module (`module Blog` in a `BlogApp` app) need `module BlogApp` (and `BlogAppDB`)
 
 ## Unreleased - `session:setup` writes code that compiles
 

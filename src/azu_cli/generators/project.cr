@@ -33,6 +33,9 @@ module AzuCLI
       property include_joobq : Bool
       property github_name : String
       property env : String
+      # Folder of the app's own templates under public/templates: where `Azu::Templates::Renderable#page_path`
+      # looks for `<Module>::Welcome::IndexPage`, so the module name underscored, not the project name
+      getter app_dir : String
       @csrf_secret : String?
 
       def initialize(@project : String, @module_name : String, @author : String, @email : String,
@@ -41,6 +44,7 @@ module AzuCLI
                      @ci_setup : String = "GitHub Actions", @docker_support : Bool = false,
                      @git_init : Bool = true, @include_example : Bool = true, @include_joobq : Bool = true,
                      @env : String = "development")
+        @app_dir = @module_name.underscore
         # Extract GitHub username from email or use author name
         @github_name = extract_github_name(@email, @author)
       end
