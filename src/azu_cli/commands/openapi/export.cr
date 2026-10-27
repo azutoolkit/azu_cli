@@ -1,5 +1,5 @@
 require "../base"
-require "../../openapi/spec_builder"
+require "../../openapi/exporter"
 require "option_parser"
 require "yaml"
 require "json"
@@ -7,127 +7,100 @@ require "json"
 module AzuCLI
   module Commands
     module OpenAPI
-      # Export OpenAPI specification from code
+      # Writes the OpenAPI 3.1 document of the application in the current directory. The document is the one
+      # `Azu::OpenAPI` builds from the endpoint contracts, so the application's code is compiled to get it.
       class Export < Base
+        FORMATS = ["yaml", "json"]
+
         property output_path : String = "openapi.yaml"
         property format : String = "yaml"
         property project_name : String = ""
         property version : String = "1.0.0"
 
-        def initialize
-          super("openapi:export", "Export OpenAPI specification from code")
+        # Replaced in specs: (app file, title, version) -> the document as JSON.
+        class_property loader : Proc(String, String, String, String) = ->(app_file : String, title : String, version : String) do
+          AzuCLI::OpenAPI::Exporter.new(app_file).run(title, version)
         end
 
-        # Override parse_args to also trigger custom parsing
+        @help = false
+        @usage_problem : String? = nil
+
+        def initialize
+          super("openapi:export", "Export the OpenAPI document of the application")
+        end
+
         def parse_args(args : Array(String))
           super(args)
           parse_arguments
         end
 
         def execute : Result
-          parse_arguments
+          return show_help_result if @help
+          @usage_problem.try { |problem| return usage_error(problem) }
+          return usage_error("Unknown format '#{@format}': use #{FORMATS.join(" or ")}") unless FORMATS.includes?(@format)
 
-          # Get project name from shard.yml if not provided
-          if @project_name.empty?
-            @project_name = get_project_name
-          end
+          app_file = "./src/#{Utils.project_name}.cr"
+          return Result.error("#{app_file} not found: run 'azu openapi:export' in the root of an Azu project") unless File.exists?(app_file)
 
-          Logger.info("Building OpenAPI specification from code...")
-
-          begin
-            # Create spec builder
-            builder = AzuCLI::OpenAPI::SpecBuilder.new(@project_name, @version)
-
-            # Build spec
-            spec = builder.build
-
-            # Write to file based on format
-            write_spec(spec)
-
-            Logger.success("✓ OpenAPI specification exported to: #{@output_path}")
-            success("OpenAPI specification exported successfully")
-          rescue ex : Exception
-            Logger.error("Failed to export OpenAPI spec: #{ex.message}")
-            error(ex.message || "Unknown error occurred")
-          end
+          title = @project_name.empty? ? Utils.project_name : @project_name
+          document = JSON.parse(self.class.loader.call(app_file, title, @version))
+          File.write(@output_path, @format == "json" ? document.to_pretty_json + "\n" : document.to_yaml)
+          stdout.puts "OpenAPI document written to #{@output_path}"
+          success
+        rescue ex : AzuCLI::OpenAPI::Exporter::Error
+          Result.error(ex.message.to_s)
         end
 
         private def parse_arguments
-          format_explicitly_set = false
-
+          format_given = false
           OptionParser.parse(get_args) do |parser|
-            parser.banner = "Usage: azu openapi:export [options]"
-
             parser.on("--output PATH", "Output file path") { |path| @output_path = path }
-            parser.on("--format FORMAT", "Output format (yaml, json)") { |fmt|
-              @format = fmt.downcase
-              format_explicitly_set = true
-            }
-            parser.on("--project NAME", "Project name") { |name| @project_name = name }
-            parser.on("--version VERSION", "API version") { |ver| @version = ver }
-            parser.on("--help", "Show help") {
-              show_help
-              exit(0)
-            }
-          end
-
-          # Auto-detect format from file extension only if not explicitly specified
-          unless format_explicitly_set
-            if @output_path.ends_with?(".json")
-              @format = "json"
-            elsif @output_path.ends_with?(".yaml") || @output_path.ends_with?(".yml")
-              @format = "yaml"
+            parser.on("--format FORMAT", "Output format (yaml, json)") do |format|
+              @format = format.downcase
+              format_given = true
             end
+            parser.on("--project NAME", "API title") { |name| @project_name = name }
+            parser.on("--version VERSION", "API version") { |version| @version = version }
+            parser.on("--help", "Show help") { @help = true }
+            parser.invalid_option { |option| @usage_problem = "Unknown option #{option}. Run 'azu openapi:export --help'" }
+            parser.missing_option { |option| @usage_problem = "#{option} needs a value" }
+          end
+          return if format_given
+          case File.extname(@output_path)
+          when ".json"         then @format = "json"
+          when ".yaml", ".yml" then @format = "yaml"
           end
         end
 
-        # Write spec to file
-        private def write_spec(spec : AzuCLI::OpenAPI::Spec)
-          case @format
-          when "json"
-            File.write(@output_path, spec.to_json)
-          when "yaml", "yml"
-            File.write(@output_path, spec.to_yaml)
-          else
-            raise "Unsupported format: #{@format}. Use 'yaml' or 'json'"
-          end
-        end
-
-        # Get project name from shard.yml
-        private def get_project_name : String
-          if File.exists?("shard.yml")
-            shard_yml = YAML.parse(File.read("shard.yml"))
-            return shard_yml["name"].as_s
-          end
-          "api"
-        rescue
-          "api"
+        private def show_help_result : Result
+          show_help
+          success
         end
 
         def show_help
-          puts "Usage: azu openapi:export [options]"
-          puts
-          puts "Export OpenAPI 3.1 specification from your Crystal code."
-          puts
-          puts "Options:"
-          puts "  --output PATH          Output file path [default: openapi.yaml]"
-          puts "  --format FORMAT        Output format: yaml or json [default: yaml]"
-          puts "  --project NAME         Project name (auto-detected from shard.yml)"
-          puts "  --version VERSION      API version [default: 1.0.0]"
-          puts "  --help                 Show this help message"
-          puts
-          puts "Examples:"
-          puts "  azu openapi:export"
-          puts "  azu openapi:export --output api-spec.json --format json"
-          puts "  azu openapi:export --output docs/openapi.yaml --version 2.0.0"
-          puts
-          puts "The command will analyze:"
-          puts "  - Endpoints in src/endpoints/"
-          puts "  - Models in src/models/"
-          puts "  - Request classes in src/requests/"
-          puts "  - Response classes in src/pages/"
-          puts
-          puts "And generate a complete OpenAPI 3.1 specification."
+          stdout.puts <<-HELP
+            Usage: azu openapi:export [options]
+
+            Write the OpenAPI 3.1 document of the application: every route of an Azu::Endpoint (scopes and mounted
+            apps included), its parameters, request bodies with their validation rules, and response schemas. The
+            document is built by Azu::OpenAPI from the endpoint contracts, so the application's code is compiled
+            and loaded (the server is not started); the first run takes as long as a build. That runs the top-level
+            code of src/<project>.cr; do not point it at a production environment.
+
+            Options:
+              --output PATH       Output file [default: openapi.yaml]
+              --format FORMAT     yaml or json [default: from the file extension, else yaml]
+              --project NAME      API title [default: the shard name]
+              --version VERSION   API version [default: 1.0.0]
+              --help              Show this help
+
+            Exit codes: 0 success, 1 the application could not be loaded, 2 invalid usage.
+
+            Examples:
+              azu openapi:export
+              azu openapi:export --output docs/openapi.json
+              azu openapi:export --project "Blog API" --version 2.0.0
+            HELP
         end
       end
     end

@@ -1,58 +1,6 @@
 require "../../spec_helper"
 
 describe "OpenAPI Integration" do
-  describe "full roundtrip: code -> spec -> code" do
-    it "exports spec and regenerates equivalent code" do
-      # Setup test project
-      Dir.mkdir_p("spec/fixtures/roundtrip/src/models")
-      Dir.mkdir_p("spec/fixtures/roundtrip/src/endpoints/posts")
-
-      # Create original model
-      model_content = <<-CRYSTAL
-      struct Post
-        property title : String
-        property content : String
-        property published : Bool
-      end
-      CRYSTAL
-      File.write("spec/fixtures/roundtrip/src/models/post.cr", model_content)
-
-      # Create original endpoint
-      endpoint_content = <<-CRYSTAL
-      struct Posts::PostsIndexEndpoint
-        include Azu::Endpoint(Posts::PostsIndexRequest, Posts::PostsIndexPage)
-
-        get "/posts"
-
-        def call : Posts::PostsIndexPage
-          Posts::PostsIndexPage.new
-        end
-      end
-      CRYSTAL
-      File.write("spec/fixtures/roundtrip/src/endpoints/posts/posts_index_endpoint.cr", endpoint_content)
-
-      # Export to OpenAPI spec
-      builder = AzuCLI::OpenAPI::SpecBuilder.new("RoundtripTest", "1.0.0", "spec/fixtures/roundtrip")
-      spec = builder.build
-
-      # Verify spec was created correctly
-      spec.info.title.should eq("RoundtripTest API")
-      spec.components.should_not be_nil
-      schemas = spec.components.not_nil!.schemas
-      schemas.should_not be_nil
-      schemas.not_nil!.has_key?("Post").should be_true
-
-      # Cleanup
-      File.delete("spec/fixtures/roundtrip/src/models/post.cr")
-      File.delete("spec/fixtures/roundtrip/src/endpoints/posts/posts_index_endpoint.cr")
-      Dir.delete("spec/fixtures/roundtrip/src/models")
-      Dir.delete("spec/fixtures/roundtrip/src/endpoints/posts")
-      Dir.delete("spec/fixtures/roundtrip/src/endpoints")
-      Dir.delete("spec/fixtures/roundtrip/src")
-      Dir.delete("spec/fixtures/roundtrip")
-    end
-  end
-
   describe "API project workflow" do
     it "creates API project and generates resources" do
       # Test project detection
