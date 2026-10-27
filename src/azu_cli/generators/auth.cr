@@ -17,6 +17,8 @@ module AzuCLI
       OUTPUT_DIR      = "."
       USER_ATTRIBUTES = {"email" => "string:unique", "password_digest" => "string"}
       SESSION_HANDLER = SessionWiring::HANDLER
+      # The first line of the session initializer it writes; `session:setup` never replaces a file that has it.
+      INITIALIZER_MARKER = "# Written by `azu generate auth`"
 
       getter app_module : String
       getter app_dir : String

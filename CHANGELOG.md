@@ -1,5 +1,22 @@
 # Changelog - Azu CLI
 
+## Unreleased - `session:setup` refuses what would break the app; `session:clear` honours `--backend`
+
+- Fixed: `azu session:setup` run again replaced nothing but reported success; with `--force` after `azu generate auth`
+  it replaced auth's initializer, dropping `user_id` and `authenticated?`, and the app no longer compiled. It now
+  refuses (exit 1, nothing written) when `src/initializers/session.cr` exists unless `--force`, always when
+  `azu generate auth` wrote it (a marker line in the file, `def authenticated?`, or auth's endpoints and throttle), and
+  when the app file is missing or has no `Azu::Handler::RequestId.new,` line, instead of reporting success without
+  mounting the handler
+- Fixed: `session:setup` and `session:clear` refuse an unknown option, a `--backend` without a value and an unknown
+  backend with exit 2 (`session:setup` also refuses an argument); both have a `--help`
+- Fixed: `session:clear --backend` was ignored. It is honoured; cookie and memory backends say why nothing can be
+  cleared (exit 1) before asking anything. The Redis path deleted `<project>:session:*`, which the session shard never
+  writes: it deletes `session:*` (`RedisStore#prefixed`) with `SCAN` instead of `KEYS`; with no initializer and no
+  `SESSION_BACKEND` it refuses instead of assuming Redis
+- Docs: `docs/commands/session.md` used `Session.session.authenticate`, which the session shard does not have; it
+  shows `Session.session.regenerate_id`, as the generated authentication does
+
 ## Unreleased - `session:setup` writes code that compiles
 
 - Fixed: `azu session:setup` generated an initializer against an API the session shard does not have
