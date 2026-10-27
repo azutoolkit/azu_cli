@@ -387,6 +387,11 @@ Generators extend `Teeplate::FileTree`:
   each one's plain output, and a `Runner` fiber that runs them one at a time as subprocesses (`AZU_UI=plain`,
   `AZU_CONTROL=1`), paused while the app builds. Never block the dashboard's fiber: `Runner#enqueue` wakes the runner
   with a non-blocking `select` send (`Channel#empty?` blocked it for good)
+- `azu dev`'s Console panel: `dev_server/console.cr` (`Console.script` wraps a snippet after the declarations and
+  kept assignments, `Console.outcome` reads `=> value`/crash/compile error, `Evaluator` runs `crystal run
+  .azu_console.cr`: keep that one file name, the compiler's object cache is keyed on it) and `UI::Editor` (the
+  multi-line input, `Editor.complete?` decides Enter). Ctrl-O is `Action::Handoff`: `Program` closes its key reader
+  (a dup of the terminal), restores the terminal, runs `crystal i`, and takes the terminal back
 - `azu dev`'s dashboard (`dev_server/hud.cr`) gets build/app/log events from `Commands::Dev` and telemetry from the app
   over `AZU_TELEMETRY_SOCKET` (azu's `Dev::Telemetry`, JSON lines, `"v": 1`; unknown fields ignored)
 - `azu generate` on a terminal (or with `--dry-run`/`--check`) runs itself in a shadow copy (`GeneratePlan`,

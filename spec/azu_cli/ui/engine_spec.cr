@@ -77,6 +77,10 @@ describe AzuCLI::UI::Input do
     TUI::Input.parse("\e[99zq").map(&.code).should eq [TUI::KeyCode::Char]
   end
 
+  it "reads Alt-Enter and the editing control keys" do
+    TUI::Input.parse("\e\r\u{1}\u{5}\u{c}\u{f}").map(&.code).should eq [TUI::KeyCode::AltEnter, TUI::KeyCode::CtrlA, TUI::KeyCode::CtrlE, TUI::KeyCode::CtrlL, TUI::KeyCode::CtrlO]
+  end
+
   it "keeps a bracketed paste as one key" do
     keys = TUI::Input.parse("\e[200~blog\napp\e[201~a")
     keys.map(&.code).should eq [TUI::KeyCode::Paste, TUI::KeyCode::Char]

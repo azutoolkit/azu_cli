@@ -23,7 +23,12 @@
   `test`, `db:status`, `db:migrate`, `session:clear`, `config:show`, `config:env`, `version` and `completion` as
   subprocesses, one at a time and not during a build, again when what they read changes (a build, a migration, `.env`
   or `shard.yml`), and shows each one's outcome and output; `db:migrate` and `session:clear` run only after `y`, and
-  `w` re-runs the tests after each build. The overview has a one-line summary. Panels are numbered `1`-`6` now (Log is `6`)
+  `w` re-runs the tests after each build. The overview has a one-line summary. Panels are numbered `1`-`7` now (Log is `7`)
+- Added: `azu dev`'s Console panel (key `3`), like rails console: Crystal runs with the app loaded and answers
+  `=> value`; declarations and local assignments carry over to later snippets (an assignment that writes is not
+  replayed), multi-line input with auto-indent, history kept per project, `help`/`locals`/`forget`. Without an
+  interpreter each snippet is compiled with the app (about 10 s once the app's objects are cached); Ctrl-O opens
+  `crystal i` with the app and the declarations when the compiler has it, and the dashboard comes back on `exit`
 - Added: the other commands in the same style. `azu doctor`, `azu routes`, `azu db:status` and `azu version` draw
   cards on a color terminal; `db:migrate`, `db:rollback`, `db:seed` and `db:data:migrate` show their `crystal run` as a
   live task card that ends with the migrations applied or rolled back (the app's log noise is dropped, its warnings

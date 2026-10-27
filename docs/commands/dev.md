@@ -22,7 +22,7 @@ keeps the line output described below.
 | Log      | The app's stdout and stderr (the dashboard reads them through pipes)                                     |
 
 A failed build covers the dashboard with the error location and the compiler's excerpt while the previous build keeps
-serving; Esc goes back. Keys: `1`-`6` panels, `r` rebuild now, `l` log, `c` clear the log, `q` or Ctrl-C quit. Quitting
+serving; Esc goes back. Keys: `1`-`7` panels, `r` rebuild now, `l` log, `c` clear the log, `q` or Ctrl-C quit. Quitting
 prints a one-line summary of the session.
 
 Requests and SQL come from the app: `azu dev` listens on a Unix socket (mode 0600) and passes its path to the app as
@@ -103,3 +103,38 @@ The list shows each command's mark (`✔` ok, `▲` needs a look, `✖` failed),
 beside it shows the selected command's output and when it runs. Keys: `↑`/`↓` select, Enter run, `a` run every check
 again (not the tests, not the commands that change things). The overview sums the commands up in one line. Run from
 the dashboard (`AZU_CONTROL=1`), `doctor` counts the port the app holds as expected, not as a warning.
+
+## Console panel
+
+Panel `3` is a console with the app loaded, like `rails console`. Type Crystal; Enter runs it when the code is
+finished (an open `def`, `do`, bracket or string gets a new line instead, and `end` dedents itself), Alt-Enter adds a
+line, `↑`/`↓` walk the history (kept per project in `$XDG_STATE_HOME/azu/`), Ctrl-L clears, Esc cancels a run or gives
+the keyboard back to the panels (Enter takes it again).
+
+```text
+demo_app(dev)> post = Post.last
+=> #<Post @id=2, @title="Hello", ...>
+▸ post kept for the next snippets
+demo_app(dev)> post.try(&.title)
+=> "Hello"  11.0s
+demo_app(dev)> def titles(n = 3)
+          ...>   Post.all.first(n).map(&.title)
+          ...> end
+✔ declared: kept for the next snippets
+demo_app(dev)> titles(5)
+=> ["Hello", "World"]
+```
+
+How it runs: without an interpreter each snippet is compiled with the app (`crystal run` of `.azu_console.cr` in the
+project root, removed after the run; one file name, so later runs reuse the app's object files: about 10 s for a
+mid-size app, against 20 s for the first). An expression answers `=> value` (its `inspect`); what it prints comes
+before. Declarations (`def`, `class`, `module`, `struct`, `macro`, ...) are kept and come before every later snippet.
+A local assignment (`post = Post.first`) is kept too and runs again before each snippet, so its locals carry over;
+one that would write if run again (`create`, `save`, `update`, `delete`, `destroy`, a `!` method, ...) is not kept,
+and the transcript says so. `locals` and `declarations` list what is kept, `forget` drops it, `help` explains, `exit`
+leaves the console. Snippets run against the database `DATABASE_URL` points at.
+
+With a Crystal that has the interpreter (`crystal i --help` works; Homebrew and the crystal-lang.org packages have it,
+the official Docker images and Linux tarballs do not), Ctrl-O (or `i` when the panels have the keyboard) leaves the
+terminal to `crystal i` with the app and your declarations loaded: a live session where every local stays, `debugger`
+works, and `exit` brings the dashboard back.

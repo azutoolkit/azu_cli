@@ -7,6 +7,7 @@ lib LibAzuTerm
   end
 
   fun ioctl(fd : LibC::Int, request : LibC::ULong, ...) : LibC::Int
+  fun dup(fd : LibC::Int) : LibC::Int
 end
 
 module AzuCLI

@@ -49,7 +49,7 @@ line by line as before.
 `--debounce MS` (default 300), `--interval MS` (polling interval, default 250), `--ui rich|plain`. On a terminal of
 at least 60x16 (not CI) `azu dev` opens a dashboard: build with compiler stages, app (pid, uptime, restarts, crashes,
 memory), requests and SQL from the app (azu's `Dev::Telemetry` over `AZU_TELEMETRY_SOCKET`), JoobQ queues, the app's
-log, and the CLI's own commands (panel `2`: doctor, routes, db:status, test, db:migrate, session:clear, config:*, version, completion, re-run when what they read changes); keys `1`-`6` panels, `r` rebuild, `l` log, `c` clear log, `q` quit. `--ui plain` keeps the line output. `src/**`, `config/**`, `shard.yml` and
+log, and the CLI's own commands (panel `2`: doctor, routes, db:status, test, db:migrate, session:clear, config:*, version, completion, re-run when what they read changes), a console with the app loaded (panel `3`, like rails console; Ctrl-O opens `crystal i` when the compiler has it); keys `1`-`7` panels, `r` rebuild, `l` log, `c` clear log, `q` quit. `--ui plain` keeps the line output. `src/**`, `config/**`, `shard.yml` and
 `shard.lock` changes build and restart; `public/templates/**` changes neither build nor restart; `.env*` changes restart
 without a build. A failed build keeps the running app. See [docs/commands/dev.md](docs/commands/dev.md).
 

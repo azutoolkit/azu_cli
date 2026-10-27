@@ -73,9 +73,15 @@ module AzuCLI
         telemetry = AzuCLI::DevServer::TelemetryServer.new
         control = AzuCLI::DevServer::Control::Runner.new(->(message : UI::Message) { emit(message) })
         @control = control
+        app_file = "./src/#{Utils.project_name}.cr"
+        evaluator = AzuCLI::DevServer::Console::Evaluator.new(->(message : UI::Message) { emit(message) }, app_file)
         screen = AzuCLI::DevServer::Hud.new(target, (@port || ENV["PORT"]? || DEFAULT_PORT).to_s, @environment || ENV["CRYSTAL_ENV"]? || "development",
           "watching src, config · poll #{@interval.total_milliseconds.to_i} ms", on_rebuild: -> { @rebuild_requested = true; nil }, branch: git_branch,
-          on_control: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command); nil })
+          on_control: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command); nil },
+          history: AzuCLI::DevServer::Console::History.for_project,
+          on_eval: ->(id : Int32, code : String, prelude : Array(String), declaration : Bool, kept : Array(String)) { evaluator.evaluate(id, code, prelude, declaration, kept); nil },
+          on_cancel_eval: -> { evaluator.cancel; nil },
+          on_interpreter: ->(prelude : Array(String)) { run_interpreter(app_file, prelude); nil })
         program = UI::Program.new(screen, terminal, UI::FullScreenRenderer.new(terminal.output))
         @hud = program
         @child.try do |child|
@@ -90,6 +96,7 @@ module AzuCLI
           exit 0
         end
         control.start
+        spawn { emit(AzuCLI::DevServer::Events::InterpreterProbe.new(Console.environment.interpreter?)) }
         spawn serve(target)
         spawn sample_memory(program)
         sample_jobs(program)
@@ -99,6 +106,17 @@ module AzuCLI
         telemetry.stop
         stdout.puts screen.summary
         success
+      end
+
+      # `crystal i` with the app loaded and the Console panel's declarations, on the terminal the dashboard left to it.
+      private def run_interpreter(app_file : String, prelude : Array(String)) : Nil
+        script = Console.new.script(app_file, prelude)
+        ScratchFile.with(".azu_console_", script, ignore_interrupt: true) do |path|
+          STDOUT.puts "crystal i: loading #{app_file} (exit returns to azu dev)"
+          Console.environment.run_interpreter(path, Dir.current)
+        end
+      rescue ex
+        STDERR.puts "crystal i failed: #{ex.message}"
       end
 
       private def sample_memory(program : UI::Program) : Nil
