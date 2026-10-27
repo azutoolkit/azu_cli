@@ -84,9 +84,23 @@ module AzuCLI
         tty? && File.exists?("/dev/tty") && output.as?(IO::FileDescriptor).try(&.tty?) == true
       end
 
-      # Opens the controlling terminal for keys (stdin may be a pipe). The event loop waits on it, so reading never stalls the fibers that draw.
-      def self.open_input : IO::FileDescriptor
-        File.new("/dev/tty", "r")
+      # Opens the terminal for keys (stdin may be a pipe), non-blocking, so the event loop waits on it and reading never
+      # stalls the fibers that draw. `File.new` will not do: on macOS it opens files blocking, and a blocking read
+      # holds the whole thread, so the screen is drawn once and every key seems ignored. The device is opened by its
+      # own name (as Crystal reopens STDIN), since macOS's kqueue cannot wait on the /dev/tty alias.
+      def self.open_input(path : String = terminal_path) : IO::FileDescriptor
+        fd = LibC.open(path, LibC::O_RDONLY | LibC::O_NONBLOCK | LibC::O_CLOEXEC)
+        raise IO::Error.from_errno("Could not open #{path}") if fd < 0
+        IO::FileDescriptor.new(fd)
+      end
+
+      # The terminal's device (/dev/ttys003, /dev/pts/1) from stdin, else stdout; /dev/tty when neither is one.
+      def self.terminal_path : String
+        {STDIN, STDOUT}.each do |io|
+          buffer = uninitialized UInt8[256]
+          return String.new(buffer.to_unsafe) if io.tty? && LibC.ttyname_r(io.fd, buffer, 256) == 0
+        end
+        "/dev/tty"
       end
 
       # Raw mode on `input` for the block, and the screen put back whatever happens (an exception, Ctrl-C).

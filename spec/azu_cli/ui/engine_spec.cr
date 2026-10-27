@@ -172,3 +172,20 @@ describe AzuCLI::UI::Widgets do
     TUI::Widgets.clock(761.seconds).should eq "00:12:41"
   end
 end
+
+describe "AzuCLI::UI::Terminal.open_input" do
+  # A blocking descriptor holds the whole thread on read: the screen is drawn once and keys seem ignored. File.new
+  # opens blocking on macOS, which is how the first version of the key reader hung there.
+  it "opens the terminal non-blocking, so the event loop waits on it" do
+    input = TUI::Terminal.open_input("/dev/null")
+    begin
+      (LibC.fcntl(input.fd, LibC::F_GETFL) & LibC::O_NONBLOCK).should_not eq 0
+    ensure
+      input.close
+    end
+  end
+
+  it "falls back to /dev/tty when neither stdin nor stdout is a terminal" do
+    TUI::Terminal.terminal_path.should eq "/dev/tty" unless STDIN.tty? || STDOUT.tty?
+  end
+end
