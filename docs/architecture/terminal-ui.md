@@ -1,3 +1,7 @@
+---
+description: The design of the azu terminal UI: color tokens, glyphs, renderer and screen mockups, with a status table of what is built.
+---
+
 # Terminal UI: the azu HUD
 
 Status: **partly implemented.** The engine (section 3) and the three screens are built; some features of the
