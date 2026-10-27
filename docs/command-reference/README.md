@@ -14,7 +14,7 @@ Azu CLI is one binary, `azu`, with a command per task: create a project, generat
 flowchart LR
   A["azu"] --> B["Project: new, init"]
   A --> C["Generate: generate (g), undo"]
-  A --> D["Run: dev, serve (s), routes, console"]
+  A --> D["Run: dev, serve (s), routes, config, console"]
   A --> E["Check: doctor, test (t)"]
   A --> F["Data: db:*"]
   A --> G["Background: jobs:*, session:*"]
@@ -42,6 +42,7 @@ azu serve
 | `azu dev` | Run the app, rebuilding and restarting it on change | [dev](azu-dev.md) |
 | `azu serve` (`server`, `s`) | Compile and run the app, restarting on change | [serve](azu-serve.md) |
 | `azu routes` | List the routes and their request and response types | [routes](azu-routes.md) |
+| `azu config` | Show the effective configuration of the app, secrets masked | [config](azu-config.md) |
 | `azu console` | Open Crystal's interpreter with the app loaded | [console](azu-console.md) |
 | `azu doctor` | Check the toolchain, dependencies, database, environment and port | [doctor](azu-doctor.md) |
 | `azu test` (`t`) | Run the application's tests | [test](azu-test.md) |

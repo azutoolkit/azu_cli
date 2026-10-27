@@ -8,7 +8,7 @@ Your app is configured by environment variables, loaded from `.env` files. There
 
 ## Overview & visual demo
 
-<figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor checking the database, env, secrets and port"><figcaption><p><code>azu doctor</code> reads the same environment your app does: the database URL, every variable <code>.env.example</code> lists, the secrets and the port.</p></figcaption></figure>
+<figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor checking the database, env, secrets and port"><figcaption><p><code>azu doctor</code> reads the same environment your app does: the database URL, every variable <code>.env.example</code> lists, the secrets and the port. <a href="../command-reference/azu-config.md"><code>azu config</code></a> prints what the app ends up using.</p></figcaption></figure>
 
 ```mermaid
 flowchart TD
@@ -90,6 +90,10 @@ ok    port           port 4000 is free
 *Four of the nine checks. With `CRYSTAL_ENV=production`, a missing variable or a weak secret is a failure instead of a warning.*
 
 ## Do's and don'ts
+
+{% hint style="info" %}
+**Pro tip:** `azu config` shows the values your app ends up with (server, database, limits, ...) and `azu doctor` checks the environment around them. Neither prints a secret.
+{% endhint %}
 
 {% hint style="info" %}
 **Pro tip:** `azu doctor` is the quickest way to see what your environment looks like to the app. It never prints a secret or a password.

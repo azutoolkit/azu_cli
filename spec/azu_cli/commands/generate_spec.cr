@@ -468,7 +468,8 @@ describe AzuCLI::Commands::Generate do
   describe "project type detection" do
     it "detects API projects and sets api_only mode" do
       ScratchProject.new.in_generated_project do
-        File.write("src/api.cr", "# the entry point of an API project\n")
+        # What `azu new --api` does: the main target is src/api.cr
+        File.write("shard.yml", "name: blog\nversion: 0.1.0\ntargets:\n  blog:\n    main: src/api.cr\n")
 
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["model", "User"])
@@ -480,7 +481,8 @@ describe AzuCLI::Commands::Generate do
 
     it "keeps web mode for a web-only request in an API project" do
       ScratchProject.new.in_generated_project do
-        File.write("src/api.cr", "# the entry point of an API project\n")
+        # What `azu new --api` does: the main target is src/api.cr
+        File.write("shard.yml", "name: blog\nversion: 0.1.0\ntargets:\n  blog:\n    main: src/api.cr\n")
 
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["model", "User", "--web-only"])

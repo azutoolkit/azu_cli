@@ -249,7 +249,6 @@ describe AzuCLI::Commands::Init do
             command.execute.success?.should be_true
           end
           capture.stdout.should contain("Initializing Azu in current project")
-          capture.stdout.should contain("Creating Azu configuration")
           capture.stdout.should contain("Creating project structure")
           capture.stdout.should contain("Azu initialized successfully")
         end

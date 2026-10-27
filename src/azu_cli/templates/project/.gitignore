@@ -10,6 +10,7 @@
 /playground/lib/
 /playground/example/
 /playground/azu/
-# scratch files of `azu routes` and `azu console` (removed when the command ends)
+# scratch files of `azu routes`, `azu config` and `azu console` (removed when the command ends)
 /tmp_routes_*.cr
+/tmp_config_*.cr
 /.azu_console_*.cr

@@ -54,6 +54,7 @@ module AzuCLI
       register_command("dev", Commands::Dev)
       register_command("routes", Commands::Routes)
       register_command("console", Commands::Console)
+      register_command("config", Commands::Config)
       register_command("doctor", Commands::Doctor)
 
       # Job queue commands

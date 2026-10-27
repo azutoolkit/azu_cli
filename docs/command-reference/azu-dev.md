@@ -6,7 +6,7 @@ description: Run your app in development, rebuilding and restarting it on every 
 
 ## Overview & visual demo
 
-`azu dev` builds the app with `shards build` (a debug build, not a release), runs it, and keeps it current: source and config changes rebuild and restart it, a failed build keeps the previous app running, and template changes need no build at all. On a terminal it draws a dashboard with the build, the app, requests, SQL, jobs and the log. The concise version is [azu dev](../command-reference/azu-dev.md).
+`azu dev` builds the app with `shards build` (a debug build, not a release), runs it, and keeps it current: source and config changes rebuild and restart it, a failed build keeps the previous app running, and template changes need no build at all. On a terminal it draws a dashboard with the build, the app, requests, SQL, jobs and the log.
 
 <figure><img src="../assets/terminal-ui/07-dev-dashboard.png" alt="The azu dev dashboard: build, app, requests, SQL, workers and the log of a running app"><figcaption><p>The dashboard of a running app. The Requests and SQL panels come from the app, so they need <code>require "azu/dev"</code> and <code>PERFORMANCE_MONITORING=true</code>.</p></figcaption></figure>
 

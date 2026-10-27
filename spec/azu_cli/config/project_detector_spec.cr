@@ -1,8 +1,9 @@
 require "../../spec_helper"
+require "file_utils"
 
 describe AzuCLI::ProjectDetector do
   describe "#detect_type" do
-    it "returns api for projects with api.cr file" do
+    it "returns api for a project with src/api.cr and no src/server.cr" do
       Dir.mkdir_p("spec/fixtures/api_project/src")
       File.write("spec/fixtures/api_project/src/api.cr", "# API file")
 
@@ -23,6 +24,33 @@ describe AzuCLI::ProjectDetector do
       Dir.delete("spec/fixtures/web_project/public/templates")
       Dir.delete("spec/fixtures/web_project/public")
       Dir.delete("spec/fixtures/web_project")
+    end
+
+    it "reads the type from the main target of shard.yml, because generated web and api projects share their files" do
+      {"src/server.cr" => "web", "src/api.cr" => "api"}.each do |main, type|
+        dir = "spec/fixtures/generated_#{type}_project"
+        Dir.mkdir_p("#{dir}/src")
+        Dir.mkdir_p("#{dir}/public/templates")
+        Dir.mkdir_p("#{dir}/config")
+        File.write("#{dir}/src/server.cr", "# server")
+        File.write("#{dir}/src/api.cr", "# api")
+        File.write("#{dir}/config/api.yml", "version: v1
+")
+        File.write("#{dir}/config/openapi.yml", "openapi: 3.1.0
+")
+        File.write("#{dir}/shard.yml", "name: app
+version: 0.1.0
+targets:
+  app:
+    main: #{main}
+  tasks:
+    main: src/tasks.cr
+")
+
+        AzuCLI::ProjectDetector.new(dir).detect_type.should eq(type)
+
+        FileUtils.rm_rf(dir)
+      end
     end
 
     it "returns cli for projects with cli.cr file and no server" do

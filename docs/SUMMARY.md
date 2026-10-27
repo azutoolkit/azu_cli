@@ -18,6 +18,7 @@
 * [azu dev](command-reference/azu-dev.md)
 * [azu serve](command-reference/azu-serve.md)
 * [azu routes](command-reference/azu-routes.md)
+* [azu config](command-reference/azu-config.md)
 * [azu console](command-reference/azu-console.md)
 * [azu doctor](command-reference/azu-doctor.md)
 * [azu test](command-reference/azu-test.md)

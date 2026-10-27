@@ -6,8 +6,13 @@
   logging flags only: `azu dev` and `azu serve` read `PORT`/`HOST`, `azu db:*` reads `DATABASE_URL`, and a section named
   after the environment replaced the rest of the file instead of merging with it. The CLI is configured by
   environment variables (`AZU_ENV`, `AZU_DEBUG`, `AZU_VERBOSE`, `AZU_QUIET`, `AZU_UI`, `NO_COLOR`) and the app by its
-  `.env` files. `azu new` no longer writes `config/azu.yml`, `azu init` no longer writes it, and a project's type is
-  read from its files (`src/api.cr` for an API) only. An existing `config/azu.yml` is ignored; delete it.
+  `.env` files. `azu new` and `azu init` no longer write `config/azu.yml`; an existing one is ignored, delete it. A
+  project's type is read from the main target of its `shard.yml` (`src/api.cr` is an API, `src/server.cr` a web app),
+  because generated web and api projects share their files.
+- Added: `azu config [--format table|json] [--section NAME]` shows the effective configuration of the application:
+  it compiles and loads the app like `azu routes` does and prints the settings Azu holds (server, TLS, templates,
+  database, limits, uploads, WebSocket, i18n, assets), masking the database password and reporting `CSRF_SECRET` and
+  `SESSION_SECRET` only as set or not set.
 - Fixed: generated logging and custom middleware called `call_next` twice, so the rest of the chain ran twice.
 - Fixed: `azu generate mailer ... --skip job` wrote the job file anyway; `azu generate` help suggested `middleware
   --type auth`, which is not a type (use `authentication`).
