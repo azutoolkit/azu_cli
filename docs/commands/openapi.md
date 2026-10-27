@@ -283,172 +283,34 @@ components:
 
 ## azu openapi:export
 
-Exports an OpenAPI 3.1 specification from your existing Azu application code.
-
-### Basic Usage
+Writes the OpenAPI 3.1 document of your app, built by Azu itself (`Azu::OpenAPI`) from your
+`Azu::Endpoint(Request, Response)` contracts. It sees every route the app really has, including the ones declared in
+`routes`, `scope` and mounted apps, with typed `{id}` path parameters, query parameters or request bodies, the
+`validate` rules as JSON Schema keywords (`minLength`, `pattern`, `minimum`, ...), response schemas, and shared
+components referenced with `$ref`.
 
 ```bash
-# Export to default file (openapi.yaml)
-azu openapi:export
-
-# Export to specific file
-azu openapi:export --output api-spec.yaml
-
-# Export as JSON
-azu openapi:export --output api-spec.json --format json
-
-# Export with custom project name and version
-azu openapi:export --project "My API" --version "2.0.0"
+azu openapi:export                                         # openapi.yaml
+azu openapi:export --output docs/openapi.json              # JSON, picked from the extension
+azu openapi:export --project "Blog API" --version 2.0.0    # info.title and info.version
 ```
-
-### Options
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--output PATH` | Output file path | openapi.yaml |
-| `--format FORMAT` | Output format (yaml, json) | yaml |
-| `--project NAME` | Project name | Auto-detected from shard.yml |
-| `--version VERSION` | API version | 1.0.0 |
+| `--output PATH` | Output file | `openapi.yaml` |
+| `--format FORMAT` | `yaml` or `json` | from the extension of `--output`, else `yaml` |
+| `--project NAME` | `info.title` | the `name` in `shard.yml` |
+| `--version VERSION` | `info.version` | `1.0.0` |
 
-### Examples
+How it works: like `azu routes`, the command compiles a small script that requires `src/<project>.cr` (without
+starting the server) and prints `Azu::OpenAPI.document(Azu::App.default, info)`. So the first run takes as long as a
+build, and the top-level code of your app file runs (initializers, `.env` loading): do not point it at a production
+database. It needs azu 0.5.72 or newer. Exit codes: 0 written, 1 the app could not be compiled or loaded (the
+compiler's last lines are shown), 2 invalid usage.
 
-#### Export to YAML
-
-```bash
-# Export to default YAML file
-azu openapi:export
-# Building OpenAPI specification from code...
-# ✓ OpenAPI specification exported to: openapi.yaml
-```
-
-#### Export to JSON
-
-```bash
-# Export to JSON file
-azu openapi:export --output api-spec.json --format json
-# Building OpenAPI specification from code...
-# ✓ OpenAPI specification exported to: api-spec.json
-```
-
-#### Custom Project Information
-
-```bash
-# Export with custom project details
-azu openapi:export --project "Blog API" --version "2.0.0" --output docs/api.yaml
-# Building OpenAPI specification from code...
-# ✓ OpenAPI specification exported to: docs/api.yaml
-```
-
-### Code Analysis
-
-The export command analyzes your Azu application and extracts:
-
-#### Endpoints Analysis
-
-- **HTTP methods** from endpoint classes
-- **Path patterns** from route definitions
-- **Request parameters** from method signatures
-- **Response types** from return values
-
-#### Models Analysis
-
-- **Schema definitions** from CQL models
-- **Field types** and constraints
-- **Validation rules** and formats
-- **Relationships** between models
-
-#### Request/Response Analysis
-
-- **Request classes** and their fields
-- **Response classes** and their structure
-- **Validation rules** and constraints
-- **Content types** and formats
-
-### Generated OpenAPI Specification
-
-The exported specification includes:
-
-```yaml
-# Generated openapi.yaml
-openapi: 3.1.0
-info:
-  title: My Application
-  version: 1.0.0
-  description: Generated from Azu application
-
-servers:
-  - url: http://localhost:4000
-    description: Development server
-
-paths:
-  /users:
-    get:
-      summary: List users
-      operationId: listUsers
-      responses:
-        '200':
-          description: List of users
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-    post:
-      summary: Create user
-      operationId: createUser
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateUserRequest'
-      responses:
-        '201':
-          description: User created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-
-components:
-  schemas:
-    User:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - name
-        - email
-        - created_at
-        - updated_at
-
-    CreateUserRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-      required:
-        - name
-        - email
-```
+What the document contains, and what Azu cannot infer (summaries, security schemes, a success status other than
+200), is described in [Azu's OpenAPI reference](https://github.com/azutoolkit/azu/blob/master/docs/reference/api/openapi.md).
+To serve the document from the running app instead, add `Azu::OpenAPI::Handler`.
 
 ## Workflow Integration
 
