@@ -49,6 +49,8 @@ module AzuCLI
     class Child
       getter binary : String
       getter env : Hash(String, String)
+      # When set, the app's stdout and stderr go through pipes to this (line, from stderr?) instead of the terminal.
+      property on_output : Proc(String, Bool, Nil)?
       @process : Process?
 
       def initialize(@binary : String, @env : Hash(String, String), @args : Array(String) = [] of String, @chdir : String = ".", @grace : Time::Span = 5.seconds)
@@ -72,7 +74,20 @@ module AzuCLI
       end
 
       def start : Nil
-        @process = Process.new(binary, @args, env: env, chdir: @chdir, input: Process::Redirect::Close, output: Process::Redirect::Inherit, error: Process::Redirect::Inherit)
+        unless on_output = @on_output
+          @process = Process.new(binary, @args, env: env, chdir: @chdir, input: Process::Redirect::Close, output: Process::Redirect::Inherit, error: Process::Redirect::Inherit)
+          return
+        end
+
+        process = Process.new(binary, @args, env: env, chdir: @chdir, input: Process::Redirect::Close, output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
+        @process = process
+        {process.output, process.error}.each_with_index do |io, index|
+          spawn do
+            io.each_line { |line| on_output.call(line, index == 1) }
+          rescue IO::Error
+            # the app ended
+          end
+        end
       end
 
       # SIGTERM, then SIGKILL when it has not exited within the grace time.

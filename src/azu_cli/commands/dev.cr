@@ -2,17 +2,20 @@ require "./base"
 require "../dev_server/changes"
 require "../dev_server/watcher"
 require "../dev_server/runner"
+require "../dev_server/telemetry"
+require "../dev_server/hud"
 
 module AzuCLI
   module Commands
     # Runs the app and keeps it current: rebuilds (non-release) when sources change and restarts the app.
     class Dev < Base
-      OPTIONS             = ["port", "host", "env", "debounce", "interval"]
+      OPTIONS             = ["port", "host", "env", "debounce", "interval", "ui"]
       DEFAULT_PORT        = AzuCLI::Config::Ports::DEV_SERVER
       DEFAULT_DEBOUNCE_MS = 300
       DEFAULT_INTERVAL_MS = 250
 
       alias Child = AzuCLI::DevServer::Child
+      alias Events = AzuCLI::DevServer::Events
 
       # nil: leave it to the app's environment (the shell, the .env files, the app's default)
       getter port : Int32? = nil
@@ -20,6 +23,8 @@ module AzuCLI
       getter environment : String? = nil
       getter debounce : Time::Span = DEFAULT_DEBOUNCE_MS.milliseconds
       getter interval : Time::Span = DEFAULT_INTERVAL_MS.milliseconds
+      # rich (the dashboard) or plain (lines); nil: the dashboard on a terminal of at least 60x16, lines otherwise.
+      getter ui_mode : String? = nil
 
       # How the app is built; replaced in specs.
       class_property builder : String -> AzuCLI::DevServer::Builder = ->(target : String) { AzuCLI::DevServer::Builder.new("shards", ["build", target]) }
@@ -28,6 +33,8 @@ module AzuCLI
       @builder : AzuCLI::DevServer::Builder?
       @stopping = false
       @lock = Mutex.new
+      @hud : UI::Program?
+      @rebuild_requested = false
 
       def initialize
         super("dev", "Run the app, rebuilding and restarting it when the code changes")
@@ -42,9 +49,87 @@ module AzuCLI
 
         target = Utils.binary_name
         attach_child(target)
+        return run_dashboard(target) if dashboard?
+
         trap_termination
         announce(target)
         serve(target)
+      end
+
+      # The dashboard runs when a person is watching: a terminal on both ends, big enough, not CI, not --ui plain.
+      def dashboard? : Bool
+        mode = @ui_mode || ENV["AZU_UI"]?.presence
+        return false if mode == "plain" || mode == "json"
+
+        terminal = UI::Terminal.detect
+        columns, rows = terminal.size
+        wanted = mode == "rich" ? terminal.tty? : UI::Reporter.rich?(terminal)
+        wanted && STDIN.tty? && terminal.interactive? && columns >= 60 && rows >= 16
+      end
+
+      private def run_dashboard(target : String) : Result
+        terminal = UI::Terminal.detect
+        telemetry = AzuCLI::DevServer::TelemetryServer.new
+        screen = AzuCLI::DevServer::Hud.new(target, (@port || ENV["PORT"]? || DEFAULT_PORT).to_s, @environment || ENV["CRYSTAL_ENV"]? || "development",
+          "watching src, config · poll #{@interval.total_milliseconds.to_i} ms", on_rebuild: -> { @rebuild_requested = true; nil }, branch: git_branch)
+        program = UI::Program.new(screen, terminal, UI::FullScreenRenderer.new(terminal.output))
+        @hud = program
+        @child.try do |child|
+          child.env["AZU_TELEMETRY_SOCKET"] = telemetry.path
+          child.on_output = ->(line : String, error : Bool) { program.send(Events::LogLine.new(line, error)); nil }
+        end
+        telemetry.start { |data| program.send(Events::Telemetry.new(data)) }
+        Process.on_terminate do |_reason|
+          terminal.restore(full_screen: true)
+          stop
+          telemetry.stop
+          exit 0
+        end
+        spawn serve(target)
+        spawn sample_memory(program)
+        sample_jobs(program)
+        program.run
+        stop
+        telemetry.stop
+        stdout.puts screen.summary
+        success
+      end
+
+      private def sample_memory(program : UI::Program) : Nil
+        until @stopping
+          app = @child.try(&.pid).try { |pid| AzuCLI::DevServer::Memory.rss(pid) }
+          program.send(Events::RssSample.new(app, AzuCLI::DevServer::Memory.rss(Process.pid.to_i64)))
+          sleep 1.second
+        end
+      end
+
+      private def sample_jobs(program : UI::Program) : Nil
+        queues = AzuCLI::DevServer::JobsSampler.queues
+        return if queues.empty?
+
+        sampler = AzuCLI::DevServer::JobsSampler.new(queues)
+        spawn do
+          until @stopping
+            program.send(sampler.sample)
+            sleep 2.seconds
+          end
+        end
+      end
+
+      private def git_branch : String?
+        output = IO::Memory.new
+        status = Process.run("git", ["rev-parse", "--abbrev-ref", "HEAD"], output: output, error: Process::Redirect::Close)
+        status.success? ? output.to_s.strip.presence : nil
+      rescue IO::Error
+        nil
+      end
+
+      private def emit(message : UI::Message) : Nil
+        @hud.try(&.send(message))
+      end
+
+      private def dashboard_running? : Bool
+        !@hud.nil?
       end
 
       # nil when the options are fine, else why not.
@@ -65,6 +150,11 @@ module AzuCLI
         return "--interval must be a positive number of milliseconds" unless interval
         @debounce = debounce.milliseconds
         @interval = interval.milliseconds
+        if has_option?("ui")
+          mode = get_option("ui")
+          return "--ui must be rich or plain" unless {"rich", "plain"}.includes?(mode)
+          @ui_mode = mode
+        end
         @host = get_option("host") if has_option?("host")
         @environment = get_option("env") if has_option?("env")
         nil
@@ -120,15 +210,30 @@ module AzuCLI
 
         loop do
           sleep @interval
+          break if @stopping
+          if @rebuild_requested
+            @rebuild_requested = false
+            rebuild_and_restart(target)
+          end
           report_exit
           batcher.add(watcher.poll, Time.instant)
           if plan = batcher.take(Time.instant)
             apply(plan, target)
           end
         end
+        success
       end
 
       def apply(plan : AzuCLI::DevServer::Plan, target : String) : Nil
+        if dashboard_running?
+          emit(Events::Changed.new(plan.files, plan.action))
+          case plan.action
+          in .rebuild?             then rebuild_and_restart(target, plan.files)
+          in .restart?             then restart
+          in .templates?, .ignore? then nil
+          end
+          return
+        end
         names = plan.files.first(3).join(", ") + (plan.files.size > 3 ? " and #{plan.files.size - 3} more" : "")
         case plan.action
         in .rebuild?   then Logger.info("Changed: #{names}"); rebuild_and_restart(target)
@@ -138,17 +243,22 @@ module AzuCLI
         end
       end
 
-      def rebuild_and_restart(target : String, first : Bool = false) : Nil
+      def rebuild_and_restart(target : String, files : Array(String) = [] of String, first : Bool = false) : Nil
         return if @stopping
 
-        Logger.info("Building #{target}...")
+        dashboard_running? ? emit(Events::BuildStarted.new(files)) : Logger.info("Building #{target}...")
         builder = self.class.builder.call(target)
+        builder.args << "--progress" if dashboard_running? && builder.command == "shards"
         @builder = builder
         builder.cancel if @stopping # stop() ran between the check above and the line before
-        result = builder.build
+        sink = dashboard_running? ? AzuCLI::DevServer::LineSink.new { |line| emit(Events::BuildLine.new(line)) } : STDERR
+        result = builder.build(sink: sink)
         @builder = nil
         if result.cancelled || @stopping
           nil # shutting down: neither a failure nor a restart
+        elsif dashboard_running?
+          emit(Events::BuildFinished.new(result.success, result.seconds, result.output))
+          restart if result.success
         elsif result.success
           Logger.info("Built in #{result.seconds.round(1)}s")
           restart
@@ -168,9 +278,9 @@ module AzuCLI
         return if @stopping
 
         @lock.synchronize { @child.try(&.restart) unless @stopping }
-        Logger.info("App started (pid #{@child.try(&.pid)})")
+        dashboard_running? ? emit(Events::AppStarted.new(@child.try(&.pid))) : Logger.info("App started (pid #{@child.try(&.pid)})")
       rescue ex : IO::Error
-        Logger.error("Could not start the app: #{ex.message}")
+        dashboard_running? ? emit(Events::LogLine.new("Could not start the app: #{ex.message}", true)) : Logger.error("Could not start the app: #{ex.message}")
       end
 
       # "exited with code 1" or "was killed by SEGV" (a process that died from a signal has no exit code).
@@ -180,7 +290,13 @@ module AzuCLI
 
       private def report_exit : Nil
         status = @child.try(&.exited)
-        Logger.error("The app #{self.class.describe_exit(status)}; save a change to build and start it again.") if status
+        return unless status
+
+        if dashboard_running?
+          emit(Events::AppExited.new(self.class.describe_exit(status)))
+        else
+          Logger.error("The app #{self.class.describe_exit(status)}; save a change to build and start it again.")
+        end
       end
 
       private def show_help_result : Result
@@ -213,6 +329,7 @@ module AzuCLI
             --env NAME         CRYSTAL_ENV for the app (default: your environment or .env, else development)
             --debounce MS      Quiet time before a change is acted on (default #{DEFAULT_DEBOUNCE_MS})
             --interval MS      Polling interval (default #{DEFAULT_INTERVAL_MS})
+            --ui MODE          rich: the dashboard (the default on a terminal of at least 60x16), plain: lines
             --help             Show this help
 
           Exit codes: 0 stopped by Ctrl-C or SIGTERM, 1 not an Azu project, 2 invalid usage.
