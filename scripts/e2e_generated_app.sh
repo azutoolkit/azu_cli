@@ -100,6 +100,14 @@ expect_status() {
   echo "ok: GET $1 -> $got"
 }
 
+# expect_content_type PATH TYPE: GET PATH answers with media type TYPE. The app sends nosniff, so a browser shows
+# a page without a Content-Type as text instead of rendering it.
+expect_content_type() {
+  got="$(curl -s -o /dev/null -w '%{content_type}' --max-time 10 "http://127.0.0.1:$PORT$1")"
+  case "$got" in "$2" | "$2;"*) ;; *) fail "GET $1 answered Content-Type '$got', expected $2" ;; esac
+  echo "ok: GET $1 is $2"
+}
+
 expect_body() {
   grep -q -- "$1" "$WORK/body" || fail "response body does not contain '$1'"
   echo "ok: body contains '$1'"
@@ -148,6 +156,8 @@ check_api_scaffold() {
   expect_body '"title":"Hello"'
   api_request GET /posts/1 200
   expect_body '"body":"First post"'
+  expect_content_type /posts application/json
+  expect_content_type /posts/1 application/json
   api_request PATCH /posts/1 200 '{"title":"Updated","body":"Edited"}'
   expect_body '"title":"Updated"'
   expect_body '"published":true' # a PATCH without published keeps it
@@ -184,6 +194,7 @@ check_web_scaffold() {
   expect_body '<dd>true</dd>'
   expect_status /posts 200
   expect_body 'href="/posts/1"'
+  for page in /posts /posts/new /posts/1 /posts/1/edit; do expect_content_type "$page" text/html; done
 
   rm -f "$jar"
   [ "$(fetch /posts/1/edit "$jar")" = 200 ] || fail "GET /posts/1/edit did not return 200"
@@ -291,6 +302,9 @@ check_auth() {
     [ "$got" = 403 ] || fail "POST $path without a CSRF token returned $got, expected 403"
     echo "ok: POST $path without a CSRF token -> 403"
   done
+
+  expect_content_type /register text/html
+  expect_content_type /login text/html
 
   rm -f "$jar"
   [ "$(fetch /register "$jar")" = 200 ] || fail "GET /register did not return 200"
@@ -639,8 +653,10 @@ start_server
 step "check responses"
 expect_status /health 200
 expect_body '"status":"ok"'
+expect_content_type /health application/json
 if [ "$TYPE" = web ]; then
   expect_status / 200
+  expect_content_type / text/html
   expect_body "Welcome to $MODULE"
   expect_body "Typed contracts"
   expect_status /assets/app.css 200

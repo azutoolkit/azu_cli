@@ -6,6 +6,7 @@ module <%= app_module %>
     get "/login"
 
     def call : Sessions::NewPage
+      content_type "text/html"
       Sessions::NewPage.new(csrf_tag, flash_messages)
     end
   end

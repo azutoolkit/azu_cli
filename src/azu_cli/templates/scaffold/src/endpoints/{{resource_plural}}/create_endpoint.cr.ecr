@@ -7,6 +7,7 @@ module <%= app_module %>
     def call : <%= response_type %>
       record = <%= namespace %>::CreateService.new.call(create_request)
 <% if api? -%>
+      content_type "application/json"
       status 201
       <%= response_type %>.new(record)
 <% else -%>

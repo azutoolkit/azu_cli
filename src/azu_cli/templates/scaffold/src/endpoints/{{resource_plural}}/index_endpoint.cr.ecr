@@ -5,6 +5,7 @@ module <%= app_module %>
     <%= verb %> "<%= route %>"
 
     def call : <%= response_type %>
+      content_type "<%= media_type %>"
       <%= response_type %>.new(<%= model_name %>.all.to_a)
     end
   end

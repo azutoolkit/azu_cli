@@ -27,6 +27,16 @@ describe AzuCLI::Generate::Auth do
     end
   end
 
+  it "answers its pages as HTML" do
+    in_generated_project do
+      render.call(".")
+
+      %w(registrations/new sessions/new account/show).each do |page|
+        File.read("src/endpoints/#{page}_endpoint.cr").should contain(%(Page\n      content_type "text/html"\n))
+      end
+    end
+  end
+
   it "stores a bcrypt digest of the password for a unique email" do
     in_generated_project do
       render.call(".")

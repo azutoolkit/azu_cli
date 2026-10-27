@@ -1,5 +1,11 @@
 # Changelog - Azu CLI
 
+## Unreleased - Generated pages render in the browser
+
+- Fixed: every page of a generated app (`/`, the scaffold pages, `/login`, `/register`, `/account`) showed in the browser as HTML source. Azu leaves the Content-Type to the endpoint (`content_type "text/html"`, as its example app does), the generated endpoints never set it, and the generated app mounts `Azu::Handler::SecurityHeaders`, whose `X-Content-Type-Options: nosniff` stops the browser from guessing. The generated endpoints now set `text/html` for a page and `application/json` for JSON (`/health`, the API scaffold's reads, its 201 create and its update); redirects and 204s have no body and set none
+- Changed: `scripts/e2e_generated_app.sh` checks the Content-Type of `/`, `/health`, the scaffold pages (web: HTML, api: JSON), `/login` and `/register`
+- Migration for apps generated before: add `content_type "text/html"` as the first line of `call` in every endpoint that returns a page, and `content_type "application/json"` in `/health` and the JSON endpoints. From the project directory, on macOS or Linux: `grep -rlE '^    def call : \S+Page$' src/endpoints | grep -v /health/ | xargs perl -0pi -e 's/^(    def call : \S+Page\n)(?!      content_type)/$1      content_type "text\/html"\n/mg'`, then rebuild
+
 ## Unreleased - A module name of your own (`azu new --module`)
 
 - Fixed: `azu new` put the welcome template under the project name (`public/templates/<project>/welcome/index_page.jinja`), while Azu looks for `<Module>::Welcome::IndexPage` under the module name underscored (`Azu::Templates::Renderable#page_path`). Whenever the two differ, `GET /` answered 500 with `Crinja::TemplateNotFoundError`: with `--module BlogApp` for `blog`, a hyphenated name (`blog-app` gives `BlogApp`, so `blog_app/`), or `myapp` with `MyApp`. The template now goes to `public/templates/<module_name.underscore>/`, the folder the scaffold and auth generators already use

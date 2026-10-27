@@ -118,5 +118,15 @@ describe "Generated project landing page" do
         css.should contain("@media (max-width: 40rem)")
       end
     end
+
+    # Azu leaves the Content-Type to the endpoint and the app sends nosniff: without it a browser shows the page as text
+    it "answers / as HTML and /health as JSON" do
+      render_landing_project("web") do |dir|
+        File.read(File.join(dir, "src/endpoints/welcome/index_endpoint.cr")).should contain(%(def call : Welcome::IndexPage\n      content_type "text/html"\n))
+      end
+      render_landing_project("api") do |dir|
+        File.read(File.join(dir, "src/endpoints/health/health_endpoint.cr")).should contain(%(def call : HealthPage\n      content_type "application/json"\n))
+      end
+    end
   end
 end

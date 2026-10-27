@@ -8,6 +8,7 @@ module <%= app_module %>
       record = <%= find_record %>
       <%= namespace %>::UpdateService.new.call(record, update_request)
 <% if api? -%>
+      content_type "application/json"
       <%= response_type %>.new(record)
 <% else -%>
       redirect to: "/<%= resource_plural %>/#{record.id}", status: 303
