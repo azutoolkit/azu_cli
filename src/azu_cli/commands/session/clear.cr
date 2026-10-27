@@ -40,8 +40,8 @@ module AzuCLI
           case backend
           when "redis"
             clear_redis_sessions
-          when "database"
-            clear_database_sessions
+          when "cookie"
+            return error("Cookie sessions live in the browsers: change SESSION_SECRET to end them all")
           when "memory"
             Logger.warn("Memory sessions cannot be cleared remotely")
             Logger.info("Restart the application to clear memory sessions")
@@ -70,8 +70,8 @@ module AzuCLI
           if File.exists?("./src/initializers/session.cr")
             content = File.read("./src/initializers/session.cr")
             return "redis" if content.includes?("RedisStore")
-            return "database" if content.includes?("DatabaseStore")
             return "memory" if content.includes?("MemoryStore")
+            return "cookie" if content.includes?("CookieStore")
           end
 
           # Try to detect from environment
@@ -103,24 +103,6 @@ module AzuCLI
           redis.close
         rescue ex
           raise "Failed to clear Redis sessions: #{ex.message}"
-        end
-
-        private def clear_database_sessions
-          Logger.info("Clearing database sessions...")
-
-          # This is a simplified version - in production you'd want to use
-          # the actual session model/repository
-          db_url = ENV["DATABASE_URL"]?
-          unless db_url
-            raise "DATABASE_URL not set"
-          end
-
-          ::DB.open(db_url) do |db|
-            result = db.exec("DELETE FROM sessions")
-            Logger.info("Cleared #{result.rows_affected} session(s)")
-          end
-        rescue ex
-          raise "Failed to clear database sessions: #{ex.message}"
         end
 
         private def get_project_name : String

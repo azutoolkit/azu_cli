@@ -1,5 +1,33 @@
 require "../../../spec_helper"
 
+EXPORT_DOCUMENT = %({"openapi":"3.1.0","info":{"title":"t","version":"1"},"paths":{"/posts/{id}":{"get":{"operationId":"Blog.ShowEndpoint"}}}})
+
+private def with_export_project(&)
+  dir = File.tempname("azu-export")
+  Dir.mkdir_p(File.join(dir, "src"))
+  File.write(File.join(dir, "shard.yml"), "name: blog\nversion: 0.1.0\n")
+  File.write(File.join(dir, "src/blog.cr"), "")
+  yield dir
+ensure
+  FileUtils.rm_rf(dir) if dir
+end
+
+private def run_export(dir : String, args : Array(String), loader = nil)
+  asked = nil.as({String, String, String}?)
+  original = AzuCLI::Commands::OpenAPI::Export.loader
+  AzuCLI::Commands::OpenAPI::Export.loader = loader || ->(file : String, title : String, version : String) : String do
+    asked = {file, title, version}
+    EXPORT_DOCUMENT
+  end
+  command = AzuCLI::Commands::OpenAPI::Export.new
+  command.stdout = IO::Memory.new
+  command.parse_args(args)
+  result = Dir.cd(dir) { command.execute }
+  {result: result, asked: asked}
+ensure
+  AzuCLI::Commands::OpenAPI::Export.loader = original.not_nil!
+end
+
 describe AzuCLI::Commands::OpenAPI::Export do
   describe "#initialize" do
     it "has correct command name" do
@@ -98,6 +126,62 @@ describe AzuCLI::Commands::OpenAPI::Export do
       command.project_name.should eq("MyAPI")
       command.version.should eq("3.0.0")
       command.format.should eq("json")
+    end
+  end
+
+  describe "#execute" do
+    it "writes the document the app reports, as JSON or YAML" do
+      with_export_project do |dir|
+        json = run_export(dir, ["--output", "api.json", "--project", "Blog API", "--version", "2.0.0"])
+        json[:result].success?.should be_true
+        json[:asked].should eq({"./src/blog.cr", "Blog API", "2.0.0"})
+        JSON.parse(File.read(File.join(dir, "api.json")))["paths"]["/posts/{id}"]["get"]["operationId"].should eq "Blog.ShowEndpoint"
+
+        yaml = run_export(dir, [] of String)
+        yaml[:asked].should eq({"./src/blog.cr", "blog", "1.0.0"})
+        YAML.parse(File.read(File.join(dir, "openapi.yaml")))["openapi"].should eq "3.1.0"
+      end
+    end
+
+    it "creates the directory of the output file, and answers 1 when it cannot write it" do
+      with_export_project do |dir|
+        run_export(dir, ["--output", "docs/api/openapi.json"])[:result].success?.should be_true
+        File.exists?(File.join(dir, "docs/api/openapi.json")).should be_true
+
+        File.write(File.join(dir, "taken"), "")
+        result = run_export(dir, ["--output", "taken/openapi.json"])[:result]
+        result.exit_code.should eq 1
+        result.error.should contain "taken/openapi.json"
+      end
+    end
+
+    it "shows the help for -h and --help" do
+      with_export_project do |dir|
+        run_export(dir, ["-h"])[:result].success?.should be_true
+        run_export(dir, ["--help"])[:result].success?.should be_true
+        File.exists?(File.join(dir, "openapi.yaml")).should be_false
+      end
+    end
+
+    it "refuses an unknown format or option with exit code 2" do
+      with_export_project do |dir|
+        run_export(dir, ["--format", "xml"])[:result].exit_code.should eq 2
+        run_export(dir, ["--colour"])[:result].exit_code.should eq 2
+        File.exists?(File.join(dir, "openapi.yaml")).should be_false
+      end
+    end
+
+    it "fails without an app file, and when the app cannot be loaded" do
+      with_export_project do |dir|
+        File.delete(File.join(dir, "src/blog.cr"))
+        run_export(dir, [] of String)[:result].success?.should be_false
+      end
+      with_export_project do |dir|
+        failing = ->(_file : String, _title : String, _version : String) : String { raise AzuCLI::OpenAPI::Exporter::Error.new("could not be loaded") }
+        result = run_export(dir, [] of String, failing)[:result]
+        result.success?.should be_false
+        result.error.should contain "could not be loaded"
+      end
     end
   end
 

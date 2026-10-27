@@ -125,7 +125,7 @@ azu jobs:ui [--port PORT] [--host HOST]
 ## Session Commands
 
 ```bash
-azu session:setup [--backend TYPE] [--force]   # redis, memory or database
+azu session:setup [--backend TYPE] [--force]   # cookie (default), redis or memory
 azu session:clear [--backend TYPE] [--force]
 ```
 
