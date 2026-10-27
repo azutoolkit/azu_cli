@@ -1,347 +1,132 @@
-# Service Generator
+---
+description: Generate service classes for create, update and destroy, which save or delete the record a validated request describes.
+---
 
-The Service Generator creates service classes that encapsulate business logic and provide a clean interface for your application's core functionality.
+# Service
 
-## Usage
+`azu g service` writes one class per write action under `src/services/<plural>/`. A service takes the validated request, saves or deletes the record, and returns it. It doesn't validate: the request already did that.
+
+## Overview & visual demo
+
+<figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing, listing the comment services create_service, destroy_service and update_service with their line counts"><figcaption><p>After Enter, the service files are listed with their line counts. Each action is its own file.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["Posts::CreateEndpoint"] --> B["Posts::CreateRequest, already validated"]
+  B --> C["Posts::CreateService#call"]
+  C --> D["Post.new, then save!"]
+  D --> E["returns the Post"]
+```
+
+## Quickstart & command syntax
 
 ```bash
-azu generate service SERVICE_NAME [OPTIONS]
+azu g service post create update destroy title:string body:text
+azu g service post create title:string body:text
+azu g service post title:string body:text
 ```
 
-## Description
-
-Services in Azu applications handle complex business logic, external API integrations, and data processing operations. They provide a clean separation between your application's business rules and the presentation layer.
-
-## Options
-
-- `SERVICE_NAME` - Name of the service to generate (required)
-- `-d, --description DESCRIPTION` - Description of the service
-- `-m, --methods METHODS` - Comma-separated list of methods to generate
-- `-t, --template TEMPLATE` - Template to use (default: basic)
-- `-f, --force` - Overwrite existing files
-- `-h, --help` - Show help message
-
-## Examples
-
-### Generate a basic service
-
+{% tabs %}
+{% tab title="Create only" %}
 ```bash
-azu generate service UserService
+azu g service post create title:string body:text
 ```
+{% endtab %}
 
-This creates:
-
-- `src/services/user_service.cr` - The service class
-- `spec/services/user_service_spec.cr` - Test file
-
-### Generate a service with specific methods
-
+{% tab title="Destroy" %}
 ```bash
-azu generate service EmailService --methods send_welcome,reset_password,notify_admin
+azu g service post destroy                   # no attributes needed
 ```
+{% endtab %}
 
-### Generate a service with description
-
+{% tab title="Dry run" %}
 ```bash
-azu generate service PaymentProcessor --description "Handles payment processing and transactions"
+azu g service post create update title:string body:text --dry-run
 ```
+{% endtab %}
+{% endtabs %}
 
-## Generated Files
+| Part           | Meaning                                                                          | Default                     |
+| -------------- | -------------------------------------------------------------------------------- | --------------------------- |
+| `name`         | Singular or plural resource name                                                 | required                    |
+| `actions`      | Any of `create update destroy`                                                   | all three                   |
+| `attributes`   | `name:type[?][:modifier]`, the same list as the request. Used by create and update | none                     |
+| `--force`      | Overwrite existing files without asking                                          | off                         |
+| `--dry-run`    | List files and diffs, write nothing                                              | off                         |
+| `--check`      | Type-check with the new files; write nothing if it doesn't compile               | off                         |
+| `--yes`        | Write without asking (the plan is still printed on a terminal)                   | off                         |
 
-### Service Class (`src/services/SERVICE_NAME.cr`)
+## Realistic output
 
-```crystal
-# Handles business logic for <%= @description || @name.underscore.humanize %>
-class <%= @name %>Service
-  # Initialize the service
-  def initialize
-  end
-
-  # Add your service methods here
-  # Example:
-  # def process_data(data : String) : Bool
-  #   # Implementation
-  # end
-end
+{% code title="generated files" %}
+```text
+src/services/posts/create_service.cr
+src/services/posts/update_service.cr
+src/services/posts/destroy_service.cr
 ```
+{% endcode %}
 
-### Test File (`spec/services/SERVICE_NAME_spec.cr`)
-
+{% code title="src/services/posts/create_service.cr" %}
 ```crystal
-require "../spec_helper"
-
-describe <%= @name %>Service do
-  describe "#initialize" do
-    it "creates a new service instance" do
-      service = <%= @name %>Service.new
-      service.should be_a(<%= @name %>Service)
-    end
-  end
-
-  # Add your test cases here
-end
-```
-
-## Service Patterns
-
-### Basic Service Pattern
-
-```crystal
-class UserService
-  def initialize(@user_repository : UserRepository)
-  end
-
-  def create_user(user_data : Hash) : User
-    # Validate user data
-    # Create user
-    # Return user
-  end
-
-  def update_user(id : Int64, user_data : Hash) : User?
-    # Find user
-    # Update user
-    # Return updated user
-  end
-
-  def delete_user(id : Int64) : Bool
-    # Delete user
-    # Return success status
-  end
-end
-```
-
-### Service with Error Handling
-
-```crystal
-class PaymentService
-  class PaymentError < Exception; end
-
-  def process_payment(payment_data : Hash) : Payment
-    begin
-      # Process payment logic
-      Payment.new(payment_data)
-    rescue ex : Exception
-      raise PaymentError.new("Payment processing failed: #{ex.message}")
+module Blog
+  class Posts::CreateService
+    def call(request : Posts::CreateRequest) : Post
+      record = Post.new(title: request.title, body: request.body)
+      record.save!
+      record
     end
   end
 end
 ```
+{% endcode %}
 
-### Service with Dependencies
+*Create builds the record from the request's fields and saves it. Each attribute you pass becomes one `request.<field>` here.*
 
+{% code title="src/services/posts/update_service.cr" %}
 ```crystal
-class OrderService
-  def initialize(
-    @order_repository : OrderRepository,
-    @payment_service : PaymentService,
-    @email_service : EmailService
-  )
-  end
-
-  def create_order(order_data : Hash) : Order
-    # Create order
-    # Process payment
-    # Send confirmation email
-  end
-end
-```
-
-## Best Practices
-
-### 1. Single Responsibility
-
-Each service should have a single, well-defined responsibility:
-
-```crystal
-# Good: Focused on user operations
-class UserService
-  def create_user(data : Hash) : User; end
-  def update_user(id : Int64, data : Hash) : User?; end
-  def delete_user(id : Int64) : Bool; end
-end
-
-# Good: Focused on authentication
-class AuthService
-  def authenticate(email : String, password : String) : User?; end
-  def reset_password(email : String) : Bool; end
-end
-```
-
-### 2. Dependency Injection
-
-Use dependency injection to make services testable:
-
-```crystal
-class OrderService
-  def initialize(@repository : OrderRepository)
-  end
-end
-
-# In your application setup
-order_service = OrderService.new(OrderRepository.new)
-```
-
-### 3. Error Handling
-
-Implement proper error handling and custom exceptions:
-
-```crystal
-class UserService
-  class UserNotFoundError < Exception; end
-  class InvalidUserDataError < Exception; end
-
-  def find_user(id : Int64) : User
-    user = @repository.find(id)
-    raise UserNotFoundError.new("User with id #{id} not found") unless user
-    user
-  end
-end
-```
-
-### 4. Method Naming
-
-Use clear, descriptive method names:
-
-```crystal
-# Good
-def process_payment(payment_data : Hash) : Payment
-def send_welcome_email(user : User) : Bool
-def validate_user_data(data : Hash) : Bool
-
-# Avoid
-def do_something(data : Hash)
-def process(data : Hash)
-```
-
-## Integration with Controllers
-
-Use services in your controllers:
-
-```crystal
-class UsersController < ApplicationController
-  def initialize(@user_service : UserService)
-  end
-
-  def create
-    user = @user_service.create_user(params.to_h)
-    render json: user, status: :created
-  rescue UserService::InvalidUserDataError => ex
-    render json: {error: ex.message}, status: :bad_request
-  end
-end
-```
-
-## Testing Services
-
-### Unit Testing
-
-```crystal
-describe UserService do
-  describe "#create_user" do
-    it "creates a new user with valid data" do
-      service = UserService.new
-      user_data = {"name" => "John Doe", "email" => "john@example.com"}
-
-      user = service.create_user(user_data)
-
-      user.name.should eq("John Doe")
-      user.email.should eq("john@example.com")
-    end
-
-    it "raises error with invalid data" do
-      service = UserService.new
-      user_data = {"name" => ""}
-
-      expect_raises(UserService::InvalidUserDataError) do
-        service.create_user(user_data)
-      end
+module Blog
+  class Posts::UpdateService
+    def call(record : Post, request : Posts::UpdateRequest) : Post
+      request.title.try { |value| record.title = value }
+      request.body.try { |value| record.body = value }
+      record.save!
+      record
     end
   end
 end
 ```
+{% endcode %}
 
-### Mocking Dependencies
+*Update changes only the fields the request carried. A field that wasn't sent stays as it was.*
 
+{% code title="src/services/posts/destroy_service.cr" %}
 ```crystal
-describe OrderService do
-  describe "#create_order" do
-    it "processes payment and sends email" do
-      mock_payment_service = MockPaymentService.new
-      mock_email_service = MockEmailService.new
-      service = OrderService.new(mock_payment_service, mock_email_service)
-
-      service.create_order({"amount" => 100})
-
-      mock_payment_service.should have_received(:process_payment)
-      mock_email_service.should have_received(:send_confirmation)
+module Blog
+  class Posts::DestroyService
+    def call(record : Post) : Bool
+      record.delete!
     end
   end
 end
 ```
+{% endcode %}
 
-## Common Service Types
+*Destroy takes the record the endpoint found, so it has no request.*
 
-### 1. CRUD Services
+## Do's and don'ts
 
-Handle basic Create, Read, Update, Delete operations:
+{% hint style="info" %}
+A service is a plain class. Call it from an endpoint, a job or a console, the same way the generated endpoints do.
+{% endhint %}
 
-```crystal
-class PostService
-  def create_post(data : Hash) : Post; end
-  def find_post(id : Int64) : Post?; end
-  def update_post(id : Int64, data : Hash) : Post?; end
-  def delete_post(id : Int64) : Bool; end
-  def list_posts(page : Int32 = 1) : Array(Post); end
-end
-```
+{% hint style="success" %}
+Pass the same attributes to the service as to the request. The generated code reads `request.<field>` for each one, so a mismatch fails at compile time instead of at runtime.
+{% endhint %}
 
-### 2. External API Services
+{% hint style="warning" %}
+`save!` and `delete!` raise when they fail. The generated endpoints don't rescue that, so a failed save reaches azu's error handling as an exception.
+{% endhint %}
 
-Handle communication with external APIs:
-
-```crystal
-class WeatherService
-  def get_weather(city : String) : WeatherData
-    response = HTTP::Client.get("https://api.weather.com/#{city}")
-    WeatherData.from_json(response.body)
-  end
-end
-```
-
-### 3. Processing Services
-
-Handle complex data processing:
-
-```crystal
-class ReportService
-  def generate_monthly_report(month : Time) : Report
-    # Complex report generation logic
-  end
-
-  def export_to_pdf(report : Report) : Bytes
-    # PDF generation logic
-  end
-end
-```
-
-## Related Commands
-
-- `azu generate model` - Generate data models
-- `azu generate endpoint` - Generate API endpoints
-- `azu generate contract` - Generate validation contracts
-- `azu generate middleware` - Generate middleware components
-
-## Templates
-
-The service generator supports different templates:
-
-- `basic` - Simple service with basic structure
-- `crud` - Service with full CRUD operations
-- `api` - Service designed for external API integration
-- `processing` - Service for data processing operations
-
-To use a specific template:
-
-```bash
-azu generate service DataProcessor --template processing
-```
+{% hint style="danger" %}
+Don't call a service with a request you built by hand from `params`. Skipping the request skips its validation, and the service trusts what it gets.
+{% endhint %}

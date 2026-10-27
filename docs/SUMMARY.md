@@ -1,111 +1,59 @@
 # Table of contents
 
-## Overview
-
-- [Introduction](README.md)
+* [Azu CLI](README.md)
 
 ## Getting Started
 
-- [Installation](getting-started/installation.md)
-- [Quickstart](getting-started/quickstart.md)
-- [Project Structure](getting-started/project-structure.md)
+* [Installation](getting-started/installation.md)
+* [Quickstart](getting-started/quickstart.md)
+* [Project Structure](getting-started/project-structure.md)
+* [Terminal UI](getting-started/terminal-ui.md)
 
-## CLI Architecture
+## Command Reference
 
-- [Overview](cli-architecture/overview.md)
-- [Terminal UI](cli-architecture/terminal-ui.md)
-
-## Command Guides
-
-- [azu new](command-reference/azu-new.md)
-- [azu dev](command-reference/azu-dev.md)
-- [azu generate](command-reference/azu-generate.md)
-- [azu routes](command-reference/azu-routes.md)
-- [Production builds](command-reference/building-for-production.md)
-
-## Advanced
-
-- [Configuration (azu.yml)](advanced/configuration.md)
-- [Custom tasks and extensions](advanced/custom-tasks.md)
-- Configuration reference
-  - [Configuration Overview](configuration/README.md)
-  - [Project Configuration](configuration/project-config.md)
-  - [Database Configuration](configuration/database-config.md)
-  - [Development Server Configuration](configuration/dev-server-config.md)
-  - [Generator Configuration](configuration/generator-config.md)
-  - [Environment Variables](configuration/environment.md)
-
-## Full Command Reference
-
-- [Command Overview](commands/README.md)
-- [azu new](commands/new.md)
-- [azu init](commands/init.md)
-- [azu generate](commands/generate.md)
-- [azu dev](commands/dev.md)
-- [azu serve](commands/serve.md)
-- [azu routes](commands/routes.md)
-- [azu console](commands/console.md)
-- [azu doctor](commands/doctor.md)
-- [azu test](commands/test.md)
-- [Background Jobs Commands](commands/jobs.md)
-  - [azu jobs:worker](commands/jobs.md#azu-jobsworker)
-  - [azu jobs:status](commands/jobs.md#azu-jobsstatus)
-  - [azu jobs:clear](commands/jobs.md#azu-jobsclear)
-  - [azu jobs:retry](commands/jobs.md#azu-jobsretry)
-  - [azu jobs:ui](commands/jobs.md#azu-jobsui)
-- [Session Management Commands](commands/session.md)
-  - [azu session:setup](commands/session.md#azu-sessionsetup)
-  - [azu session:clear](commands/session.md#azu-sessionclear)
-- [Database Commands](commands/database.md)
-  - [azu db:create](commands/database.md#azu-dbcreate)
-  - [azu db:migrate](commands/database.md#azu-dbmigrate)
-  - [azu db:rollback](commands/database.md#azu-dbrollback)
-  - [azu db:seed](commands/database.md#azu-dbseed)
-  - [azu db:reset](commands/database.md#azu-dbreset)
-  - [azu db:status](commands/database.md#azu-dbstatus)
-  - [azu db:setup](commands/database.md#azu-dbsetup)
-  - [azu db:drop](commands/database.md#azu-dbdrop)
-- [OpenAPI Commands](commands/openapi.md)
-  - [azu openapi:generate](commands/openapi.md#azu-openapigenerate)
-  - [azu openapi:export](commands/openapi.md#azu-openapiexport)
-- [Configuration Commands](commands/config.md)
-  - [azu config:show](commands/config.md#azu-configshow)
-  - [azu config:validate](commands/config.md#azu-configvalidate)
-  - [azu config:env](commands/config.md#azu-configenv)
-- [azu completion](commands/completion.md)
-- [azu help](commands/help.md)
-- [azu version](commands/version.md)
-- [CLI Options Reference](reference/cli-options.md)
+* [Overview](command-reference/README.md)
+* [azu new](command-reference/azu-new.md)
+* [azu init](command-reference/azu-init.md)
+* [azu generate](command-reference/azu-generate.md)
+* [azu dev](command-reference/azu-dev.md)
+* [azu serve](command-reference/azu-serve.md)
+* [azu routes](command-reference/azu-routes.md)
+* [azu console](command-reference/azu-console.md)
+* [azu doctor](command-reference/azu-doctor.md)
+* [azu test](command-reference/azu-test.md)
+* [azu db:*](command-reference/azu-db.md)
+* [azu jobs:*](command-reference/azu-jobs.md)
+* [azu session:*](command-reference/azu-session.md)
+* [azu openapi:*](command-reference/azu-openapi.md)
+* [azu config:*](command-reference/azu-config.md)
+* [azu completion](command-reference/azu-completion.md)
+* [Production Builds](command-reference/building-for-production.md)
 
 ## Generators
 
-- [Generators Overview](generators/README.md)
-- [Endpoint Generator](generators/endpoint.md)
-- [Model Generator](generators/model.md)
-- [Service Generator](generators/service.md)
-- [Middleware Generator](generators/middleware.md)
-- [Request Generator](generators/request.md)
-- [Page Generator](generators/page.md)
-- [Component Generator](generators/component.md)
-- [Custom Validator Generator](generators/custom-validator.md)
-- [Migration Generator](generators/migration.md)
-- [Data Migration Generator](generators/data-migration.md)
-- [Authentication Generator](generators/auth.md)
-- [Channel Generator](generators/channel.md)
-- [Mailer Generator](generators/mailer.md)
-- [Scaffold Generator](generators/scaffold.md)
+* [Generators Overview](generators/README.md)
+* [Scaffold](generators/scaffold.md)
+* [Model](generators/model.md)
+* [Endpoint](generators/endpoint.md)
+* [Request](generators/request.md)
+* [Page](generators/page.md)
+* [Service](generators/service.md)
+* [Middleware](generators/middleware.md)
+* [Component](generators/component.md)
+* [Custom Validator](generators/custom-validator.md)
+* [Migration](generators/migration.md)
+* [Data Migration](generators/data-migration.md)
+* [Authentication](generators/auth.md)
+* [Channel](generators/channel.md)
+* [Mailer](generators/mailer.md)
+* [JoobQ](generators/joobq.md)
+* [API Resource](generators/api-resource.md)
 
-## Architecture & Internals
+## Advanced
 
-- [Architecture Overview](architecture/README.md)
-- [CLI Framework (Topia)](architecture/cli-framework.md)
-- [Generator System](architecture/generator-system.md)
-- [Template Engine (ECR)](architecture/template-engine.md)
-- [Configuration System](architecture/configuration.md)
-- [Plugin System](architecture/plugins.md)
-- [Terminal UI (proposal)](architecture/terminal-ui.md)
+* [Configuration](advanced/configuration.md)
+* [Custom Tasks](advanced/custom-tasks.md)
 
-## Help & Contributing
+## Help
 
-- [Common Issues](troubleshooting/README.md)
-- [Contributing Guide](contributing/README.md)
+* [Troubleshooting](troubleshooting/README.md)

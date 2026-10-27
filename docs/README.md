@@ -7,6 +7,8 @@ description: Scaffold, run and ship Azu apps from your terminal.
 Azu CLI is the command line for the [Azu Toolkit](https://github.com/azutoolkit/azu). It creates projects, generates the
 code you would have written anyway, rebuilds your app when you save, and tells you what's wrong with your setup.
 
+## Overview
+
 {% tabs %}
 {% tab title="azu new" %}
 <figure><img src="assets/terminal-ui/05-new-done.png" alt="azu new blog finishing: flight plan, progress card and next steps"><figcaption><p>A reviewed plan, a live progress card, and the commands to run next. 63 files, git, shards and a type-check in 18 seconds.</p></figcaption></figure>
@@ -53,11 +55,12 @@ azu db:migrate
 | Generate models, endpoints, CRUD | `azu generate <type> <name> [fields]`            | [azu generate](command-reference/azu-generate.md)                  |
 | See every route                  | `azu routes`                                     | [azu routes](command-reference/azu-routes.md)                      |
 | Ship a build                     | `shards build --production`, `azu new --docker`  | [Production builds](command-reference/building-for-production.md)  |
-| Check your environment           | `azu doctor`                                     | [azu doctor](commands/doctor.md)                                   |
+| Check your environment           | `azu doctor`                                     | [azu doctor](command-reference/azu-doctor.md)                                   |
 
 ## Realistic output
 
-```text title="terminal"
+{% code title="terminal" %}
+```text
 $ azu doctor --ui plain
 ok    crystal        Crystal 1.22.1 (the project needs 1.22.1 or newer)
 ok    shards         Shards 0.20.0
@@ -67,6 +70,7 @@ ok    database       SQLite file ./db/blog_development.db is writable
 
 9 ok, 0 warnings, 0 failures
 ```
+{% endcode %}
 
 *Every rich screen has a plain twin, so this is what CI and pipes see.*
 
@@ -100,19 +104,6 @@ project's own code.
 [quickstart.md](getting-started/quickstart.md)
 {% endcontent-ref %}
 
-{% content-ref url="cli-architecture/overview.md" %}
-[overview.md](cli-architecture/overview.md)
+{% content-ref url="command-reference/README.md" %}
+[README.md](command-reference/README.md)
 {% endcontent-ref %}
-
-<details>
-
-<summary>Built on</summary>
-
-| Piece                                            | Role                              |
-| ------------------------------------------------ | --------------------------------- |
-| [Azu](https://github.com/azutoolkit/azu)         | The web framework your app runs on |
-| [CQL](https://github.com/azutoolkit/cql)         | ORM and migrations                |
-| [JoobQ](https://github.com/azutoolkit/joobq)     | Background jobs                   |
-| [Topia](https://github.com/azutoolkit/topia)     | Command parsing in the CLI itself, and project tasks |
-
-</details>

@@ -1,297 +1,142 @@
-# Request Generator
+---
+description: Generate Azu::Request contracts per action, with the validations for create and update and the id for show, edit and destroy.
+---
 
-The Request Generator creates request structs that define the structure and validation rules for incoming data in your Azu application. These align with the `Azu::Request` convention.
+# Request
 
-> **Deprecation Notice**: The `contract` generator is deprecated. Use `request` instead. Running `azu generate contract` will automatically redirect to `request`.
+`azu g request` writes one `Azu::Request` struct per action, under `src/requests/<plural>/`. Create and update carry the resource's attributes. Show, edit and destroy carry the `id` from the route. Index and new carry nothing. The request is where input gets validated, so the endpoint and the service can trust what they receive.
 
-## Usage
+## Overview & visual demo
+
+<figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate preview listing the request files for comments: create_request, destroy_request, edit_request, index_request, new_request, show_request and update_request"><figcaption><p>The scaffold's preview lists one request file per action. A single <code>azu g request</code> writes just the one you name.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["Form or JSON params"] --> B["Posts::CreateRequest"]
+  B --> C["Posts::CreateEndpoint gets a validated request"]
+  C --> D["Posts::CreateService"]
+  D --> E["Post saved"]
+```
+
+## Quickstart & command syntax
 
 ```bash
-azu generate request REQUEST_NAME [attr:type...] [OPTIONS]
+azu g request post create title:string body:text
+azu g request post update title:string body:text
+azu g request post show
 ```
 
-## Description
-
-Requests in Azu applications provide a way to validate and structure incoming data from HTTP requests, API calls, or form submissions. They ensure data integrity and provide clear error messages when validation fails.
-
-## Options
-
-- `REQUEST_NAME` - Name of the request to generate (required)
-- `attr:type` - Field definitions (e.g., `name:string email:string age:int32`)
-- `--force` - Overwrite existing files
-- `--help` - Show help message
-
-## Examples
-
-### Generate a basic request
-
+{% tabs %}
+{% tab title="Create" %}
 ```bash
-azu generate request User name:string email:string
+azu g request post create title:string body:text   # strings are required
 ```
+{% endtab %}
 
-This creates:
-- `src/requests/user/index_request.cr` - The request struct
-
-### Generate request for specific action
-
+{% tab title="Update" %}
 ```bash
-azu generate request User create name:string email:string password:string
+azu g request post update title:string body:text   # every field optional, a sent value can't be blank
 ```
+{% endtab %}
 
-### Generate request with various field types
-
+{% tab title="Show" %}
 ```bash
-azu generate request Post title:string content:text published:bool views:int32
+azu g request post show                            # carries the id only
 ```
+{% endtab %}
+{% endtabs %}
 
-## Field Types
+| Part           | Meaning                                                                       | Default              |
+| -------------- | ----------------------------------------------------------------------------- | -------------------- |
+| `name`         | Singular or plural resource name                                              | required             |
+| `action`       | One of `index show new create edit update destroy`                            | `index`              |
+| `attributes`   | `name:type[?][:modifier]`. Used by `create` and `update`; ignored otherwise   | none                 |
+| `--force`      | Overwrite existing files without asking                                       | off                  |
+| `--dry-run`    | List files and diffs, write nothing                                           | off                  |
+| `--check`      | Type-check with the new file; write nothing if it doesn't compile            | off                  |
+| `--yes`        | Write without asking (the plan is still printed on a terminal)                | off                  |
 
-The request generator supports these field types:
+The attribute types and modifiers are the same as for the model. See [model](model.md).
 
-| Type | Crystal Type | Description |
-|------|--------------|-------------|
-| `string` | `String` | Text strings |
-| `text` | `String` | Long text |
-| `int32`, `integer` | `Int32` | 32-bit integers |
-| `int64` | `Int64` | 64-bit integers |
-| `float32` | `Float32` | 32-bit floats |
-| `float64`, `float` | `Float64` | 64-bit floats |
-| `bool`, `boolean` | `Bool` | Boolean values |
-| `time`, `datetime` | `Time` | Date and time |
-| `date` | `Date` | Date only |
-| `json` | `JSON::Any` | JSON data |
-| `reference`, `belongs_to` | `Int64` | Foreign key reference |
+## Realistic output
 
-## Generated File Structure
-
+{% code title="generated files" %}
+```text
+src/requests/posts/create_request.cr
+src/requests/posts/update_request.cr
+src/requests/posts/show_request.cr
+src/requests/predicates.cr        (written with update: defines the given? predicate)
 ```
-src/requests/
-└── user/
-    ├── index_request.cr
-    ├── show_request.cr
-    ├── create_request.cr
-    ├── update_request.cr
-    └── destroy_request.cr
-```
+{% endcode %}
 
-## Generated Code Example
-
-### Request Struct (`src/requests/user/create_request.cr`)
-
+{% code title="src/requests/posts/create_request.cr" %}
 ```crystal
-module App::User
-  struct CreateRequest
+module Blog
+  struct Posts::CreateRequest
     include Azu::Request
 
-    getter name : String
-    getter email : String
-    getter age : Int32?
+    getter title : String
+    getter body : String
+
+    validate title, presence: true
+    validate body, presence: true
   end
 end
 ```
+{% endcode %}
 
-## Using Requests in Endpoints
+*On create, every string is required. The generator adds `presence` for strings only.*
 
-### Basic Usage
-
+{% code title="src/requests/posts/update_request.cr" %}
 ```crystal
-struct Users::CreateEndpoint
-  include Azu::Endpoint(User::CreateRequest, User::CreateResponse)
-
-  post "/users"
-
-  def call : User::CreateResponse
-    # Access validated request data
-    user = Models::User.create!(
-      name: request.name,
-      email: request.email
-    )
-
-    User::CreateResponse.new(user: user)
-  end
-end
-```
-
-### With Validation
-
-```crystal
-module App::User
-  struct CreateRequest
+module Blog
+  struct Posts::UpdateRequest
     include Azu::Request
 
-    getter name : String
-    getter email : String
+    getter title : String?
+    getter body : String?
 
-    def valid? : Bool
-      !name.empty? && email.includes?("@")
-    end
-
-    def errors : Array(String)
-      errors = [] of String
-      errors << "Name is required" if name.empty?
-      errors << "Invalid email format" unless email.includes?("@")
-      errors
-    end
+    validate title, given: true
+    validate body, given: true
   end
 end
 ```
+{% endcode %}
 
-## Request Patterns
+*On update, each field is optional (PATCH). A value that is sent must not be blank.*
 
-### Basic Request Pattern
-
+{% code title="src/requests/posts/show_request.cr" %}
 ```crystal
-module App::User
-  struct IndexRequest
+module Blog
+  struct Posts::ShowRequest
     include Azu::Request
 
-    getter page : Int32 = 1
-    getter per_page : Int32 = 25
-    getter sort : String = "created_at"
-    getter order : String = "desc"
+    getter id : Int64
   end
 end
 ```
+{% endcode %}
 
-### Request with Optional Fields
+*The id comes from the route. Show, edit and destroy carry it.*
 
-```crystal
-module App::User
-  struct UpdateRequest
-    include Azu::Request
+## Do's and don'ts
 
-    getter name : String?
-    getter email : String?
-    getter bio : String?
-  end
-end
-```
+{% hint style="info" %}
+**Pro tip:** `azu routes` shows each endpoint's request type next to its response, so you can see which request an action uses.
+{% endhint %}
 
-### Request with Nested Data
+{% hint style="success" %}
+Give the request, the model and the service the same attributes. The service reads `request.<field>` for each attribute, so a field the request lacks fails to compile.
+{% endhint %}
 
-```crystal
-module App::Order
-  struct CreateRequest
-    include Azu::Request
+{% hint style="warning" %}
+The generator adds a `validate` line for strings only. Numbers, booleans and times get no rule from it. Add the rules you need by hand.
+{% endhint %}
 
-    getter customer_id : Int64
-    getter items : Array(OrderItem)
+{% hint style="warning" %}
+A boolean on create defaults to `false`, so the request always has a value. On update it is `Bool?`, and an unsent field leaves the record unchanged.
+{% endhint %}
 
-    struct OrderItem
-      getter product_id : Int64
-      getter quantity : Int32
-    end
-  end
-end
-```
-
-## Best Practices
-
-### 1. Keep Requests Focused
-
-Each request should validate a specific use case:
-
-```crystal
-# Good: Separate requests for different operations
-struct CreateUserRequest
-  include Azu::Request
-  getter name : String
-  getter email : String
-  getter password : String
-end
-
-struct UpdateUserRequest
-  include Azu::Request
-  getter name : String?
-  getter email : String?
-  # No password field for updates
-end
-```
-
-### 2. Use Type-Safe Fields
-
-```crystal
-# Good: Explicit types
-struct UserRequest
-  include Azu::Request
-  getter age : Int32
-  getter active : Bool
-  getter rating : Float64
-end
-```
-
-### 3. Provide Default Values
-
-```crystal
-struct PaginationRequest
-  include Azu::Request
-  getter page : Int32 = 1
-  getter per_page : Int32 = 25
-end
-```
-
-### 4. Document Expected Formats
-
-```crystal
-struct DateRangeRequest
-  include Azu::Request
-
-  # Expected format: YYYY-MM-DD
-  getter start_date : String
-
-  # Expected format: YYYY-MM-DD
-  getter end_date : String
-end
-```
-
-## Testing Requests
-
-### Unit Testing
-
-```crystal
-describe User::CreateRequest do
-  it "parses valid request data" do
-    params = HTTP::Params.parse("name=John&email=john@example.com")
-    request = User::CreateRequest.from_params(params)
-
-    request.name.should eq("John")
-    request.email.should eq("john@example.com")
-  end
-
-  it "handles missing optional fields" do
-    params = HTTP::Params.parse("name=John")
-    request = User::UpdateRequest.from_params(params)
-
-    request.name.should eq("John")
-    request.email.should be_nil
-  end
-end
-```
-
-## Related Commands
-
-- `azu generate endpoint` - Generate API endpoints
-- `azu generate model` - Generate data models
-- `azu generate service` - Generate business logic services
-- `azu generate scaffold` - Generate complete CRUD resources
-
-## Migration from Contract
-
-If you're migrating from the deprecated `contract` generator:
-
-1. Rename `contract` to `request` in your generator commands
-2. Update class inheritance from `Azu::Contract` to `include Azu::Request`
-3. Replace validation methods with the request pattern
-
-```crystal
-# Old (Contract pattern)
-class UserContract < Azu::Contract
-  field :name, String, required: true
-end
-
-# New (Request pattern)
-struct UserRequest
-  include Azu::Request
-  getter name : String
-end
-```
+{% hint style="danger" %}
+Don't reuse one request for create and update. Create requires the strings and update makes them optional, so keep them as two contracts.
+{% endhint %}

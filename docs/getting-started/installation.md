@@ -1,3 +1,7 @@
+---
+description: Build Azu CLI from source, check it, and add shell completion.
+---
+
 # Installation
 
 Azu CLI is one binary, built from source with Crystal. There is no Homebrew formula and no prebuilt release binary yet.
@@ -105,7 +109,8 @@ Open a new shell, then type `azu g<Tab>`.
 
 ## Realistic output
 
-```text title="terminal"
+{% code title="terminal" %}
+```text
 $ azu version
 Azu CLI v0.1.46
 Crystal 1.22.1
@@ -116,6 +121,7 @@ Plugins:
   - Database Plugin v1.0.0
   - Development Plugin v1.0.0
 ```
+{% endcode %}
 
 On a color terminal inside a project the same command is a card that also lists the `azu`, `cql` and `joobq`
 versions from `shard.lock` (`--ui plain` for the text above).

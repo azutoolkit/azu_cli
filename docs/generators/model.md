@@ -1,317 +1,201 @@
-# Model Generator
+---
+description: Generate CQL ActiveRecord models and their create-table migrations from name:type attributes, with the types, modifiers and references they accept.
+---
 
-The model generator creates CQL ORM models for your Azu application. Models represent database tables and provide an object-oriented interface for database operations.
+# Model
 
-## Overview
+`azu g model` writes a CQL model to `src/models/` and a create-table migration to `src/db/migrations/`. When `src/db/schema.cr` exists, it also appends the table to that file. The model holds columns and associations only. Validation lives in the request contracts.
 
-```bash
-azu generate model <name> [field:type] [options]
+## Overview & visual demo
+
+<figure><img src="../assets/terminal-ui/17-db-migrate.png" alt="azu db:migrate applying the CreatePosts migration to the development database"><figcaption><p>After <code>azu g model post</code>, <code>azu db:migrate</code> applies the migration it wrote. Here the <code>CreatePosts</code> migration is applied.</p></figcaption></figure>
+
+```mermaid
+flowchart LR
+  A["azu g model post title:string"] --> B["src/models/post.cr"]
+  A --> C["migration: create_posts"]
+  C --> D["schema.cr gets a posts table"]
+  C --> E["azu db:migrate creates the table"]
 ```
 
-## Basic Usage
+## Quickstart & command syntax
 
 ```bash
-# Generate a basic model
-azu generate model user
-
-# Generate with fields
-azu generate model user name:string email:string age:int32
-
-# Generate with relationships
-azu generate model post title:string content:text user_id:references
+azu g model post title:string body:text published:bool
+azu g model comment body:text post_id:references
+azu g model user name:string 'email:string:unique' 'nickname:string?'
+azu g model post title:string --skip-tests
 ```
 
-## Command Options
+{% tabs %}
+{% tab title="Preview" %}
+```bash
+azu g model post title:string body:text --dry-run   # the files and their diffs, nothing written
+```
+{% endtab %}
 
-| Option             | Description                      | Default |
-| ------------------ | -------------------------------- | ------- |
-| `--timestamps`     | Add created_at/updated_at fields | true    |
-| `--uuid`           | Use UUID as primary key          | false   |
-| `--skip-migration` | Don't generate migration file    | false   |
-| `--force`          | Overwrite existing files         | false   |
+{% tab title="Check" %}
+```bash
+azu g model post title:string body:text --check     # type-check with the new model, write nothing on failure
+```
+{% endtab %}
 
-## Field Types
+{% tab title="Model only" %}
+```bash
+azu g model post title:string --skip-tests          # no migration; you write it yourself
+```
+{% endtab %}
+{% endtabs %}
 
-| Type         | Crystal Type | Database Type | Description            |
-| ------------ | ------------ | ------------- | ---------------------- |
-| `string`     | `String`     | VARCHAR/TEXT  | Short text field       |
-| `text`       | `String`     | TEXT          | Long text field        |
-| `int32`      | `Int32`      | INTEGER       | 32-bit integer         |
-| `int64`      | `Int64`      | BIGINT        | 64-bit integer         |
-| `float64`    | `Float64`    | DECIMAL       | Floating point number  |
-| `bool`       | `Bool`       | BOOLEAN       | True/false value       |
-| `date`       | `Date`       | DATE          | Date only              |
-| `time`       | `Time`       | TIMESTAMP     | Date and time          |
-| `json`       | `JSON::Any`  | JSON/JSONB    | JSON data              |
-| `uuid`       | `UUID`       | UUID          | UUID field             |
-| `references` | `Int64`      | BIGINT        | Foreign key reference  |
+| Part           | Meaning                                                                    | Default                    |
+| -------------- | -------------------------------------------------------------------------- | -------------------------- |
+| `name`         | Singular or plural: `post` and `posts` both make `class Post`              | required                   |
+| `attributes`   | `name:type[?][:modifier]`, one per column (see the tables below)           | none                       |
+| `--skip-tests` | Skips the migration. Despite the name, it doesn't touch tests              | off                        |
+| `--force`      | Overwrite existing files without asking                                    | off                        |
+| `--dry-run`    | List files and diffs, write nothing                                        | off                        |
+| `--check`      | Type-check with the generated files; write nothing if it doesn't compile   | off                        |
+| `--yes`        | Write without asking (the plan is still printed on a terminal)             | off                        |
 
-## Generated Files
+`created_at` and `updated_at` are always generated. `id`, `created_at` and `updated_at` given as attributes are dropped with a warning.
 
-### Model File
+**Types**
 
+| Type                 | Crystal type | Column                                      |
+| -------------------- | ------------ | ------------------------------------------- |
+| `string`, `text`     | `String`     | `text :name`                                |
+| `int32`, `integer`   | `Int32`      | `column :name, Int32`                       |
+| `int64`              | `Int64`      | `column :name, Int64`                       |
+| `float32`            | `Float32`    | `column :name, Float32`                     |
+| `float64`, `float`   | `Float64`    | `column :name, Float64`                     |
+| `bool`, `boolean`    | `Bool`       | `boolean :name, default: false`             |
+| `time`, `datetime`   | `Time`       | `column :name, Time`                        |
+| `date`               | `Date`       | `column :name, Date`                        |
+| `uuid`               | `UUID`       | `column :name, UUID`                        |
+| `json`               | `JSON::Any`  | `column :name, JSON::Any`                   |
+| `references`, `belongs_to` | `Int64` | `column :name_id, Int64`, plus a `belongs_to` and a foreign key |
+
+**Modifiers**
+
+| Form                  | Effect                                                                  |
+| --------------------- | ----------------------------------------------------------------------- |
+| `name:string?`        | Nullable: `String?` in the model, `null: true` on the column            |
+| `:unique`             | `unique: true` on the column                                            |
+| `:index`              | `index: true` on the column                                             |
+| `:required`           | Accepted. Columns are `NOT NULL` already, so it changes nothing         |
+| `:ref:<table>`        | Foreign key to `<table>`'s `id`, with no `belongs_to` in the model      |
+| `comments:has_many`   | An association, no column: `has_many :comments, Comment, foreign_key: :post_id` |
+
+`post_id:references` and `post_id:int64:ref:posts` look alike, but only `references` gives the model a `belongs_to`.
+
+## Realistic output
+
+{% code title="generated files" %}
+```text
+src/models/post.cr
+src/db/migrations/<version>_create_posts.cr
+src/db/schema.cr        (changed: a table :posts block is appended)
+```
+{% endcode %}
+
+The database name in `db_context` comes from `src/db/schema.cr`. This example uses `BlogDB`, the name in a `blog` project's schema.
+
+{% code title="src/models/post.cr" %}
 ```crystal
-# src/models/user.cr
-struct User
+require "cql"
+
+class Post
   include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :users
+  db_context BlogDB, :posts
 
-  getter id : Int64?
-  getter name : String
-  getter email : String
-  getter age : Int32?
-  getter created_at : Time?
-  getter updated_at : Time?
+  property title : String
+  property body : String
+  property published : Bool
+  property created_at : Time?
+  property updated_at : Time?
 
-  # Validations
-  validate :name, presence: true, size: 2..100
-  validate :email, presence: true
-
-  def initialize(@name : String, @email : String, @age : Int32? = nil)
+  def initialize(@title : String, @body : String, @published : Bool)
   end
 end
 ```
+{% endcode %}
 
-### Migration File
+*Columns are properties. The constructor takes the attributes, so `Post.new(title: ..., body: ..., published: ...)` works in the services.*
 
+{% code title="src/db/migrations/20261027120000_create_posts.cr" %}
 ```crystal
-# src/db/migrations/20240115103045_create_users.cr
-class CreateUsers < CQL::Migration(20240115103045)
+require "cql"
+
+# Migration to create posts table
+# Generated at 2026-10-27 12:00:00 UTC
+class CreatePosts < CQL::Migration(20261027120000_i64)
   def up
-    schema.table :users do
-      primary :id, Int64
-      text :name
-      text :email
-      integer :age, null: true
+    schema.table :posts do
+      primary :id, Int64, auto_increment: true
+      text :title
+      text :body
+      boolean :published, default: false
       timestamps
     end
-    schema.users.create!
+    schema.posts.create!
   end
 
   def down
-    schema.users.drop!
+    schema.posts.drop!
   end
 end
 ```
+{% endcode %}
 
-## Examples
+*The version is the time you generated the file, so yours differs. The `schema.cr` block mirrors the `table :posts` part.*
 
-### User Model
+A reference adds an association on both sides. This is `comment` with `post_id:references`:
 
-```bash
-azu generate model user name:string email:string age:int32
-```
-
-**Generated Model:**
-
+{% code title="src/models/comment.cr" %}
 ```crystal
-# src/models/user.cr
-struct User
+require "cql"
+
+class Comment
   include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :users
+  db_context BlogDB, :comments
 
-  getter id : Int64?
-  getter name : String
-  getter email : String
-  getter age : Int32?
-  getter created_at : Time?
-  getter updated_at : Time?
-
-  validate :name, presence: true, size: 2..100
-  validate :email, presence: true
-
-  def initialize(@name : String, @email : String, @age : Int32? = nil)
-  end
-end
-```
-
-### Post Model with Relationships
-
-```bash
-azu generate model post title:string content:text user_id:references
-```
-
-**Generated Model:**
-
-```crystal
-# src/models/post.cr
-struct Post
-  include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :posts
-
-  getter id : Int64?
-  getter title : String
-  getter content : String
-  getter user_id : Int64
-  getter created_at : Time?
-  getter updated_at : Time?
-
-  belongs_to :user, User, foreign_key: :user_id
-  has_many :comments, Comment, foreign_key: :post_id
-
-  validate :title, presence: true, size: 1..100
-  validate :content, presence: true
-
-  scope :published, -> { where(published: true) }
-
-  def initialize(@title : String, @content : String, @user_id : Int64)
-  end
-end
-```
-
-### Category Model with UUID
-
-```bash
-azu generate model category name:string description:text --uuid
-```
-
-**Generated Model:**
-
-```crystal
-# src/models/category.cr
-struct Category
-  include CQL::ActiveRecord::Model(UUID)
-  db_context AppDB, :categories
-
-  getter id : UUID?
-  getter name : String
-  getter description : String?
-  getter created_at : Time?
-  getter updated_at : Time?
-
-  validate :name, presence: true, size: 2..100
-
-  def initialize(@name : String, @description : String? = nil)
-  end
-end
-```
-
-## Relationships
-
-### belongs_to
-
-```crystal
-# src/models/comment.cr
-struct Comment
-  include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :comments
-
-  getter id : Int64?
-  getter content : String
-  getter post_id : Int64
-  getter user_id : Int64
-  getter created_at : Time?
-  getter updated_at : Time?
+  property body : String
+  property post_id : Int64
+  property created_at : Time?
+  property updated_at : Time?
 
   belongs_to :post, Post, foreign_key: :post_id
-  belongs_to :user, User, foreign_key: :user_id
 
-  validate :content, presence: true
-
-  def initialize(@content : String, @post_id : Int64, @user_id : Int64)
+  def initialize(@body : String, @post_id : Int64)
   end
 end
 ```
+{% endcode %}
 
-### has_many
+*The `belongs_to` line comes from the `references` type. The migration gets a `foreign_key [:post_id], references: :posts` line.*
 
-```crystal
-# src/models/user.cr
-struct User
-  include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :users
+## Do's and don'ts
 
-  has_many :posts, Post, foreign_key: :user_id
-  has_many :comments, Comment, foreign_key: :user_id
-end
-```
+{% hint style="info" %}
+**Pro tip:** `--check` type-checks the project with the new model before anything is written. Use it when the model touches code that already exists.
+{% endhint %}
 
-### has_one
+{% hint style="success" %}
+Add a migration for every later change, such as `azu g migration add_slug_to_posts slug:string:index`, instead of editing a migration that already ran. Run `azu db:migrate` to apply it.
+{% endhint %}
 
-```crystal
-struct User
-  include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :users
+{% hint style="success" %}
+Put validations in the request contracts (`azu g request`), not in the model. The model stays a description of the table.
+{% endhint %}
 
-  has_one :profile, UserProfile, foreign_key: :user_id
-end
-```
+{% hint style="warning" %}
+`--skip-tests` skips the migration. Use it only when you write the migration yourself, or the model will point at a table that doesn't exist.
+{% endhint %}
 
-### many_to_many
+{% hint style="warning" %}
+`azu g model` doesn't check types. An unknown type such as `decimal` becomes `String` without a message. `azu g scaffold` rejects unknown types; the model generator does not.
+{% endhint %}
 
-```crystal
-struct Post
-  include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :posts
-
-  many_to_many :tags, Tag, join_through: :post_tags
-end
-```
-
-## Validations
-
-```crystal
-struct User
-  include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :users
-
-  # Presence validation
-  validate :name, presence: true
-
-  # Size/length validation
-  validate :username, size: 2..50
-
-  # Format validation with regex
-  validate :email, match: /\A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i
-
-  # Numeric validations
-  validate :age, gt: 0, lt: 120
-  validate :price, gte: 0.0, lte: 1_000_000.0
-
-  # Inclusion validation
-  validate :status, inclusion: {in: %w[active inactive pending]}
-end
-```
-
-## Scopes
-
-```crystal
-struct Post
-  include CQL::ActiveRecord::Model(Int64)
-  db_context AppDB, :posts
-
-  scope :published, -> { where(published: true) }
-  scope :recent, -> { order(created_at: :desc) }
-  scope :by_user, ->(user_id : Int64) { where(user_id: user_id) }
-end
-```
-
-## Query Examples
-
-```crystal
-# Create
-user = User.new("alice", "alice@example.com")
-user.save
-
-# Find
-user = User.find(1_i64)
-user = User.find_by(email: "alice@example.com")
-
-# Query
-users = User.where(active: true).all
-posts = Post.published.recent.limit(10).all
-
-# Update
-user.username = "alice_updated"
-user.save!
-
-# Delete
-user.destroy!
-```
-
----
-
-**Next Steps:**
-
-- [Migration Generator](migration.md) - Create database migrations
-- [Endpoint Generator](endpoint.md) - Create HTTP endpoints
+{% hint style="danger" %}
+Don't name an attribute after a Crystal keyword or a method the model already has, such as `errors`. The generator refuses those names because the getter would hide the method or not compile at all.
+{% endhint %}

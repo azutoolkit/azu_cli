@@ -1,362 +1,261 @@
-# API Resource Generator
+---
+description: Generate a complete JSON API resource, with models, a migration, five endpoints, requests, services and response classes.
+---
 
-Generate complete REST API resources with a single command.
+# API resource
 
-## Overview
+`azu g api_resource` writes a JSON API for one resource: five endpoints (index, show, create, update, destroy), request contracts, services, response classes, a model and its migration. It writes no pages, templates, `new` or `edit` routes, in a web project or an API project. It is the [scaffold](scaffold.md) with the API layout forced on, so `azu g scaffold post ... --api-only` writes the same files.
 
-The `api_resource` generator creates a complete REST API resource including models, endpoints, request validators, and JSON responses. It's designed specifically for API-only projects.
+## Overview & visual demo
 
-## Usage
+<figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing: the written files with line counts and the azu undo reminder"><figcaption><p>After Enter, <code>azu g</code> lists every file it wrote with its line count. <code>azu undo</code> reverts them.</p></figcaption></figure>
 
-```bash
-azu generate api_resource <name> [attributes] [options]
+```mermaid
+flowchart LR
+  A["azu g api_resource Article title:string body:text"] --> B["Model and migration"]
+  A --> C["Requests and services"]
+  A --> D["Five endpoints, JSON"]
+  D --> E["index, show: 200 with a response class"]
+  D --> F["create: 201, update: 200, destroy: 204"]
+  B --> G["azu db:migrate"]
 ```
 
-### Arguments
-
-- `<name>` - Resource name (singular, e.g., `Post`, `User`, `Article`)
-- `[attributes]` - Space-separated list of `field:type` pairs
-
-### Options
-
-- `--force` - Overwrite existing files
-- `--skip COMPONENTS` - Skip specific components (comma-separated)
-- `--help` - Show help message
-
-## Examples
-
-### Basic Resource
+## Quickstart & command syntax
 
 ```bash
-azu generate api_resource Post title:string content:text published:bool
+azu g api_resource Article title:string body:text
+azu db:migrate
+azu serve
 ```
 
-Generates:
-
-- `src/models/post.cr` - CQL model with attributes
-- `src/migrations/TIMESTAMP_create_posts.cr` - Database migration
-- `src/endpoints/posts/*_endpoint.cr` - REST endpoints (index, show, create, update, destroy)
-- `src/requests/posts/*_request.cr` - Request validation classes
-- `src/pages/posts/*_page.cr` - JSON response classes
-
-### Complex Resource
-
+{% tabs %}
+{% tab title="Resource" %}
 ```bash
-azu generate api_resource Article \
-  title:string \
-  slug:string \
-  content:text \
-  excerpt:string \
-  published_at:time \
-  author_id:int64 \
-  view_count:int32 \
-  featured:bool
+azu g api_resource Article title:string body:text published:bool
 ```
 
-### Skip Specific Components
+Every `name:type` becomes a column, a request field and a field of the responses.
+{% endtab %}
 
+{% tab title="Existing table" %}
 ```bash
-# Skip migration (if table already exists)
-azu generate api_resource Comment body:text user_id:int64 post_id:int64 --skip migration
-
-# Skip model (if using existing model)
-azu generate api_resource User name:string email:string --skip model,migration
+azu g api_resource Article title:string body:text --skip migration
 ```
 
-## Generated Structure
+Writes the endpoints and models over a table you already have, with no new migration.
+{% endtab %}
 
-### Models
+{% tab title="Preview" %}
+```bash
+azu g api_resource Article title:string --dry-run   # list the files, write nothing
+azu g api_resource Article title:string --check     # type-check with the new files first
+```
+{% endtab %}
+{% endtabs %}
 
-Generated in `src/models/<name>.cr`:
+| Argument or option | Meaning | Default |
+| --- | --- | --- |
+| `name` | The resource. Singular or plural. Same naming rules as the scaffold | required |
+| `name:type[:modifier]` | Columns, request fields and response fields. Types and modifiers as in the [scaffold](scaffold.md) | none |
+| `--skip LIST` | Leave out the listed components, as for the scaffold | none |
+| `--force` | Overwrite existing files | off |
+| `--dry-run` | List the files and changes, write nothing | off |
+| `--check` | Type-check the project with the new files before writing | off |
+| `--yes` | Write without asking (a terminal still shows the preview) | off |
+| `--ui MODE` | `rich` or `plain` | `rich` on a terminal |
 
+The routes it writes:
+
+| Method and path | Endpoint | Answers |
+| --- | --- | --- |
+| `GET /articles` | `Articles::IndexEndpoint` | `200`, an array of records as JSON |
+| `GET /articles/:id` | `Articles::ShowEndpoint` | `200`, one record, or `404` |
+| `POST /articles` | `Articles::CreateEndpoint` | `201`, the new record |
+| `PATCH /articles/:id` | `Articles::UpdateEndpoint` | `200`, the updated record |
+| `DELETE /articles/:id` | `Articles::DestroyEndpoint` | `204` |
+
+## Realistic output
+
+{% code title="generated files for azu g api_resource Article title:string body:text" %}
+```text
+src/db/migrations/<version>_create_articles.cr
+src/db/schema.cr                        changed: adds the articles table
+src/models/article.cr
+src/endpoints/articles/                 create, destroy, index, show, update  _endpoint.cr
+src/requests/articles/                  create, destroy, index, show, update  _request.cr
+src/requests/predicates.cr
+src/services/articles/                  create, destroy, update  _service.cr
+src/responses/articles/                 index_response.cr, show_response.cr
+```
+{% endcode %}
+
+*Five endpoints, two responses and no pages: the difference from the web scaffold.*
+
+{% code title="src/models/article.cr" %}
 ```crystal
 require "cql"
 
-struct Post < CQL::Record(Int64)
-  include CQL::Timestamps
+class Article
+  include CQL::ActiveRecord::Model(Int64)
+  db_context BlogDB, :articles
 
   property title : String
-  property content : String
-  property published : Bool
+  property body : String
+  property created_at : Time?
+  property updated_at : Time?
 
-  timestamps
-end
-```
-
-### Migrations
-
-Generated in `src/migrations/TIMESTAMP_create_<plural>.cr`:
-
-```crystal
-class CreatePosts < CQL::Migration
-  def up
-    schema.create :posts do
-      primary :id, Int64
-      text :title
-      text :content
-      boolean :published, default: false
-      timestamps
-    end
-  end
-
-  def down
-    schema.drop :posts
+  def initialize(@title : String, @body : String)
   end
 end
 ```
+{% endcode %}
 
-### Endpoints
+*The model, as for any scaffolded resource.*
 
-Generated in `src/endpoints/<plural>/<name>_<action>_endpoint.cr`:
-
-**Index** (GET /posts):
-
-```crystal
-struct Posts::PostsIndexEndpoint
-  include Azu::Endpoint(Posts::PostsIndexRequest, Posts::PostsIndexPage)
-
-  get "/posts"
-
-  def call : Posts::PostsIndexPage
-    posts = Post.all
-    Posts::PostsIndexPage.new(posts: posts)
-  end
-end
-```
-
-**Show** (GET /posts/:id):
-
-```crystal
-struct Posts::PostsShowEndpoint
-  include Azu::Endpoint(Posts::PostsShowRequest, Posts::PostsShowPage)
-
-  get "/posts/:id"
-
-  def call : Posts::PostsShowPage
-    post = Post.find(request.id)
-    Posts::PostsShowPage.new(post: post)
-  end
-end
-```
-
-**Create** (POST /posts):
-
-```crystal
-struct Posts::PostsCreateEndpoint
-  include Azu::Endpoint(Posts::PostsCreateRequest, Posts::PostsCreatePage)
-
-  post "/posts"
-
-  def call : Posts::PostsCreatePage
-    post = Post.create(
-      title: request.title,
-      content: request.content,
-      published: request.published || false
-    )
-    Posts::PostsCreatePage.new(post: post)
-  end
-end
-```
-
-**Update** (PATCH /posts/:id):
-
-```crystal
-struct Posts::PostsUpdateEndpoint
-  include Azu::Endpoint(Posts::PostsUpdateRequest, Posts::PostsUpdatePage)
-
-  patch "/posts/:id"
-
-  def call : Posts::PostsUpdatePage
-    post = Post.find(request.id)
-    post.update(
-      title: request.title,
-      content: request.content,
-      published: request.published
-    )
-    Posts::PostsUpdatePage.new(post: post)
-  end
-end
-```
-
-**Destroy** (DELETE /posts/:id):
-
-```crystal
-struct Posts::PostsDestroyEndpoint
-  include Azu::Endpoint(Posts::PostsDestroyRequest, Posts::PostsDestroyPage)
-
-  delete "/posts/:id"
-
-  def call : Posts::PostsDestroyPage
-    post = Post.find(request.id)
-    post.destroy
-    Posts::PostsDestroyPage.new(success: true)
-  end
-end
-```
-
-### Request Classes
-
-Generated in `src/requests/<plural>/<name>_<action>_request.cr`:
-
-```crystal
-struct Posts::PostsCreateRequest < Azu::Request
-  property title : String
-  property content : String
-  property published : Bool?
-end
-```
-
-### Response Classes
-
-Generated in `src/pages/<plural>/<name>_<action>_page.cr`:
-
+{% code title="src/responses/articles/show_response.cr" %}
 ```crystal
 require "json"
 
-struct Posts::PostsIndexPage < Azu::Page
-  include JSON::Serializable
+module Blog
+  struct Articles::ShowResponse
+    include Azu::Response::Negotiable
+    include JSON::Serializable
 
-  property posts : Array(Post)
+    getter id : Int64?
+    getter title : String
+    getter body : String
 
-  def render : String
-    to_json
+    def initialize(record : Article)
+      @id = record.id
+      @title = record.title
+      @body = record.body
+    end
+
+    def render_json : String
+      to_json
+    end
   end
 end
 ```
+{% endcode %}
 
-## Supported Attribute Types
+*The response lists every column the resource has. `index_response.cr` wraps an array of these.*
 
-| Type      | Description    | Database Type    |
-| --------- | -------------- | ---------------- |
-| `string`  | String values  | VARCHAR/TEXT     |
-| `text`    | Long text      | TEXT             |
-| `int32`   | 32-bit integer | INTEGER          |
-| `int64`   | 64-bit integer | BIGINT           |
-| `float32` | 32-bit float   | REAL             |
-| `float64` | 64-bit float   | DOUBLE PRECISION |
-| `bool`    | Boolean        | BOOLEAN          |
-| `time`    | Timestamp      | TIMESTAMP        |
-
-## Best Practices
-
-### Naming Conventions
-
-- Use singular names: `Post`, `User`, `Article`
-- Names should be PascalCase
-- Database tables will be pluralized automatically
-
-### Attribute Design
-
-- Keep attributes simple and focused
-- Use foreign keys for relationships (`author_id:int64`)
-- Add timestamps automatically (built-in)
-- Use appropriate types for data
-
-### API Structure
-
-- Follow REST conventions
-- Use plural resource names in URLs (`/posts`)
-- Implement proper HTTP status codes
-- Version your API (`/api/v1/posts`)
-
-### Security
-
-- Always validate input in request classes
-- Implement authentication in endpoints
-- Use authorization for sensitive operations
-- Sanitize user input
-
-## API-Only vs Web Projects
-
-The `api_resource` generator is optimized for API-only projects:
-
-**API Resource:**
-
-- Generates JSON responses
-- Skips Jinja templates
-- Skips page views
-- Focuses on REST endpoints
-
-**Scaffold (Web):**
-
-- Generates HTML pages
-- Includes Jinja templates
-- Includes forms
-- Web and API endpoints
-
-## Integration
-
-### With OpenAPI
-
-Generate OpenAPI spec from API resources:
-
-```bash
-# Generate API resource
-azu generate api_resource Post title:string content:text
-
-# Export to OpenAPI spec
-azu openapi:export --output docs/api.yaml
-```
-
-### With Authentication
-
-Add authentication to API resources:
-
-```bash
-# Generate auth system
-azu generate auth
-
-# Generate API resource with auth
-azu generate api_resource Post title:string content:text
-
-# Add authentication middleware to endpoints manually
-```
-
-### With Pagination
-
-Implement pagination in index endpoints:
-
+{% code title="src/endpoints/articles/create_endpoint.cr" %}
 ```crystal
-struct Posts::PostsIndexEndpoint
-  include Azu::Endpoint(Posts::PostsIndexRequest, Posts::PostsIndexPage)
+module Blog
+  struct Articles::CreateEndpoint
+    include Azu::Endpoint(Articles::CreateRequest, Articles::ShowResponse)
 
-  get "/posts"
+    post "/articles"
 
-  def call : Posts::PostsIndexPage
-    page = request.page || 1
-    per_page = request.per_page || 25
-
-    posts = Post.all.limit(per_page).offset((page - 1) * per_page)
-    total = Post.count
-
-    Posts::PostsIndexPage.new(
-      posts: posts,
-      page: page,
-      per_page: per_page,
-      total: total
-    )
+    def call : Articles::ShowResponse
+      record = Articles::CreateService.new.call(create_request)
+      status 201
+      Articles::ShowResponse.new(record)
+    end
   end
 end
 ```
+{% endcode %}
 
-## Comparison with Scaffold
+*A create answers `201` with the record. The request is validated before the endpoint runs.*
 
-| Feature         | api_resource | scaffold |
-| --------------- | ------------ | -------- |
-| Models          | ✓            | ✓        |
-| Migrations      | ✓            | ✓        |
-| REST Endpoints  | ✓            | ✓        |
-| Request Classes | ✓            | ✓        |
-| JSON Responses  | ✓            | ✓        |
-| HTML Pages      | ✗            | ✓        |
-| Jinja Templates | ✗            | ✓        |
-| Forms           | ✗            | ✓        |
-| Use Case        | APIs         | Web Apps |
+{% code title="src/requests/articles/create_request.cr" %}
+```crystal
+module Blog
+  struct Articles::CreateRequest
+    include Azu::Request
 
-## See Also
+    getter title : String
+    getter body : String
 
-- [Scaffold Generator](./scaffold.md) - Full-stack CRUD generation
-- [Model Generator](./model.md) - Generate models only
-- [Endpoint Generator](./endpoint.md) - Generate endpoints only
-- [OpenAPI Commands](../commands/openapi.md) - OpenAPI integration
-- [REST API Example](../examples/rest-api.md) - Complete example
+    validate title, presence: true
+    validate body, presence: true
+  end
+end
+```
+{% endcode %}
+
+*A bad request is answered before it reaches the service.*
+
+<details>
+
+<summary>The index endpoint and the migration</summary>
+
+{% code title="src/endpoints/articles/index_endpoint.cr" %}
+```crystal
+module Blog
+  struct Articles::IndexEndpoint
+    include Azu::Endpoint(Articles::IndexRequest, Articles::IndexResponse)
+
+    get "/articles"
+
+    def call : Articles::IndexResponse
+      Articles::IndexResponse.new(Article.all.to_a)
+    end
+  end
+end
+```
+{% endcode %}
+
+*The index endpoint loads every record and answers with the index response.*
+
+{% code title="src/db/migrations/20261027210011_create_articles.cr" %}
+```crystal
+require "cql"
+
+# Migration to create articles table
+# Generated at 2026-10-27 21:00:11 UTC
+class CreateArticles < CQL::Migration(20261027210011_i64)
+  def up
+    schema.table :articles do
+      primary :id, Int64, auto_increment: true
+      text :title
+      text :body
+      timestamps
+    end
+    schema.articles.create!
+  end
+
+  def down
+    # Drop articles table
+    schema.articles.drop!
+  end
+end
+```
+{% endcode %}
+
+*The migration for the table. The same table block goes into `src/db/schema.cr`.*
+
+</details>
+
+## Do's and don'ts
+
+{% hint style="success" %}
+Use `--skip migration` when the table is already in your database and you only want the endpoints. Pass the same `name:type` attributes as the table's columns, so the model, requests and responses match it.
+{% endhint %}
+
+{% hint style="info" %}
+**Pro tip:** check the JSON before you ship. Run `azu g api_resource ... --dry-run` to see the file list, then `azu routes` once the app builds to list the five routes.
+{% endhint %}
+
+{% hint style="warning" %}
+The generated endpoints are open. Nothing checks who calls them. `azu g auth` is for web projects and refuses API projects, so add your own check before you deploy.
+{% endhint %}
+
+{% hint style="warning" %}
+A response lists every column of the resource. Add a sensitive column, such as a password digest, and it goes out in every response. Leave such a column out of the resource, or edit the response class.
+{% endhint %}
+
+{% hint style="danger" %}
+`--force` overwrites the endpoints, services and responses you have edited. Generate once, then edit the files you own.
+{% endhint %}
+
+<details>
+
+<summary>OpenAPI</summary>
+
+The app can export an OpenAPI description of its routes. See [OpenAPI commands](../command-reference/azu-openapi.md) for `azu openapi:export`.
+
+</details>
