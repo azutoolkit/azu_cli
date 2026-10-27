@@ -41,7 +41,7 @@ Each name after the mailer becomes a method. With none, the mailer gets `welcome
 azu g mailer User welcome --skip job
 ```
 
-`--skip job` leaves out the `welcome_later` method. The job file is still written.
+`--skip job` leaves out the `welcome_later` method and doesn't write the job file.
 {% endtab %}
 
 {% tab title="Preview" %}
@@ -55,7 +55,7 @@ azu g mailer User welcome --dry-run   # list the files, write nothing
 | --- | --- | --- |
 | `name` | The domain, such as `User`. The class is `<name>Mailer`, the file `<name>_mailer.cr` | required |
 | `methods` | One method per name, in snake case (`password_reset`). Subjects are generated from them | `welcome` |
-| `--skip job` | No `_later` methods | off |
+| `--skip job` | No `_later` methods and no job file | off |
 | `--force` | Overwrite existing files | off |
 | `--dry-run` | List the files, write nothing | off |
 
@@ -145,7 +145,7 @@ class UserMailer < Carbon::Email
 
 <summary>The job that sends it: src/jobs/user_job.cr</summary>
 
-For `azu g mailer User welcome password_reset` the job file is `src/jobs/user_job.cr` and it defines `UserMailerJob`. The header comment says it is generated "when using --async flag"; no such flag exists, and the file is written whether or not you pass `--skip job`.
+For `azu g mailer User welcome password_reset` the job file is `src/jobs/user_job.cr` and it defines `UserMailerJob`. The header comment says it is generated "when using --async flag"; no such flag exists. With `--skip job` the file isn't written.
 
 {% code title="src/jobs/user_job.cr (excerpt)" %}
 ```crystal
