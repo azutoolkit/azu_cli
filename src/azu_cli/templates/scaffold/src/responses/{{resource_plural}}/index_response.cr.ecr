@@ -2,7 +2,7 @@ require "json"
 
 module <%= app_module %>
   struct <%= namespace %>::IndexResponse
-    include Azu::Response
+    include Azu::Response::Negotiable
 
     @records : Array(<%= namespace %>::ShowResponse)
 
@@ -10,7 +10,7 @@ module <%= app_module %>
       @records = records.map { |record| <%= namespace %>::ShowResponse.new(record) }
     end
 
-    def render : String
+    def render_json : String
       @records.to_json
     end
   end

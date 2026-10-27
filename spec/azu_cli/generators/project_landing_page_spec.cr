@@ -118,5 +118,19 @@ describe "Generated project landing page" do
         css.should contain("@media (max-width: 40rem)")
       end
     end
+
+    # Negotiable sets the Content-Type; a plain Azu::Response sets none, and with nosniff a browser shows the page as text
+    it "answers / as negotiated HTML and /health as negotiated JSON" do
+      render_landing_project("web") do |dir|
+        page = File.read(File.join(dir, "src/pages/welcome/index_page.cr"))
+        page.should contain("include Azu::Response::Negotiable\n")
+        page.should contain("def render_html : String\n")
+      end
+      render_landing_project("api") do |dir|
+        page = File.read(File.join(dir, "src/pages/health/health_page.cr"))
+        page.should contain("include Azu::Response::Negotiable\n")
+        page.should contain("def render_json : String\n")
+      end
+    end
   end
 end

@@ -1,12 +1,12 @@
 module <%= app_module %>
   struct <%= namespace %>::NewPage
-    include Azu::Response
+    include Azu::Response::Negotiable
     include Azu::Templates::Renderable
 
     def initialize(@csrf_tag : String)
     end
 
-    def render
+    def render_html : String
       view data: {"<%= resource_singular %>" => {} of String => String, "csrf_tag" => @csrf_tag}
     end
   end
