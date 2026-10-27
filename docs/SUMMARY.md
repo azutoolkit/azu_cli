@@ -82,6 +82,7 @@
 - [Template Engine (ECR)](architecture/template-engine.md)
 - [Configuration System](architecture/configuration.md)
 - [Plugin System](architecture/plugins.md)
+- [Terminal UI (proposal)](architecture/terminal-ui.md)
 
 ## Help & Contributing
 
