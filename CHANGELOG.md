@@ -1,5 +1,10 @@
 # Changelog - Azu CLI
 
+## Unreleased - azu new usage errors, e2e_docker CA path
+
+- Fixed: `azu new` with an unknown `--type`, an unknown `--ci` or `--docker` for a cli project exits with 2 (invalid usage), like the other usage errors; it exited with 1
+- Fixed: `scripts/e2e_docker.sh` resolves a relative `E2E_DOCKER_CA` before it changes directory; a relative path failed with "E2E_DOCKER_CA is not a file"
+
 ## Unreleased - JoobQ code that compiles and runs against joobq 0.4.2
 
 - Fixed: the JoobQ code azu writes called API that joobq 0.4.2 does not have, so it did not compile. Jobs (`azu generate job`, the example job of `azu generate joobq`, the mailer job) set `@expires` to a number of seconds (`Int32`), while JoobQ's `expires` is the `Int64` Unix time in milliseconds when the job expires: they now write `<span>.from_now.to_unix_ms`. The worker of `azu generate joobq` called `JoobQ::Worker.start` and the one of `azu new` logged `JoobQ.config.redis_url`; both start the queues with `JoobQ.forge` and stop on INT and TERM
