@@ -10,6 +10,10 @@
   `--db postgresql` (or `--db mysql`) for the previous behaviour; projects generated before are unaffected
 - Fixed: the generated `config/azu.yml` named `postgresql` (port 5432) whatever `--db` was; it names the chosen
   adapter, and has no server settings on SQLite
+- Fixed: `--db mysql` wrote a PostgreSQL `DATABASE_URL` into `.env.development` / `.env.test`; it writes
+  `mysql://root@localhost:3306/<project>_<env>_db`
+- Fixed: an unknown `--db` (a typo such as `sqllite`) silently generated a PostgreSQL project; `azu new` refuses it
+  (exit 2, nothing written)
 - Fixed: the generated README listed `azu db create`-style commands that do not exist; it lists `azu db:setup`,
   `azu db:migrate`, `azu db:seed`, `azu db:reset`
 - Changed: `scripts/e2e_generated_app.sh` passes no `--db` when `E2E_DB` is unset, so it tests the default (and

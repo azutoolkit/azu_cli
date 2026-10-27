@@ -164,7 +164,7 @@ Pass `--db postgresql` (or `--db mysql`) for a server database.
 **For production applications with a database server.**
 
 ```bash
-azu new my_app --db postgres
+azu new my_app --db postgresql
 ```
 
 **Features:**
@@ -400,7 +400,7 @@ Tables used by models must be declared in `src/db/schema.cr`; migrations are run
 
 ```bash
 # Create blog with PostgreSQL
-azu new my_blog --db postgres --type web
+azu new my_blog --db postgresql --type web
 
 cd my_blog
 
@@ -420,7 +420,7 @@ azu serve
 
 ```bash
 # Create API service
-azu new user_api --type api --db postgres
+azu new user_api --type api --db postgresql
 
 cd user_api
 

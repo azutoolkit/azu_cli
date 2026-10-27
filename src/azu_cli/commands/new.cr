@@ -326,10 +326,15 @@ module AzuCLI
       end
 
       PROJECT_TYPES = ["web", "api", "cli"]
+      # The adapters Generate::Project knows, with the aliases it accepts
+      DATABASES = ["sqlite", "sqlite3", "postgresql", "postgres", "pg", "mysql"]
 
       private def delivery_error : String?
         unless PROJECT_TYPES.includes?(@project_type)
           return "Unknown project type '#{@project_type}'. Choose one of: #{PROJECT_TYPES.join(", ")}."
+        end
+        unless DATABASES.includes?(@database)
+          return "Unknown database adapter '#{@database}'. Choose one of: sqlite, postgresql, mysql."
         end
         unless AzuCLI::Generate::Project::CI_SETUPS.includes?(@ci_setup)
           return "Unknown CI setup '#{@ci_setup}'. Choose one of: #{AzuCLI::Generate::Project::CI_SETUPS.join(", ")}."

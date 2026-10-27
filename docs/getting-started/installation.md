@@ -212,7 +212,6 @@ Create a global configuration file:
 mkdir -p ~/.config/azu
 cat > ~/.config/azu/config.yml << EOF
 # Global Azu CLI configuration
-default_database: postgres
 default_template: web
 editor: code  # or vim, nano, etc.
 git_auto_init: true

@@ -470,7 +470,6 @@ You can create a configuration file (`azu.yml`) to set default options:
 ```yaml
 # azu.yml
 project:
-  default_database: postgres
   default_type: web
 
 development:

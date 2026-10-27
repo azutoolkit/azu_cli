@@ -356,6 +356,15 @@ describe AzuCLI::Generate::Project do
       end
     end
 
+    it "gives a MySQL project a MySQL DATABASE_URL in .env.development and .env.test" do
+      test_dir = "./tmp_test_mysql_env"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: "mysql").render(test_dir)
+
+      File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=mysql://root@localhost:3306/myapp_development_db\n")
+      File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=mysql://root@localhost:3306/myapp_test_db\n")
+    end
+
     it "uses the mysql and sqlite3 drivers in the initializer" do
       {"mysql" => "mysql", "sqlite3" => "sqlite3"}.each do |database, driver|
         generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database)

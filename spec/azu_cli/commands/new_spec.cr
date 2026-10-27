@@ -303,6 +303,22 @@ describe AzuCLI::Commands::New do
       end
     end
 
+    it "refuses a database adapter it does not know instead of generating a PostgreSQL project" do
+      TestHelpers::TestSetup.with_temp_project("bad_db_test") do |temp_project|
+        Dir.cd(temp_project.path) do
+          cli = AzuCLI::Commands::New.new
+          cli.parse_args(["--yes", "--db", "sqllite", "typo_app"])
+          TestHelpers::TestSetup.with_captured_output do |_|
+            result = cli.execute
+            result.success?.should be_false
+            result.error.should contain("Unknown database adapter 'sqllite'. Choose one of: sqlite, postgresql, mysql.")
+            result.exit_code.should eq(2)
+          end
+          Dir.exists?("typo_app").should be_false
+        end
+      end
+    end
+
     it "handles skip git flag" do
       TestHelpers::TestSetup.with_temp_project("no_git_test") do |temp_project|
         parent_dir = temp_project.path
