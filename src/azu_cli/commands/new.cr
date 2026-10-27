@@ -354,7 +354,7 @@ module AzuCLI
         # Module name (derived from project name) must also be valid
         module_name = name.split(/[-_]/).map(&.capitalize).join
         return false unless module_name.matches?(/^[A-Z][a-zA-Z0-9]*$/)
-        return false if CRYSTAL_Rhttps://github.com/azutoolkit/azu_cli/pull/44/conflict?name=src%252Fazu_cli%252Fcommands%252Fnew.cr&ancestor_oid=29310eb25dda691830f6111bc0439d7f6dfac357&base_oid=e81ce3fd4c29d9e890ae0bb6fae0de856cf61fd7&head_oid=c452e7cb9bf3d9892b55a670ad468d8956cde491ESERVED_WORDS.includes?(module_name.downcase)
+        return false if CRYSTAL_RESERVED_WORDS.includes?(module_name.downcase)
 
         true
       end
