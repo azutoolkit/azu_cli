@@ -38,7 +38,11 @@ To develop your CLI application:
 To start your Azu server:
 
 1. Install dependencies with `shards install`
-2. Check `DATABASE_URL` in `.env.development` (a SQLite file needs no server)
+<% if database_adapter == "sqlite3" -%>
+2. `DATABASE_URL` in `.env.development` is a SQLite file (`db/<%= @project.downcase %>_development.db`): no server to install
+<% else -%>
+2. Start your <%= @database %> server and check `DATABASE_URL` in `.env.development`
+<% end -%>
 3. Create and migrate your database with `azu db:setup`
 4. Start the development server with `azu serve`
 
@@ -50,7 +54,7 @@ over `.env`); other environments listen on `0.0.0.0` by default.
 
 ## Configuration
 
-- **Database**: Configure your database connection in `src/initializers/cql_config.cr`
+- **Database**: `DATABASE_URL` in `.env.development` and `.env.test`; `src/initializers/cql_config.cr` connects with it
 - **Server**: Adjust server settings in `src/server.cr`
 - **Environment**: Use environment variables for configuration
 
@@ -59,10 +63,10 @@ over `.env`); other environments listen on `0.0.0.0` by default.
 This project uses [CQL](https://github.com/azutoolkit/cql) as the ORM. Database operations:
 
 ```bash
-azu db create    # Create the database
-azu db migrate   # Run migrations
-azu db seed      # Seed with data
-azu db reset     # Reset database
+azu db:setup     # Create the database and run the migrations
+azu db:migrate   # Run migrations
+azu db:seed      # Seed with data
+azu db:reset     # Reset database
 ```
 <% end -%>
 

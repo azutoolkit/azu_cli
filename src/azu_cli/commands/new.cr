@@ -13,7 +13,8 @@ module AzuCLI
       property email : String = ""
       property license : String = "MIT"
       property project_type : String = "web"
-      property database : String = "postgresql"
+      # SQLite needs no server: `azu new blog && cd blog && azu db:setup && azu serve` works on a fresh machine
+      property database : String = "sqlite"
       property test_framework : String = "spec"
       property ci_setup : String = "GitHub Actions"
       property docker_support : Bool = false
@@ -504,7 +505,7 @@ module AzuCLI
         puts "  --license LICENSE         License (MIT, Apache-2.0, GPL-3.0, etc.)"
         puts "  --type TYPE               Project type (web, api, cli) [default: web]"
         puts "  --api                     Create API project (shorthand for --type api)"
-        puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: postgresql]"
+        puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: sqlite]"
         puts "  --test TEST               Test framework (spec, minitest) [default: spec]"
         puts "  --ci CI                   CI setup (\"GitHub Actions\" or \"None\") [default: GitHub Actions]"
         puts "  --no-ci                   Skip the CI workflow"

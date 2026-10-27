@@ -14,7 +14,7 @@ describe AzuCLI::Commands::New do
       command.email.should eq("")
       command.license.should eq("MIT")
       command.project_type.should eq("web")
-      command.database.should eq("postgresql")
+      command.database.should eq("sqlite")
       command.test_framework.should eq("spec")
       command.ci_setup.should eq("GitHub Actions")
       command.docker_support.should be_false
@@ -739,6 +739,13 @@ describe AzuCLI::Commands::New do
       command.project_name = "svc"
       command.project_type = "api"
       command.next_steps.should contain("Test: curl http://localhost:4000/health")
+    end
+
+    it "needs no database server by default, and says the default in --help" do
+      command = AzuCLI::Commands::New.new
+      command.database_hint.should be_nil
+      output = TestHelpers::TestSetup.with_captured_output { command.show_help }
+      output.stdout.should contain("--db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: sqlite]")
     end
 
     it "tells a server-backed database to be running and has no database step for a cli" do

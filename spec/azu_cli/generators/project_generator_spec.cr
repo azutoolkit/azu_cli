@@ -30,7 +30,7 @@ describe AzuCLI::Generate::Project do
 
     generator.license.should eq("MIT")
     generator.project_type.should eq("web")
-    generator.database.should eq("postgresql")
+    generator.database.should eq("sqlite")
     generator.test_framework.should eq("spec")
     generator.ci_setup.should eq("GitHub Actions")
     generator.docker_support.should be_false
@@ -210,7 +210,7 @@ describe AzuCLI::Generate::Project do
 
   describe "Azu + CQL setup" do
     it "generates a single cql_config initializer and no database initializer" do
-      generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com")
+      generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: "postgresql")
 
       test_dir = "./tmp_test_cql_config"
       FileUtils.mkdir_p(test_dir)
@@ -322,6 +322,38 @@ describe AzuCLI::Generate::Project do
       File.read("./shard.yml").should contain("crystal: '>= #{AzuCLI::Generate::Project::CRYSTAL_VERSION}'\n")
       checks = AzuCLI::Diagnostics::Checks.new(test_dir, ->(name : String) { ENV[name]? }, AzuCLI::Diagnostics::LocalSystem.new)
       checks.crystal_floor.should eq AzuCLI::Generate::Project::CRYSTAL_VERSION
+    end
+
+    it "defaults to SQLite: the sqlite3 driver, file URLs, and a CI workflow without a database service" do
+      test_dir = "./tmp_test_default_db"
+      FileUtils.mkdir_p(test_dir)
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
+
+      shard = File.read(File.join(test_dir, "shard.yml"))
+      shard.should match(/sqlite3:\n    github: crystal-lang\/crystal-sqlite3\n    version: ~> 0\.24\.0\n/)
+      shard.should_not contain("crystal-pg")
+      File.read(File.join(test_dir, "src", "initializers", "cql_config.cr")).should contain(%(require "sqlite3"))
+      File.read(File.join(test_dir, ".env.development")).should contain("DATABASE_URL=sqlite3://./db/myapp_development.db\n")
+      File.read(File.join(test_dir, ".env.test")).should contain("DATABASE_URL=sqlite3://./db/myapp_test.db\n")
+      workflow = File.read(File.join(test_dir, ".github", "workflows", "ci.yml"))
+      workflow.should contain("libsqlite3-dev")
+      workflow.should_not contain("services:")
+    end
+
+    it "names the chosen adapter in config/azu.yml, with a server port only for a server database" do
+      {"sqlite" => {"sqlite3", nil}, "postgresql" => {"postgresql", 5432}, "mysql" => {"mysql", 3306}}.each do |database, (adapter, port)|
+        test_dir = "./tmp_test_azu_yml_#{database}"
+        FileUtils.mkdir_p(test_dir)
+        AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database).render(test_dir)
+
+        yaml = File.read(File.join(test_dir, "config", "azu.yml"))
+        yaml.should contain(%(  adapter: "#{adapter}"\n))
+        if port
+          yaml.should contain("  port: #{port}\n  database:")
+        else
+          yaml.should_not contain("username:")
+        end
+      end
     end
 
     it "uses the mysql and sqlite3 drivers in the initializer" do
@@ -546,7 +578,7 @@ describe AzuCLI::Generate::Project do
 
     it "builds src/api.cr for an api project and has no data volume on postgresql" do
       FileUtils.mkdir_p("./tmp_test_docker_api")
-      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "api", docker_support: true).render("./tmp_test_docker_api")
+      AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", project_type: "api", database: "postgresql", docker_support: true).render("./tmp_test_docker_api")
 
       dockerfile = File.read("./tmp_test_docker_api/Dockerfile")
       dockerfile.should contain("src/api.cr -o bin/myapp")

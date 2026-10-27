@@ -14,7 +14,7 @@
 #
 # Usage: scripts/e2e_generated_app.sh [web|api]      (default: web)
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
-#        E2E_DB   database adapter for `azu new`     (default: sqlite)
+#        E2E_DB   database adapter for `azu new`     (default: unset, `azu new` picks its default, sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
 #        E2E_SKIP_DEV set to 1 to skip the `azu dev` check (two more compiles, a few minutes)
 #        E2E_REDIS_URL  a Redis to run a generated job through (a worker builds and runs it); unset skips that check
@@ -552,11 +552,17 @@ check_dev() {
 
 step "generate a $TYPE project ($DB) with $AZU_BIN"
 cd "$WORK"
+# Without E2E_DB no --db: the default of `azu new` is what is tested.
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
-  --type "$TYPE" --db "$DB" --no-git --no-docker --ci "GitHub Actions" >"$WORK/new.log" 2>&1 ||
+  --type "$TYPE" ${E2E_DB:+--db "$E2E_DB"} --no-git --no-docker --ci "GitHub Actions" >"$WORK/new.log" 2>&1 ||
   { cat "$WORK/new.log"; fail "azu new failed"; }
 cat "$WORK/new.log"
 cd "$NAME"
+if [ -z "${E2E_DB:-}" ]; then
+  grep -q "crystal-lang/crystal-sqlite3" shard.yml || fail "azu new without --db does not default to SQLite"
+  ! grep -q "will/crystal-pg" shard.yml || fail "azu new without --db still depends on pg"
+  echo "ok: azu new defaults to SQLite"
+fi
 
 step "the next steps name the port the app listens on"
 env_port="$(sed -n 's/^PORT=//p' .env)"

@@ -40,7 +40,7 @@ module AzuCLI
 
       def initialize(@project : String, @module_name : String, @author : String, @email : String,
                      @license : String = "MIT", @project_type : String = "web",
-                     @database : String = "postgresql", @test_framework : String = "spec",
+                     @database : String = "sqlite", @test_framework : String = "spec",
                      @ci_setup : String = "GitHub Actions", @docker_support : Bool = false,
                      @git_init : Bool = true, @include_example : Bool = true, @include_joobq : Bool = true,
                      @env : String = "development")
