@@ -138,3 +138,29 @@ describe AzuCLI::DevServer::LineSink do
     lines.should eq ["[1/14] Parse   ", "[2/14] Semantic", "Error: boom"]
   end
 end
+
+describe AzuCLI::DevServer::TelemetryServer do
+  it "receives the app's snapshots on a socket in a directory only this user can enter, and cleans up" do
+    server = AzuCLI::DevServer::TelemetryServer.new
+    received = Channel(JSON::Any).new(1)
+    server.start { |data| received.send(data) }
+    begin
+      (File.info(File.dirname(server.path)).permissions.value & 0o077).should eq 0
+      client = UNIXSocket.new(server.path)
+      client.puts %({"v":2,"ignored":true})
+      client.puts %({"v":1,"requests":{"total":3}})
+      client.flush
+      select
+      when data = received.receive
+        data.dig("requests", "total").as_i.should eq 3
+      when timeout(2.seconds)
+        fail "no snapshot arrived"
+      end
+      client.close
+    ensure
+      server.stop
+    end
+    File.exists?(server.path).should be_false
+    Dir.exists?(File.dirname(server.path)).should be_false
+  end
+end

@@ -52,6 +52,7 @@ describe AzuCLI::GeneratePlan do
       Dir.mkdir_p(File.join(project, "bin"))
       File.write(File.join(project, "bin", "blog"), "binary")
       AzuCLI::GeneratePlan.copy_project(project, shadow)
+      (File.info(shadow).permissions.value & 0o077).should eq 0 # it holds a copy of .env
       File.symlink?(File.join(shadow, "lib")).should be_true
       Dir.exists?(File.join(shadow, ".git")).should be_false
       File.exists?(File.join(shadow, "bin", "blog")).should be_false

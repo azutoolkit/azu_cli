@@ -188,13 +188,18 @@ module AzuCLI
       getter path : String
       @server : UNIXServer?
 
-      def initialize(@path : String = File.join(Dir.tempdir, "azu-dev-#{Process.pid}.sock"))
+      # The socket lives in a directory only this user can enter, so no one else can connect, even in the moment
+      # between creating the socket and restricting it.
+      def initialize(@directory : String = File.join(Dir.tempdir, "azu-dev-#{Process.pid}-#{Random::Secure.hex(4)}"))
+        @path = File.join(@directory, "telemetry.sock")
       end
 
       def start(&on_snapshot : JSON::Any ->) : Nil
+        Dir.mkdir_p(@directory, 0o700)
+        File.chmod(@directory, 0o700)
         File.delete?(path)
         server = UNIXServer.new(path)
-        File.chmod(path, 0o600) # only processes of this user may report
+        File.chmod(path, 0o600)
         @server = server
         spawn do
           while client = server.accept?
@@ -216,6 +221,7 @@ module AzuCLI
       def stop : Nil
         @server.try(&.close) rescue nil
         File.delete?(path)
+        Dir.delete(@directory) rescue nil
       end
     end
 

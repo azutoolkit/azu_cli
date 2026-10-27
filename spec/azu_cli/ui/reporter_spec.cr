@@ -57,3 +57,12 @@ describe AzuCLI::UI::Reporter do
     io.to_s.should eq "blog is ready · ✔\n  cd blog\n"
   end
 end
+
+describe "AzuCLI.json_output?" do
+  it "is on for --ui json in either spelling" do
+    AzuCLI.json_output?(["new", "blog", "--ui", "json"]).should be_true
+    AzuCLI.json_output?(["new", "blog", "--ui=json"]).should be_true
+    AzuCLI.json_output?(["new", "blog", "--ui", "plain"]).should be_false
+    AzuCLI.json_output?(["new", "json"]).should be_false
+  end
+end

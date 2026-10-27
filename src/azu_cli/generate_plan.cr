@@ -55,7 +55,7 @@ module AzuCLI
     end
 
     def self.copy_project(from : String, to : String) : Nil
-      Dir.mkdir_p(to)
+      Dir.mkdir_p(to, 0o700) # the copy holds the project's .env: no one else may read it
       Dir.each_child(from) do |name|
         next if SKIP.includes?(name) || name.ends_with?(".db") || name.ends_with?(".sqlite3")
         source = File.join(from, name)
