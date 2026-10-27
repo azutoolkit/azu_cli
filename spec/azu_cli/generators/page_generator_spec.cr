@@ -21,6 +21,15 @@ describe "page generators" do
       content.should contain(%("post" => @post.attributes.transform_keys(&.to_s)))
     end
 
+    # Negotiable sets the Content-Type; a plain Azu::Response sets none, and with nosniff a browser shows the page as text
+    it "answers with negotiated HTML" do
+      %w(index show new edit).each do |action|
+        content = page.call(action)
+        content.should contain("include Azu::Response::Negotiable\n")
+        content.should contain("def render_html : String\n")
+      end
+    end
+
     it "gives the form pages a CSRF tag" do
       page.call("new").should contain("def initialize(@csrf_tag : String)")
       page.call("edit").should contain("@post : Post, @csrf_tag : String")
@@ -37,6 +46,8 @@ describe "page generators" do
         content = rendered(AzuCLI::Generate::Response.new("Post", "show", attributes), "src/responses", "posts/show_response.cr")
 
         content.should contain("struct Posts::ShowResponse")
+        content.should contain("include Azu::Response::Negotiable\n")
+        content.should contain("def render_json : String\n")
         content.should contain("include JSON::Serializable")
         content.should contain("getter published : Bool")
         content.should contain("@title = record.title")
@@ -48,6 +59,8 @@ describe "page generators" do
         content = rendered(AzuCLI::Generate::Response.new("Post", "index", attributes), "src/responses", "posts/index_response.cr")
 
         content.should contain("Posts::ShowResponse.new(record)")
+        content.should contain("include Azu::Response::Negotiable\n")
+        content.should contain("def render_json : String\n")
       end
     end
   end

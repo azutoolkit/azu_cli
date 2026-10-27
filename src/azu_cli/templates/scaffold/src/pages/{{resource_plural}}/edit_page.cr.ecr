@@ -1,12 +1,12 @@
 module <%= app_module %>
   struct <%= namespace %>::EditPage
-    include Azu::Response
+    include Azu::Response::Negotiable
     include Azu::Templates::Renderable
 
     def initialize(@<%= resource_singular %> : <%= model_name %>, @csrf_tag : String)
     end
 
-    def render
+    def render_html : String
       view data: {"<%= resource_singular %>" => @<%= resource_singular %>.attributes.transform_keys(&.to_s), "csrf_tag" => @csrf_tag}
     end
   end

@@ -65,12 +65,12 @@ module AzuCLI
           # Response class for #{@action} action
           # Generated from OpenAPI specification
           struct #{response_class}
-            include Azu::Response
+            include Azu::Response::Negotiable
             include JSON::Serializable
 
           #{property_defs}
 
-            def render : String
+            def render_json : String
               to_json
             end
           end
@@ -83,10 +83,10 @@ module AzuCLI
           # Response class for #{@action} action
           # Generated from OpenAPI specification
           struct #{response_class}
-            include Azu::Response
+            include Azu::Response::Negotiable
             include JSON::Serializable
 
-            def render : String
+            def render_json : String
               to_json
             end
           end
