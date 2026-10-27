@@ -88,6 +88,12 @@ module AzuCLI
         CONFIG
       end
 
+      # Teeplate renders these (it never calls a `filter`). Without async delivery (`--skip job`) nothing
+      # enqueues the mailer job, so its file is not written.
+      def rendered_file_entries
+        file_entries.reject { |entry| !@async && entry.path.to_s.starts_with?("src/jobs/") }
+      end
+
       # Check if async delivery is enabled
       def async_enabled? : Bool
         @async

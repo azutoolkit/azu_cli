@@ -26,6 +26,18 @@ describe AzuCLI::Commands::Generate do
     end
   end
 
+  describe "#show_help" do
+    it "only suggests middleware types the generator knows" do
+      known = %w(authentication authorization logging cors rate_limiting)
+
+      output = TestHelpers::TestSetup.with_captured_output { AzuCLI::Commands::Generate.new.show_help }.stdout
+
+      types = output.scan(/azu generate middleware \w+ --type (\w+)/).map(&.[1])
+      types.should_not be_empty
+      types.each { |type| known.should contain(type) }
+    end
+  end
+
   describe "#execute" do
     it "handles generators without name requirements" do
       repository = Dir.current
