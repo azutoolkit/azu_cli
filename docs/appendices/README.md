@@ -56,9 +56,14 @@ Definitions and explanations of terms used throughout the Azu CLI documentation.
 
 ### Version Compatibility
 
-| Azu CLI Version | Crystal Version | Azu Framework | CQL ORM |
-| --------------- | --------------- | ------------- | ------- |
-| 0.1.x           | 1.22.1+         | ~> 0.5.118    | 0.0.604 |
+| Azu CLI Version         | Crystal Version | Azu Framework | CQL ORM | Session   |
+| ----------------------- | --------------- | ------------- | ------- | --------- |
+| releases after 0.1.44   | 1.22.1+         | ~> 0.10.1     | 0.0.604 | ~> 1.1    |
+| 0.1.44 and earlier      | 1.22.1+         | ~> 0.5.118    | 0.0.604 | ~> 1.0.31 |
+
+`~> 0.10.1` is `>= 0.10.1, < 0.11.0`: azu is 0.x and can change its API between minor versions, so a project takes
+the next minor by editing its `shard.yml` (see azu's `docs/reference/breaking-changes.md`), not on `shards update`.
+`~> 1.0.31` resolved to session's stray `v1.0.32` tag; `~> 1.1` installs the 1.1 release.
 
 Generated projects declare `crystal: '>= 1.22.1'`, which is what azu 0.5.124 and newer are built and tested on, so
 installing their shards does not need `--ignore-crystal-version`. Shards only warns (`may be incompatible with
