@@ -1,22 +1,16 @@
 require "./initializers/joobq"
 require "./jobs/**"
 
-# JoobQ Worker
-# This file starts the JoobQ background job worker
+# JoobQ worker: runs the queues configured in src/initializers/joobq.cr (and config/joobq.<env>.yml).
+# Start it with `azu jobs:worker`, or `crystal run src/worker.cr -- --worker`.
+# Redis: REDIS_URL, else the URL in src/initializers/joobq.cr
 
-module <%= @project_name.camelcase %>
-  class Worker
-    def self.start
-      puts "Starting JoobQ Worker..."
-      puts "Queue: <%= @default_queue %>"
-      puts "Workers: <%= @workers %>"
-      puts "Redis URL: <%= @redis_url %>"
+Log.info { "Starting JoobQ workers for queues: #{JoobQ.config.queues.keys.join(", ")}" }
 
-      # Start the JoobQ worker
-      JoobQ::Worker.start
-    end
-  end
+Signal::INT.trap do
+  Log.info { "Stopping JoobQ workers" }
+  exit
 end
 
-# Start the worker when this file is run directly
-<%= @project_name.camelcase %>::Worker.start if __FILE__ == PROGRAM_NAME
+# Starts the queues and blocks
+JoobQ.forge

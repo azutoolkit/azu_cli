@@ -48,7 +48,7 @@ module AzuCLI
             <<-ASYNC
               # Deliver #{method_name} email asynchronously
               def #{method_name}_later(to email : Carbon::Address, **params)
-                #{@camel_case_name}Job.perform_later(
+                #{@camel_case_name}MailerJob.enqueue(
                   action: "#{method_name}",
                   to: email.to_s,
                   params: params.to_h

@@ -9,8 +9,8 @@
 # To enqueue this job:
 #   <%= job_struct_name %>.enqueue<%= has_parameters? ? "(#{example_arguments})" : "" %>
 #
-# To schedule this job:
-#   <%= job_struct_name %>.schedule(in: 5.minutes<%= has_parameters? ? ", #{example_arguments}" : "" %>)
+# To run it in 5 minutes:
+#   <%= job_struct_name %>.delay(for: 5.minutes<%= has_parameters? ? ", #{example_arguments}" : "" %>)
 
 struct <%= job_struct_name %>
   include JoobQ::Job
@@ -19,8 +19,8 @@ struct <%= job_struct_name %>
   @queue   = "<%= queue %>"
   # Number of retries on failure
   @retries = <%= retries %>
-  # Job expiration time
-  @expires = <%= expiration_seconds %>
+  # A job not run within <%= expires %> expires (JoobQ stores the Unix time in milliseconds)
+  @expires = <%= expiration_time %>
 
 <% if has_parameters? %>
   # Job parameters
@@ -30,7 +30,7 @@ struct <%= job_struct_name %>
   end
 
 <% else %>
-  def initialize()
+  def initialize
   end
 
 <% end %>
@@ -49,7 +49,6 @@ struct <%= job_struct_name %>
   end
 end
 
-# Add this job to the registry when file is required
-# Uncomment the following line in src/initializers/joobq.cr:
-# JoobQ::QueueFactory.register_job_type(<%= job_struct_name %>)
+# A worker runs it once a queue does: in the JoobQ.configure block of src/initializers/joobq.cr add
+#   queue "<%= queue %>", 2, <%= job_struct_name %>
 

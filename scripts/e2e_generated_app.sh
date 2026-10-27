@@ -6,6 +6,9 @@
 # A web project also gets a Chat channel (two WebSocket clients) and authentication (sign up, sign in,
 # a protected page, sign out; the password is stored as a bcrypt digest).
 #
+# The JoobQ code it generates (a job, the worker and initializer of `azu new` and of `azu generate joobq`) must
+# compile against the pinned joobq.
+#
 # It also drives the CLI's own development commands against the project: `azu routes`, `azu doctor`, and
 # `azu dev` (rebuild and restart on a source change, no rebuild for a template, a failed build keeps the old app).
 #
@@ -729,6 +732,19 @@ if [ "$SCAFFOLD" = 1 ] && [ "${E2E_SKIP_DEV:-0}" != 1 ]; then
   wait "$SERVER_PID" 2>/dev/null || true
   SERVER_PID=""
   check_dev
+fi
+
+# The JoobQ code azu writes must compile against the joobq the project pins: a job (with a queue a worker runs),
+# the worker of `azu new`, then the files of `azu generate joobq`. --no-codegen type-checks without linking.
+if grep -q "^  joobq:" shard.yml; then
+  step "generated JoobQ code compiles against the pinned joobq"
+  "$AZU_BIN" generate job SendWelcome email:string user_id:int64
+  printf 'JoobQ.configure do\n  queue "default", 2, SendWelcomeJob\nend\n' >src/initializers/zz_e2e_queues.cr
+  crystal build --no-codegen src/worker.cr || fail "the worker of azu new does not compile with a generated job"
+  echo "ok: azu new's worker and a generated job compile"
+  "$AZU_BIN" generate joobq --force
+  crystal build --no-codegen src/worker.cr || fail "the worker of azu generate joobq does not compile"
+  echo "ok: azu generate joobq's worker, initializer and example job compile"
 fi
 
 step "PASS: generated $TYPE app compiles, boots and serves"

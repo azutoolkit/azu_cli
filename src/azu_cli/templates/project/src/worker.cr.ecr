@@ -1,30 +1,15 @@
 require "./<%=project%>"
-require "./initializers/joobq"
 
-# JoobQ Worker Process
-# This file starts the background job worker processes
-# Run with: crystal run src/worker.cr -- --worker
-# Or use: azu jobs:worker
+# JoobQ worker process: runs the queues configured in src/initializers/joobq.cr.
+# Start it with `azu jobs:worker`, or `crystal run src/worker.cr -- --worker`.
 
-Log.info { "🚀 Starting JoobQ workers..." }
-Log.info { "Redis: #{JoobQ.config.redis_url}" }
-Log.info { "Default Queue: #{JoobQ.config.default_queue}" }
-Log.info { "Worker Batch Size: #{JoobQ.config.worker_batch_size}" }
-Log.info { "Retries: #{JoobQ.config.retries}" }
-Log.info { "" }
-Log.info { "Press Ctrl+C to stop workers" }
-Log.info { "" }
+Log.info { "Starting JoobQ workers for queues: #{JoobQ.config.queues.keys.join(", ")}" }
+Log.info { "Default queue: #{JoobQ.config.default_queue}, retries: #{JoobQ.config.retries}" }
 
-# Start the JoobQ forge (worker processes)
-# The forge will process jobs from all configured queues
-JoobQ.forge
-
-# Handle graceful shutdown
 Signal::INT.trap do
-  Log.info { "\n🛑 Gracefully stopping workers..." }
-  # JoobQ automatically handles cleanup
-  exit(0)
+  Log.info { "Stopping JoobQ workers" }
+  exit
 end
 
-# Keep the process running
-sleep
+# Starts the queues and blocks
+JoobQ.forge

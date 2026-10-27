@@ -61,20 +61,20 @@ describe AzuCLI::Generate::Job do
     end
   end
 
-  describe "#expiration_seconds" do
-    it "converts expiration times to seconds" do
+  describe "#expiration_time" do
+    it "turns the expiry into the Unix time in milliseconds JoobQ stores" do
       generator = AzuCLI::Generate::Job.new("Test")
 
-      generator.expiration_seconds.should eq("1.days.total_seconds.to_i")
+      generator.expiration_time.should eq("1.days.from_now.to_unix_ms")
 
       generator = AzuCLI::Generate::Job.new("Test", expires: "30.minutes")
-      generator.expiration_seconds.should eq("30.minutes.total_seconds.to_i")
+      generator.expiration_time.should eq("30.minutes.from_now.to_unix_ms")
 
       generator = AzuCLI::Generate::Job.new("Test", expires: "6.hours")
-      generator.expiration_seconds.should eq("6.hours.total_seconds.to_i")
+      generator.expiration_time.should eq("6.hours.from_now.to_unix_ms")
 
       generator = AzuCLI::Generate::Job.new("Test", expires: "7.days")
-      generator.expiration_seconds.should eq("7.days.total_seconds.to_i")
+      generator.expiration_time.should eq("7.days.from_now.to_unix_ms")
     end
   end
 
@@ -258,8 +258,8 @@ describe AzuCLI::Generate::Job do
         content.should contain("include JoobQ::Job")
         content.should contain("@queue   = \"default\"")
         content.should contain("@retries = 3")
-        content.should contain("@expires = 1.days.total_seconds.to_i")
-        content.should contain("def initialize()")
+        content.should contain("@expires = 1.days.from_now.to_unix_ms")
+        content.should contain("  def initialize\n")
         content.should contain("def perform")
         content.should contain("rescue ex")
       ensure
@@ -287,7 +287,7 @@ describe AzuCLI::Generate::Job do
         content.should contain("struct EmailJob")
         content.should contain("@queue   = \"emails\"")
         content.should contain("@retries = 5")
-        content.should contain("@expires = 6.hours.total_seconds.to_i")
+        content.should contain("@expires = 6.hours.from_now.to_unix_ms")
         content.should contain("@email_address : String, @subject : String, @body : String")
         content.should contain("Log.info { \"Processing email_address: \"+@email_address.to_s }")
         content.should contain("Log.info { \"Processing subject: \"+@subject.to_s }")
@@ -317,7 +317,7 @@ describe AzuCLI::Generate::Job do
         content.should contain("struct ImageProcessingJob")
         content.should contain("@queue   = \"images\"")
         content.should contain("@retries = 2")
-        content.should contain("@expires = 30.minutes.total_seconds.to_i")
+        content.should contain("@expires = 30.minutes.from_now.to_unix_ms")
         content.should contain("@user_id : Int64, @image_path : String, @sizes : Array(String)")
         content.should contain("@sizes.each { |item| Log.info { \"Processing item: \"+item.to_s } }")
       ensure
@@ -398,7 +398,7 @@ describe AzuCLI::Generate::Job do
 
           content = File.read("src/jobs/simple_job.cr")
           content.should contain("#   SimpleJob.enqueue\n")
-          content.should contain("#   SimpleJob.schedule(in: 5.minutes)\n")
+          content.should contain("#   SimpleJob.delay(for: 5.minutes)\n")
         end
       end
     end
@@ -448,7 +448,7 @@ describe AzuCLI::Generate::Job do
           job_file = "src/jobs/email_job.cr"
           content = File.read(job_file)
 
-          content.should contain("@expires = 2.hours.total_seconds.to_i")
+          content.should contain("@expires = 2.hours.from_now.to_unix_ms")
         end
       end
     end
@@ -608,19 +608,19 @@ describe AzuCLI::Generate::Job do
       it "handles different expiration formats" do
         generator = AzuCLI::Generate::Job.new("TestJob")
 
-        generator.expiration_seconds.should eq("1.days.total_seconds.to_i")
+        generator.expiration_time.should eq("1.days.from_now.to_unix_ms")
         # Test different expiration times by creating new generators
         generator_30min = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "30.minutes")
-        generator_30min.expiration_seconds.should eq("30.minutes.total_seconds.to_i")
+        generator_30min.expiration_time.should eq("30.minutes.from_now.to_unix_ms")
 
         generator_1day = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "1.day")
-        generator_1day.expiration_seconds.should eq("1.days.total_seconds.to_i")
+        generator_1day.expiration_time.should eq("1.days.from_now.to_unix_ms")
 
         generator_2hours = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "2.hours")
-        generator_2hours.expiration_seconds.should eq("2.hours.total_seconds.to_i")
+        generator_2hours.expiration_time.should eq("2.hours.from_now.to_unix_ms")
 
         generator_2weeks = AzuCLI::Generate::Job.new("TestJob", {} of String => String, "default", 3, "2.weeks")
-        generator_2weeks.expiration_seconds.should eq("2.weeks.total_seconds.to_i")
+        generator_2weeks.expiration_time.should eq("2.weeks.from_now.to_unix_ms")
       end
 
       it "generates job with scheduling information" do
@@ -637,7 +637,7 @@ describe AzuCLI::Generate::Job do
 
           content.should contain("@queue   = \"default\"")
           content.should contain("@retries = 3")
-          content.should contain("@expires = 1.hour.total_seconds.to_i")
+          content.should contain("@expires = 1.hour.from_now.to_unix_ms")
         end
       end
     end

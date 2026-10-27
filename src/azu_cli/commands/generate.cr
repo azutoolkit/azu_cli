@@ -383,8 +383,8 @@ module AzuCLI
 
         Logger.info("")
         Logger.info("Next steps:")
-        Logger.info("  1. Register job in src/initializers/joobq.cr:")
-        Logger.info("     JoobQ::QueueFactory.register_job_type(#{job_name})")
+        Logger.info("  1. Give it a queue in the JoobQ.configure block of src/initializers/joobq.cr:")
+        Logger.info("     queue \"#{generator.queue}\", 2, #{job_name}")
         Logger.info("  2. Implement job logic in the perform method")
         Logger.info("  3. Start worker: azu jobs:worker")
         Logger.info("")
@@ -427,6 +427,7 @@ module AzuCLI
         Logger.info("   dependencies:")
         Logger.info("     joobq:")
         Logger.info("       github: azutoolkit/joobq")
+        Logger.info("       version: ~> 0.4.2")
         Logger.info("     redis:")
         Logger.info("       github: stefanwille/crystal-redis")
         Logger.info("")

@@ -1,48 +1,43 @@
 require "joobq"
-# Optional: Uncomment if using JoobQPro
-# require "joobq_pro"
-
-# Require all job classes
 require "../jobs/**"
 
-# Register job types with QueueFactory before loading configuration
+# Queues from config/joobq.<CRYSTAL_ENV>.yml name their job classes: register each one here.
 <% if @create_example_job -%>
 JoobQ::QueueFactory.register_job_type(<%= @example_job_name %>)
 <% end -%>
-# Add your job classes here as you create them
-# Example:
 # JoobQ::QueueFactory.register_job_type(EmailJob)
-# JoobQ::QueueFactory.register_job_type(TestJob)
 
-# Initialize JoobQ configuration from YAML file
-# This will load the configuration from config/joobq.yml based on the environment
-environment = ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
+environment = ENV["CRYSTAL_ENV"]? || "development"
 config_file = "config/joobq.#{environment}.yml"
+redis_url = ENV["REDIS_URL"]?
 
 if File.exists?(config_file)
   JoobQ.initialize_config_with(:file, config_file)
-  Log.info { "JoobQ initialized with config: #{config_file}" }
 else
   Log.warn { "JoobQ config file not found: #{config_file}, using defaults" }
+  redis_url ||= <%= @redis_url.inspect %>
 
-  # Fallback to manual configuration if no config file exists
   JoobQ.configure do |config|
-    config.redis_url = ENV["REDIS_URL"]? || "<%= @redis_url rescue "redis://localhost:6379" %>"
-    config.default_queue = "<%= @default_queue rescue "default" %>"
+    config.default_queue = <%= @default_queue.inspect %>
     config.retries = 5
     config.timeout = 30.seconds
-    config.timezone = Time::Location.load("UTC")
+    config.time_location = "UTC"
     config.worker_batch_size = 50
     config.rest_api_enabled = true
+<% if @create_example_job -%>
+    queue <%= @default_queue.inspect %>, <%= @workers %>, <%= @example_job_name %>
+<% end -%>
   end
 end
 
-# Optional: Add JoobQPro middleware for enhanced features
-# JoobQ.config.middlewares << JoobQPro::Middleware::Metrics.instance
+# JoobQ's Redis store takes a host, a port and a password; REDIS_URL (`azu jobs:worker` sets it) names all three.
+if redis_url
+  redis = URI.parse(redis_url)
+  JoobQ.config.store = JoobQ::RedisStore.new(host: redis.host || "localhost", port: redis.port || 6379, password: redis.password)
+end
 
 # Disable REST API for worker processes
 if ARGV.includes?("--worker")
   JoobQ.config.rest_api_enabled = false
   Log.info { "JoobQ REST API disabled for worker process" }
 end
-
