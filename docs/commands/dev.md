@@ -4,8 +4,31 @@ Runs the app and keeps it current while you edit: it rebuilds (`shards build <ta
 restarts the app when the code changes.
 
 ```bash
-azu dev [--port PORT] [--host HOST] [--env NAME] [--debounce MS] [--interval MS]
+azu dev [--port PORT] [--host HOST] [--env NAME] [--debounce MS] [--interval MS] [--ui rich|plain]
 ```
+
+## The dashboard
+
+On a terminal of at least 60x16 (and not in CI) `azu dev` opens a full-screen dashboard; `--ui plain` (or `AZU_UI=plain`)
+keeps the line output described below.
+
+| Panel    | Shows                                                                                                   |
+| -------- | ------------------------------------------------------------------------------------------------------- |
+| Build    | The compiler's stage while it builds (`crystal build --progress`, passed through `shards build`), the build time, the last builds, the changed files |
+| App      | pid, uptime, restarts, crashes, resident memory with its trend, the GC heap                             |
+| Requests | Rate, p50/p95, 4xx/5xx and the last requests, from the app                                               |
+| SQL      | Query count, average, slow queries, the connection pool, N+1 alerts with the endpoint and caller, the slowest statements, from the app |
+| Jobs     | Pending, busy and failed jobs per queue of `config/jobs.yml`, read from `REDIS_URL`                      |
+| Log      | The app's stdout and stderr (the dashboard reads them through pipes)                                     |
+
+A failed build covers the dashboard with the error location and the compiler's excerpt while the previous build keeps
+serving; Esc goes back. Keys: `1`-`5` panels, `r` rebuild now, `l` log, `c` clear the log, `q` or Ctrl-C quit. Quitting
+prints a one-line summary of the session.
+
+Requests and SQL come from the app: `azu dev` listens on a Unix socket (mode 0600) and passes its path to the app as
+`AZU_TELEMETRY_SOCKET`; an app that requires `azu/dev` and runs in development writes one JSON snapshot per second
+(azu's `Dev::Telemetry`, from the same performance monitor and query store as `/dev-dashboard`; requests need
+`PERFORMANCE_MONITORING=true`). With an azu that does not have it the two panels say what they need.
 
 ## What happens on a change
 
@@ -37,6 +60,7 @@ A build is "incremental" only in the sense that Crystal caches the code it gener
 | `--env NAME`      | `CRYSTAL_ENV` for the app (same rule)                                                   |
 | `--debounce MS`   | Quiet time before a change is acted on (default 300)                                    |
 | `--interval MS`   | Polling interval (default 250)                                                          |
+| `--ui MODE`       | `rich` (the dashboard) or `plain` (lines)                                               |
 | `--help`          | Show the help                                                                           |
 
 ## `azu dev` or `azu serve`

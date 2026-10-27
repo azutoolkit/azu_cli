@@ -159,7 +159,7 @@ describe AzuCLI::Generate::Middleware do
       logic = generator.middleware_logic
 
       logic.should contain("Log request details")
-      logic.should contain("Time.monotonic")
+      logic.should contain("Time.instant")
       logic.should contain("Log.info")
       logic.should contain("Log response details")
     end
@@ -316,7 +316,7 @@ describe AzuCLI::Generate::Middleware do
         content = File.read(middleware_file)
         content.should contain("class RequestLoggingMiddleware")
         content.should contain("Log request details")
-        content.should contain("Time.monotonic")
+        content.should contain("Time.instant")
         content.should contain("Log.info")
         content.should contain("should_log?")
       ensure

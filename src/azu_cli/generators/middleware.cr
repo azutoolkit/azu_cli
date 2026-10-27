@@ -145,13 +145,13 @@ module AzuCLI
       private def logging_logic : String
         <<-LOG
             # Log request details
-            start_time = Time.monotonic
+            start_time = Time.instant
             Log.info { "Request: " + context.request.method + " " + context.request.path }
 
             call_next(context)
 
             # Log response details
-            end_time = Time.monotonic
+            end_time = Time.instant
             duration = (end_time - start_time).total_milliseconds
             Log.info { "Response: " + context.response.status_code.to_s + " (" + duration.to_s + "ms)" }
         LOG

@@ -360,3 +360,4 @@ Database integration through CQL ORM:
 - [Configuration System](configuration.md) - Configuration management
 - [Logging System](logging.md) - Logging architecture
 - [Plugin System](plugins.md) - The internal command hooks
+- [Terminal UI (proposal)](terminal-ui.md) - HUD, wizard and generate preview design

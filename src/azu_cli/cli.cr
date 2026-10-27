@@ -29,6 +29,7 @@ module AzuCLI
       # Code generation commands
       register_command("generate", Commands::Generate)
       register_command("g", Commands::Generate) # Alias
+      register_command("undo", Commands::Undo)
 
       # Database commands
       register_command("db:create", Commands::DB::Create)

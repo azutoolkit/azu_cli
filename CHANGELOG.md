@@ -1,5 +1,26 @@
 # Changelog - Azu CLI
 
+## Unreleased - Terminal UI: the azu new wizard, the azu dev dashboard, previews for azu generate
+
+- Added: `src/azu_cli/ui`, a terminal UI engine built on the standard library only: terminal detection (color depth from
+  `COLORTERM`/`TERM`, `NO_COLOR`, `FORCE_COLOR`, UTF-8 and CJK locales), design tokens with a 16/256/true-color mapping
+  and an ASCII glyph fallback, a cell frame with cards, a diffing full-screen renderer and an inline renderer (both with
+  synchronized output), a key parser and a fiber event loop. `UI::Reporter` shows a command's steps as a live card
+  (`rich`), one line per step (`plain`) or NDJSON (`json`); `--ui` and `AZU_UI` choose
+- Added: `azu new` on a terminal opens a wizard (one step per existing option, a review with the same choices as one
+  command line), then a live progress card (files, secrets, git, shards with a count, type-check) and a done card.
+  `--yes`, pipes and CI keep the previous flow; the shards and type-check output is shown when they fail
+- Added: `azu dev` on a terminal of at least 60x16 opens a dashboard (build stages from `crystal build --progress`,
+  build history, app pid/uptime/restarts/crashes/RSS, requests and SQL with N+1 alerts from the app, JoobQ queue sizes,
+  the app's log, a failed-build card with the error location while the previous build keeps serving). The app reports
+  through a Unix socket (`AZU_TELEMETRY_SOCKET`, mode 0600) when it uses an azu with `Dev::Telemetry` (azu branch
+  `claude/pensive-davinci-equizt`); without it the panels say so. `--ui plain` keeps the line output
+- Added: `azu generate` on a terminal previews every file it would write and the diff of every file it would change
+  (rendered in a copy of the project), type-checks in the background and writes on Enter exactly what was shown;
+  `--dry-run`, `--check`, `--yes`; no arguments open a menu. `azu undo` reverts the last write (`--dry-run`, `--list`),
+  leaving files edited since
+- Changed: the CLI's log output is synchronous, so a log line is never written in the middle of a live card
+
 ## Unreleased - `azu new` defaults to SQLite
 
 - Changed (visible default): `azu new` uses SQLite instead of PostgreSQL when `--db` is not given (also the default
@@ -23,7 +44,7 @@
 
 - Changed: the `generated-app` CI job has a `redis:7` service and sets `E2E_REDIS_URL`, so
   `scripts/e2e_generated_app.sh` runs a generated job through a worker in CI; before, CI only type-checked it
-  
+
 ## Unreleased - `azu new --type cli` generates a cli project
 
 - Fixed: `azu new --type cli` generated the whole web project (`src/server.cr`, endpoints, pages, `src/worker.cr`,
@@ -142,7 +163,7 @@
 
 - Changed: `Generate::Project::CRYSTAL_VERSION` is 1.22.1: generated projects get `.tool-versions` `crystal 1.22.1`, a Dockerfile `FROM crystallang/crystal:1.22.1` and a CI workflow in that container. The generated `shard.yml` declared `crystal: '>= 1.19.1'` at that point; the section above raises it to `'>= 1.22.1'` (azu 0.5.124+ needs it; cql 0.0.604 needs 1.12.2). This repository's `.tool-versions` is 1.22.1 too
 - Changed: the CI matrix ran 1.19.1, 1.22.1 (primary) and latest at that point (the 1.19.1 legs are gone, see above); the generated-app jobs run web on all three and api on 1.22.1
-- Verified on 1.22.1: format check, `shards build`, the full spec suite and `scripts/e2e_generated_app.sh web` and `api`. The build prints five deprecation warnings (`Time.monotonic`, `Process::Status#exit_signal`), no error
+- Verified on 1.22.1: format check, `shards build`, the full spec suite and `scripts/e2e_generated_app.sh web` and `api`. The build prints five deprecation warnings (`Time.instant`, `Process::Status#exit_signal`), no error
 
 ## Unreleased - Review of the loopback PR
 
