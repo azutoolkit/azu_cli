@@ -3,13 +3,21 @@ require "./<%=project%>"
 # JoobQ worker process: runs the queues configured in src/initializers/joobq.cr.
 # Start it with `azu jobs:worker`, or `crystal run src/worker.cr -- --worker`.
 
-Log.info { "Starting JoobQ workers for queues: #{JoobQ.config.queues.keys.join(", ")}" }
+Log.info { "Starting JoobQ workers for queues: #{JoobQ.queues.merge(JoobQ.config.queues).keys.join(", ")}" }
 Log.info { "Default queue: #{JoobQ.config.default_queue}, retries: #{JoobQ.config.retries}" }
 
 Signal::INT.trap do
   Log.info { "Stopping JoobQ workers" }
   exit
 end
+Signal::TERM.trap do
+  Log.info { "Stopping JoobQ workers" }
+  exit
+end
 
-# Starts the queues and blocks
-JoobQ.forge
+# JoobQ.forge starts only the queues of config/joobq.<env>.yml (JoobQ.queues); the ones `queue` declares in
+# JoobQ.configure live in JoobQ.config.queues, so start both, as forge does.
+JoobQ.config.schedulers.each(&.run)
+JoobQ.config.delayed_job_scheduler.start
+JoobQ.queues.merge(JoobQ.config.queues).each_value(&.start)
+sleep

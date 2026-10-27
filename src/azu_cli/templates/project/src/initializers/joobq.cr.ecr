@@ -1,4 +1,17 @@
 require "joobq"
+
+# JoobQ's Redis store (and its delayed-job scheduler) read REDIS_HOST, REDIS_PORT and REDIS_PASS; REDIS_URL
+# (`azu jobs:worker` sets it) names all three. Set them before JoobQ.config is first used.
+if redis_url = ENV["REDIS_URL"]?
+  redis = URI.parse(redis_url)
+  ENV["REDIS_HOST"] = redis.host || "localhost"
+  ENV["REDIS_PORT"] = (redis.port || 6379).to_s
+  if password = redis.password
+    ENV["REDIS_PASS"] = password
+    ENV["REDIS_PASSWORD"] = password
+  end
+end
+
 # Every job in src/jobs (`azu generate job SendEmail to:string` creates one there)
 require "../jobs/**"
 
@@ -15,14 +28,8 @@ JoobQ.configure do |config|
   # Enable statistics tracking
   config.stats_enabled = true
 
-  # JoobQ's Redis store takes a host, a port and a password (or REDIS_HOST, REDIS_PORT, REDIS_PASS);
-  # REDIS_URL (`azu jobs:worker` sets it) names all three.
-  if redis_url = ENV["REDIS_URL"]?
-    redis = URI.parse(redis_url)
-    config.store = JoobQ::RedisStore.new(host: redis.host || "localhost", port: redis.port || 6379, password: redis.password)
-  end
-
   # A worker runs the jobs of the queues listed here: name, number of workers, job class
+  # (src/worker.cr starts them)
   # queue "default", 2, SendEmailJob
 end
 

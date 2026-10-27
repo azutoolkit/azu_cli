@@ -399,6 +399,14 @@ module AzuCLI
         # Get project name from current directory or options
         project_name = @options["project"]? || Dir.current.split("/").last
         redis_url = @options["redis"]? || "redis://localhost:6379"
+        redis_uri = URI.parse(redis_url) rescue nil
+        unless redis_uri && redis_uri.scheme == "redis" && redis_uri.host
+          return error("Invalid --redis '#{redis_url}'. Use redis://host:port")
+        end
+        if redis_uri.user || redis_uri.password
+          # the URL is written into src/initializers/joobq.cr, which is committed
+          return error("--redis must not carry credentials; set REDIS_URL in the environment (.env) instead")
+        end
         create_example = !@options.has_key?("no-example")
 
         generator = Generators::JoobQ.new(

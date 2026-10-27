@@ -1,4 +1,17 @@
 require "joobq"
+
+# JoobQ's Redis store (and its delayed-job scheduler) read REDIS_HOST, REDIS_PORT and REDIS_PASS; REDIS_URL
+# (`azu jobs:worker` sets it) names all three. Set them before JoobQ.config is first used.
+if redis_url = ENV["REDIS_URL"]?<% if @redis_url != "redis://localhost:6379" %> || <%= @redis_url.inspect %><% end %>
+  redis = URI.parse(redis_url)
+  ENV["REDIS_HOST"] = redis.host || "localhost"
+  ENV["REDIS_PORT"] = (redis.port || 6379).to_s
+  if password = redis.password
+    ENV["REDIS_PASS"] = password
+    ENV["REDIS_PASSWORD"] = password
+  end
+end
+
 require "../jobs/**"
 
 # Queues from config/joobq.<CRYSTAL_ENV>.yml name their job classes: register each one here.
@@ -9,14 +22,11 @@ JoobQ::QueueFactory.register_job_type(<%= @example_job_name %>)
 
 environment = ENV["CRYSTAL_ENV"]? || "development"
 config_file = "config/joobq.#{environment}.yml"
-redis_url = ENV["REDIS_URL"]?
 
 if File.exists?(config_file)
   JoobQ.initialize_config_with(:file, config_file)
 else
   Log.warn { "JoobQ config file not found: #{config_file}, using defaults" }
-  redis_url ||= <%= @redis_url.inspect %>
-
   JoobQ.configure do |config|
     config.default_queue = <%= @default_queue.inspect %>
     config.retries = 5
@@ -28,12 +38,6 @@ else
     queue <%= @default_queue.inspect %>, <%= @workers %>, <%= @example_job_name %>
 <% end -%>
   end
-end
-
-# JoobQ's Redis store takes a host, a port and a password; REDIS_URL (`azu jobs:worker` sets it) names all three.
-if redis_url
-  redis = URI.parse(redis_url)
-  JoobQ.config.store = JoobQ::RedisStore.new(host: redis.host || "localhost", port: redis.port || 6379, password: redis.password)
 end
 
 # Disable REST API for worker processes

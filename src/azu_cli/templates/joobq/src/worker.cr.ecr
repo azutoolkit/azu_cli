@@ -5,12 +5,20 @@ require "./jobs/**"
 # Start it with `azu jobs:worker`, or `crystal run src/worker.cr -- --worker`.
 # Redis: REDIS_URL, else the URL in src/initializers/joobq.cr
 
-Log.info { "Starting JoobQ workers for queues: #{JoobQ.config.queues.keys.join(", ")}" }
+Log.info { "Starting JoobQ workers for queues: #{JoobQ.queues.merge(JoobQ.config.queues).keys.join(", ")}" }
 
 Signal::INT.trap do
   Log.info { "Stopping JoobQ workers" }
   exit
 end
+Signal::TERM.trap do
+  Log.info { "Stopping JoobQ workers" }
+  exit
+end
 
-# Starts the queues and blocks
-JoobQ.forge
+# JoobQ.forge starts only the queues of config/joobq.<env>.yml (JoobQ.queues); the ones `queue` declares in
+# JoobQ.configure live in JoobQ.config.queues, so start both, as forge does.
+JoobQ.config.schedulers.each(&.run)
+JoobQ.config.delayed_job_scheduler.start
+JoobQ.queues.merge(JoobQ.config.queues).each_value(&.start)
+sleep

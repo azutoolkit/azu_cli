@@ -123,10 +123,15 @@ JoobQ::QueueFactory.register_job_type(EmailJob)
 environment = ENV["CRYSTAL_ENV"]? || "development"
 JoobQ.initialize_config_with(:file, "config/joobq.#{environment}.yml")
 
-# REDIS_URL (`azu jobs:worker` sets it) becomes JoobQ's Redis store
+# REDIS_URL (`azu jobs:worker` sets it) becomes REDIS_HOST / REDIS_PORT / REDIS_PASS, which JoobQ's
+# Redis store and its delayed-job scheduler read (set before JoobQ.config is first used)
 if redis_url = ENV["REDIS_URL"]?
   redis = URI.parse(redis_url)
-  JoobQ.config.store = JoobQ::RedisStore.new(host: redis.host || "localhost", port: redis.port || 6379, password: redis.password)
+  ENV["REDIS_HOST"] = redis.host || "localhost"
+  ENV["REDIS_PORT"] = (redis.port || 6379).to_s
+  if password = redis.password
+    ENV["REDIS_PASS"] = password
+  end
 end
 
 # Disable REST API for worker processes

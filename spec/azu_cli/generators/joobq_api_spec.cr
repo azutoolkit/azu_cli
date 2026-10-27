@@ -31,9 +31,19 @@ describe "Generated JoobQ code" do
     end
   end
 
-  it "starts the workers with JoobQ.forge and expires jobs at a Unix time in milliseconds" do
+  it "starts the queues of JoobQ.queues and of JoobQ.config.queues, and expires jobs at a Unix time in milliseconds" do
     render_joobq_code do |files|
-      files.select { |path, _| path.ends_with?("worker.cr") }.each_value(&.should(contain("JoobQ.forge")))
+      # JoobQ.forge (0.4.2) starts only JoobQ.queues, so a queue declared with `queue` would never run
+      files.select { |path, _| path.ends_with?("worker.cr") }.each_value do |code|
+        code.should contain("JoobQ.queues.merge(JoobQ.config.queues).each_value(&.start)")
+        code.should contain("Signal::TERM.trap")
+        code.should_not contain("JoobQ.forge")
+      end
+      # REDIS_URL reaches both the store and RedisStore.instance (the delayed-job scheduler) through the environment
+      files.select { |path, _| path.ends_with?("initializers/joobq.cr") }.each_value do |code|
+        code.should contain(%(ENV["REDIS_PORT"]))
+        code.should_not contain("RedisStore.new")
+      end
       files.select { |path, _| path.ends_with?("_job.cr") }.each_value(&.should(match(/@expires = \d+\.\w+\.from_now\.to_unix_ms/)))
       files.find! { |path, _| path.ends_with?("send_email_job.cr") }[1].should contain("SendEmailJob.delay(for: 5.minutes, to: value)")
     end

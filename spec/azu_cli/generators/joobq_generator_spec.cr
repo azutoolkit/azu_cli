@@ -135,8 +135,11 @@ describe AzuCLI::Generate::JoobQ do
           content = File.read(initializer_file)
           content.should contain("require \"joobq\"")
           content.should contain("JoobQ.configure")
-          content.should contain(%(redis_url ||= "redis://localhost:6379"))
-          content.should contain("JoobQ.config.store = JoobQ::RedisStore.new(host: redis.host")
+          content.should contain(%(if redis_url = ENV["REDIS_URL"]?\n))
+          content.should contain(%(ENV["REDIS_HOST"] = redis.host || "localhost"))
+          content.should_not contain("RedisStore.new")
+          # the Redis environment is set before JoobQ.config is first used
+          content.index!("ENV[\"REDIS_HOST\"]").should be < content.index!("JoobQ.configure")
           content.should contain("JoobQ::QueueFactory.register_job_type(ExampleJob)")
         end
       end
@@ -153,7 +156,7 @@ describe AzuCLI::Generate::JoobQ do
           initializer_file = "src/initializers/joobq.cr"
           content = File.read(initializer_file)
 
-          content.should contain(%(redis_url ||= "redis://custom:6379"))
+          content.should contain(%(if redis_url = ENV["REDIS_URL"]? || "redis://custom:6379"))
         end
       end
 
@@ -191,7 +194,8 @@ describe AzuCLI::Generate::JoobQ do
 
           content = File.read(worker_file)
           content.should contain("require \"./initializers/joobq\"") # which requires "joobq"
-          content.should contain("JoobQ.forge")
+          content.should contain("JoobQ.config.queues")
+          content.should contain("Signal::TERM.trap")
         end
       end
 
@@ -448,7 +452,8 @@ describe AzuCLI::Generate::JoobQ do
           worker_file = "src/worker.cr"
           content = File.read(worker_file)
 
-          content.should contain("JoobQ.forge")
+          content.should contain("JoobQ.config.queues")
+          content.should contain("Signal::TERM.trap")
         end
       end
     end
