@@ -308,11 +308,14 @@ targets:
 dependencies:
   azu:
     github: azutoolkit/azu
-    version: ~> 0.5.118
+    version: ~> 0.10.1
   cql:
     github: azutoolkit/cql
     version: 0.0.604
-  # ... session, joobq, redis, topia
+  session:
+    github: azutoolkit/session
+    version: ~> 1.1
+  # ... joobq, redis, topia
   sqlite3: # pg ~> 0.31.0 with --db postgresql, mysql ~> 0.18.0 with --db mysql
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.24.0

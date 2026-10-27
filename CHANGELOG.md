@@ -1,5 +1,14 @@
 # Changelog - Azu CLI
 
+## Unreleased - generated projects depend on azu 0.10 and session 1.1
+
+- Changed (visible to new projects): `azu new` pins `azu ~> 0.10.1` (`>= 0.10.1, < 0.11.0`) instead of `~> 0.5.118`,
+  which resolved to 0.5.136, and `session ~> 1.1` instead of `~> 1.0.31`, which resolved to session's stray `v1.0.32`
+  tag. New apps get azu's fixes from 0.6.0 on (CORS, the CSRF body cap, Throttle behind proxies, upload limits, server
+  timeouts, problem+json errors) and session 1.1's expiry and secret fixes. The generated code needed no change for
+  them. Projects generated before keep their pins: edit `shard.yml` and run `shards update azu session` to move, after
+  reading azu's `docs/reference/breaking-changes.md`. `cql` (exactly 0.0.604) and `joobq` (`~> 0.4.2`) are unchanged
+
 ## Unreleased - `azu new` defaults to SQLite
 
 - Changed (visible default): `azu new` uses SQLite instead of PostgreSQL when `--db` is not given (also the default
