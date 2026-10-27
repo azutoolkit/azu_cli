@@ -4,6 +4,18 @@
 
 - Changed: the `generated-app` CI job has a `redis:7` service and sets `E2E_REDIS_URL`, so
   `scripts/e2e_generated_app.sh` runs a generated job through a worker in CI; before, CI only type-checked it
+  
+## Unreleased - `azu new --type cli` generates a cli project
+
+- Fixed: `azu new --type cli` generated the whole web project (`src/server.cr`, endpoints, pages, `src/worker.cr`,
+  the database initializer and schema, `.env` with a CSRF secret, `public/`, `config/`) next to the program, and a
+  `shard.yml` depending on azu, cql, joobq and a database driver: `Generate::Project#filter` was never called by
+  Teeplate. The type is decided in `rendered_file_entries`; a cli project now gets `src/<name>.cr`, its two spec files,
+  `shard.yml` (no dependencies, no `tasks` target), README, LICENSE, `.gitignore`, `.editorconfig`, `.tool-versions`
+  and the CI workflow. `--db` is ignored for it, and `azu new` no longer asks for a database. The dead `filter` is gone
+- Changed: the next steps of a cli project are `shards build` and `./bin/<name> --help`
+- Changed: `scripts/e2e_generated_app.sh cli` generates a cli project, checks it has none of the web files, runs its
+  specs, `shards build`s it and runs `--help`, `--version` and `--hello`
 
 ## Unreleased - Generated pages render in the browser
 

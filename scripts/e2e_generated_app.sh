@@ -12,7 +12,7 @@
 # It also drives the CLI's own development commands against the project: `azu routes`, `azu openapi:export`, `azu doctor`, and
 # `azu dev` (rebuild and restart on a source change, no rebuild for a template, a failed build keeps the old app).
 #
-# Usage: scripts/e2e_generated_app.sh [web|api]      (default: web)
+# Usage: scripts/e2e_generated_app.sh [web|api|cli]  (default: web; cli only builds, tests and runs the program)
 # Env:   AZU_BIN  path to the azu binary to test     (default: <repo>/bin/azu)
 #        E2E_DB   database adapter for `azu new`     (default: sqlite)
 #        KEEP_TMP set to 1 to keep the temp dir for debugging
@@ -571,6 +571,24 @@ cd "$WORK"
   { cat "$WORK/new.log"; fail "azu new failed"; }
 cat "$WORK/new.log"
 cd "$NAME"
+
+# A cli project is a program, not a server: no database, jobs, .env or assets; it builds and runs on its own.
+if [ "$TYPE" = cli ]; then
+  step "a cli project has no server, database, jobs, .env or assets"
+  for path in src/server.cr src/api.cr src/worker.cr src/db src/endpoints src/initializers config public .env .env.development; do
+    [ ! -e "$path" ] || fail "the cli project has $path"
+  done
+  ! grep -q "^dependencies:" shard.yml || fail "the cli project's shard.yml has dependencies"
+  step "test, build and run the cli project"
+  shards install
+  crystal spec || fail "the cli project's specs fail"
+  shards build || fail "shards build fails for the cli project"
+  "./bin/$NAME" --help | grep -q "Usage: $NAME" || fail "bin/$NAME --help prints no usage"
+  [ "$("./bin/$NAME" --version)" = v0.1.0 ] || fail "bin/$NAME --version does not print v0.1.0"
+  [ "$("./bin/$NAME" --hello E2E)" = "Hello, E2E!" ] || fail "bin/$NAME --hello E2E does not greet"
+  step "PASS: generated cli project builds, passes its specs and runs"
+  exit 0
+fi
 
 step "the next steps name the port the app listens on"
 env_port="$(sed -n 's/^PORT=//p' .env)"
