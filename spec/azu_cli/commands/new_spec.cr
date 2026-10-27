@@ -328,6 +328,19 @@ describe AzuCLI::Commands::New do
       end
     end
 
+    it "ignores --db for a cli project, which has no database" do
+      TestHelpers::TestSetup.with_temp_project("cli_any_db_test") do |temp_project|
+        Dir.cd(temp_project.path) do
+          cli = AzuCLI::Commands::New.new
+          cli.parse_args(["--yes", "--type", "cli", "--db", "none", "--no-git", "any_db_tool"])
+          TestHelpers::TestSetup.with_captured_output do |_|
+            cli.execute.success?.should be_true
+          end
+          File.exists?("any_db_tool/src/any_db_tool.cr").should be_true
+        end
+      end
+    end
+
     it "handles skip git flag" do
       TestHelpers::TestSetup.with_temp_project("no_git_test") do |temp_project|
         parent_dir = temp_project.path
