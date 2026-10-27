@@ -6,6 +6,44 @@
 - Changed: `scripts/e2e_generated_app.sh` checks the Content-Type of `/`, `/health`, the scaffold pages (web: HTML, api: JSON), `/login` and `/register`
 - Migration for apps generated before: add `content_type "text/html"` as the first line of `call` in every endpoint that returns a page, and `content_type "application/json"` in `/health` and the JSON endpoints. From the project directory, on macOS or Linux: `grep -rlE '^    def call : \S+Page$' src/endpoints | grep -v /health/ | xargs perl -0pi -e 's/^(    def call : \S+Page\n)(?!      content_type)/$1      content_type "text\/html"\n/mg'`, then rebuild
 
+## Unreleased - `session:setup` refuses what would break the app; `session:clear` honours `--backend`
+
+- Fixed: `azu session:setup` run again replaced nothing but reported success; with `--force` after `azu generate auth`
+  it replaced auth's initializer, dropping `user_id` and `authenticated?`, and the app no longer compiled. It now
+  refuses (exit 1, nothing written) when `src/initializers/session.cr` exists unless `--force`, always when
+  `azu generate auth` wrote it (a marker line in the file, `def authenticated?`, or auth's endpoints and throttle), and
+  when the app file is missing or has no `Azu::Handler::RequestId.new,` line, instead of reporting success without
+  mounting the handler
+- Fixed: `session:setup` and `session:clear` refuse an unknown option, a `--backend` without a value and an unknown
+  backend with exit 2 (`session:setup` also refuses an argument); both have a `--help`
+- Fixed: `session:clear --backend` was ignored. It is honoured; cookie and memory backends say why nothing can be
+  cleared (exit 1) before asking anything. The Redis path deleted `<project>:session:*`, which the session shard never
+  writes: it deletes `session:*` (`RedisStore#prefixed`) with `SCAN` instead of `KEYS`; with no initializer and no
+  `SESSION_BACKEND` it refuses instead of assuming Redis
+- Fixed: `session:clear` read the backend from any mention of `RedisStore` in `src/initializers/session.cr`, comments
+  included. The initializer of `azu generate auth` (a `CookieStore`) mentions `Session::RedisStore` in a comment, so
+  in every project with generated authentication `session:clear` deleted every `session:*` key of the Redis at
+  `REDIS_URL`. Without `--backend` it now infers the backend only when the initializer is, as written (CRLF line ends
+  and trailing whitespace aside), a file `azu session:setup --backend cookie|redis|memory` writes for the project or
+  the one `azu generate auth` writes (cookie, with or without its marker line), compared with the generators' output
+  rendered in memory. Any other initializer, edited or unknown, is refused (exit 1, also with `SESSION_BACKEND` set):
+  deleting data has to fail closed, and reading what edited Crystal does takes the compiler. `SESSION_BACKEND` is used
+  only when there is no initializer
+- Fixed: `session:clear` prints the Redis target as `scheme://host:port/database` (never the user or password, nor
+  the URL as given, also in errors), and that every `session:*` key in that database goes, other apps' sessions
+  included, also with `--force`; it connects to a bracketed IPv6 host; a `REDIS_URL` it cannot read (two `@`, no host,
+  a port outside 1..65535, a database that is not a number) is a clean error (exit 1) instead of `Invalid Int32`, and a
+  database the server does not have says so; it refuses an argument (exit 2)
+- Fixed: `session:clear` waited for ever on a Redis that does not answer (`rediss://` against a plain port hung for
+  minutes): it waits 5 seconds to connect and 10 for each reply, then exits 1. A `REDIS_URL` user was dropped: it now
+  sends `AUTH user password` (Redis 6 ACLs), and never reconnects on its own, so a lost connection cannot come back
+  unauthenticated or on database 0
+- Fixed: `session:setup -h` and `session:clear -h` ran the command; they show the help
+- Fixed: `session:setup` refuses (exit 1, even with `--force`) when auth's endpoints or throttle exist although its
+  initializer was deleted. An initializer that only looks like auth's says so and how to replace it (delete the file)
+- Docs: `docs/commands/session.md` used `Session.session.authenticate`, which the session shard does not have; it
+  shows `Session.session.regenerate_id`, as the generated authentication does
+
 ## Unreleased - azu new usage errors, e2e_docker CA path
 
 - Fixed: `azu new` with an unknown `--type`, an unknown `--ci` or `--docker` for a cli project exits with 2 (invalid usage), like the other usage errors; it exited with 1
