@@ -1,36 +1,13 @@
 require "log"
 require "colorize"
 require "json"
+require "./ui"
 
 module AzuCLI
   # Centralized logging system for Azu CLI
   # Provides structured logging with colored output and multiple formats
   module Logger
     extend self
-
-    # Color scheme for different message types
-    private COLORS = {
-      debug:   :dark_gray,
-      info:    :white,
-      warn:    :yellow,
-      error:   :red,
-      fatal:   :magenta,
-      success: :green,
-      title:   :cyan,
-      prompt:  :blue,
-    }
-
-    # Icons for different message types
-    private ICONS = {
-      debug:   "🔍",
-      info:    "ℹ️ ",
-      warn:    "⚠️ ",
-      error:   "❌",
-      fatal:   "💀",
-      success: "✅",
-      title:   "📋",
-      prompt:  "❓",
-    }
 
     @@log : Log?
     @@setup_done = false
@@ -112,27 +89,24 @@ module AzuCLI
     end
 
     def warn(message : String)
-      # Warnings should go to STDERR
-      if Config.instance.colored_output? && STDERR.tty?
-        print_colored(:warn, message, io: STDERR)
+      if styled?(STDERR)
+        emit(STDERR, lines(STDERR).message(UI::Lines::Kind::Warn, message))
       else
         STDERR.puts("WARNING: #{message}")
       end
     end
 
     def error(message : String)
-      # Errors should go to STDERR
-      if Config.instance.colored_output? && STDERR.tty?
-        print_colored(:error, message, io: STDERR)
+      if styled?(STDERR)
+        emit(STDERR, lines(STDERR).message(UI::Lines::Kind::Error, message))
       else
         STDERR.puts("ERROR: #{message}")
       end
     end
 
     def fatal(message : String)
-      # Fatal errors should go to STDERR
-      if Config.instance.colored_output? && STDERR.tty?
-        print_colored(:fatal, message, io: STDERR)
+      if styled?(STDERR)
+        emit(STDERR, lines(STDERR).message(UI::Lines::Kind::Fatal, message))
       else
         STDERR.puts("FATAL: #{message}")
       end
@@ -140,176 +114,114 @@ module AzuCLI
 
     # CLI-specific log methods with enhanced formatting
     def success(message : String)
-      if Config.instance.colored_output? && STDOUT.tty?
-        print_colored(:success, message, io: STDOUT)
-      else
-        puts("SUCCESS: #{message}")
-      end
+      styled?(STDOUT) ? emit(STDOUT, lines(STDOUT).message(UI::Lines::Kind::Success, message)) : puts("SUCCESS: #{message}")
     end
 
     def title(message : String)
-      if Config.instance.colored_output? && STDOUT.tty?
-        print_colored(:title, message, io: STDOUT)
-      else
-        puts("TITLE: #{message}")
-      end
+      styled?(STDOUT) ? emit(STDOUT, lines(STDOUT).message(UI::Lines::Kind::Title, message)) : puts("TITLE: #{message}")
     end
 
     def prompt(message : String)
-      if Config.instance.colored_output? && STDOUT.tty?
-        print_colored(:prompt, message, io: STDOUT)
+      if styled?(STDOUT)
+        STDOUT.print "#{lines(STDOUT).message(UI::Lines::Kind::Prompt, message)} "
       else
         print("#{message} ")
       end
     end
 
     def announce(message : String)
-      output_io = STDOUT
-      if Config.instance.colored_output? && output_io.tty?
-        output_io.puts
-        output_io.puts "=" * 60
-        output_io.print "  #{ICONS[:title]} "
-        output_io.puts message.colorize(COLORS[:title]).bold
-        output_io.puts "=" * 60
-        output_io.puts
+      STDOUT.puts
+      if styled?(STDOUT)
+        STDOUT.puts lines(STDOUT).header(message)
       else
-        output_io.puts
-        output_io.puts "=" * 60
-        output_io.puts "  #{message}"
-        output_io.puts "=" * 60
-        output_io.puts
+        STDOUT.puts "=" * 60
+        STDOUT.puts "  #{message}"
+        STDOUT.puts "=" * 60
       end
+      STDOUT.puts
     end
 
     def step(step_number : Int32, total_steps : Int32, message : String)
-      prefix = "[#{step_number}/#{total_steps}]"
-      output_io = STDOUT
-
-      if Config.instance.colored_output? && output_io.tty?
-        output_io.print prefix.colorize(:dark_gray)
-        output_io.print " "
-        output_io.puts message.colorize(COLORS[:info])
+      if styled?(STDOUT)
+        emit(STDOUT, lines(STDOUT).step(step_number, total_steps, message))
       else
-        output_io.puts "#{prefix} #{message}"
+        STDOUT.puts "[#{step_number}/#{total_steps}] #{message}"
       end
     end
 
     def progress_start(message : String)
-      output_io = STDOUT
-      if Config.instance.colored_output? && output_io.tty?
-        output_io.print "#{ICONS[:info]} #{message}... ".colorize(COLORS[:info])
-        output_io.flush
+      if styled?(STDOUT)
+        STDOUT.print "#{lines(STDOUT).message(UI::Lines::Kind::Info, message)}#{lines(STDOUT).glyphs.ellipsis} "
       else
-        output_io.print "#{message}... "
-        output_io.flush
+        STDOUT.print "#{message}... "
       end
+      STDOUT.flush
     end
 
     def progress_done(success : Bool = true)
-      output_io = STDOUT
-      if Config.instance.colored_output? && output_io.tty?
-        if success
-          output_io.puts "✅ Done".colorize(COLORS[:success])
-        else
-          output_io.puts "❌ Failed".colorize(COLORS[:error])
-        end
+      if styled?(STDOUT)
+        lines = lines(STDOUT)
+        STDOUT.puts success ? lines.paint("#{lines.glyphs.ok} done", UI::Token::Green) : lines.paint("#{lines.glyphs.fail} failed", UI::Token::Red)
       else
-        output_io.puts success ? "Done" : "Failed"
+        STDOUT.puts success ? "Done" : "Failed"
       end
     end
 
     def command_start(command : String)
-      output_io = STDOUT
-      if Config.instance.colored_output? && output_io.tty?
-        output_io.print "    → ".colorize(:dark_gray)
-        output_io.puts command.colorize(:white)
-      else
-        output_io.puts "    → #{command}"
-      end
+      styled?(STDOUT) ? emit(STDOUT, lines(STDOUT).message(UI::Lines::Kind::Command, command)) : STDOUT.puts("    → #{command}")
     end
 
     def file_created(path : String)
-      output_io = STDOUT
-      if Config.instance.colored_output? && output_io.tty?
-        output_io.print "      ✨ Created: ".colorize(COLORS[:success])
-        output_io.puts path.colorize(:white)
-      else
-        output_io.puts "      Created: #{path}"
-      end
+      styled?(STDOUT) ? emit(STDOUT, lines(STDOUT).message(UI::Lines::Kind::Created, path)) : STDOUT.puts("      Created: #{path}")
     end
 
     def file_modified(path : String)
-      output_io = STDOUT
-      if Config.instance.colored_output? && output_io.tty?
-        output_io.print "      📝 Modified: ".colorize(COLORS[:warn])
-        output_io.puts path.colorize(:white)
-      else
-        output_io.puts "      Modified: #{path}"
-      end
+      styled?(STDOUT) ? emit(STDOUT, lines(STDOUT).message(UI::Lines::Kind::Modified, path)) : STDOUT.puts("      Modified: #{path}")
     end
 
     def file_skipped(path : String, reason : String = "already exists")
-      output_io = STDOUT
-      if Config.instance.colored_output? && output_io.tty?
-        output_io.print "      ⏭️  Skipped: ".colorize(:dark_gray)
-        output_io.print path.colorize(:white)
-        output_io.puts " (#{reason})".colorize(:dark_gray)
+      styled?(STDOUT) ? emit(STDOUT, lines(STDOUT).message(UI::Lines::Kind::Skipped, "#{path} (#{reason})")) : STDOUT.puts("      Skipped: #{path} (#{reason})")
+    end
+
+    # Whether `io` gets the themed lines: a terminal, and colored output not turned off in the configuration.
+    private def styled?(io : IO::FileDescriptor) : Bool
+      Config.instance.colored_output? && io.tty?
+    end
+
+    @@lines = {} of Int32 => UI::Lines
+
+    # Prints a styled line; while a live card is drawn (a db:migrate task), above it.
+    def emit(io : IO, line : String) : Nil
+      if live = UI::Rich.live
+        live.print_above(line, io)
       else
-        output_io.puts "      Skipped: #{path} (#{reason})"
+        io.puts line
+        io.flush
       end
     end
 
-    # Print colored message with icon
-    private def print_colored(type : Symbol, message : String, io : IO = STDOUT)
-      icon = ICONS[type]? || ""
-      color = COLORS[type]? || :white
-
-      io.print "#{icon} " unless icon.empty?
-      io.puts message.colorize(color)
+    # The theme of the terminal on `io` (NO_COLOR keeps the glyphs and drops the color).
+    def lines(io : IO::FileDescriptor) : UI::Lines
+      @@lines[io.fd] ||= UI::Lines.new(UI::Terminal.detect(io))
     end
 
     # Custom colored backend for enhanced CLI output
     private class ColoredBackend < Log::Backend
       # Synchronous: a line is on the terminal before the next `puts` or live card, never written later by a fiber.
-      def initialize(@io : IO, @format : String, @show_icons : Bool = true)
+      def initialize(@io : IO::FileDescriptor, @format : String, @show_icons : Bool = true)
         super(::Log::DispatchMode::Sync)
       end
 
       def write(entry : Log::Entry)
-        # Route different log levels to appropriate outputs
-        target_io = case entry.severity
-                    when .warn?, .error?, .fatal?
-                      STDERR
-                    else
-                      @io # Use configured IO (STDOUT for info/debug)
-                    end
-
-        color = case entry.severity
-                when .debug? then COLORS[:debug]
-                when .info?  then COLORS[:info]
-                when .warn?  then COLORS[:warn]
-                when .error? then COLORS[:error]
-                when .fatal? then COLORS[:fatal]
-                else              :white
-                end
-
-        icon = if @show_icons
-                 case entry.severity
-                 when .debug? then ICONS[:debug]
-                 when .info?  then ICONS[:info]
-                 when .warn?  then ICONS[:warn]
-                 when .error? then ICONS[:error]
-                 when .fatal? then ICONS[:fatal]
-                 else              ""
-                 end
-               else
-                 ""
+        target_io = entry.severity.warn? || entry.severity.error? || entry.severity.fatal? ? STDERR : @io
+        kind = case entry.severity
+               when .debug? then UI::Lines::Kind::Debug
+               when .warn?  then UI::Lines::Kind::Warn
+               when .error? then UI::Lines::Kind::Error
+               when .fatal? then UI::Lines::Kind::Fatal
+               else              UI::Lines::Kind::Info
                end
-
-        target_io.print icon unless icon.empty?
-        target_io.print " " unless icon.empty?
-        target_io.puts entry.message.colorize(color)
-        target_io.flush
+        Logger.emit(target_io, Logger.lines(target_io).message(kind, entry.message))
       end
     end
 
@@ -317,30 +229,14 @@ module AzuCLI
     def exception(ex : Exception, context : String? = nil)
       error_io = STDERR
 
-      if Config.instance.colored_output? && error_io.tty?
+      if styled?(error_io)
+        lines = lines(error_io)
         error_io.puts
-        error_io.puts "💥 Exception Occurred".colorize(COLORS[:error]).bold
-        error_io.puts "=" * 50
-
-        if context
-          error_io.print "Context: ".colorize(:dark_gray)
-          error_io.puts context.colorize(:white)
-        end
-
-        error_io.print "Error: ".colorize(COLORS[:error])
-        error_io.puts ex.message.colorize(:white)
-
+        error_io.puts lines.message(UI::Lines::Kind::Error, ex.message.to_s)
+        context.try { |text| error_io.puts "  #{lines.paint(text, UI::Token::Muted)}" }
         if Config.instance.debug_mode && (backtrace = ex.backtrace?)
-          error_io.puts
-          error_io.puts "Backtrace:".colorize(:dark_gray)
-          backtrace.each_with_index do |frame, index|
-            if index < 10 # Limit backtrace in non-debug mode
-              error_io.puts "  #{frame}".colorize(:dark_gray)
-            end
-          end
+          backtrace.first(10).each { |frame| error_io.puts "  #{lines.paint(frame, UI::Token::Faint)}" }
         end
-
-        error_io.puts "=" * 50
         error_io.puts
       else
         error_io.puts

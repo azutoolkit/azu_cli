@@ -210,9 +210,20 @@ module AzuCLI
         true
       end
 
+      # Whether this reporter has drawn a card yet.
+      getter? drawn = false
+
+      # The card being drawn, if any: a log line printed meanwhile goes above it (`print_above`), never through it.
+      class_getter live : Rich?
+
+      # A group inside a group (db:setup running db:migrate) adds its tasks to the outer card.
       def group(title : String, &)
+        return yield if @grouped
+
+        @grouped = true
         @title = title
         @tasks = [] of Task
+        @@live = self
         begin
           yield
         ensure
@@ -220,7 +231,25 @@ module AzuCLI
           @renderer.commit
           @tasks = [] of Task
           @title = "azu"
+          @grouped = false
+          @@live = nil
         end
+      end
+
+      @grouped = false
+
+      # Writes `line` (already styled) above the live card.
+      def print_above(line : String, io : IO = terminal.output) : Nil
+        @renderer.clear
+        terminal.output.flush
+        io.puts line
+        io.flush
+        draw unless @tasks.empty?
+      end
+
+      # The width of a panel's inside, for laying out its lines.
+      def inner_width : Int32
+        card_width - 4
       end
 
       def started(task : Task) : Nil
@@ -254,6 +283,7 @@ module AzuCLI
         lines.each_with_index { |segs, index| frame.line(inner.x, inner.y + 1 + index, segs, inner.w) }
         @renderer.flush(frame)
         @renderer.commit
+        @drawn = true
       end
 
       # Prints something above the live card, then draws the card again below it.
@@ -276,6 +306,7 @@ module AzuCLI
         return if @tasks.empty?
 
         @last_draw = Time.instant
+        @drawn = true
         rows = @tasks.sum { |task| task.running? && task.note ? 2 : 1 }
         frame = Frame.new(card_width, rows + 2, @styles)
         inner = frame.card(frame.area, @title, badge: running? ? nil : summary)

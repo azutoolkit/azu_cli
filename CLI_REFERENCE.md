@@ -55,12 +55,13 @@ without a build. A failed build keeps the running app. See [docs/commands/dev.md
 
 ### `azu routes` Options
 
-`--format table|json` (default `table`), `--method METHOD`, `--path TEXT` (substring). Exit 0, 1 (the app could not
+`--format table|json` (default `table`), `--method METHOD`, `--path TEXT` (substring), `--ui rich|plain` (a card on a
+color terminal by default). Exit 0, 1 (the app could not
 be loaded), 2 (invalid usage). See [docs/commands/routes.md](docs/commands/routes.md).
 
 ### `azu doctor` Options
 
-`--json`. Exit 0 (warnings allowed) or 1 (a check failed). See [docs/commands/doctor.md](docs/commands/doctor.md).
+`--json`, `--ui rich|plain` (a card on a color terminal by default). Exit 0 (warnings allowed) or 1 (a check failed). See [docs/commands/doctor.md](docs/commands/doctor.md).
 
 ### `azu console`
 

@@ -101,3 +101,25 @@ describe AzuCLI::Commands::Doctor do
     AzuCLI::CLI.new.command_names.should contain("doctor")
   end
 end
+
+describe "AzuCLI::Commands::Doctor on a terminal" do
+  it "draws the checks as a card, with a mark per check, the hints and the counts" do
+    in_tmp_project(files: {"shard.lock" => "version: 2.0\n"}) do
+      with_system(StubSystem.new) do
+        card = IO::Memory.new
+        command = AzuCLI::Commands::Doctor.new
+        command.ui = AzuCLI::UI::Rich.new(AzuCLI::UI::Terminal.fake(card, columns: 100))
+        result, output = run_command(command, [] of String)
+
+        result.success?.should be_true
+        output.should be_empty
+        text = card.to_s
+        text.should contain "╭─ Doctor"
+        text.should contain "8 ok · 1 warn · 0 fail"
+        text.should contain "│ ✔ crystal"
+        text.should contain "│ ▲ database"
+        text.should contain "▸ set DATABASE_URL"
+      end
+    end
+  end
+end

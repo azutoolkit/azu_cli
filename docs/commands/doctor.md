@@ -3,7 +3,7 @@
 Diagnoses the environment the project runs in. Nothing is changed and no value of a variable and no password of a URL is printed. A `DATABASE_URL` is cut at its last `@` before the first `?` or `#`; when an `@` follows a `?` or `#` the host cannot be told from a piece of the password, so the check only warns (no host printed). The same goes for a URL without `@` whose `:` is not followed by a valid port (`postgres://user:secret`, `postgres://user:12345678`), which could be a user and password that lost their `@`; a port after the `@` that is not 1-65535 fails without being printed. Only `postgres://user:1234` (digits that are a valid port) reads as host `user`, which is what a URL parser would also do and asks you to percent-encode `@ ? # /` in the user and password. Write `crystal:` in shard.yml as a quoted string (`'>= 1.10'`): an unquoted `1.10` is read by YAML as the number 1.1.
 
 ```bash
-azu doctor [--json]
+azu doctor [--json] [--ui rich|plain]
 ```
 
 | Check          | What it verifies                                                                                                                          |
@@ -22,6 +22,20 @@ The variables come from the environment `azu` runs in, which includes the projec
 `CRYSTAL_ENV=production` the `env` and `secrets` problems are failures instead of warnings.
 
 ## Output
+
+On a color terminal (not CI) the checks are a card: a mark per check (`✔` ok, `▲` warning, `✖` failure), the hints
+under them and the counts in the corner; the border is amber with a warning and red with a failure. `--ui plain`, a
+pipe, `NO_COLOR` and CI print the text below.
+
+```text
+╭─ Doctor · blog ───────────────────────────────────────────── 8 ok · 1 warn · 0 fail ─╮
+│                                                                                     │
+│ ✔ crystal       Crystal 1.22.1 (the project needs 1.22.1 or newer)                  │
+│ ▲ database      SQLite file ./db/blog_development.db does not exist yet             │
+│                 ▸ run 'azu db:setup'                                                │
+│ ...                                                                                 │
+╰─────────────────────────────────────────────────────────────────────────────────────╯
+```
 
 ```text
 ok    crystal        Crystal 1.22.1 (the project needs 1.22.1 or newer)

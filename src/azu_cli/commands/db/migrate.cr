@@ -79,7 +79,7 @@ module AzuCLI
           # Create a temporary migration runner script
           runner_script = create_migration_runner_script("up", version, steps)
 
-          Logger.info("Running migrations...")
+          Logger.info("Running migrations...") unless rich?
           show_database_info if @verbose
 
           # Execute the runner script
@@ -89,7 +89,7 @@ module AzuCLI
           File.delete(runner_script) if File.exists?(runner_script)
 
           if result
-            Logger.info("✓ Migrations completed successfully")
+            Logger.info("✓ Migrations completed successfully") unless rich?
             success("Migrations completed")
           else
             error("Migration failed")
@@ -168,8 +168,7 @@ module AzuCLI
 
         # Execute the migration runner script
         private def execute_runner_script(script_path : String) : Bool
-          status = Process.run("crystal", ["run", script_path], output: STDOUT, error: STDERR)
-          status.success?
+          run_crystal_script(script_path, "Migrate")
         end
 
         # Execute dry-run mode

@@ -377,6 +377,10 @@ Generators extend `Teeplate::FileTree`:
 - `UI::Program` reads keys from `/dev/tty` in raw mode (no `\n` → CR: the inline renderer writes `\r\n`); inline frames
   leave the last column free. Anything printed to stdout while an inline frame is live shifts it: the CLI's log backend
   is synchronous for that reason
+- Every command has `ui` (Base: `--ui`, then `AZU_UI`) and `rich?`; a command draws a card only when `rich?` and keeps its
+  plain output otherwise (specs get plain, since their stdout is an `IO::Memory`). `Logger` styles its lines with
+  `UI::Lines` and prints them above a live card (`UI::Rich.live`); `Database#run_crystal_script` is the card for a
+  migration or seed script (`ScriptOutput` sorts its output)
 - Commands report through `UI::Reporter` (`rich` card, `plain` lines, `json` NDJSON), chosen by `--ui`/`AZU_UI`, else
   rich only on a terminal with color, not in CI. Pipes and `--yes` must keep working without a terminal
 - `azu dev`'s dashboard (`dev_server/hud.cr`) gets build/app/log events from `Commands::Dev` and telemetry from the app

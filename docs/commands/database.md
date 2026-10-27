@@ -15,6 +15,17 @@ Azu CLI provides database management commands that work with CQL ORM.
 | `azu db:seed`     | Run seed data                      |
 | `azu db:status`   | Show migration status              |
 
+On a color terminal (not CI) `db:migrate`, `db:rollback`, `db:seed` and `db:data:migrate` show the `crystal run` of
+their script as a live card (compiling, then the script's last line) that ends with what was applied or rolled back;
+the warnings of the app the script loads and the lines the script printed follow the card, and its whole output when
+it fails. `db:status` is a card too. `--ui plain`, a pipe, `NO_COLOR` and CI keep the output of the script as it is.
+
+```text
+╭─ Migrate · blog_development ──────────────────────────────────────────── ✔ 21.9s ─╮
+│ ✔ Migrate         applied CreatePosts                                       21.9s │
+╰───────────────────────────────────────────────────────────────────────────────────╯
+```
+
 ## Configuration
 
 ### Environment Variables
@@ -148,14 +159,21 @@ Shows migration status.
 azu db:status
 ```
 
-Output:
+Output on a terminal:
 
 ```text
-Migration Status:
-  [✓] 20240115103045_create_users
-  [✓] 20240116103045_create_posts
-  [ ] 20240117103045_add_avatar_to_users
+╭─ Migrations · blog_development ─────────────────────────── 2 applied · 1 pending ─╮
+│                                                                                  │
+│    VERSION         MIGRATION               APPLIED                               │
+│ ✔  20240115103045  Create users            2024-01-15 10:31:02                   │
+│ ✔  20240116103045  Create posts            2024-01-16 10:31:02                   │
+│ ○  20240117103045  Add avatar to users     pending                               │
+│                                                                                  │
+│ sqlite3 · development                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────╯
 ```
+
+Elsewhere (`--ui plain`, pipes, CI) it is a table with the same columns.
 
 ## azu generate migration
 
