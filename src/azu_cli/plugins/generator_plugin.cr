@@ -32,6 +32,8 @@ module AzuCLI
       end
 
       private def validate_generator_args(args : Array(String))
+        return if args.empty? && Commands::Generate.menu_available? # the generator menu asks for the type
+
         if args.empty?
           raise ArgumentError.new("Generator type is required. Use: azu generate <type> <name>")
         end

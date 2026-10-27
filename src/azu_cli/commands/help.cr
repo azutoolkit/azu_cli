@@ -27,7 +27,8 @@ module AzuCLI
         puts "Project Commands:"
         puts "  new <project-name>     Create a new Azu project"
         puts "  init                   Initialize Azu in existing project"
-        puts "  generate <type> <name> Generate code (alias: g)"
+        puts "  generate <type> <name> Generate code (alias: g); on a terminal it previews the files first"
+        puts "  undo                   Revert the files of the last azu generate"
         puts
         puts "Database Commands:"
         puts "  db:create              Create the database"

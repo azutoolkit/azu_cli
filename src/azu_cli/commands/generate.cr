@@ -27,7 +27,11 @@ module AzuCLI
       end
 
       def execute : Result
+        @all_args = without_ui_flags(@all_args)
         parse_arguments
+        if result = preview_flow
+          return result
+        end
 
         # Detect project type and auto-set API mode
         detector = ProjectDetector.new
@@ -163,6 +167,9 @@ module AzuCLI
           parser.on("--record RECORD", "Record type for validators") do |record|
             @options["record"] = record
           end
+          parser.on("--dry-run", "Show the files it would write, write nothing") { @dry_run = true }
+          parser.on("--yes", "Write without asking (after the preview on a terminal)") { @yes = true }
+          parser.on("--check", "Type-check the project with the generated files before writing") { @check = true }
           parser.on("--help", "Show help") {
             show_help
             exit(0)
@@ -911,6 +918,10 @@ module AzuCLI
         puts
         puts "Options:"
         puts "  --force                    Overwrite existing files without prompting"
+        puts "  --dry-run                  Show the files it would write (and the diff of files it changes), write nothing"
+        puts "  --yes                      Write without asking (on a terminal the preview still shows)"
+        puts "  --check                    Type-check the project with the generated files first"
+        puts "  --ui MODE                  rich (the preview, the default on a terminal) or plain"
         puts "  --skip-tests               Do not generate the migration (generate model)"
         puts "  --api-only                 Generate API-only components (JSON responses)"
         puts "  --web-only                 Generate web-only components (HTML pages)"

@@ -64,7 +64,8 @@ module AzuCLI
       else
         ::Log::IOBackend.new(
           io: STDOUT, # Changed to STDOUT for regular output
-          formatter: create_formatter(config.log_format)
+          formatter: create_formatter(config.log_format),
+          dispatcher: ::Log::DispatchMode::Sync
         )
       end
     end
@@ -269,8 +270,9 @@ module AzuCLI
 
     # Custom colored backend for enhanced CLI output
     private class ColoredBackend < Log::Backend
+      # Synchronous: a line is on the terminal before the next `puts` or live card, never written later by a fiber.
       def initialize(@io : IO, @format : String, @show_icons : Bool = true)
-        super()
+        super(::Log::DispatchMode::Sync)
       end
 
       def write(entry : Log::Entry)
