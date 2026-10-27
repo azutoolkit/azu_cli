@@ -2,7 +2,7 @@ require "json"
 
 module <%= app_module %>
   struct <%= namespace %>::ShowResponse
-    include Azu::Response
+    include Azu::Response::Negotiable
     include JSON::Serializable
 
     getter id : Int64?
@@ -17,7 +17,7 @@ module <%= app_module %>
 <% end -%>
     end
 
-    def render : String
+    def render_json : String
       to_json
     end
   end
