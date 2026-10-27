@@ -102,8 +102,8 @@ module AzuCLI
         end
       end
 
-      # Adapter of the project's database driver shard (sqlite3, mysql). PostgreSQL, the default, wins
-      # when its driver is there, and is what a project without any driver gets.
+      # Adapter of the project's database driver shard (sqlite3, mysql). PostgreSQL wins when its driver
+      # is there, and is what a project without any driver gets.
       private def project_adapter : String?
         dependencies = Utils.project_dependencies
         return if dependencies.includes?("pg")

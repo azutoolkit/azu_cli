@@ -115,7 +115,7 @@ Solutions to common issues and problems you might encounter.
 
 ```bash
 # Create a new web application
-azu new my_blog --type web --db postgres
+azu new my_blog --type web --db postgresql
 
 # Create an API-only application
 azu new my_api --type api --db mysql

@@ -67,8 +67,9 @@ azu <command> [subcommand] [arguments] [options]
 ### Examples
 
 ```bash
-# Project Creation
-azu new my_app --db postgres
+# Project Creation (SQLite by default)
+azu new my_app
+azu new my_app --db postgresql
 
 # Code Generation
 azu generate scaffold Post title:string content:text
@@ -424,7 +425,7 @@ azu version
 
 | Option              | Description                             | Default  |
 | ------------------- | --------------------------------------- | -------- |
-| `--db <db>`         | Database adapter (postgresql, mysql, sqlite) | postgresql |
+| `--db <db>`         | Database adapter (sqlite, postgresql, mysql) | sqlite   |
 | `--type <type>`     | Project type (web, api, cli)            | web      |
 | `--docker`          | Generate a Dockerfile and .dockerignore  | false    |
 | `--ci <setup>`      | `GitHub Actions` or `None`              | GitHub Actions |
@@ -469,7 +470,6 @@ You can create a configuration file (`azu.yml`) to set default options:
 ```yaml
 # azu.yml
 project:
-  default_database: postgres
   default_type: web
 
 development:

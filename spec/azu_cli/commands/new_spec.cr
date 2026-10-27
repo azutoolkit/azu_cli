@@ -14,7 +14,7 @@ describe AzuCLI::Commands::New do
       command.email.should eq("")
       command.license.should eq("MIT")
       command.project_type.should eq("web")
-      command.database.should eq("postgresql")
+      command.database.should eq("sqlite")
       command.test_framework.should eq("spec")
       command.ci_setup.should eq("GitHub Actions")
       command.docker_support.should be_false
@@ -308,6 +308,35 @@ describe AzuCLI::Commands::New do
           end
           Dir.exists?("tool_app").should be_false
           Dir.exists?("lab_app").should be_false
+        end
+      end
+    end
+
+    it "refuses a database adapter it does not know instead of generating a PostgreSQL project" do
+      TestHelpers::TestSetup.with_temp_project("bad_db_test") do |temp_project|
+        Dir.cd(temp_project.path) do
+          cli = AzuCLI::Commands::New.new
+          cli.parse_args(["--yes", "--db", "sqllite", "typo_app"])
+          TestHelpers::TestSetup.with_captured_output do |_|
+            result = cli.execute
+            result.success?.should be_false
+            result.error.should contain("Unknown database adapter 'sqllite'. Choose one of: sqlite, postgresql, mysql.")
+            result.exit_code.should eq(2)
+          end
+          Dir.exists?("typo_app").should be_false
+        end
+      end
+    end
+
+    it "ignores --db for a cli project, which has no database" do
+      TestHelpers::TestSetup.with_temp_project("cli_any_db_test") do |temp_project|
+        Dir.cd(temp_project.path) do
+          cli = AzuCLI::Commands::New.new
+          cli.parse_args(["--yes", "--type", "cli", "--db", "none", "--no-git", "any_db_tool"])
+          TestHelpers::TestSetup.with_captured_output do |_|
+            cli.execute.success?.should be_true
+          end
+          File.exists?("any_db_tool/src/any_db_tool.cr").should be_true
         end
       end
     end
@@ -748,6 +777,13 @@ describe AzuCLI::Commands::New do
       command.project_name = "svc"
       command.project_type = "api"
       command.next_steps.should contain("Test: curl http://localhost:4000/health")
+    end
+
+    it "needs no database server by default, and says the default in --help" do
+      command = AzuCLI::Commands::New.new
+      command.database_hint.should be_nil
+      output = TestHelpers::TestSetup.with_captured_output { command.show_help }
+      output.stdout.should contain("--db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: sqlite]")
     end
 
     it "tells a server-backed database to be running and has no database step for a cli" do

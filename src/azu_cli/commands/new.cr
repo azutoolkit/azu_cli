@@ -13,7 +13,8 @@ module AzuCLI
       property email : String = ""
       property license : String = "MIT"
       property project_type : String = "web"
-      property database : String = "postgresql"
+      # SQLite needs no server: `azu new blog && cd blog && azu db:setup && azu serve` works on a fresh machine
+      property database : String = "sqlite"
       property test_framework : String = "spec"
       property ci_setup : String = "GitHub Actions"
       property docker_support : Bool = false
@@ -327,10 +328,15 @@ module AzuCLI
       end
 
       PROJECT_TYPES = ["web", "api", "cli"]
+      # The adapters Generate::Project knows, with the aliases it accepts
+      DATABASES = ["sqlite", "sqlite3", "postgresql", "postgres", "pg", "mysql"]
 
       private def delivery_error : String?
         unless PROJECT_TYPES.includes?(@project_type)
           return "Unknown project type '#{@project_type}'. Choose one of: #{PROJECT_TYPES.join(", ")}."
+        end
+        unless @project_type == "cli" || DATABASES.includes?(@database)
+          return "Unknown database adapter '#{@database}'. Choose one of: sqlite, postgresql, mysql."
         end
         unless AzuCLI::Generate::Project::CI_SETUPS.includes?(@ci_setup)
           return "Unknown CI setup '#{@ci_setup}'. Choose one of: #{AzuCLI::Generate::Project::CI_SETUPS.join(", ")}."
@@ -506,7 +512,7 @@ module AzuCLI
         puts "  --license LICENSE         License (MIT, Apache-2.0, GPL-3.0, etc.)"
         puts "  --type TYPE               Project type (web, api, cli) [default: web]"
         puts "  --api                     Create API project (shorthand for --type api)"
-        puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: postgresql]"
+        puts "  --db DATABASE             Database adapter (postgresql, mysql, sqlite) [default: sqlite]"
         puts "  --test TEST               Test framework (spec, minitest) [default: spec]"
         puts "  --ci CI                   CI setup (\"GitHub Actions\" or \"None\") [default: GitHub Actions]"
         puts "  --no-ci                   Skip the CI workflow"
