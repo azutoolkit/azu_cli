@@ -8,7 +8,7 @@ description: How to set up, build, test and change Azu CLI, with the quality rul
 
 Azu CLI is a Crystal program. Commands live in `src/azu_cli/commands/`, generators in `src/azu_cli/generators/` with their templates beside them, and specs in `spec/`. A change is ready when `crystal spec`, the format check and the generated-app gate pass, and the docs describe what the command really prints.
 
-<figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate preview: the file list and a diff"><figcaption><p>Check a generator change here first. The preview lists every file the generator would write, with a diff for each edit.</p></figcaption></figure>
+<figure><img src="docs/assets/terminal-ui/11-generate-preview.png" alt="azu generate preview: the file list and a diff"><figcaption><p>Check a generator change here first. The preview lists every file the generator would write, with a diff for each edit.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
@@ -181,4 +181,6 @@ The integration specs run `bin/azu`, not the code in `src/`. After you change th
 Don't write generated test projects into the repository. The integration helpers create them in the system temp directory. Don't commit `.env` or a secret value, even in a fixture.
 {% endhint %}
 
-For the documentation rules, see [Writing documentation](documentation.md), and run `python3 scripts/check_docs.py` before you push.
+For the documentation rules, see [Writing documentation](design/writing-docs.md), and run `python3 scripts/check_docs.py` before you push.
+
+How the CLI works inside, for contributors, is in [`design/`](design): the [command lifecycle](design/cli-lifecycle.md), the [generator system](design/generator-system.md), the [template engine](design/template-engine.md) and the [terminal UI design](design/terminal-ui.md). These are not part of the published docs.

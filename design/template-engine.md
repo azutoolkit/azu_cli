@@ -10,7 +10,7 @@ copied as written. That is why one template file can produce Crystal source and 
 
 ## Overview & visual demo
 
-<figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate scaffold comment after writing: the Crystal files and Jinja pages the templates rendered"><figcaption><p>Each line is one rendered template. <code>public/templates/...jinja</code> comes from the same scaffold as <code>src/models/comment.cr</code>.</p></figcaption></figure>
+<figure><img src="../docs/assets/terminal-ui/12-generate-written.png" alt="azu generate scaffold comment after writing: the Crystal files and Jinja pages the templates rendered"><figcaption><p>Each line is one rendered template. <code>public/templates/...jinja</code> comes from the same scaffold as <code>src/models/comment.cr</code>.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR

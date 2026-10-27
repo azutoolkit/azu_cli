@@ -104,19 +104,6 @@ project's own code.
 [quickstart.md](getting-started/quickstart.md)
 {% endcontent-ref %}
 
-{% content-ref url="cli-architecture/overview.md" %}
-[overview.md](cli-architecture/overview.md)
+{% content-ref url="command-reference/README.md" %}
+[README.md](command-reference/README.md)
 {% endcontent-ref %}
-
-<details>
-
-<summary>Built on</summary>
-
-| Piece                                            | Role                              |
-| ------------------------------------------------ | --------------------------------- |
-| [Azu](https://github.com/azutoolkit/azu)         | The web framework your app runs on |
-| [CQL](https://github.com/azutoolkit/cql)         | ORM and migrations                |
-| [JoobQ](https://github.com/azutoolkit/joobq)     | Background jobs                   |
-| [Topia](https://github.com/azutoolkit/topia)     | Command parsing in the CLI itself, and project tasks |
-
-</details>

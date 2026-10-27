@@ -11,7 +11,7 @@ first runs in a shadow copy of the project so you can see what it would write.
 
 ## Overview & visual demo
 
-<figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate preview: the list of files a scaffold would write, and a diff of db/schema.cr"><figcaption><p>The preview lists every file the generators would write. Nothing is in the project until you confirm.</p></figcaption></figure>
+<figure><img src="../docs/assets/terminal-ui/11-generate-preview.png" alt="azu generate preview: the list of files a scaffold would write, and a diff of db/schema.cr"><figcaption><p>The preview lists every file the generators would write. Nothing is in the project until you confirm.</p></figcaption></figure>
 
 ```mermaid
 flowchart TD

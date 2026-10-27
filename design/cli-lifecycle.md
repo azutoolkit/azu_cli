@@ -9,7 +9,7 @@ middleware and plugin hooks, and turns the result into an exit code.
 
 ## Overview & visual demo
 
-<figure><img src="../assets/terminal-ui/04-new-progress.png" alt="azu new mid-run: a review screen above a progress card with a spinner"><figcaption><p>One command, three layers: the wizard and review (UI), the steps it runs (command), and the files it writes (generator).</p></figcaption></figure>
+<figure><img src="../docs/assets/terminal-ui/04-new-progress.png" alt="azu new mid-run: a review screen above a progress card with a spinner"><figcaption><p>One command, three layers: the wizard and review (UI), the steps it runs (command), and the files it writes (generator).</p></figcaption></figure>
 
 ```mermaid
 flowchart TD
@@ -84,7 +84,7 @@ Add a command by subclassing `Commands::Base`, returning a `Result`, and registe
 
 {% hint style="warning" %}
 The plugin system is internal. There's no `azu plugin` command, no plugin installation and no external plugin loading.
-See [Custom tasks](../advanced/custom-tasks.md) for how to extend the CLI.
+See [Custom tasks](../docs/advanced/custom-tasks.md) for how to extend the CLI.
 {% endhint %}
 
 {% hint style="danger" %}

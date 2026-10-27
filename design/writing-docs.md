@@ -9,7 +9,7 @@ Read this once, copy a page that's close to yours, and run the checker before yo
 
 ## Overview & visual demo
 
-<figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate preview, an example of a real terminal screenshot"><figcaption><p>Show the real tool. Screenshots in <code>docs/assets/terminal-ui</code> beat any description of them.</p></figcaption></figure>
+<figure><img src="../docs/assets/terminal-ui/11-generate-preview.png" alt="azu generate preview, an example of a real terminal screenshot"><figcaption><p>Show the real tool. Screenshots in <code>docs/assets/terminal-ui</code> beat any description of them.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
@@ -96,7 +96,7 @@ Always give the fence a language: `bash`, `crystal`, `yaml`, `json`, `text`.
 
 {% tab title="Screenshot" %}
 ```markdown
-<figure><img src="../assets/terminal-ui/07-dev-dashboard.png" alt="What it shows"><figcaption><p>What to look at.</p></figcaption></figure>
+<figure><img src="../docs/assets/terminal-ui/07-dev-dashboard.png" alt="What it shows"><figcaption><p>What to look at.</p></figcaption></figure>
 ```
 {% endtab %}
 

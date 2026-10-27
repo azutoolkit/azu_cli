@@ -1,11 +1,10 @@
 ---
-description: Wizards, cards, a dashboard and a live preview, each with a plain-text twin.
+description: The wizard, cards, dashboard and live preview, and how to switch every one of them to plain text or JSON.
 ---
 
 # Terminal UI
 
-The UI engine (`src/azu_cli/ui/`) uses only the Crystal standard library plus one `ioctl` binding. Screens are pure
-`update(event) -> Action` and `view(frame)` functions, so specs drive them with keys and compare the frame as text.
+Every azu command that draws something has two other forms: plain lines and JSON. The rich form needs a color terminal; pipes, CI and `NO_COLOR` get the plain one automatically.
 
 ## Overview & visual demo
 
@@ -92,7 +91,7 @@ warn  database       SQLite file ./db/blog_development.db does not exist yet
 {% endhint %}
 
 {% hint style="success" %}
-Building a screen? Keep it a pure `Screen` and test it with `Terminal.fake` and `frame.to_text`.
+Prefer `--ui plain` or `--format json` in scripts. They keep stdout for data and are stable across terminals.
 {% endhint %}
 
 {% hint style="warning" %}
@@ -100,14 +99,5 @@ Inline screens keep your terminal background. Only the full-screen dashboard pai
 {% endhint %}
 
 {% hint style="danger" %}
-Never put a two-column glyph (emoji, CJK) inside a frame. `Frame#text` replaces it with `?` so borders keep lining up.
+Don't parse the rich output. It uses box characters and colors that change between terminals. Use `--ui json` or `--format json`.
 {% endhint %}
-
-<details>
-
-<summary>Design reference</summary>
-
-Color tokens, glyph rules, the renderer and the screen mockups: [Terminal UI (design)](terminal-ui-design.md).
-Some mockups there are proposals; that page lists which parts are built.
-
-</details>

@@ -7,6 +7,7 @@
 * [Installation](getting-started/installation.md)
 * [Quickstart](getting-started/quickstart.md)
 * [Project Structure](getting-started/project-structure.md)
+* [Terminal UI](getting-started/terminal-ui.md)
 
 ## Command Reference
 
@@ -48,21 +49,11 @@
 * [JoobQ](generators/joobq.md)
 * [API Resource](generators/api-resource.md)
 
-## CLI Architecture
-
-* [Overview](cli-architecture/overview.md)
-* [Terminal UI](cli-architecture/terminal-ui.md)
-* [Generator System](cli-architecture/generator-system.md)
-* [Template Engine](cli-architecture/template-engine.md)
-* [Terminal UI Design](cli-architecture/terminal-ui-design.md)
-
 ## Advanced
 
 * [Configuration](advanced/configuration.md)
-* [Custom Tasks and Extensions](advanced/custom-tasks.md)
+* [Custom Tasks](advanced/custom-tasks.md)
 
-## Help and Contributing
+## Help
 
 * [Troubleshooting](troubleshooting/README.md)
-* [Contributing](contributing/README.md)
-* [Writing Documentation](contributing/documentation.md)

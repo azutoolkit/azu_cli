@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks that docs/ will build as a GitBook space and follow docs/contributing/documentation.md.
+"""Checks that docs/ will build as a GitBook space and follow design/writing-docs.md.
 
 Usage: scripts/check_docs.py [files...]   (no files: every page in docs/)
 Exit code 1 when a check fails.
@@ -13,7 +13,7 @@ SECTIONS = ["Overview", "Quickstart", "Realistic output", "Do's and don'ts"]
 HINT_STYLES = {"info", "warning", "success", "danger"}
 MERMAID = ("flowchart", "graph", "sequenceDiagram", "classDiagram", "stateDiagram", "erDiagram", "gantt", "journey", "pie")
 # Pages that are not documentation of a feature and so do not need the four sections.
-LAYOUT_EXEMPT = {"SUMMARY.md", "cli-architecture/terminal-ui-design.md"}
+LAYOUT_EXEMPT = {"SUMMARY.md"}
 
 
 def registered_commands():
