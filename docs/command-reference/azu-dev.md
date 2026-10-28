@@ -83,7 +83,7 @@ ERROR: Build failed after 5.5s. The previous build keeps running (pid 1195); sav
 {% code title="terminal: azu dev, the dashboard after a failed build" %}
 ```text
 ▲ AZU  dev · demo_app   ✖ build failed · serving the previous build   pid 1195  :4000  develo…  16:04:33
-[1] Overview   [2] Commands   [3] Console   [4] Requests   [5] SQL   [6] Jobs   [7] Log
+[1] Overview   [2] Commands   [3] Console   [4] Requests   [5] SQL   [6] Jobs   [7] Log   [8] Config
 Build failed · the app keeps running the previous build (pid 1195)                         5.5s
 ✖ src/demo_app.cr:79:6
 
@@ -136,8 +136,13 @@ Don't stop `azu dev` with SIGKILL. It cannot stop the app then, and the app keep
 | SQL | Query count, average, slow queries, the connection pool, N+1 alerts, the slowest statements (from the app) |
 | Jobs | Pending, busy and failed jobs per queue in `config/jobs.yml`, read from `REDIS_URL` (default `redis://localhost:6379`) |
 | Log | The app's stdout and stderr |
+| Config | What the app runs with, as `azu config` last read it: server, TLS, templates, database, limits, uploads, WebSocket, i18n, assets; secrets only as set or not set |
 
-Keys: `1` to `7` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
+Keys: `1` to `8` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
+
+The Log, Requests, SQL and Config panels scroll: `↑`/`↓` (or `k`/`j`) a line, PgUp/PgDn a page, Home/End (or `g`/`G`) to either end. The card's badge says which rows it shows (`21-40 of 80`). A Log scrolled back stays where it is as lines arrive; End follows the newest line again.
+
+The Config panel shows the last run of `azu config`, which the Commands panel repeats after each successful build and whenever `.env*`, `shard.yml` or `shard.lock` changes. Enter (or `u`) reads it again. Values are colored by what they say: a setting that is not set in amber, on and set in green, off in muted, numbers and durations in cyan, URLs and addresses in blue. When the app does not load, the panel shows the error instead.
 
 </details>
 
@@ -170,12 +175,17 @@ Each command runs as `azu <command>` with plain output, one at a time, never whi
 | `doctor`, `version` | at start (`doctor` again when `.env*`, `shard.yml` or `shard.lock` changes) |
 | `routes` | after each successful build |
 | `config` | after each successful build, and when `.env*`, `shard.yml` or `shard.lock` changes |
-| `db:status` | at start, when `src/db/migrations` changes, and after `db:migrate` |
-| `test` | on Enter; `w` also runs it after each build |
-| `db:migrate`, `session:clear` | on Enter, then `y`: they change the database or the session store |
+| `db:status` | at start, when `src/db/migrations` changes, and after any command that changes the database |
+| `db:validate`, `db:migrations:verify --no-rollback` | on Enter, and with `a` |
+| `test`, `openapi:export` | on Enter; `w` also runs the tests after each build |
+| `db:migrate`, `db:rollback`, `db:seed`, `db:data:migrate`, `db:create`, `db:setup`, `db:schema:load`, `db:reset`, `db:drop` | on Enter, then `y`: they change the database |
+| `jobs:status`, `jobs:retry --all`, `jobs:clear --failed` | in a JoobQ project (`config/jobs.yml`); retry and clear after `y` |
+| `session:clear` | on Enter, then `y`: it changes the session store |
 | `completion <shell>` | on Enter, for the shell in `SHELL` (bash when it is another) |
 
-Keys: `↑`/`↓` select, Enter runs, `a` runs every check again (not the tests, not the commands that change things), `w` toggles the tests after builds. Run from the dashboard, `doctor` counts the port the app holds as expected.
+Commands that ask "are you sure?" on their own (`db:rollback`, `db:reset`, `db:drop`, `jobs:clear`, `session:clear`) run with `--force`: the panel has no terminal to answer them, and its `y` is the answer. `db:migrations:verify` runs with `--no-rollback`, so it reads the migrations without rolling the newest one back and applying it again. Left out are the commands that need names, files or choices typed with them (`new`, `init`, `generate`, `undo`, `session:setup`, `openapi:generate`) and the ones that keep running or take the terminal (`serve`, `dev`, `console`, `jobs:worker`, `jobs:ui`).
+
+Keys: `↑`/`↓` select (the list scrolls to keep the selection in view), Enter runs, PgUp/PgDn scroll the selected command's output, `a` runs every check again (the commands that only read: not the tests, not the commands that change things), `w` toggles the tests after builds. Run from the dashboard, `doctor` counts the port the app holds as expected.
 
 </details>
 
