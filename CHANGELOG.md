@@ -8,8 +8,11 @@
   `jobs:retry --all` and `jobs:clear --failed`. Commands that ask "are you sure?" run with `--force` (the panel's `y`
   answers it), `a` runs the commands that only read, and `db:status` runs again after any command that changed the
   database.
+- Added: a Config panel in `azu dev` (`8`): the app's effective configuration as `azu config` last read it, a
+  section under the other with its values colored, read again after each build, on `.env*`/`shard.yml` changes and on
+  Enter. The tab bar narrows its gaps to fit the terminal.
 - Added: scrolling in `azu dev`: the command list keeps the selection in view, PgUp/PgDn scroll the selected
-  command's output, and the Log, Requests and SQL panels scroll with ↑/↓, PgUp/PgDn and Home/End (the Log stays put
+  command's output, and the Log, Requests, SQL and Config panels scroll with ↑/↓, PgUp/PgDn and Home/End (the Log stays put
   while scrolled back and End follows it again).
 - Removed: `azu.yml` and the `config:show`, `config:validate` and `config:env` commands. The file was read for a few
   logging flags only: `azu dev` and `azu serve` read `PORT`/`HOST`, `azu db:*` reads `DATABASE_URL`, and a section named

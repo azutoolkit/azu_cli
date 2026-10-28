@@ -83,7 +83,7 @@ ERROR: Build failed after 5.5s. The previous build keeps running (pid 1195); sav
 {% code title="terminal: azu dev, the dashboard after a failed build" %}
 ```text
 ▲ AZU  dev · demo_app   ✖ build failed · serving the previous build   pid 1195  :4000  develo…  16:04:33
-[1] Overview   [2] Commands   [3] Console   [4] Requests   [5] SQL   [6] Jobs   [7] Log
+[1] Overview   [2] Commands   [3] Console   [4] Requests   [5] SQL   [6] Jobs   [7] Log   [8] Config
 Build failed · the app keeps running the previous build (pid 1195)                         5.5s
 ✖ src/demo_app.cr:79:6
 
@@ -136,10 +136,13 @@ Don't stop `azu dev` with SIGKILL. It cannot stop the app then, and the app keep
 | SQL | Query count, average, slow queries, the connection pool, N+1 alerts, the slowest statements (from the app) |
 | Jobs | Pending, busy and failed jobs per queue in `config/jobs.yml`, read from `REDIS_URL` (default `redis://localhost:6379`) |
 | Log | The app's stdout and stderr |
+| Config | What the app runs with, as `azu config` last read it: server, TLS, templates, database, limits, uploads, WebSocket, i18n, assets; secrets only as set or not set |
 
-Keys: `1` to `7` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
+Keys: `1` to `8` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
 
-The Log, Requests and SQL panels scroll: `↑`/`↓` (or `k`/`j`) a line, PgUp/PgDn a page, Home/End (or `g`/`G`) to either end. The card's badge says which rows it shows (`21-40 of 80`). A Log scrolled back stays where it is as lines arrive; End follows the newest line again.
+The Log, Requests, SQL and Config panels scroll: `↑`/`↓` (or `k`/`j`) a line, PgUp/PgDn a page, Home/End (or `g`/`G`) to either end. The card's badge says which rows it shows (`21-40 of 80`). A Log scrolled back stays where it is as lines arrive; End follows the newest line again.
+
+The Config panel shows the last run of `azu config`, which the Commands panel repeats after each successful build and whenever `.env*`, `shard.yml` or `shard.lock` changes. Enter (or `u`) reads it again. Values are colored by what they say: a setting that is not set in amber, on and set in green, off in muted, numbers and durations in cyan, URLs and addresses in blue. When the app does not load, the panel shows the error instead.
 
 </details>
 

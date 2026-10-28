@@ -18,6 +18,7 @@ module AzuCLI
         SQL
         Jobs
         Log
+        Config
       end
 
       enum State
@@ -177,12 +178,16 @@ module AzuCLI
           return UI::Action::Redraw
         end
         return confirm(key) if @confirming
-        if (char = key.char) && ('1'..'7').includes?(char)
+        if (char = key.char) && char.ascii_number? && (1..Tab.values.size).includes?(char.to_i)
           @tab = Tab.from_value(char.to_i - 1)
           @console_focus = true if tab.console?
           return UI::Action::Redraw
         end
         return commands_key(key) if tab.commands? && commands_key?(key)
+        if tab.config? && (key.code.enter? || key.char?('u'))
+          @commands.find(&.id.==("config")).try { |command| run(command) }
+          return UI::Action::Redraw
+        end
         return scroll_key(key) if Hud.scrollable?(tab) && scroll_key?(key)
         case key.char
         when 'r'
@@ -205,7 +210,7 @@ module AzuCLI
 
       # The tabs whose card scrolls with ↑/↓, PgUp/PgDn and Home/End.
       def self.scrollable?(tab : Tab) : Bool
-        tab.log? || tab.requests? || tab.sql?
+        tab.log? || tab.requests? || tab.sql? || tab.config?
       end
 
       # The Log keeps to its newest line until it is scrolled back.
@@ -591,22 +596,25 @@ module AzuCLI
           in .sql?      then sql(frame, body, full: true)
           in .jobs?     then jobs(frame, body)
           in .log?      then log_card(frame, body, "Log", full: true)
+          in .config?   then config_panel(frame, body)
           end
         end
         keys = if tab.console? && console_focus?
                  evaluating? ? [{"Enter", "Queue another"}, {"Esc", "Cancel the run"}] : [{"Enter", "Run"}, {"Alt-Enter", "New line"}, {"↑/↓", "History"}, {"Ctrl-L", "Clear"}, {"Ctrl-O", "crystal i"}, {"Esc", "Panels"}]
                elsif tab.console?
-                 [{"Enter", "Type"}, {"i", "crystal i"}, {"1-7", "Panels"}, {"q", "Quit"}]
+                 [{"Enter", "Type"}, {"i", "crystal i"}, {"1-#{Tab.values.size}", "Panels"}, {"q", "Quit"}]
                elsif failed_card?
                  [{"Esc", "Back to the dashboard"}, {"r", "Retry build"}, {"q", "Quit"}]
                elsif command = @confirming
                  [{"y", "Run #{command.line}"}, {"any key", "Cancel"}]
                elsif tab.commands?
-                 [{"↑/↓", "Select"}, {"Enter", "Run"}, {"PgUp/PgDn", "Scroll output"}, {"a", "Run all checks"}, {"w", "Tests after builds: #{test_watch? ? "on" : "off"}"}, {"1-7", "Panels"}, {"q", "Quit"}]
+                 [{"↑/↓", "Select"}, {"Enter", "Run"}, {"PgUp/PgDn", "Scroll output"}, {"a", "Run all checks"}, {"w", "Tests after builds: #{test_watch? ? "on" : "off"}"}, {"1-#{Tab.values.size}", "Panels"}, {"q", "Quit"}]
+               elsif tab.config?
+                 [{"↑/↓", "Scroll"}, {"PgUp/PgDn", "Page"}, {"Enter", "Read it again"}, {"1-#{Tab.values.size}", "Panels"}, {"r", "Rebuild"}, {"q", "Quit"}]
                elsif Hud.scrollable?(tab)
-                 [{"↑/↓", "Scroll"}, {"PgUp/PgDn", "Page"}, {"Home/End", Hud.tail?(tab) ? "Oldest/Newest" : "Top/Bottom"}, {"1-7", "Panels"}, {"r", "Rebuild"}, {"c", "Clear log"}, {"q", "Quit"}]
+                 [{"↑/↓", "Scroll"}, {"PgUp/PgDn", "Page"}, {"Home/End", Hud.tail?(tab) ? "Oldest/Newest" : "Top/Bottom"}, {"1-#{Tab.values.size}", "Panels"}, {"r", "Rebuild"}, {"c", "Clear log"}, {"q", "Quit"}]
                else
-                 [{"1-7", "Panels"}, {"r", "Rebuild"}, {"l", "Log"}, {"c", "Clear log"}, {"q", "Quit"}]
+                 [{"1-#{Tab.values.size}", "Panels"}, {"r", "Rebuild"}, {"l", "Log"}, {"c", "Clear log"}, {"q", "Quit"}]
                end
         Widgets.key_bar(frame, 1, height - 2, keys, width - 2)
         status_line(frame, width, height - 1)
@@ -635,13 +643,16 @@ module AzuCLI
         frame.line(x, 0, segs, clock_x - x - 2)
       end
 
+      # "[1] Overview   [2] Commands ...": the gaps narrow to fit the terminal.
       private def tabs(frame : Frame, width : Int32) : Nil
+        labels = Tab.values.map_with_index { |entry, index| "[#{index + 1}] #{entry}" }
+        room = width - 2 - labels.sum { |label| Width.of(label) }
+        gap = (room // Math.max(1, labels.size - 1)).clamp(1, 3)
         x = 1
-        Tab.values.each_with_index do |entry, index|
-          on = entry == tab
-          label = "[#{index + 1}] #{entry.to_s == "SQL" ? "SQL" : entry.to_s}"
+        labels.each_with_index do |label, index|
+          on = Tab.values[index] == tab
           x = frame.text(x, 1, label, on ? frame.style(Token::Cyan, Attr::Bold) : frame.style(Token::Muted))
-          x += 3
+          x += gap
         end
       end
 
@@ -906,6 +917,76 @@ module AzuCLI
           break if y + index >= inner.bottom
           tone = line.matches?(/\A(ok|✔)\b/) ? Token::Text : (line.matches?(/\A(warn|WARNING)/) ? Token::Amber : (line.matches?(/\A(fail|ERROR|FATAL)|error/i) ? Token::Red : Token::Text))
           frame.text(inner.x, y + index, line, tone, max: inner.w)
+        end
+      end
+
+      # ---- the Config panel
+
+      # `azu config`'s plain output read back: a section per heading line, a key and a value per indented line.
+      def self.config_sections(output : String) : Array({String, Array({String, String})})
+        sections = [] of {String, Array({String, String})}
+        output.each_line do |line|
+          if line.matches?(/\A[A-Z][A-Z0-9 _\/+-]*\z/)
+            sections << {line.strip, [] of {String, String}}
+          elsif (match = line.match(/\A  (\S.*?)(?:\s{2,}(.*))?\z/)) && (section = sections.last?)
+            section[1] << {match[1], (match[2]? || "").strip}
+          end
+        end
+        sections
+      end
+
+      # The app's configuration, as the last `azu config` read it (after each build and each .env or shard.yml change):
+      # the sections one under the other, a key column and the values colored by what they say.
+      private def config_panel(frame : Frame, body : Rect) : Nil
+        g = frame.glyphs
+        command = @commands.find(&.id.==("config"))
+        run = runs["config"]?
+        sections = run && !run.status.fail? ? Hud.config_sections(run.output.join('\n')) : [] of {String, Array({String, String})}
+        width = sections.flat_map(&.[1]).max_of? { |(key, _)| Width.of(key) } || 0
+        rows = [] of Array(Seg)
+        sections.each_with_index do |(name, settings), index|
+          rows << [] of Seg if index > 0
+          rows << [Seg[name, Token::Purple, Attr::Bold]]
+          settings.each { |(key, value)| rows << [Seg["  #{Width.pad(key, width)}  ", Token::Muted], Seg[value, Hud.config_tone(value)]] }
+        end
+        shown, @scrolls[Tab::Config], range = Hud.window(rows, body.h - 3, scroll(Tab::Config))
+        state = case status("config")
+                when .running? then "#{Widgets.spinner(g, @clock.call)} reading"
+                when .queued?  then "queued"
+                else                run.try { |done| "read #{ago(done.at)} ago" }
+                end
+        badge = [state, range].compact.join(" · ").presence
+        inner = frame.card(body, "Config #{g.dot} #{@environment}", badge)
+        return if inner.empty?
+        @page = Math.max(1, inner.h - 2)
+
+        y = inner.y
+        if command.nil?
+          frame.text(inner.x, y, "azu config is not in this dashboard's commands", Token::Muted, max: inner.w)
+        elsif run.nil?
+          frame.text(inner.x, y, status("config").idle? ? "azu config runs after the first build; Enter runs it now" : "#{Widgets.spinner(g, @clock.call)} compiling the app to read its configuration", Token::Muted, max: inner.w)
+        elsif run.status.fail?
+          frame.text(inner.x, y, "#{g.fail} #{run.summary}", Token::Red, max: inner.w)
+          run.output.reject(&.blank?).last(Math.max(0, inner.h - 2)).each_with_index do |line, index|
+            frame.text(inner.x, y + 2 + index, line, Token::Muted, max: inner.w)
+          end
+        elsif sections.empty?
+          frame.text(inner.x, y, "azu config printed no settings", Token::Muted, max: inner.w)
+        else
+          frame.text(inner.x, y, "What the app runs with once its code and .env files are loaded; secrets show as set or not set", Token::Faint, max: inner.w)
+          shown.each_with_index { |segs, index| frame.line(inner.x, y + 1 + index, segs, inner.w) }
+        end
+      end
+
+      # A value's color: a missing setting amber, on/set green, off muted, numbers and sizes cyan, addresses blue.
+      def self.config_tone(value : String) : Token
+        case value
+        when "not set"                                                                  then Token::Amber
+        when "set", "true", "enabled", "on"                                             then Token::Green
+        when "false", "disabled", "off", "none", "-", ""                                then Token::Muted
+        when /\A[a-z][a-z0-9+.-]*:\/\//, /\A[\w.-]+:\d+\z/, /\A\d{1,3}(\.\d{1,3}){3}\z/ then Token::Blue
+        when /\A-?\d+(\.\d+)?\s*(ms|s|m|h|b|kb|mb|gb|kib|mib|gib|%)?\z/i                then Token::Cyan
+        else                                                                                 Token::Text
         end
       end
 

@@ -237,6 +237,73 @@ describe "AzuCLI::DevServer::Hud control plane" do
     render(screen, 120, 16).should contain "/posts/1 "
   end
 
+  it "shows azu config's last reading on the Config tab, a section under the other" do
+    requested = [] of String
+    screen = control_hud(requested)
+    screen.update(key('8'))
+    screen.tab.config?.should be_true
+    render(screen).should contain "azu config runs after the first build; Enter runs it now"
+
+    requested.clear
+    screen.update(TUI::Key.new(TUI::KeyCode::Enter))
+    requested.should eq ["config"]
+    screen.update(Ev::ControlStarted.new("config"))
+    render(screen).should contain "compiling the app to read its configuration"
+
+    output = "SERVER\n  environment     development\n  port            4000\n  loopback only   true\n\n" \
+             "SECRETS\n  CSRF_SECRET     set\n  SESSION_SECRET  not set\n\n" \
+             "DATABASE\n  url             postgres://admin:***@db.internal:5432/app\n"
+    screen.update(Ev::ControlFinished.new("config", 0, output, 3.0))
+    text = render(screen)
+    text.should contain "╭─ Config · development "
+    text.should contain "read 0s ago"
+    text.should contain "SERVER"
+    text.should contain "  loopback only   true"
+    text.should contain "  SESSION_SECRET  not set"
+    text.should contain "  url             postgres://admin:***@db.internal:5432/app"
+    text.should contain "[Enter] Read it again"
+  end
+
+  it "reads azu config's plain output back into sections, keys with spaces included" do
+    sections = AzuCLI::DevServer::Hud.config_sections("SERVER\n  loopback only    true\n  port            4000\n\nTLS\n  enabled         false\n")
+    sections.should eq [{"SERVER", [{"loopback only", "true"}, {"port", "4000"}]}, {"TLS", [{"enabled", "false"}]}]
+    AzuCLI::DevServer::Hud.config_tone("not set").should eq TUI::Token::Amber
+    AzuCLI::DevServer::Hud.config_tone("true").should eq TUI::Token::Green
+    AzuCLI::DevServer::Hud.config_tone("50.0ms").should eq TUI::Token::Cyan
+    AzuCLI::DevServer::Hud.config_tone("sqlite3://./db/app.db").should eq TUI::Token::Blue
+    AzuCLI::DevServer::Hud.config_tone("127.0.0.1").should eq TUI::Token::Blue
+    AzuCLI::DevServer::Hud.config_tone("10000").should eq TUI::Token::Cyan
+    AzuCLI::DevServer::Hud.config_tone("development").should eq TUI::Token::Text
+  end
+
+  it "fits every tab in the tab bar, narrowing the gaps" do
+    screen = control_hud([] of String)
+    render(screen, 100, 20).should contain "[7] Log  [8] Config"
+    render(screen, 120, 20).should contain "[7] Log   [8] Config"
+  end
+
+  it "says why azu config failed on the Config tab" do
+    screen = control_hud([] of String)
+    screen.update(key('8'))
+    screen.update(Ev::ControlFinished.new("config", 1, "In src/blog.cr:3:1\nError: undefined constant Blog::Oops\n", 9.0))
+    text = render(screen)
+    text.should contain "✖ Error: undefined constant Blog::Oops"
+  end
+
+  it "scrolls a long configuration" do
+    screen = control_hud([] of String)
+    screen.update(key('8'))
+    output = (1..40).map { |n| "SECTION#{n}\n  key#{n}  value#{n}\n" }.join("\n")
+    screen.update(Ev::ControlFinished.new("config", 0, output, 3.0))
+    text = render(screen, 120, 20)
+    text.should contain "│ SECTION1 "
+    text.should contain "of 119"
+    press(screen, TUI::KeyCode::End)
+    text = render(screen, 120, 20)
+    text.should contain "value40"
+    text.should_not contain "value1 "
+  end
+
   it "re-runs the tests after each build once w is on" do
     requested = [] of String
     screen = control_hud(requested)
