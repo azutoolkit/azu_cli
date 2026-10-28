@@ -24,6 +24,28 @@ def registered_commands():
     return names
 
 
+# YAML reads an unquoted value with ": " or " #" in it, or one starting with an indicator, as something other
+# than a string, and GitBook then refuses the whole import ("Error while updating content").
+YAML_INDICATORS = tuple("[]{}&*!|>'\"%@`#,?:-")
+
+
+def front_matter_errors(text):
+    if not text.startswith("---\n") or "\n---" not in text[3:]:
+        return []
+    errs = []
+    for line in text[4:text.index("\n---", 3)].splitlines():
+        m = re.match(r"^(\w[\w-]*):\s*(.*)$", line)
+        if not m:
+            errs.append(f"front matter line is not 'key: value': {line!r}")
+            continue
+        value = m.group(2)
+        if value[:1] in ("'", '"') and value.endswith(value[0]) and len(value) > 1:
+            continue
+        if ": " in value or value.endswith(":") or " #" in value or value.startswith(YAML_INDICATORS):
+            errs.append(f"front matter {m.group(1)} is not plain YAML (': ', ' #' or a leading indicator): quote it or reword it")
+    return errs
+
+
 def strip_fences(text):
     return re.sub(r"^```.*?^```", "", text, flags=re.S | re.M)
 
@@ -35,6 +57,7 @@ def check(path, commands, summary_pages):
     body = strip_fences(text)
 
     # --- GitBook syntax -------------------------------------------------
+    errs += front_matter_errors(text)
     for opener, closer in [("tabs", "endtabs"), ("tab", "endtab"), ("hint", "endhint"), ("code", "endcode")]:
         o = len(re.findall(r"\{%\s*" + opener + r"(?:\s|%\})", text))
         c = len(re.findall(r"\{%\s*" + closer + r"\s*%\}", text))
