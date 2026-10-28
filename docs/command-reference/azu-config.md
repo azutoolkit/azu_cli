@@ -1,5 +1,5 @@
 ---
-description: Show the effective configuration of your app: server, TLS, templates, database, limits and more, with secrets masked.
+description: Show the effective configuration of your app (server, TLS, templates, database, limits and more), with secrets masked.
 ---
 
 # azu config
