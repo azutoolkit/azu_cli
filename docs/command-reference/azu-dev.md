@@ -139,6 +139,8 @@ Don't stop `azu dev` with SIGKILL. It cannot stop the app then, and the app keep
 
 Keys: `1` to `7` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
 
+The Log, Requests and SQL panels scroll: `↑`/`↓` (or `k`/`j`) a line, PgUp/PgDn a page, Home/End (or `g`/`G`) to either end. The card's badge says which rows it shows (`21-40 of 80`). A Log scrolled back stays where it is as lines arrive; End follows the newest line again.
+
 </details>
 
 <details>
@@ -170,12 +172,17 @@ Each command runs as `azu <command>` with plain output, one at a time, never whi
 | `doctor`, `version` | at start (`doctor` again when `.env*`, `shard.yml` or `shard.lock` changes) |
 | `routes` | after each successful build |
 | `config` | after each successful build, and when `.env*`, `shard.yml` or `shard.lock` changes |
-| `db:status` | at start, when `src/db/migrations` changes, and after `db:migrate` |
-| `test` | on Enter; `w` also runs it after each build |
-| `db:migrate`, `session:clear` | on Enter, then `y`: they change the database or the session store |
+| `db:status` | at start, when `src/db/migrations` changes, and after any command that changes the database |
+| `db:validate`, `db:migrations:verify --no-rollback` | on Enter, and with `a` |
+| `test`, `openapi:export` | on Enter; `w` also runs the tests after each build |
+| `db:migrate`, `db:rollback`, `db:seed`, `db:data:migrate`, `db:create`, `db:setup`, `db:schema:load`, `db:reset`, `db:drop` | on Enter, then `y`: they change the database |
+| `jobs:status`, `jobs:retry --all`, `jobs:clear --failed` | in a JoobQ project (`config/jobs.yml`); retry and clear after `y` |
+| `session:clear` | on Enter, then `y`: it changes the session store |
 | `completion <shell>` | on Enter, for the shell in `SHELL` (bash when it is another) |
 
-Keys: `↑`/`↓` select, Enter runs, `a` runs every check again (not the tests, not the commands that change things), `w` toggles the tests after builds. Run from the dashboard, `doctor` counts the port the app holds as expected.
+Commands that ask "are you sure?" on their own (`db:rollback`, `db:reset`, `db:drop`, `jobs:clear`, `session:clear`) run with `--force`: the panel has no terminal to answer them, and its `y` is the answer. `db:migrations:verify` runs with `--no-rollback`, so it reads the migrations without rolling the newest one back and applying it again. Left out are the commands that need names, files or choices typed with them (`new`, `init`, `generate`, `undo`, `session:setup`, `openapi:generate`) and the ones that keep running or take the terminal (`serve`, `dev`, `console`, `jobs:worker`, `jobs:ui`).
+
+Keys: `↑`/`↓` select (the list scrolls to keep the selection in view), Enter runs, PgUp/PgDn scroll the selected command's output, `a` runs every check again (the commands that only read: not the tests, not the commands that change things), `w` toggles the tests after builds. Run from the dashboard, `doctor` counts the port the app holds as expected.
 
 </details>
 

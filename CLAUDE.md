@@ -386,7 +386,10 @@ Generators extend `Teeplate::FileTree`:
 - `azu dev`'s Commands panel is `dev_server/control.cr`: a catalog of commands with triggers, `Control.outcome` parsing
   each one's plain output, and a `Runner` fiber that runs them one at a time as subprocesses (`AZU_UI=plain`,
   `AZU_CONTROL=1`), paused while the app builds. Never block the dashboard's fiber: `Runner#enqueue` wakes the runner
-  with a non-blocking `select` send (`Channel#empty?` blocked it for good)
+  with a non-blocking `select` send (`Channel#empty?` blocked it for good).
+  The catalog lists every registered command but `Control::LEFT_OUT` (a spec checks it: a new command goes in one or the
+  other); a command that prompts runs with `--force` behind the panel's `y` (`confirm`), `check` ones only read (`a`).
+  Scrollable cards go through `Hud.window` (rows, height, offset, tail) and show its `21-40 of 80` badge
 - `azu dev`'s Console panel: `dev_server/console.cr` (`Console.script` wraps a snippet after the declarations and
   kept assignments, `Console.outcome` reads `=> value`/crash/compile error, `Evaluator` runs `crystal run
   .azu_console.cr`: keep that one file name, the compiler's object cache is keyed on it) and `UI::Editor` (the

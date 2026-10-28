@@ -10,11 +10,22 @@ end
 
 private def control_hud(requested : Array(String), clock = Clock.new)
   AzuCLI::DevServer::Hud.new("blog", "4000", "development", "watching src", clock: -> { clock.now }, directory: "/work/blog",
-    commands: Control.catalog("zsh"), on_control: ->(command : Control::Command) { requested << command.id; nil })
+    commands: Control.catalog("zsh", jobs: false), on_control: ->(command : Control::Command) { requested << command.id; nil })
 end
 
 private def key(char : Char)
   TUI::Key.new(TUI::KeyCode::Char, char)
+end
+
+private def press(screen, code : TUI::KeyCode, times = 1)
+  times.times { screen.update(TUI::Key.new(code)) }
+end
+
+# Moves the Commands panel's selection to `id`.
+private def select_command(screen, id : String)
+  until screen.commands[screen.selected].id == id
+    press(screen, TUI::KeyCode::Down)
+  end
 end
 
 private def render(screen, width = 120, height = 32) : String
@@ -44,6 +55,42 @@ describe AzuCLI::DevServer::Control do
     Control.shell({"SHELL" => "/bin/zsh"}).should eq "zsh"
     Control.shell({"SHELL" => "/usr/bin/tcsh"}).should eq "bash"
     Control.catalog("fish").find!(&.id.==("completion")).args.should eq ["completion", "fish"]
+  end
+
+  it "lists every registered command but the ones it leaves out on purpose" do
+    registered = File.read("src/azu_cli/cli.cr").scan(/register_command\("([^"]+)", (Commands::[\w:]+)\)/)
+    aliases = registered.group_by(&.[2]).values.flat_map { |names| names[1..].map(&.[1]) } # g, server, s, t
+    listed = Control.catalog("bash", jobs: true).map(&.id)
+    (registered.map(&.[1]) - aliases - Control::LEFT_OUT.to_a).sort.should eq listed.sort
+  end
+
+  it "lists the jobs commands only in a JoobQ project" do
+    Control.catalog("bash", jobs: false).map(&.id).select(&.starts_with?("jobs:")).should be_empty
+    Control.catalog("bash", jobs: true).map(&.id).select(&.starts_with?("jobs:")).should eq ["jobs:status", "jobs:retry", "jobs:clear"]
+  end
+
+  it "asks before every command that changes something, and runs it without a prompt of its own" do
+    catalog = Control.catalog("bash", jobs: true)
+    changing = %w[db:migrate db:rollback db:seed db:data:migrate db:create db:setup db:schema:load db:reset db:drop jobs:retry jobs:clear session:clear]
+    catalog.select(&.confirm).map(&.id).sort.should eq changing.sort
+    # these ask "are you sure?" on their own: the panel has no terminal to answer, its y is the answer
+    %w[db:rollback db:reset db:drop jobs:clear session:clear].each { |id| catalog.find!(&.id.==(id)).args.should contain "--force" }
+    # verify would roll back and re-apply the newest migration without it
+    catalog.find!(&.id.==("db:migrations:verify")).args.should eq ["db:migrations:verify", "--no-rollback"]
+    catalog.find!(&.id.==("db:drop")).effect.should eq "the database"
+    catalog.find!(&.id.==("jobs:clear")).effect.should eq "the job queues"
+    catalog.find!(&.id.==("session:clear")).effect.should eq "the session store"
+  end
+end
+
+describe "AzuCLI::DevServer::Hud.window" do
+  it "keeps a window of rows inside them, from the top or back from the end" do
+    rows = (1..10).to_a
+    AzuCLI::DevServer::Hud.window(rows, 4, 0).should eq({[1, 2, 3, 4], 0, "1-4 of 10"})
+    AzuCLI::DevServer::Hud.window(rows, 4, 99).should eq({[7, 8, 9, 10], 6, "7-10 of 10"})
+    AzuCLI::DevServer::Hud.window(rows, 4, 0, tail: true).should eq({[7, 8, 9, 10], 0, "7-10 of 10"})
+    AzuCLI::DevServer::Hud.window(rows, 4, 2, tail: true).should eq({[5, 6, 7, 8], 2, "5-8 of 10"})
+    AzuCLI::DevServer::Hud.window(rows, 20, 3).should eq({rows, 0, nil})
   end
 end
 
@@ -89,8 +136,7 @@ describe "AzuCLI::DevServer::Hud control plane" do
     screen.tab.commands?.should be_true
     screen.update(Ev::ControlFinished.new("db:status", 0, "Total: 1 migrations (0 applied, 1 pending)", 1.0))
     requested.clear
-    5.times { screen.update(TUI::Key.new(TUI::KeyCode::Down)) } # db:migrate
-    screen.commands[screen.selected].id.should eq "db:migrate"
+    select_command(screen, "db:migrate")
     screen.update(TUI::Key.new(TUI::KeyCode::Enter))
     requested.should be_empty
     render(screen).should contain "press y to run it"
@@ -102,6 +148,93 @@ describe "AzuCLI::DevServer::Hud control plane" do
 
     screen.update(Ev::ControlFinished.new("db:migrate", 0, "done", 20.0))
     requested.should eq ["db:migrate", "db:status"] # what the migration changed
+  end
+
+  it "runs every check on a, nothing that changes things" do
+    requested = [] of String
+    screen = control_hud(requested)
+    screen.update(key('2'))
+    %w[doctor db:status version].each { |id| screen.update(Ev::ControlFinished.new(id, 0, "", 1.0)) } # the start runs
+    requested.clear
+    screen.update(key('a'))
+    requested.sort.should eq %w[config db:migrations:verify db:status db:validate doctor routes version]
+  end
+
+  it "reads the database again after any command that changed it" do
+    requested = [] of String
+    screen = control_hud(requested)
+    screen.update(key('2'))
+    screen.update(Ev::ControlFinished.new("db:status", 0, "", 1.0))
+    select_command(screen, "db:rollback")
+    screen.update(TUI::Key.new(TUI::KeyCode::Enter))
+    text = render(screen)
+    text.should contain "azu db:rollback --force changes the database"
+    text.should contain "press y to run it, any other key cancels"
+    screen.update(key('y'))
+    requested.clear
+    screen.update(Ev::ControlFinished.new("db:rollback", 0, "done", 2.0))
+    requested.should eq ["db:status"]
+    screen.update(Ev::ControlFinished.new("openapi:export", 0, "done", 2.0))
+    requested.should eq ["db:status"] # it changed no database
+  end
+
+  it "scrolls the list to keep the selected command in view on a short terminal" do
+    screen = control_hud([] of String)
+    screen.update(key('2'))
+    render(screen, 120, 14).should contain "doctor"
+    select_command(screen, "completion")
+    text = render(screen, 120, 14)
+    text.should contain "▸ ○ completion"
+    text.should_not contain "HEALTH"
+    select_command(screen, "doctor") # wraps around to the top
+    render(screen, 120, 14).should match /▸ . doctor/
+  end
+
+  it "scrolls the selected command's output with PgUp and PgDn" do
+    screen = control_hud([] of String)
+    screen.update(key('2'))
+    screen.update(Ev::ControlFinished.new("doctor", 0, (1..60).map { |n| "line #{n}" }.join("\n"), 1.0))
+    text = render(screen, 120, 20)
+    text.should contain "│ line 60 "
+    text.should contain "of 60"
+    press(screen, TUI::KeyCode::PageUp)
+    text = render(screen, 120, 20)
+    text.should_not contain "│ line 60 "
+    text.should contain "│ line 4"
+    press(screen, TUI::KeyCode::PageDown, 20)
+    render(screen, 120, 20).should contain "│ line 60 "
+  end
+
+  it "scrolls the Log back, keeps it there as lines arrive, and End follows the newest again" do
+    screen = control_hud([] of String)
+    50.times { |n| screen.update(Ev::LogLine.new("app line #{n + 1}")) }
+    screen.update(key('7'))
+    render(screen, 100, 16).should contain "app line 50"
+    press(screen, TUI::KeyCode::Up, 10)
+    text = render(screen, 100, 16)
+    text.should_not contain "app line 50"
+    text.should contain "app line 40"
+    screen.update(Ev::LogLine.new("app line 51"))
+    render(screen, 100, 16).should contain "app line 40" # stays where it was scrolled to
+    press(screen, TUI::KeyCode::End)
+    render(screen, 100, 16).should contain "app line 51"
+  end
+
+  it "scrolls the Requests tab through the recent requests" do
+    screen = control_hud([] of String)
+    recent = (1..40).map { |n| {"at" => "12:00:#{n}", "method" => "GET", "path" => "/posts/#{n}", "status" => 200, "ms" => 1.5, "endpoint" => "Show"} }
+    screen.update(Ev::Telemetry.new(JSON.parse({"requests" => {"total" => 40, "rps" => 1.0, "recent" => recent}}.to_json)))
+    screen.update(key('4'))
+    text = render(screen, 120, 16)
+    text.should contain "/posts/1 "
+    text.should contain "1-9 of 40"
+    press(screen, TUI::KeyCode::PageDown)
+    text = render(screen, 120, 16)
+    text.should_not contain "/posts/1 "
+    press(screen, TUI::KeyCode::End)
+    render(screen, 120, 16).should contain "/posts/40"
+    press(screen, TUI::KeyCode::Home)
+    render(screen, 120, 16).should contain "/posts/1 "
   end
 
   it "re-runs the tests after each build once w is on" do

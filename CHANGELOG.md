@@ -2,6 +2,15 @@
 
 ## Unreleased - generated projects depend on azu 0.10 and session 1.1
 
+- Added: the Commands panel of `azu dev` lists every command that runs to an end without a terminal: `db:validate`,
+  `db:migrations:verify --no-rollback`, `openapi:export`, and after `y` `db:rollback`, `db:seed`, `db:data:migrate`,
+  `db:create`, `db:setup`, `db:schema:load`, `db:reset` and `db:drop`; in a JoobQ project also `jobs:status`,
+  `jobs:retry --all` and `jobs:clear --failed`. Commands that ask "are you sure?" run with `--force` (the panel's `y`
+  answers it), `a` runs the commands that only read, and `db:status` runs again after any command that changed the
+  database.
+- Added: scrolling in `azu dev`: the command list keeps the selection in view, PgUp/PgDn scroll the selected
+  command's output, and the Log, Requests and SQL panels scroll with ↑/↓, PgUp/PgDn and Home/End (the Log stays put
+  while scrolled back and End follows it again).
 - Removed: `azu.yml` and the `config:show`, `config:validate` and `config:env` commands. The file was read for a few
   logging flags only: `azu dev` and `azu serve` read `PORT`/`HOST`, `azu db:*` reads `DATABASE_URL`, and a section named
   after the environment replaced the rest of the file instead of merging with it. The CLI is configured by

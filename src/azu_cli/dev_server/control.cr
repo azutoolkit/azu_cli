@@ -27,24 +27,59 @@ module AzuCLI
         end
       end
 
-      # A command of the control plane. `confirm` commands change something (the database, the session store) and run
-      # only after `y`.
-      record Command, id : String, group : String, args : Array(String), triggers : Trigger = Trigger::None, confirm : Bool = false do
+      # A command of the control plane. `confirm` commands change something (the database, the job queues, the session
+      # store) and run only after `y`; `check` commands only read, and `a` runs them all.
+      record Command, id : String, group : String, args : Array(String), triggers : Trigger = Trigger::None, confirm : Bool = false, check : Bool = false do
         def line : String
           "azu #{args.join(" ")}"
         end
+
+        # What a `confirm` command changes, for its prompt.
+        def effect : String
+          case id
+          when .starts_with?("db:")      then "the database"
+          when .starts_with?("jobs:")    then "the job queues"
+          when .starts_with?("session:") then "the session store"
+          else                                "the project"
+          end
+        end
       end
 
-      def self.catalog(shell : String = Control.shell) : Array(Command)
-        [
-          Command.new("doctor", "Health", ["doctor"], Trigger::Start | Trigger::Config),
-          Command.new("routes", "App", ["routes"], Trigger::Build),
-          Command.new("config", "App", ["config"], Trigger::Build | Trigger::Config),
+      # The registered commands the panel leaves out (aliases aside): they need names, files or choices typed with
+      # them, or they keep running or own the terminal.
+      LEFT_OUT = {"new", "init", "help", "generate", "undo", "session:setup", "openapi:generate",
+                  "serve", "dev", "console", "jobs:worker", "jobs:ui"}
+
+      # Every other command: they run to an end without a terminal. Commands that would ask "are you sure?" get
+      # --force: `y` here is that answer. The jobs commands are listed in JoobQ projects (config/jobs.yml).
+      def self.catalog(shell : String = Control.shell, jobs : Bool = File.exists?("config/jobs.yml")) : Array(Command)
+        commands = [
+          Command.new("doctor", "Health", ["doctor"], Trigger::Start | Trigger::Config, check: true),
+          Command.new("routes", "App", ["routes"], Trigger::Build, check: true),
+          Command.new("config", "App", ["config"], Trigger::Build | Trigger::Config, check: true),
           Command.new("test", "App", ["test"]),
-          Command.new("db:status", "Database", ["db:status"], Trigger::Start | Trigger::Migrations),
+          Command.new("openapi:export", "App", ["openapi:export"]),
+          Command.new("db:status", "Database", ["db:status"], Trigger::Start | Trigger::Migrations, check: true),
+          Command.new("db:validate", "Database", ["db:validate"], check: true),
+          Command.new("db:migrations:verify", "Database", ["db:migrations:verify", "--no-rollback"], check: true),
           Command.new("db:migrate", "Database", ["db:migrate"], confirm: true),
+          Command.new("db:rollback", "Database", ["db:rollback", "--force"], confirm: true),
+          Command.new("db:seed", "Database", ["db:seed"], confirm: true),
+          Command.new("db:data:migrate", "Database", ["db:data:migrate"], confirm: true),
+          Command.new("db:create", "Database", ["db:create"], confirm: true),
+          Command.new("db:setup", "Database", ["db:setup"], confirm: true),
+          Command.new("db:schema:load", "Database", ["db:schema:load"], confirm: true),
+          Command.new("db:reset", "Database", ["db:reset", "--force"], confirm: true),
+          Command.new("db:drop", "Database", ["db:drop", "--force"], confirm: true),
+        ]
+        if jobs
+          commands << Command.new("jobs:status", "Jobs", ["jobs:status"], check: true)
+          commands << Command.new("jobs:retry", "Jobs", ["jobs:retry", "--all"], confirm: true)
+          commands << Command.new("jobs:clear", "Jobs", ["jobs:clear", "--failed", "--force"], confirm: true)
+        end
+        commands + [
           Command.new("session:clear", "Sessions", ["session:clear", "--force"], confirm: true),
-          Command.new("version", "Other", ["version"], Trigger::Start),
+          Command.new("version", "Other", ["version"], Trigger::Start, check: true),
           Command.new("completion", "Other", ["completion", shell]),
         ]
       end

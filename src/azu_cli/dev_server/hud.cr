@@ -75,6 +75,12 @@ module AzuCLI
       @history_index : Int32?
       @scroll = 0
       @handoff_work : Proc(Nil)?
+      # Scrolling: the first row of the command list, the selected command's output (rows back from its end), and the
+      # Log (rows back from the newest), Requests and SQL tabs (rows from the top)
+      @list_top = 0
+      @detail_scroll = 0
+      @scrolls = {} of Tab => Int32
+      @page = 10
 
       def initialize(@project : String, @port : String, @environment : String, @watching : String, @on_rebuild : Proc(Nil) = -> { }, @clock : Proc(Time::Instant) = -> { Time.instant }, @directory : String = Dir.current, @branch : String? = nil,
                      @commands : Array(Control::Command) = Control.catalog, @on_control : Proc(Control::Command, Nil) = ->(_command : Control::Command) { },
@@ -177,6 +183,7 @@ module AzuCLI
           return UI::Action::Redraw
         end
         return commands_key(key) if tab.commands? && commands_key?(key)
+        return scroll_key(key) if Hud.scrollable?(tab) && scroll_key?(key)
         case key.char
         when 'r'
           @on_rebuild.call
@@ -193,7 +200,57 @@ module AzuCLI
       end
 
       private def commands_key?(key : Key) : Bool
-        key.code.up? || key.code.down? || key.code.enter? || {'j', 'k', 'a', 'w'}.includes?(key.char)
+        key.code.up? || key.code.down? || key.code.enter? || key.code.page_up? || key.code.page_down? || {'j', 'k', 'a', 'w'}.includes?(key.char)
+      end
+
+      # The tabs whose card scrolls with ↑/↓, PgUp/PgDn and Home/End.
+      def self.scrollable?(tab : Tab) : Bool
+        tab.log? || tab.requests? || tab.sql?
+      end
+
+      # The Log keeps to its newest line until it is scrolled back.
+      def self.tail?(tab : Tab) : Bool
+        tab.log?
+      end
+
+      def scroll(tab : Tab) : Int32
+        @scrolls[tab]? || 0
+      end
+
+      private def scroll_key?(key : Key) : Bool
+        key.code.up? || key.code.down? || key.code.page_up? || key.code.page_down? || key.code.home? || key.code.end? || {'j', 'k', 'g', 'G'}.includes?(key.char)
+      end
+
+      # Moves the view: up shows older rows (back from the end on the Log, toward the top elsewhere).
+      private def scroll_key(key : Key) : UI::Action
+        up = if key.code.up? || key.char?('k')
+               1
+             elsif key.code.down? || key.char?('j')
+               -1
+             elsif key.code.page_up?
+               @page
+             elsif key.code.page_down?
+               -@page
+             elsif key.code.home? || key.char?('g')
+               Int32::MAX // 2
+             else
+               -(Int32::MAX // 2)
+             end
+        offset = scroll(tab) + (Hud.tail?(tab) ? up : -up)
+        @scrolls[tab] = offset.clamp(0, Int32::MAX // 2)
+        UI::Action::Redraw
+      end
+
+      # The rows of a window `height` rows high, `offset` rows from the top (from the bottom when `tail`), the offset
+      # kept inside the rows, and "21-40 of 80" when they do not all fit.
+      def self.window(rows : Array(T), height : Int32, offset : Int32, tail : Bool = false) : {Array(T), Int32, String?} forall T
+        height = Math.max(0, height)
+        last = Math.max(0, rows.size - height)
+        offset = offset.clamp(0, last)
+        first = tail ? last - offset : offset
+        shown = rows[first, height]
+        badge = rows.size > height && height > 0 ? "#{first + 1}-#{first + shown.size} of #{rows.size}" : nil
+        {shown, offset, badge}
       end
 
       # The Commands panel: move, run the selected command (after `y` when it changes something), run every check,
@@ -201,13 +258,19 @@ module AzuCLI
       private def commands_key(key : Key) : UI::Action
         if key.code.up? || key.char?('k')
           @selected = (@selected - 1) % @commands.size
+          @detail_scroll = 0
         elsif key.code.down? || key.char?('j')
           @selected = (@selected + 1) % @commands.size
+          @detail_scroll = 0
+        elsif key.code.page_up?
+          @detail_scroll += @page
+        elsif key.code.page_down?
+          @detail_scroll = Math.max(0, @detail_scroll - @page)
         elsif key.code.enter?
           command = @commands[@selected]
           command.confirm ? (@confirming = command) : run(command)
         elsif key.char?('a')
-          @commands.each { |command| run(command) unless command.confirm || command.id.in?("test", "completion") }
+          @commands.each { |command| run(command) if command.check }
         elsif key.char?('w')
           @test_watch = !@test_watch
         end
@@ -436,8 +499,12 @@ module AzuCLI
         when Events::ControlFinished
           outcome, summary = Control.outcome(event.id, event.exit_code, event.output)
           statuses[event.id] = outcome
+          @detail_scroll = 0 if @commands[@selected]?.try(&.id) == event.id
           runs[event.id] = Control::Run.new(outcome, summary, event.output.lines.map(&.rstrip), event.seconds, @clock.call)
-          @commands.find(&.id.==("db:status")).try { |status_command| run(status_command) } if event.id == "db:migrate"
+          # A command that changed the database: db:status reads it again
+          if @commands.find(&.id.==(event.id)).try { |command| command.confirm && command.effect == "the database" }
+            @commands.find(&.id.==("db:status")).try { |status_command| run(status_command) }
+          end
         when Events::BuildStarted
           @state = State::Building
           @build_started = @clock.call
@@ -480,6 +547,7 @@ module AzuCLI
         when Events::LogLine
           @log << event
           @log.shift if @log.size > LOG_LINES
+          @scrolls[Tab::Log] = scroll(Tab::Log) + 1 if scroll(Tab::Log) > 0
         when Events::RssSample
           @rss = event.app
           @cli_rss = event.cli
@@ -522,7 +590,7 @@ module AzuCLI
           in .requests? then requests(frame, body, full: true)
           in .sql?      then sql(frame, body, full: true)
           in .jobs?     then jobs(frame, body)
-          in .log?      then log_card(frame, body, "Log")
+          in .log?      then log_card(frame, body, "Log", full: true)
           end
         end
         keys = if tab.console? && console_focus?
@@ -534,7 +602,9 @@ module AzuCLI
                elsif command = @confirming
                  [{"y", "Run #{command.line}"}, {"any key", "Cancel"}]
                elsif tab.commands?
-                 [{"↑/↓", "Select"}, {"Enter", "Run"}, {"a", "Run all checks"}, {"w", "Tests after builds: #{test_watch? ? "on" : "off"}"}, {"1-7", "Panels"}, {"q", "Quit"}]
+                 [{"↑/↓", "Select"}, {"Enter", "Run"}, {"PgUp/PgDn", "Scroll output"}, {"a", "Run all checks"}, {"w", "Tests after builds: #{test_watch? ? "on" : "off"}"}, {"1-7", "Panels"}, {"q", "Quit"}]
+               elsif Hud.scrollable?(tab)
+                 [{"↑/↓", "Scroll"}, {"PgUp/PgDn", "Page"}, {"Home/End", Hud.tail?(tab) ? "Oldest/Newest" : "Top/Bottom"}, {"1-7", "Panels"}, {"r", "Rebuild"}, {"c", "Clear log"}, {"q", "Quit"}]
                else
                  [{"1-7", "Panels"}, {"r", "Rebuild"}, {"l", "Log"}, {"c", "Clear log"}, {"q", "Quit"}]
                end
@@ -762,7 +832,7 @@ module AzuCLI
       end
 
       private def commands_panel(frame : Frame, body : Rect) : Nil
-        list_width = Math.min(60, Math.max(36, body.w * 9 // 20))
+        list_width = Math.min(64, Math.max(40, body.w // 2))
         list, detail = body.w >= 90 ? {Rect.new(body.x, body.y, list_width, body.h), Rect.new(body.x + list_width + 1, body.y, body.w - list_width - 1, body.h)} : body.split_top(@commands.size + 8)
         command_list(frame, list)
         command_detail(frame, detail) unless detail.h < 3
@@ -774,43 +844,53 @@ module AzuCLI
         inner = frame.card(rect, "Commands", "#{counts[0]} #{g.ok}  #{counts[1]} #{g.warn}  #{counts[2]} #{g.fail}")
         return if inner.empty?
 
-        y = inner.y
-        group = nil
+        # A row per group heading and per command; the list scrolls to keep the selected command in view
+        rows = [] of String | Int32
         @commands.each_with_index do |command, index|
-          break if y >= inner.bottom
-          if command.group != group
-            group = command.group
-            frame.text(inner.x, y, group.upcase, Token::Faint)
-            y += 1
-            break if y >= inner.bottom
+          rows << command.group if index == 0 || @commands[index - 1].group != command.group
+          rows << index
+        end
+        selected_row = rows.index(@selected) || 0
+        @list_top = @list_top.clamp(selected_row - inner.h + 1, selected_row)
+        @list_top = @list_top.clamp(0, Math.max(0, rows.size - inner.h))
+        rows[@list_top, inner.h].each_with_index do |row, offset|
+          y = inner.y + offset
+          if row.is_a?(String)
+            frame.text(inner.x, y, row.upcase, Token::Faint)
+            next
           end
+          index = row
+          command = @commands[index]
           selected = index == @selected
           glyph, tone = mark(frame, status(command.id))
           frame.text(inner.x, y, selected ? g.pointer : " ", Token::Cyan)
           frame.text(inner.x + 2, y, glyph, tone)
-          frame.text(inner.x + 4, y, command.id, selected ? frame.style(Token::Cyan, Attr::Bold) : frame.style(Token::Text), max: 16)
+          frame.text(inner.x + 4, y, command.id, selected ? frame.style(Token::Cyan, Attr::Bold) : frame.style(Token::Text), max: 20)
           age = runs[command.id]?.try { |run| ago(run.at) } || ""
           age_x = inner.right - Width.of(age)
           summary = runs[command.id]?.try(&.summary) || (command.confirm ? "Enter, then y" : (command.triggers.none? ? "Enter runs it" : ""))
           summary = "queued" if status(command.id).queued?
           summary = "running" if status(command.id).running?
-          frame.text(inner.x + 21, y, summary, status(command.id).ok? || status(command.id).idle? ? Token::Muted : tone, max: age_x - inner.x - 22)
+          frame.text(inner.x + 25, y, summary, status(command.id).ok? || status(command.id).idle? ? Token::Muted : tone, max: age_x - inner.x - 26)
           frame.text(age_x, y, age, Token::Faint)
-          y += 1
         end
       end
 
       private def command_detail(frame : Frame, rect : Rect) : Nil
         command = @commands[@selected]
         run = runs[command.id]?
-        badge = run.try { |done| "#{Widgets.duration(done.seconds)} · #{ago(done.at)} ago" }
+        # The rows above the output, to know how many of its lines fit before drawing the card
+        header = 1 + (@confirming ? 3 : 0) + (status(command.id).running? ? 1 : 0) + 1
+        lines, @detail_scroll, range = Hud.window(run.try(&.output.reject(&.blank?)) || [] of String, rect.h - 2 - header, @detail_scroll, tail: true)
+        badge = run.try { |done| "#{Widgets.duration(done.seconds)} · #{ago(done.at)} ago#{range.try { |text| " · #{text}" }}" }
         inner = frame.card(rect, command.line, badge)
         return if inner.empty?
 
         y = inner.y
         if pending = @confirming
-          frame.text(inner.x, y, "#{frame.glyphs.warn} #{pending.line} changes #{pending.id.starts_with?("db") ? "the database" : "the session store"}: press y to run it", Token::Amber, max: inner.w)
-          y += 2
+          frame.text(inner.x, y, "#{frame.glyphs.warn} #{pending.line} changes #{pending.effect}", Token::Amber, max: inner.w)
+          frame.text(inner.x + 2, y + 1, "press y to run it, any other key cancels", Token::Amber, max: inner.w - 2)
+          y += 3
         end
         when_line = Hud.when_runs(command, test_watch?)
         frame.text(inner.x, y, when_line, Token::Faint, max: inner.w)
@@ -821,10 +901,9 @@ module AzuCLI
         end
         return unless run
         y += 1
-        lines = run.output.reject(&.blank?)
-        room = inner.bottom - y
-        return if room <= 0
-        lines.last(room).each_with_index do |line, index|
+        @page = Math.max(1, inner.bottom - y - 1)
+        lines.each_with_index do |line, index|
+          break if y + index >= inner.bottom
           tone = line.matches?(/\A(ok|✔)\b/) ? Token::Text : (line.matches?(/\A(warn|WARNING)/) ? Token::Amber : (line.matches?(/\A(fail|ERROR|FATAL)|error/i) ? Token::Red : Token::Text))
           frame.text(inner.x, y + index, line, tone, max: inner.w)
         end
@@ -936,9 +1015,13 @@ module AzuCLI
 
       private def requests(frame : Frame, rect : Rect, full : Bool = false) : Nil
         data = @telemetry.try(&.["requests"]?)
-        badge = data.try(&.["total"]?).try { |total| "#{total} total" }
+        recent = data.try(&.["recent"]?).try(&.as_a?) || [] of JSON::Any
+        rows, offset, range = Hud.window(recent, rect.h - 3, full ? scroll(Tab::Requests) : 0)
+        @scrolls[Tab::Requests] = offset if full
+        badge = data.try(&.["total"]?).try { |total| "#{total} total#{range.try { |text| " · #{text}" }}" }
         inner = frame.card(rect, "Requests", badge)
         return if inner.empty?
+        @page = Math.max(1, inner.h - 2) if full
         return waiting_for_telemetry(frame, inner) unless data && @telemetry_at
 
         stats = [Seg[number(data["rps"]?, 1), Token::Cyan], Seg[" req/s   ", Token::Muted],
@@ -949,7 +1032,6 @@ module AzuCLI
         x = frame.line(inner.x, inner.y, stats, inner.w)
         spark = Widgets.sparkline(@rps_history, Math.max(0, inner.right - x - 3), frame.glyphs)
         frame.gradient(inner.right - Width.of(spark), inner.y, spark) unless spark.empty?
-        rows = data["recent"]?.try(&.as_a?) || [] of JSON::Any
         rows.first(inner.h - 1).each_with_index do |row, index|
           y = inner.y + 1 + index
           method = row["method"]?.try(&.as_s?) || "?"
@@ -966,38 +1048,40 @@ module AzuCLI
       private def sql(frame : Frame, rect : Rect, full : Bool = false) : Nil
         data = @telemetry.try(&.["sql"]?)
         pool = data.try(&.["pool"]?)
-        badge = pool.try { |value| value.raw.nil? ? nil : "pool #{number(value["in_flight"]?, 0)}/#{number(value["max"]?, 0)}" }
+        rows, offset, range = Hud.window(data ? sql_rows(frame.glyphs, data, full) : [] of {Int32, Array(Seg)}, rect.h - 3, full ? scroll(Tab::SQL) : 0)
+        @scrolls[Tab::SQL] = offset if full
+        badge = [pool.try { |value| value.raw.nil? ? nil : "pool #{number(value["in_flight"]?, 0)}/#{number(value["max"]?, 0)}" }, range].compact.join(" · ").presence
         inner = frame.card(rect, "SQL", badge)
         return if inner.empty?
+        @page = Math.max(1, inner.h - 2) if full
         return waiting_for_telemetry(frame, inner) unless data && @telemetry_at
 
-        g = frame.glyphs
         frame.line(inner.x, inner.y, [Seg[number(data["total"]?, 0), Token::Cyan], Seg[" q   avg ", Token::Muted], Seg["#{number(data["avg_ms"]?, 1)} ms"],
                                       Seg["   slow ", Token::Muted], Seg[number(data["slow"]?, 0), positive?(data["slow"]?) ? Token::Amber : Token::Text]], inner.w)
-        y = inner.y + 1
-        alerts = data["n_plus_one"]?.try(&.as_a?) || [] of JSON::Any
-        alerts.each do |alert|
-          break if y >= inner.bottom
-          frame.line(inner.x, y, [Seg["#{g.warn} N+1 ×#{number(alert["count"]?, 0)}  ", Token::Amber], Seg[alert["sql"]?.try(&.as_s?) || "", Token::Amber]], inner.w)
-          y += 1
+        rows.each_with_index do |(indent, segs), index|
+          break if inner.y + 1 + index >= inner.bottom
+          frame.line(inner.x + indent, inner.y + 1 + index, segs, inner.w - indent)
+        end
+      end
+
+      # The N+1 alerts (with where they come from, and the suggestion on the SQL tab) and the slowest queries, a row
+      # each with its indent.
+      private def sql_rows(g : Glyphs, data : JSON::Any, full : Bool) : Array({Int32, Array(Seg)})
+        rows = [] of {Int32, Array(Seg)}
+        (data["n_plus_one"]?.try(&.as_a?) || [] of JSON::Any).each do |alert|
+          rows << {0, [Seg["#{g.warn} N+1 ×#{number(alert["count"]?, 0)}  ", Token::Amber], Seg[alert["sql"]?.try(&.as_s?) || "", Token::Amber]]}
           where = [alert["endpoint"]?.try(&.as_s?), alert["caller"]?.try(&.as_s?)].compact.join("  ")
-          if !where.empty? && y < inner.bottom
-            frame.text(inner.x + 2, y, where, Token::Blue, max: inner.w - 2)
-            y += 1
-          end
-          if full && (suggestion = alert["suggestion"]?.try(&.as_s?)) && y < inner.bottom
-            frame.text(inner.x + 2, y, suggestion, Token::Muted, max: inner.w - 2)
-            y += 1
+          rows << {2, [Seg[where, Token::Blue]]} unless where.empty?
+          if full && (suggestion = alert["suggestion"]?.try(&.as_s?))
+            rows << {2, [Seg[suggestion, Token::Muted]]}
           end
         end
-        slowest = data["slowest"]?.try(&.as_a?) || [] of JSON::Any
-        slowest.each do |query|
-          break if y >= inner.bottom
+        (data["slowest"]?.try(&.as_a?) || [] of JSON::Any).each do |query|
           ms = query["ms"]?
-          frame.line(inner.x, y, [Seg["#{number(ms, 1)} ms".rjust(9) + "  ", (ms.try(&.as_f?) || 0.0) >= 100 ? Token::Amber : Token::Muted],
-                                  Seg[query["sql"]?.try(&.as_s?) || ""]], inner.w)
-          y += 1
+          rows << {0, [Seg["#{number(ms, 1)} ms".rjust(9) + "  ", (ms.try(&.as_f?) || 0.0) >= 100 ? Token::Amber : Token::Muted],
+                       Seg[query["sql"]?.try(&.as_s?) || ""]]}
         end
+        rows
       end
 
       private def jobs(frame : Frame, rect : Rect) : Nil
@@ -1025,11 +1109,14 @@ module AzuCLI
         end
       end
 
-      private def log_card(frame : Frame, rect : Rect, title : String) : Nil
+      # The app's output. On the Log tab it scrolls back (it follows the newest line otherwise).
+      private def log_card(frame : Frame, rect : Rect, title : String, full : Bool = false) : Nil
         return if rect.h < 3
 
-        inner = frame.card(rect, title, "#{Math.min(log.size, rect.h - 2)} of #{log.size}")
-        lines = log.to_a.last(inner.h)
+        lines, offset, range = Hud.window(log.to_a, rect.h - 2, full ? scroll(Tab::Log) : 0, tail: true)
+        @scrolls[Tab::Log] = offset if full
+        inner = frame.card(rect, title, range || "#{lines.size} of #{log.size}")
+        @page = Math.max(1, inner.h - 1) if full
         lines.each_with_index do |entry, index|
           tone = entry.error ? Token::Amber : Token::Text
           tone = Token::Red if entry.line.includes?("ERROR") || entry.line.includes?("Error")
