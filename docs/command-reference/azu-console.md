@@ -91,7 +91,7 @@ Don't use it against production by accident. Loading the app runs its top-level 
 
 - It needs a Crystal built with the interpreter: `crystal i --help` must work. The packages from crystal-lang.org/install and Homebrew include it. The official Docker images do not, and the command then exits with 2.
 - Code that links native libraries (SQLite, OpenSSL, libpq) runs only if the shared libraries are installed.
-- The interpreter is slower than compiled code and does not support every Crystal feature, so some apps do not load in it.
+- The interpreter is slower than compiled code and does not support every Crystal feature, so some apps do not load in it. With Crystal 1.22.1 no Azu app does: the interpreter stops with compiler bugs in Crinja (azu's templates) and in CQL's PostgreSQL session. The Console panel of [azu dev](azu-dev.md) runs Crystal with your app loaded without the interpreter.
 - Nothing is reloaded. Restart the console after you change code.
 - Ctrl-C goes to the interpreter, not to the CLI.
 

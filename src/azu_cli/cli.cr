@@ -165,7 +165,7 @@ module AzuCLI
         Logger.info(result.message) unless result.message.empty? || command.drew_card?
         0
       else
-        Logger.error(result.error) unless result.error.empty?
+        Logger.error(result.error) unless result.error.empty? || result.reported?
         result.exit_code
       end
     end

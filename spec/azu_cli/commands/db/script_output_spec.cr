@@ -33,3 +33,15 @@ describe AzuCLI::Commands::Database::ScriptOutput do
     ScriptOutput.note("  Compiling  ").should eq "Compiling"
   end
 end
+
+describe "AzuCLI::Commands::Database::ScriptOutput with a plan" do
+  it "says what this run applied from the plan, not from CQL's table of every applied migration" do
+    up_to_date = ScriptOutput.new(["AZU_PLAN", "│   ✔    │ CreatePosts │ 20261027155725 │"])
+    up_to_date.summary.should eq "nothing to do: up to date"
+
+    applied = ScriptOutput.new(["AZU_PLAN", "AZU_PENDING 20261027160000 AddTags", "│   ✔    │ CreatePosts │ 20261027155725 │", "│   ✔    │ AddTags │ 20261027160000 │"])
+    applied.planned.should eq [{"20261027160000", "AddTags"}]
+    applied.summary.should eq "applied AddTags"
+    applied.printed.should be_empty
+  end
+end

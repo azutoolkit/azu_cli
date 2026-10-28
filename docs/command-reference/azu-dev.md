@@ -1,12 +1,12 @@
 ---
-description: Run your app in development, rebuilding and restarting it on every source change, with a dashboard for builds, requests, SQL, jobs and logs.
+description: Run your app in development, rebuilding and restarting it on every source change, with a dashboard for builds, the CLI's commands, a console, requests, SQL, jobs and logs.
 ---
 
 # azu dev
 
 ## Overview & visual demo
 
-`azu dev` builds the app with `shards build` (a debug build, not a release), runs it, and keeps it current: source and config changes rebuild and restart it, a failed build keeps the previous app running, and template changes need no build at all. On a terminal it draws a dashboard with the build, the app, requests, SQL, jobs and the log.
+`azu dev` builds the app with `shards build` (a debug build, not a release), runs it, and keeps it current: source and config changes rebuild and restart it, a failed build keeps the previous app running, and template changes need no build at all. On a terminal it draws a dashboard with the build, the app, the CLI's own commands (doctor, routes, db:status, tests, ...) re-run as you work, a console that runs Crystal with your app loaded, requests, SQL, jobs and the log. The concise version is [azu dev](../command-reference/azu-dev.md).
 
 <figure><img src="../assets/terminal-ui/07-dev-dashboard.png" alt="The azu dev dashboard: build, app, requests, SQL, workers and the log of a running app"><figcaption><p>The dashboard of a running app. The Requests and SQL panels come from the app, so they need <code>require "azu/dev"</code> and <code>PERFORMANCE_MONITORING=true</code>.</p></figcaption></figure>
 
@@ -83,7 +83,7 @@ ERROR: Build failed after 5.5s. The previous build keeps running (pid 1195); sav
 {% code title="terminal: azu dev, the dashboard after a failed build" %}
 ```text
 ▲ AZU  dev · demo_app   ✖ build failed · serving the previous build   pid 1195  :4000  develo…  16:04:33
-[1] Overview   [2] Requests   [3] SQL   [4] Jobs   [5] Log
+[1] Overview   [2] Commands   [3] Console   [4] Requests   [5] SQL   [6] Jobs   [7] Log
 Build failed · the app keeps running the previous build (pid 1195)                         5.5s
 ✖ src/demo_app.cr:79:6
 
@@ -113,6 +113,10 @@ Use `azu dev` while you develop. Each change is a debug build, and a broken save
 Template edits do not rebuild, but the page refreshes only when template hot reload is on. It is on by default in `development`. `TEMPLATE_HOT_RELOAD=false` turns it off, and then you restart `azu dev`.
 {% endhint %}
 
+{% hint style="warning" %}
+Console snippets run against the database `DATABASE_URL` points at, like `rails console`. A snippet that writes (`Post.create!`) writes for real; the console just never runs it twice.
+{% endhint %}
+
 {% hint style="danger" %}
 Don't stop `azu dev` with SIGKILL. It cannot stop the app then, and the app keeps the port until you end it. Stop it with Ctrl-C.
 {% endhint %}
@@ -123,6 +127,9 @@ Don't stop `azu dev` with SIGKILL. It cannot stop the app then, and the app keep
 
 | Panel | Shows |
 | --- | --- |
+| Overview | Build and App cards, a one-line summary of the commands, requests, SQL, jobs and the log |
+| Commands | The CLI's own commands, re-run when what they read changes (below) |
+| Console | Crystal with the app loaded, like `rails console` (below) |
 | Build | The compiler's stage while it builds, the build time, the last builds and the changed files |
 | App | pid, uptime, restarts, crashes, resident memory and its trend, the GC heap |
 | Requests | Rate, p50 and p95, 4xx and 5xx counts, and the last requests (from the app) |
@@ -130,7 +137,7 @@ Don't stop `azu dev` with SIGKILL. It cannot stop the app then, and the app keep
 | Jobs | Pending, busy and failed jobs per queue in `config/jobs.yml`, read from `REDIS_URL` (default `redis://localhost:6379`) |
 | Log | The app's stdout and stderr |
 
-Keys: `1` to `5` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
+Keys: `1` to `7` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
 
 </details>
 
@@ -149,3 +156,59 @@ Keys: `1` to `5` switch panels, `r` rebuilds now, `l` shows the log, `c` clears 
 The watcher polls the modification time and size of the files under `src/`, `config/` and `public/templates/`, and of `shard.yml`, `shard.lock` and the `.env*` files at the root. It runs every `--interval` milliseconds. Symlinked directories are not followed. There is no file system event watcher, so a very large tree costs CPU; raise `--interval` if that matters.
 
 </details>
+
+<details>
+
+<summary>Commands panel: the CLI's commands, kept current</summary>
+
+<figure><img src="../assets/terminal-ui/19-dev-commands.png" alt="The Commands panel of azu dev: doctor, routes, db:status and the other commands with their outcomes, and doctor's output"><figcaption><p>Each command's mark, outcome and age, and the selected command's output.</p></figcaption></figure>
+
+Each command runs as `azu <command>` with plain output, one at a time, never while the app builds or the console compiles.
+
+| Command | Runs |
+| --- | --- |
+| `doctor`, `version` | at start (`doctor` again when `.env*`, `shard.yml` or `shard.lock` changes) |
+| `routes` | after each successful build |
+| `config` | after each successful build, and when `.env*`, `shard.yml` or `shard.lock` changes |
+| `db:status` | at start, when `src/db/migrations` changes, and after `db:migrate` |
+| `test` | on Enter; `w` also runs it after each build |
+| `db:migrate`, `session:clear` | on Enter, then `y`: they change the database or the session store |
+| `completion <shell>` | on Enter, for the shell in `SHELL` (bash when it is another) |
+
+Keys: `↑`/`↓` select, Enter runs, `a` runs every check again (not the tests, not the commands that change things), `w` toggles the tests after builds. Run from the dashboard, `doctor` counts the port the app holds as expected.
+
+</details>
+
+<details>
+
+<summary>Console panel: Crystal with your app loaded</summary>
+
+<figure><img src="../assets/terminal-ui/27-dev-console-pretty.png" alt="The Console panel of azu dev: Post.first and Post.all pretty-printed and colored, and a named tuple"><figcaption><p>Values come back pretty-printed and colored, like irb.</p></figcaption></figure>
+
+{% code title="terminal: azu dev, the Console panel" %}
+```text
+demo_app(dev)> post = Post.last
+=> #<Post:0x7f62
+    @id=2,
+    @title="Hello", ...>
+▸ post kept for the next snippets
+demo_app(dev)> post.try(&.title)
+=> "Hello"  11.0s
+demo_app(dev)> def titles(n = 3)
+          ...>   Post.all.first(n).map(&.title)
+          ...> end
+✔ declared: kept for the next snippets
+demo_app(dev)> titles(5)
+=> ["Hello", "World"]
+```
+{% endcode %}
+
+*A session against a generated SQLite app; the times differ on every run.*
+
+- Enter runs finished code; an open `def`, `do`, bracket or string gets a new line (and `end` dedents itself). Alt-Enter adds a line, `↑`/`↓` walk the history (kept per project), Ctrl-L clears, Esc cancels a run or gives the keyboard back to the panels.
+- An expression answers `=> value`, pretty-printed at the console's width. Declarations (`def`, `class`, `module`, ...) and local assignments carry over to later snippets; an assignment that would write if run again (`create`, `save`, `update`, `delete`, `destroy`, a `!` method) is not replayed. `locals`, `declarations`, `forget`, `help` and `exit` do what they say.
+- Each run compiles the snippets with the app (`.azu_console.cr` in the project, removed after the run). After the app's first build the console compiles the app once (`warming up`, then `ready`). Snippets typed while one compiles wait and go together into the next compile, each with its own value. Expect 10 to 20 s a run for a mid-size app: Crystal compiles the whole program every time.
+- Ctrl-O hands the terminal to `crystal i` with the app loaded, when the compiler has the interpreter. Crystal 1.22.1's interpreter cannot load an Azu app yet: it stops with compiler bugs in Crinja (azu's templates) and in CQL's PostgreSQL session.
+
+</details>
+

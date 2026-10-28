@@ -10,6 +10,8 @@ module AzuCLI
       property error : String
       # The process exit code the CLI ends with: 0 for success, 1 for a failure, 2 for invalid usage.
       property exit_code : Int32
+      # Whether the command has printed the error already (the CLI then does not print it again).
+      property? reported : Bool = false
 
       def initialize(@success : Bool, @message : String = "", @error : String = "", exit_code : Int32? = nil)
         @exit_code = exit_code || (success ? 0 : 1)
@@ -193,13 +195,13 @@ module AzuCLI
       # Error result
       def error(message : String) : Result
         Logger.error(message)
-        Result.error(message)
+        Result.error(message).tap(&.reported = true)
       end
 
       # Error result with category
       def error(message : String, category : String) : Result
         Logger.error("[#{category}] #{message}")
-        Result.error(message)
+        Result.error(message).tap(&.reported = true)
       end
 
       # Handle error with proper logging and optional exit
@@ -237,7 +239,7 @@ module AzuCLI
           end
         end
 
-        Result.error(message)
+        Result.error(message).tap(&.reported = true)
       end
 
       # Handle fatal error (always exits)

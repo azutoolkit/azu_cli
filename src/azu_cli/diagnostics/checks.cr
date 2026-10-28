@@ -228,8 +228,11 @@ module AzuCLI
         number = raw ? raw.to_i? : DEFAULT_PORT
         return Check.fail("port", "PORT is not a port number", "set PORT to a number between 1 and 65535") unless number && (1..65535).includes?(number)
         case @system.port_state(number)
-        in .free?   then Check.ok("port", "port #{number} is free")
-        in .in_use? then Check.warn("port", "port #{number} is in use (the application may be running)", "stop the process using it or set PORT")
+        in .free? then Check.ok("port", "port #{number} is free")
+        in .in_use?
+          # Run from azu dev's dashboard, the port is the app azu dev serves
+          return Check.ok("port", "port #{number} is in use by the app azu dev runs") if @env.call("AZU_CONTROL") == "1"
+          Check.warn("port", "port #{number} is in use (the application may be running)", "stop the process using it or set PORT")
         in .denied?
           Check.warn("port", "port #{number} cannot be used by this user (ports below 1024 need privileges)", "set PORT to a port above 1023 or run with the needed privileges")
         end

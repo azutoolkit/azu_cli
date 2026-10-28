@@ -34,6 +34,7 @@ module AzuCLI
       @stopping = false
       @lock = Mutex.new
       @hud : UI::Program?
+      @control : AzuCLI::DevServer::Control::Runner?
       @rebuild_requested = false
 
       def initialize
@@ -70,8 +71,19 @@ module AzuCLI
       private def run_dashboard(target : String) : Result
         terminal = UI::Terminal.detect
         telemetry = AzuCLI::DevServer::TelemetryServer.new
+        control = AzuCLI::DevServer::Control::Runner.new(->(message : UI::Message) { emit(message) })
+        @control = control
+        app_file = "./src/#{Utils.project_name}.cr"
+        evaluator = AzuCLI::DevServer::Console::Evaluator.new(->(message : UI::Message) { emit(message) }, app_file,
+          on_busy: ->(busy : Bool) { control.paused = busy; nil })
         screen = AzuCLI::DevServer::Hud.new(target, (@port || ENV["PORT"]? || DEFAULT_PORT).to_s, @environment || ENV["CRYSTAL_ENV"]? || "development",
-          "watching src, config · poll #{@interval.total_milliseconds.to_i} ms", on_rebuild: -> { @rebuild_requested = true; nil }, branch: git_branch)
+          "watching src, config · poll #{@interval.total_milliseconds.to_i} ms", on_rebuild: -> { @rebuild_requested = true; nil }, branch: git_branch,
+          on_control: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command); nil },
+          history: AzuCLI::DevServer::Console::History.for_project,
+          on_eval: ->(snippets : Array(AzuCLI::DevServer::Console::Snippet), prelude : Array(String), kept : Array(String), width : Int32) { evaluator.evaluate(snippets, prelude, kept, width); nil },
+          on_prewarm: -> { evaluator.prewarm; nil },
+          on_cancel_eval: -> { evaluator.cancel; nil },
+          on_interpreter: ->(prelude : Array(String)) { run_interpreter(app_file, prelude); nil })
         program = UI::Program.new(screen, terminal, UI::FullScreenRenderer.new(terminal.output))
         @hud = program
         @child.try do |child|
@@ -85,14 +97,28 @@ module AzuCLI
           telemetry.stop
           exit 0
         end
+        control.start
+        spawn { emit(AzuCLI::DevServer::Events::InterpreterProbe.new(Console.environment.interpreter?)) }
         spawn serve(target)
         spawn sample_memory(program)
         sample_jobs(program)
         program.run
+        control.stop
         stop
         telemetry.stop
         stdout.puts screen.summary
         success
+      end
+
+      # `crystal i` with the app loaded and the Console panel's declarations, on the terminal the dashboard left to it.
+      private def run_interpreter(app_file : String, prelude : Array(String)) : Nil
+        script = Console.new.script(app_file, prelude)
+        ScratchFile.with(".azu_console_", script, ignore_interrupt: true) do |path|
+          STDOUT.puts "crystal i: loading #{app_file} (exit returns to azu dev)"
+          Console.environment.run_interpreter(path, Dir.current)
+        end
+      rescue ex
+        STDERR.puts "crystal i failed: #{ex.message}"
       end
 
       private def sample_memory(program : UI::Program) : Nil
@@ -246,6 +272,7 @@ module AzuCLI
       def rebuild_and_restart(target : String, files : Array(String) = [] of String, first : Bool = false) : Nil
         return if @stopping
 
+        @control.try(&.building = true) # the control plane waits: its commands compile too
         dashboard_running? ? emit(Events::BuildStarted.new(files)) : Logger.info("Building #{target}...")
         builder = self.class.builder.call(target)
         builder.args << "--progress" if dashboard_running? && builder.command == "shards"
@@ -254,6 +281,7 @@ module AzuCLI
         sink = dashboard_running? ? AzuCLI::DevServer::LineSink.new { |line| emit(Events::BuildLine.new(line)) } : STDERR
         result = builder.build(sink: sink)
         @builder = nil
+        @control.try(&.building = false)
         if result.cancelled || @stopping
           nil # shutting down: neither a failure nor a restart
         elsif dashboard_running?

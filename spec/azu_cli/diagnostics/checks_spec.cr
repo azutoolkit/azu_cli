@@ -374,6 +374,16 @@ describe AzuCLI::Diagnostics::Checks do
       end
     end
 
+    it "is ok when the port is taken while azu dev's dashboard runs the check (its own app holds it)" do
+      in_tmp_project do |dir|
+        system = FakeSystem.new(GOOD_COMMANDS)
+        system.free = false
+        check = checks(dir, {"AZU_CONTROL" => "1"}, system).port
+        check.status.ok?.should be_true
+        check.message.should eq "port 4000 is in use by the app azu dev runs"
+      end
+    end
+
     it "says so when a port below 1024 is not allowed, instead of calling it in use" do
       in_tmp_project do |dir|
         system = FakeSystem.new(GOOD_COMMANDS)

@@ -85,7 +85,7 @@ describe AzuCLI::DevServer::Hud do
   it "switches tabs with the number keys, rebuilds with r and quits with q" do
     rebuilt = false
     screen = hud(rebuild: -> { rebuilt = true; nil })
-    screen.update(TUI::Key.new(TUI::KeyCode::Char, '5'))
+    screen.update(TUI::Key.new(TUI::KeyCode::Char, '7'))
     screen.tab.log?.should be_true
     screen.update(Ev::LogLine.new("listening on :4000"))
     render(screen).should contain "listening on :4000"

@@ -1,14 +1,19 @@
 require "../ui"
 require "./telemetry"
+require "./control"
+require "./console"
 
 module AzuCLI
   module DevServer
-    # The `azu dev` dashboard: build, app, requests, SQL, jobs and the app's log, updated as events arrive.
+    # The `azu dev` dashboard: build, app, the CLI's commands (the control plane), requests, SQL, jobs and the app's
+    # log, updated as events arrive.
     class Hud < UI::Screen
       include UI
 
       enum Tab
         Overview
+        Commands
+        Console
         Requests
         SQL
         Jobs
@@ -51,12 +56,80 @@ module AzuCLI
       @jobs : Events::JobsSample?
       @error_dismissed = false
       @exit_note : String?
+      # The control plane: what each command last did, and which one the Commands panel shows
+      getter runs = {} of String => Control::Run
+      getter statuses = {} of String => Control::Status
+      getter selected = 0
+      getter confirming : Control::Command?
+      getter? test_watch = false
+      @kicked_off = false
+      # The console: what is being typed, the transcript, the declarations kept for later snippets
+      getter editor = UI::Editor.new
+      getter transcript = [] of Console::Entry
+      getter prelude = [] of String
+      # Local assignments run again before each snippet, so their locals carry over
+      getter kept = [] of String
+      getter? console_focus = true
+      getter interpreter : Bool?
+      @console_ids = 0
+      @history_index : Int32?
+      @scroll = 0
+      @handoff_work : Proc(Nil)?
 
-      def initialize(@project : String, @port : String, @environment : String, @watching : String, @on_rebuild : Proc(Nil) = -> { }, @clock : Proc(Time::Instant) = -> { Time.instant }, @directory : String = Dir.current, @branch : String? = nil)
+      def initialize(@project : String, @port : String, @environment : String, @watching : String, @on_rebuild : Proc(Nil) = -> { }, @clock : Proc(Time::Instant) = -> { Time.instant }, @directory : String = Dir.current, @branch : String? = nil,
+                     @commands : Array(Control::Command) = Control.catalog, @on_control : Proc(Control::Command, Nil) = ->(_command : Control::Command) { },
+                     @history : Console::History = Console::History.new(nil),
+                     @on_eval : Proc(Array(Console::Snippet), Array(String), Array(String), Int32, Nil) = ->(_snippets : Array(Console::Snippet), _prelude : Array(String), _kept : Array(String), _width : Int32) { },
+                     @on_cancel_eval : Proc(Nil) = -> { },
+                     @on_prewarm : Proc(Nil) = -> { },
+                     @on_interpreter : Proc(Array(String), Nil) = ->(_prelude : Array(String)) { })
+      end
+
+      def handoff : Proc(Nil)?
+        @handoff_work.tap { @handoff_work = nil }
       end
 
       def animating? : Bool
-        state.building? || state.starting?
+        state.building? || state.starting? || statuses.values.any?(&.busy?) || evaluating? || @warm.running?
+      end
+
+      def evaluating? : Bool
+        transcript.any? { |entry| entry.status.running? || entry.status.queued? }
+      end
+
+      # The warm-up compile of the console, which starts after the app's first build.
+      enum WarmUp
+        Waiting
+        Running
+        Ready
+        Failed
+      end
+
+      getter warm = WarmUp::Waiting
+      @warm_error : String?
+      # A compile (a batch or the warm-up) is running: snippets typed meanwhile wait for the next one
+      @compiling = false
+      @console_progress : CompilerProgress?
+      @compile_started : Time::Instant?
+
+      def commands : Array(Control::Command)
+        @commands
+      end
+
+      def status(id : String) : Control::Status
+        statuses[id]? || Control::Status::Idle
+      end
+
+      # Runs the commands that `trigger` concerns (one already queued or running is left as it is).
+      def trigger(trigger : Control::Trigger) : Nil
+        @commands.each { |command| run(command) if command.triggers.includes?(trigger) }
+        @commands.find(&.id.==("test")).try { |command| run(command) } if trigger.build? && test_watch?
+      end
+
+      private def run(command : Control::Command) : Nil
+        return if status(command.id).busy?
+        statuses[command.id] = Control::Status::Queued
+        @on_control.call(command)
       end
 
       def requests_served : Int64
@@ -70,6 +143,10 @@ module AzuCLI
       end
 
       def update(event : Event) : UI::Action
+        unless @kicked_off
+          @kicked_off = true
+          trigger(Control::Trigger::Start)
+        end
         case event
         when Key     then key(event)
         when Resize  then UI::Action::Redraw
@@ -80,17 +157,26 @@ module AzuCLI
       end
 
       private def key(key : Key) : UI::Action
+        return console_key(key) if tab.console? && console_focus?
         return UI::Action::Quit if key.code.ctrl_c? || key.char?('q')
+        if tab.console? && (key.code.enter? || key.char?('e'))
+          @console_focus = true
+          return UI::Action::Redraw
+        end
+        return interpreter_request if tab.console? && key.char?('i')
 
         if key.code.esc?
-          return UI::Action::Continue unless failed_card?
+          return UI::Action::Continue unless failed_card? && !tab.console?
           @error_dismissed = true
           return UI::Action::Redraw
         end
-        if (char = key.char) && ('1'..'5').includes?(char)
+        return confirm(key) if @confirming
+        if (char = key.char) && ('1'..'7').includes?(char)
           @tab = Tab.from_value(char.to_i - 1)
+          @console_focus = true if tab.console?
           return UI::Action::Redraw
         end
+        return commands_key(key) if tab.commands? && commands_key?(key)
         case key.char
         when 'r'
           @on_rebuild.call
@@ -106,8 +192,252 @@ module AzuCLI
         end
       end
 
+      private def commands_key?(key : Key) : Bool
+        key.code.up? || key.code.down? || key.code.enter? || {'j', 'k', 'a', 'w'}.includes?(key.char)
+      end
+
+      # The Commands panel: move, run the selected command (after `y` when it changes something), run every check,
+      # or re-run the tests after each build.
+      private def commands_key(key : Key) : UI::Action
+        if key.code.up? || key.char?('k')
+          @selected = (@selected - 1) % @commands.size
+        elsif key.code.down? || key.char?('j')
+          @selected = (@selected + 1) % @commands.size
+        elsif key.code.enter?
+          command = @commands[@selected]
+          command.confirm ? (@confirming = command) : run(command)
+        elsif key.char?('a')
+          @commands.each { |command| run(command) unless command.confirm || command.id.in?("test", "completion") }
+        elsif key.char?('w')
+          @test_watch = !@test_watch
+        end
+        UI::Action::Redraw
+      end
+
+      # ---- the console
+
+      # Keys while the console has the keyboard: an editor where Enter runs finished code (like irb), Alt-Enter
+      # starts a new line, ↑/↓ on the first/last line walk the history, Esc gives the keyboard back to the panels.
+      private def console_key(key : Key) : UI::Action
+        case key.code
+        when .esc?
+          evaluating? ? cancel_runs : (@console_focus = false)
+        when .ctrl_c?
+          evaluating? ? cancel_runs : editor.clear
+          @history_index = nil
+        when .enter?
+          text = editor.text
+          if UI::Editor.complete?(text)
+            submit
+          elsif !text.blank?
+            editor.newline
+          end
+        when .alt_enter?      then editor.newline
+        when .up?             then editor.first_row? ? recall(-1) : editor.up
+        when .down?           then editor.last_row? ? recall(1) : editor.down
+        when .left?           then editor.left
+        when .right?          then editor.right
+        when .home?, .ctrl_a? then editor.home
+        when .end?, .ctrl_e?  then editor.end_of_line
+        when .backspace?      then editor.backspace
+        when .delete?         then editor.delete
+        when .ctrl_k?         then editor.kill
+        when .ctrl_u?         then editor.clear
+        when .ctrl_l?
+          transcript.reject! { |entry| !entry.status.running? }
+          @scroll = 0
+        when .ctrl_o?    then return interpreter_request
+        when .page_up?   then @scroll += 5
+        when .page_down? then @scroll = Math.max(0, @scroll - 5)
+        when .tab?       then editor.insert("  ")
+        when .paste?     then key.text.try { |text| editor.insert(text.gsub("\r\n", "\n").gsub('\r', '\n')) }
+        when .char?      then key.char.try { |char| editor.insert(char) }
+        end
+        UI::Action::Redraw
+      end
+
+      # Walks the history: -1 is older, 1 is newer; past the newest is an empty editor.
+      private def recall(step : Int32) : Nil
+        entries = @history.entries
+        return if entries.empty?
+        index = (@history_index || entries.size) + step
+        if index >= entries.size
+          @history_index = nil
+          editor.clear
+        else
+          @history_index = index.clamp(0, entries.size - 1)
+          editor.text = entries[@history_index.not_nil!]
+        end
+      end
+
+      private def submit : Nil
+        code = editor.text.strip
+        return if code.empty?
+        @history.add(code)
+        @history_index = nil
+        editor.clear
+        @scroll = 0
+        @console_ids += 1
+        case code
+        when "exit", "quit"
+          @console_focus = false
+        when "clear"
+          transcript.clear
+        when "reload!"
+          note(code, "every snippet compiles the app as it is now: there is nothing to reload")
+        when "help"
+          note(code, Hud::CONSOLE_HELP)
+        when "declarations"
+          note(code, prelude.empty? ? "nothing declared yet" : prelude.join("\n"))
+        when "locals"
+          note(code, kept.empty? ? "no locals kept yet: an assignment such as post = Post.first is" : kept.join("\n"))
+        when "forget"
+          note(code, "forgot #{kept.size} kept assignment#{kept.size == 1 ? "" : "s"} and #{prelude.size} declaration#{prelude.size == 1 ? "" : "s"}")
+          kept.clear
+          prelude.clear
+        else
+          transcript << Console::Entry.new(@console_ids, code, Console.declaration?(code))
+          dispatch
+        end
+      end
+
+      CONSOLE_HELP = "Crystal runs with the app loaded, like rails console: an expression answers => value.\n" \
+                     "post = Post.first keeps post for the next snippets (the assignment runs again before each one; one that writes is not kept).\n" \
+                     "def, class, module, ... are kept too. locals and declarations list them, forget drops them.\n" \
+                     "Enter runs finished code, Alt-Enter adds a line, ↑/↓ history, Ctrl-L clears, Esc cancels a run or leaves.\n" \
+                     "Snippets typed while one compiles wait and go together into the next compile (one compile, each its own => value).\n" \
+                     "Ctrl-O opens crystal i with the app, when this Crystal has it; Crystal 1.22.1's interpreter cannot load azu or CQL yet. exit leaves."
+
+      # An assignment that ran is kept (its locals carry over), unless running it again would write something.
+      private def keep(entry : Console::Entry) : Nil
+        return unless Console.assignment?(entry.code)
+        names = entry.code[/\A\s*([a-z_]\w*(\s*,\s*[a-z_]\w*)*)/, 1].split(',').map(&.strip)
+        if Console.writes?(entry.code)
+          entry.kept = "#{names.join(", ")} not kept: running it again would write; use crystal i (Ctrl-O) for a live session"
+        else
+          kept << entry.code
+          entry.kept = "#{names.join(", ")} kept for the next snippets"
+        end
+      end
+
+      # Sends every waiting snippet in one compile, unless one is already running (they go with the next).
+      private def dispatch : Nil
+        return if @compiling
+        waiting = transcript.select(&.status.queued?)
+        return if waiting.empty?
+
+        waiting.each { |entry| entry.status = Console::Entry::Status::Running }
+        @compiling = true
+        @console_progress = nil
+        @compile_started = @clock.call
+        @on_eval.call(waiting.map { |entry| Console::Snippet.new(entry.id, entry.code, entry.declaration?) }, prelude.dup, kept.dup, @value_width)
+      end
+
+      # Esc while snippets run or wait: the running compile is stopped, and the waiting ones are dropped with it.
+      private def cancel_runs : Nil
+        transcript.each do |entry|
+          next unless entry.status.queued?
+          entry.status = Console::Entry::Status::Fail
+          entry.error = "cancelled"
+        end
+        if @compiling
+          @cancel_requested = true
+          @on_cancel_eval.call
+        end
+      end
+
+      @cancel_requested = false
+      # How wide a value may print: the transcript's width less the "=> ", as last drawn
+      @value_width = 80
+
+      # After the app's first build, compile it once for the console, so the first snippet is as quick as the next.
+      private def prewarm : Nil
+        return unless @warm.waiting?
+        @warm = WarmUp::Running
+        @compiling = true
+        @compile_started = @clock.call
+        @on_prewarm.call
+      end
+
+      private def finished(event : Events::ConsoleFinished) : Nil
+        outcomes = Console.outcomes(event.exit_code, event.output, Console::SCRIPT, event.ranges, event.ids)
+        event.ids.each do |id|
+          entry = transcript.find { |candidate| candidate.id == id } || next
+          outcome = outcomes[id]?
+          if outcome.nil?
+            entry.status = Console::Entry::Status::Queued # another snippet of the batch failed first: runs again
+            next
+          end
+          entry.status = outcome.ok ? Console::Entry::Status::Ok : Console::Entry::Status::Fail
+          entry.printed = outcome.printed
+          entry.value = outcome.value
+          entry.error = @cancel_requested && !outcome.ok ? "cancelled" : outcome.error
+          entry.seconds = event.seconds
+          prelude << entry.code if outcome.ok && entry.declaration?
+          keep(entry) if outcome.ok && !entry.declaration?
+        end
+        if @cancel_requested # a cancelled batch is not run again
+          transcript.each { |entry| (entry.status = Console::Entry::Status::Fail; entry.error = "cancelled") if entry.status.queued? && event.ids.includes?(entry.id) }
+        end
+        @cancel_requested = false
+        @compiling = false
+        @warm = WarmUp::Ready if @warm.waiting? || @warm.running?
+        dispatch
+      end
+
+      private def note(code : String, text : String) : Nil
+        entry = Console::Entry.new(@console_ids, code, false, Console::Entry::Status::Note)
+        entry.printed = text.lines
+        transcript << entry
+      end
+
+      private def interpreter_request : UI::Action
+        case interpreter
+        when true
+          prelude = @prelude.dup
+          @handoff_work = -> { @on_interpreter.call(prelude) }
+          return UI::Action::Handoff
+        when false
+          @console_ids += 1
+          note("crystal i", "This Crystal has no interpreter (crystal i --help says so): the official Docker images and Linux tarballs are built " \
+                            "without it. Homebrew and the crystal-lang.org/install packages have it. Snippets here work without it.")
+        else
+          @console_ids += 1
+          note("crystal i", "still checking whether this Crystal has the interpreter; try again in a moment")
+        end
+        UI::Action::Redraw
+      end
+
+      private def confirm(key : Key) : UI::Action
+        command = @confirming.not_nil!
+        @confirming = nil
+        run(command) if key.char?('y') || key.char?('Y')
+        UI::Action::Redraw
+      end
+
       private def message(event : Message) : UI::Action
         case event
+        when Events::ConsoleFinished
+          finished(event)
+        when Events::ConsoleProgress
+          @console_progress = event.progress
+        when Events::ConsoleWarm
+          @warm = event.ok ? WarmUp::Ready : WarmUp::Failed
+          @warm_error = event.error
+          @compiling = false
+          @console_progress = nil
+          dispatch
+        when Events::InterpreterProbe
+          @interpreter = event.available
+        when Events::ControlQueued
+          statuses[event.id] = Control::Status::Queued unless status(event.id).running?
+        when Events::ControlStarted
+          statuses[event.id] = Control::Status::Running
+        when Events::ControlFinished
+          outcome, summary = Control.outcome(event.id, event.exit_code, event.output)
+          statuses[event.id] = outcome
+          runs[event.id] = Control::Run.new(outcome, summary, event.output.lines.map(&.rstrip), event.seconds, @clock.call)
+          @commands.find(&.id.==("db:status")).try { |status_command| run(status_command) } if event.id == "db:migrate"
         when Events::BuildStarted
           @state = State::Building
           @build_started = @clock.call
@@ -122,6 +452,8 @@ module AzuCLI
           @last_build_seconds = event.seconds
           @progress = nil
           if event.success
+            trigger(Control::Trigger::Build)
+            prewarm
             @build_history = (@build_history << event.seconds).last(10)
             @error = nil
             @state = @pid ? State::Running : State::Starting
@@ -143,6 +475,8 @@ module AzuCLI
           @state = State::Stopped unless state.failed?
         when Events::Changed
           @changed = event.files
+          trigger(Control::Trigger::Migrations) if event.files.any?(&.includes?("db/migrations/"))
+          trigger(Control::Trigger::Config) if event.files.any? { |file| Hud.config_file?(file) }
         when Events::LogLine
           @log << event
           @log.shift if @log.size > LOG_LINES
@@ -161,6 +495,12 @@ module AzuCLI
         UI::Action::Redraw
       end
 
+      # A file the configuration commands read: .env*, shard.yml/shard.lock, the CLI configuration.
+      def self.config_file?(path : String) : Bool
+        name = File.basename(path)
+        name.starts_with?(".env") || name.in?("shard.yml", "shard.lock") || path.includes?("config/azu") || name.starts_with?(".azu")
+      end
+
       private def failed_card? : Bool
         state.failed? && !@error_dismissed && !@error.nil?
       end
@@ -172,18 +512,32 @@ module AzuCLI
         title_bar(frame, width)
         tabs(frame, width)
         body = Rect.new(0, 2, width, height - 4)
-        if failed_card?
+        if failed_card? && !tab.console?
           draw_error(frame, body)
         else
           case tab
           in .overview? then overview(frame, body)
+          in .commands? then commands_panel(frame, body)
+          in .console?  then console_panel(frame, body)
           in .requests? then requests(frame, body, full: true)
           in .sql?      then sql(frame, body, full: true)
           in .jobs?     then jobs(frame, body)
           in .log?      then log_card(frame, body, "Log")
           end
         end
-        keys = failed_card? ? [{"Esc", "Back to the dashboard"}, {"r", "Retry build"}, {"q", "Quit"}] : [{"1-5", "Panels"}, {"r", "Rebuild"}, {"l", "Log"}, {"c", "Clear log"}, {"q", "Quit"}]
+        keys = if tab.console? && console_focus?
+                 evaluating? ? [{"Enter", "Queue another"}, {"Esc", "Cancel the run"}] : [{"Enter", "Run"}, {"Alt-Enter", "New line"}, {"↑/↓", "History"}, {"Ctrl-L", "Clear"}, {"Ctrl-O", "crystal i"}, {"Esc", "Panels"}]
+               elsif tab.console?
+                 [{"Enter", "Type"}, {"i", "crystal i"}, {"1-7", "Panels"}, {"q", "Quit"}]
+               elsif failed_card?
+                 [{"Esc", "Back to the dashboard"}, {"r", "Retry build"}, {"q", "Quit"}]
+               elsif command = @confirming
+                 [{"y", "Run #{command.line}"}, {"any key", "Cancel"}]
+               elsif tab.commands?
+                 [{"↑/↓", "Select"}, {"Enter", "Run"}, {"a", "Run all checks"}, {"w", "Tests after builds: #{test_watch? ? "on" : "off"}"}, {"1-7", "Panels"}, {"q", "Quit"}]
+               else
+                 [{"1-7", "Panels"}, {"r", "Rebuild"}, {"l", "Log"}, {"c", "Clear log"}, {"q", "Quit"}]
+               end
         Widgets.key_bar(frame, 1, height - 2, keys, width - 2)
         status_line(frame, width, height - 1)
       end
@@ -232,6 +586,10 @@ module AzuCLI
           top, rest = body.split_top(4)
           compact_card(frame, top)
         end
+        if rest.h >= 12
+          strip, rest = rest.split_top(3)
+          commands_strip(frame, strip)
+        end
         request_rows = Math.max(1, Math.min(5, (rest.h - 12) // 1))
         reqs, rest = rest.split_top(request_rows + 3)
         requests(frame, reqs)
@@ -244,6 +602,249 @@ module AzuCLI
           sql(frame, lower)
         end
         log_card(frame, rest, "Log") if rest.h >= 3
+      end
+
+      # ---- the console panel
+
+      # dev, test, prod: the environment as the prompt shows it.
+      private def short_environment : String
+        {"development" => "dev", "production" => "prod"}[@environment]? || @environment
+      end
+
+      private def prompt : String
+        "#{@project}(#{short_environment})> "
+      end
+
+      private def console_panel(frame : Frame, body : Rect) : Nil
+        input_rows = Math.min(editor.lines.size, Math.max(1, body.h // 3))
+        output, input = body.split_top(body.h - input_rows - 2)
+        console_transcript(frame, output)
+        console_input(frame, input)
+      end
+
+      private def console_transcript(frame : Frame, rect : Rect) : Nil
+        g = frame.glyphs
+        mode = case @warm
+               in .running? then "warming up"
+               in .failed?  then "app does not compile"
+               in .ready?   then "ready"
+               in .waiting? then "waits for the first build"
+               end
+        inner = frame.card(rect, "Console #{g.dot} #{@environment}", "#{kept.size} kept #{g.dot} #{prelude.size} declared #{g.dot} #{mode}")
+        return if inner.empty?
+
+        @value_width = Math.max(40, inner.w - 3)
+        rows = console_rows(frame)
+        visible = inner.h
+        @scroll = @scroll.clamp(0, Math.max(0, rows.size - visible))
+        start = Math.max(0, rows.size - visible - @scroll)
+        rows[start, visible].each_with_index { |segs, index| frame.line(inner.x, inner.y + index, segs, inner.w) }
+      end
+
+      private def console_rows(frame : Frame) : Array(Array(Seg))
+        g = frame.glyphs
+        rows = [] of Array(Seg)
+        if transcript.empty?
+          rows << [Seg["Loading #{@environment} environment: the app is compiled with each snippet (#{Hud::CONSOLE_NOTE})", Token::Muted]]
+          rows << [Seg["#{g.warn} warm-up failed: #{@warm_error}", Token::Amber]] if @warm.failed?
+          rows << [Seg["#{Widgets.spinner(g, @clock.call)} warming up: compiling the app once so each snippet takes seconds, not twice as long", Token::Cyan]] if @warm.running?
+          rows << [Seg["Try ", Token::Muted], Seg["#{module_name}::VERSION", Token::Cyan], Seg[" or a model query; ", Token::Muted], Seg["help", Token::Cyan], Seg[" lists what works", Token::Muted]]
+          return rows
+        end
+        continuation = " " * (Width.of(prompt) - 5) + "...> "
+        transcript.each do |entry|
+          entry.code.lines.each_with_index do |line, index|
+            rows << [Seg[index == 0 ? prompt : continuation, Token::Purple], Seg[line]]
+          end
+          entry.printed.each { |line| rows << [Seg[line, entry.status.note? ? Token::Muted : Token::Text]] }
+          time = entry.seconds.try { |seconds| "  #{Widgets.duration(seconds)}" } || ""
+          case entry.status
+          when .queued?
+            rows << [Seg["#{g.dot} waits: runs with the next compile", Token::Muted], Seg["  Esc cancels", Token::Faint]]
+          when .running?
+            rows << compile_row(g)
+          when .ok?
+            if entry.declaration?
+              rows << [Seg["#{g.ok} declared: kept for the next snippets", Token::Green], Seg[time, Token::Faint]]
+            else
+              lines = (entry.value || "nil").split('\n')
+              lines.each_with_index do |line, index|
+                row = [Seg[index == 0 ? "=> " : "   ", Token::Muted]] + value_segs(line)
+                row << Seg[time, Token::Faint] if index == lines.size - 1
+                rows << row
+              end
+            end
+            entry.kept.try { |kept_note| rows << [Seg["#{kept_note.includes?("not kept") ? g.warn : g.pointer} #{kept_note}", kept_note.includes?("not kept") ? Token::Amber : Token::Muted]] }
+          when .fail?
+            rows << [Seg["#{g.fail} #{entry.error}", Token::Red], Seg[time, Token::Faint]]
+          end
+        end
+        rows
+      end
+
+      @module_name : String?
+
+      private def module_name : String
+        @module_name ||= (Utils.project_module_name rescue @project.camelcase)
+      end
+
+      VALUE_COLORS = {Console::Token::Plain => Token::Text, Console::Token::String => Token::Green, Console::Token::Ivar => Token::Muted,
+                      Console::Token::Symbol => Token::Amber, Console::Token::Constant => Token::Blue, Console::Token::Number => Token::Purple,
+                      Console::Token::Keyword => Token::Amber}
+
+      # A line of a value, colored like irb: strings green, numbers purple, constants blue, @ivars muted.
+      private def value_segs(line : String) : Array(Seg)
+        Console.tokens(line).map { |(text, kind)| Seg[text, VALUE_COLORS[kind]] }
+      end
+
+      # "⠋ compiling [9/13] Codegen (bc+obj) ▰▰▰▰▱▱  6.2s"
+      private def compile_row(g : Glyphs) : Array(Seg)
+        elapsed = Widgets.duration((@clock.call - (@compile_started || @clock.call)).total_seconds)
+        row = [Seg["#{Widgets.spinner(g, @clock.call)} ", Token::Cyan]]
+        if progress = @console_progress
+          full, empty = Widgets.meter(progress.fraction, 12, g.bar_full, g.bar_empty)
+          row << Seg["#{progress.phase} ", Token::Cyan] << Seg[full, Token::Cyan] << Seg[empty, Token::Faint] << Seg[" #{progress.stage}", Token::Muted]
+        else
+          row << Seg["compiling with the app", Token::Cyan]
+        end
+        row << Seg["  #{elapsed}", Token::Faint] << Seg["  Esc cancels", Token::Faint]
+      end
+
+      CONSOLE_NOTE = "assignments and declarations carry over; help, exit"
+
+      private def console_input(frame : Frame, rect : Rect) : Nil
+        focus = console_focus?
+        inner = frame.card(rect, focus ? "Input" : "Input #{frame.glyphs.dot} Enter to type", evaluating? ? "running" : nil, border: focus ? Token::Cyan : Token::Faint)
+        return if inner.empty?
+
+        first = Math.max(0, editor.row - inner.h + 1)
+        continuation = " " * (Width.of(prompt) - 5) + "...> "
+        editor.lines[first, inner.h].each_with_index do |line, index|
+          row = first + index
+          x = frame.text(inner.x, inner.y + index, row == 0 ? prompt : continuation, Token::Purple)
+          frame.text(x, inner.y + index, line, Token::Text, max: inner.right - x)
+          if focus && row == editor.row
+            cursor_x = x + Width.of(line[0, editor.column])
+            under = line[editor.column]?.try(&.to_s) || " "
+            frame.text(cursor_x, inner.y + index, under, frame.style(Token::Text, Attr::Reverse)) if cursor_x < inner.right
+          end
+        end
+      end
+
+      # ---- the control plane
+
+      private def mark(frame : Frame, status : Control::Status) : {String, Token}
+        g = frame.glyphs
+        case status
+        in .idle?    then {g.off, Token::Faint}
+        in .queued?  then {g.dot, Token::Muted}
+        in .running? then {Widgets.spinner(g, @clock.call), Token::Cyan}
+        in .ok?      then {g.ok, Token::Green}
+        in .warn?    then {g.warn, Token::Amber}
+        in .fail?    then {g.fail, Token::Red}
+        end
+      end
+
+      # One line on the overview: every command that has run, with its mark; what needs a look first.
+      private def commands_strip(frame : Frame, rect : Rect) : Nil
+        attention = @commands.count { |command| status(command.id).warn? || status(command.id).fail? }
+        inner = frame.card(rect, "Commands", attention > 0 ? "#{attention} need a look · [2]" : "[2] details")
+        return if inner.empty?
+
+        segs = [] of Seg
+        @commands.each do |command|
+          next if status(command.id).idle?
+          glyph, tone = mark(frame, status(command.id))
+          segs << Seg[glyph, tone] << Seg[" #{command.id}", status(command.id).ok? ? Token::Muted : tone] << Seg["   "]
+        end
+        segs << Seg["starting the checks", Token::Muted] if segs.empty?
+        frame.line(inner.x, inner.y, segs, inner.w)
+      end
+
+      private def commands_panel(frame : Frame, body : Rect) : Nil
+        list_width = Math.min(60, Math.max(36, body.w * 9 // 20))
+        list, detail = body.w >= 90 ? {Rect.new(body.x, body.y, list_width, body.h), Rect.new(body.x + list_width + 1, body.y, body.w - list_width - 1, body.h)} : body.split_top(@commands.size + 8)
+        command_list(frame, list)
+        command_detail(frame, detail) unless detail.h < 3
+      end
+
+      private def command_list(frame : Frame, rect : Rect) : Nil
+        counts = {Control::Status::Ok, Control::Status::Warn, Control::Status::Fail}.map { |wanted| @commands.count { |command| status(command.id) == wanted } }
+        g = frame.glyphs
+        inner = frame.card(rect, "Commands", "#{counts[0]} #{g.ok}  #{counts[1]} #{g.warn}  #{counts[2]} #{g.fail}")
+        return if inner.empty?
+
+        y = inner.y
+        group = nil
+        @commands.each_with_index do |command, index|
+          break if y >= inner.bottom
+          if command.group != group
+            group = command.group
+            frame.text(inner.x, y, group.upcase, Token::Faint)
+            y += 1
+            break if y >= inner.bottom
+          end
+          selected = index == @selected
+          glyph, tone = mark(frame, status(command.id))
+          frame.text(inner.x, y, selected ? g.pointer : " ", Token::Cyan)
+          frame.text(inner.x + 2, y, glyph, tone)
+          frame.text(inner.x + 4, y, command.id, selected ? frame.style(Token::Cyan, Attr::Bold) : frame.style(Token::Text), max: 16)
+          age = runs[command.id]?.try { |run| ago(run.at) } || ""
+          age_x = inner.right - Width.of(age)
+          summary = runs[command.id]?.try(&.summary) || (command.confirm ? "Enter, then y" : (command.triggers.none? ? "Enter runs it" : ""))
+          summary = "queued" if status(command.id).queued?
+          summary = "running" if status(command.id).running?
+          frame.text(inner.x + 21, y, summary, status(command.id).ok? || status(command.id).idle? ? Token::Muted : tone, max: age_x - inner.x - 22)
+          frame.text(age_x, y, age, Token::Faint)
+          y += 1
+        end
+      end
+
+      private def command_detail(frame : Frame, rect : Rect) : Nil
+        command = @commands[@selected]
+        run = runs[command.id]?
+        badge = run.try { |done| "#{Widgets.duration(done.seconds)} · #{ago(done.at)} ago" }
+        inner = frame.card(rect, command.line, badge)
+        return if inner.empty?
+
+        y = inner.y
+        if pending = @confirming
+          frame.text(inner.x, y, "#{frame.glyphs.warn} #{pending.line} changes #{pending.id.starts_with?("db") ? "the database" : "the session store"}: press y to run it", Token::Amber, max: inner.w)
+          y += 2
+        end
+        when_line = Hud.when_runs(command, test_watch?)
+        frame.text(inner.x, y, when_line, Token::Faint, max: inner.w)
+        y += 1
+        if status(command.id).running?
+          frame.text(inner.x, y, "#{Widgets.spinner(frame.glyphs, @clock.call)} running", Token::Cyan)
+          y += 1
+        end
+        return unless run
+        y += 1
+        lines = run.output.reject(&.blank?)
+        room = inner.bottom - y
+        return if room <= 0
+        lines.last(room).each_with_index do |line, index|
+          tone = line.matches?(/\A(ok|✔)\b/) ? Token::Text : (line.matches?(/\A(warn|WARNING)/) ? Token::Amber : (line.matches?(/\A(fail|ERROR|FATAL)|error/i) ? Token::Red : Token::Text))
+          frame.text(inner.x, y + index, line, tone, max: inner.w)
+        end
+      end
+
+      # "runs at start and on config changes", for the detail card.
+      def self.when_runs(command : Control::Command, test_watch : Bool) : String
+        return "changes things: runs on Enter, after y" if command.confirm
+        return "runs on Enter#{test_watch ? " and after each build (w)" : "; w runs it after each build"}" if command.id == "test"
+        events = [] of String
+        events << "at start" if command.triggers.start?
+        events << "after each build" if command.triggers.build?
+        events << "when src/db/migrations changes" if command.triggers.migrations?
+        events << "when .env or shard.yml changes" if command.triggers.config?
+        events.empty? ? "runs on Enter" : "runs #{events.join(", ")} and on Enter"
+      end
+
+      private def ago(at : Time::Instant) : String
+        seconds = (@clock.call - at).total_seconds
+        seconds < 60 ? "#{seconds.to_i}s" : (seconds < 3600 ? "#{(seconds / 60).to_i}m" : "#{(seconds / 3600).to_i}h")
       end
 
       private def build_card(frame : Frame, rect : Rect) : Nil

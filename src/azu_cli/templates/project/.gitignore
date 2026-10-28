@@ -14,3 +14,4 @@
 /tmp_routes_*.cr
 /tmp_config_*.cr
 /.azu_console_*.cr
+/.azu_console.cr

@@ -34,7 +34,7 @@ module AzuCLI
           validator.validate_all
 
           all_migrations = validator.migration_files.map { |file| File.basename(file, ".cr") }
-          applied_versions = applied_migration_versions
+          applied_versions = read_applied_versions(db_name)
 
           if all_migrations.empty?
             Logger.info("No migrations found in #{migrations_dir}")
@@ -103,6 +103,17 @@ module AzuCLI
           validator.errors.each { |problem| ui.warn(problem) } unless validator.valid?
           validator.warnings.each { |warning| ui.note(warning) }
           success("Status displayed")
+        end
+
+        # The applied versions; on a terminal as a task, since reading them compiles a script on SQLite and MySQL.
+        private def read_applied_versions(db_name : String) : Array(Int64)
+          return applied_migration_versions unless rich?
+
+          ui.group("Status #{ui.as(UI::Rich).terminal.glyphs.dot} #{db_name}") do
+            ui.task("Read", "applied migrations") do |task|
+              applied_migration_versions.tap { |versions| task.finish(detail: "#{versions.size} applied") }
+            end
+          end
         end
 
         private def parse_options

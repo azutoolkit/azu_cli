@@ -50,7 +50,7 @@ line by line as before.
 `--debounce MS` (default 300), `--interval MS` (polling interval, default 250), `--ui rich|plain`. On a terminal of
 at least 60x16 (not CI) `azu dev` opens a dashboard: build with compiler stages, app (pid, uptime, restarts, crashes,
 memory), requests and SQL from the app (azu's `Dev::Telemetry` over `AZU_TELEMETRY_SOCKET`), JoobQ queues, the app's
-log; keys `1`-`5` panels, `r` rebuild, `l` log, `c` clear log, `q` quit. `--ui plain` keeps the line output. `src/**`, `config/**`, `shard.yml` and
+log, and the CLI's own commands (panel `2`: doctor, routes, db:status, test, db:migrate, session:clear, config:*, version, completion, re-run when what they read changes), a console with the app loaded (panel `3`, like rails console; Ctrl-O opens `crystal i` when the compiler has it); keys `1`-`7` panels, `r` rebuild, `l` log, `c` clear log, `q` quit. `--ui plain` keeps the line output. `src/**`, `config/**`, `shard.yml` and
 `shard.lock` changes build and restart; `public/templates/**` changes neither build nor restart; `.env*` changes restart
 without a build. A failed build keeps the running app. See [docs/command-reference/azu-dev.md](docs/command-reference/azu-dev.md).
 
@@ -59,13 +59,6 @@ without a build. A failed build keeps the running app. See [docs/command-referen
 `--format table|json` (default `table`), `--method METHOD`, `--path TEXT` (substring), `--ui rich|plain` (a card on a
 color terminal by default). Exit 0, 1 (the app could not
 be loaded), 2 (invalid usage). See [docs/command-reference/azu-routes.md](docs/command-reference/azu-routes.md).
-
-### `azu config` Options
-
-`--format table|json` (default `table`), `--section NAME` (`server`, `tls`, `templates`, `errors`, `session`, `secrets`,
-`database`, `limits`, `uploads`, `websocket`, `i18n`, `assets`), `--ui rich|plain`. It compiles and loads the app like
-`azu routes` does, and prints no secret. Exit 0, 1 (the app could not be loaded), 2 (invalid usage). See
-[docs/command-reference/azu-config.md](docs/command-reference/azu-config.md).
 
 ### `azu doctor` Options
 

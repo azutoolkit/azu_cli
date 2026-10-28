@@ -54,9 +54,11 @@ module AzuCLI
       end
 
       # What the scratch file does: load the app (without starting its server) and stop in the interpreter.
-      def script(app_file : String) : String
+      # `prelude`: declarations made in azu dev's Console panel, so the session has them too.
+      def script(app_file : String, prelude : Array(String) = [] of String) : String
         <<-CRYSTAL
           require #{app_file.inspect}
+          #{prelude.join("\n")}
 
           puts #{"Azu console: #{Utils.project_module_name} is loaded. Type Crystal code; `exit` leaves.".inspect}
           debugger

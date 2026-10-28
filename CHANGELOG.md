@@ -48,12 +48,27 @@
 - Added: `azu dev` on a terminal of at least 60x16 opens a dashboard (build stages from `crystal build --progress`,
   build history, app pid/uptime/restarts/crashes/RSS, requests and SQL with N+1 alerts from the app, JoobQ queue sizes,
   the app's log, a failed-build card with the error location while the previous build keeps serving). The app reports
-  through a Unix socket (`AZU_TELEMETRY_SOCKET`, mode 0600) when it uses an azu with `Dev::Telemetry` (azu 0.10.1
-  and newer); without it the panels say so. `--ui plain` keeps the line output
+  through a Unix socket (`AZU_TELEMETRY_SOCKET`, mode 0600) when it uses an azu with `Dev::Telemetry` (azu branch
+  `claude/pensive-davinci-equizt`); without it the panels say so. `--ui plain` keeps the line output
 - Added: `azu generate` on a terminal previews every file it would write and the diff of every file it would change
   (rendered in a copy of the project), type-checks in the background and writes on Enter exactly what was shown;
   `--dry-run`, `--check`, `--yes`; no arguments open a menu. `azu undo` reverts the last write (`--dry-run`, `--list`),
   leaving files edited since
+- Added: `azu dev` is a control plane. Its Commands panel (key `2`) runs `doctor`, `routes`, `config`,
+  `test`, `db:status`, `db:migrate`, `session:clear`, `version` and `completion` as
+  subprocesses, one at a time and not during a build, again when what they read changes (a build, a migration, `.env`
+  or `shard.yml`), and shows each one's outcome and output; `db:migrate` and `session:clear` run only after `y`, and
+  `w` re-runs the tests after each build. The overview has a one-line summary. Panels are numbered `1`-`7` now (Log is `7`)
+- Added: the console pretty-prints values (`pretty_inspect` at its width: a record's `@ivars` one per line, nested
+  arrays and hashes indented) and colors them like irb (strings, numbers and times, constants, symbols, `@ivars`)
+- Added: the console warms the compiler up after the app's first build, shows the compiler's progress, and lets you
+  type ahead: snippets typed while one compiles go together into the next compile (each with its own `=> value`; a
+  failing one fails alone). The Commands panel holds its next command while the console compiles
+- Added: `azu dev`'s Console panel (key `3`), like rails console: Crystal runs with the app loaded and answers
+  `=> value`; declarations and local assignments carry over to later snippets (an assignment that writes is not
+  replayed), multi-line input with auto-indent, history kept per project, `help`/`locals`/`forget`. Without an
+  interpreter each snippet is compiled with the app (about 10 s once the app's objects are cached); Ctrl-O opens
+  `crystal i` with the app and the declarations when the compiler has it, and the dashboard comes back on `exit`
 - Added: the other commands in the same style. `azu doctor`, `azu routes`, `azu db:status` and `azu version` draw
   cards on a color terminal; `db:migrate`, `db:rollback`, `db:seed` and `db:data:migrate` show their `crystal run` as a
   live task card that ends with the migrations applied or rolled back (the app's log noise is dropped, its warnings
