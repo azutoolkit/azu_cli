@@ -7,7 +7,7 @@ description: Scaffold, run and ship Azu apps from your terminal.
 Azu CLI is the command line for the [Azu Toolkit](https://github.com/azutoolkit/azu). It creates projects, generates the
 code you would have written anyway, rebuilds your app when you save, and tells you what's wrong with your setup.
 
-<img width="1990" height="480" alt="azu-cli-gitbook-cover" src="https://github.com/user-attachments/assets/3545183a-e86a-431a-9ed9-c2ac5eef3532" />
+<img width="1990" alt="azu-cli-gitbook-cover" src="https://github.com/user-attachments/assets/3545183a-e86a-431a-9ed9-c2ac5eef3532" />
 
 
 ## Overview
