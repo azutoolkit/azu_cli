@@ -1,14 +1,14 @@
 ---
-description: What configures your app (.env files), what configures the CLI itself (azu.yml), and which wins.
+description: How your app is configured (.env files and environment variables) and the few variables the CLI itself reads.
 ---
 
 # Configuration
 
-Two separate things get configured, and mixing them up is the usual source of confusion. Your **app** is configured by environment variables, loaded from `.env` files. The **CLI** has an optional `azu.yml` that affects its own logging and checks.
+Your app is configured by environment variables, loaded from `.env` files. There is no configuration file: the CLI itself reads a handful of environment variables and nothing else.
 
 ## Overview & visual demo
 
-<figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor checking the database, env, secrets and port"><figcaption><p><code>azu doctor</code> reads the same environment your app does: the database URL, every variable <code>.env.example</code> lists, the secrets and the port.</p></figcaption></figure>
+<figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor checking the database, env, secrets and port"><figcaption><p><code>azu doctor</code> reads the same environment your app does: the database URL, every variable <code>.env.example</code> lists, the secrets and the port. <a href="../command-reference/azu-config.md"><code>azu config</code></a> prints what the app ends up using.</p></figcaption></figure>
 
 ```mermaid
 flowchart TD
@@ -16,8 +16,7 @@ flowchart TD
   L --> E[".env.CRYSTAL_ENV"]
   E --> D[".env"]
   D --> APP["Your app and azu db:*, azu dev, azu test"]
-  Y["azu.yml (optional)"] --> CLI["CLI only: logging, config:*, startup warnings"]
-  P --> CLI
+  P --> CLI["The CLI: AZU_* variables only"]
 ```
 
 ## Quickstart & command syntax
@@ -65,42 +64,17 @@ Real environment variables win over any `.env` file, so set production secrets i
 {% endtab %}
 {% endtabs %}
 
-### The CLI: `azu.yml`
+### The CLI itself
 
-The CLI looks for the file in this order and takes the first hit: `./config/azu.yml` (what `azu new` generates), `./azu.yml`, `~/.config/azu/config.yml`, `~/.azu.yml`.
+The CLI has no config file. It reads these variables, from the process or from the project's `.env` files:
 
-{% code title="config/azu.yml" %}
-```yaml
-global:
-  debug_mode: false
-  verbose: false
-  quiet: false
-
-general:
-  colored_output: true
-
-logging:
-  level: "info"          # debug, info, warn, error, fatal
-```
-{% endcode %}
-
-| Section      | Keys the CLI reads                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------- |
-| `global`     | `debug_mode`, `verbose`, `quiet`, `show_help_on_empty`                                      |
-| `general`    | `project_name`, `project_path`, `database_adapter`, `template_engine`, `colored_output`     |
-| `filesystem` | `templates_path`, `output_path`                                                             |
-| `database`   | `url`, `name`, `host`, `port`, `user`, `password`                                           |
-| `server`     | `host`, `port`, `watch`, `rebuild`                                                          |
-| `logging`    | `level`, `format`                                                                           |
-| `project`    | `type`: how the CLI tells web, api and cli projects apart                                   |
-
-Other keys are ignored. CLI-only variables: `AZU_ENV` (else `CRYSTAL_ENV`), `AZU_DEBUG`, `AZU_VERBOSE`, `AZU_QUIET`, `AZU_UI`, `NO_COLOR`, `FORCE_COLOR`.
-
-```bash
-azu config:show --section logging --format json
-azu config:validate
-azu config:env --list
-```
+| Variable                      | Effect                                                                  |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `AZU_ENV`, else `CRYSTAL_ENV` | The environment, `development` by default                               |
+| `AZU_DEBUG`                   | Debug logging, and a backtrace on errors                                |
+| `AZU_VERBOSE`, `AZU_QUIET`    | More or less output                                                     |
+| `AZU_UI`                      | `rich`, `plain` or `json`; the same as `--ui`                           |
+| `NO_COLOR`, `FORCE_COLOR`     | Turn color off, or keep it on in a pipe                                 |
 
 ## Realistic output
 
@@ -118,6 +92,10 @@ ok    port           port 4000 is free
 ## Do's and don'ts
 
 {% hint style="info" %}
+**Pro tip:** `azu config` shows the values your app ends up with (server, database, limits, ...) and `azu doctor` checks the environment around them. Neither prints a secret.
+{% endhint %}
+
+{% hint style="info" %}
 **Pro tip:** `azu doctor` is the quickest way to see what your environment looks like to the app. It never prints a secret or a password.
 {% endhint %}
 
@@ -126,11 +104,11 @@ Commit `.env.example` with every name your app reads, and keep real values in `.
 {% endhint %}
 
 {% hint style="warning" %}
-`azu.yml` does not configure the app. `azu dev` and `azu serve` read `PORT` and `HOST`, and `azu db:*` reads `DATABASE_URL`, from the environment, not from `server:` or `database:` in the file.
+`azu dev` and `azu serve` read `PORT` and `HOST`, and `azu db:*` reads `DATABASE_URL`, from the environment or the `.env` files. Settings don't go anywhere else.
 {% endhint %}
 
 {% hint style="danger" %}
-Don't rely on file values for `global.debug_mode`, `verbose`, `quiet`, `database.url` or `database.name`. The CLI reassigns them from the environment after reading the file, so they revert when the variable is unset. A top-level section named after the environment (such as `production:`) also replaces the rest of the file instead of merging with it.
+Don't keep production secrets in a committed file. Set them in your platform's environment, where they win over any `.env` file.
 {% endhint %}
 
 <details>

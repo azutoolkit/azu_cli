@@ -6,7 +6,7 @@ description: Create a new Azu project with the wizard or flags, covering project
 
 ## Overview & visual demo
 
-`azu new` creates a project from scratch: on a terminal it opens a wizard that shows a flight plan and writes nothing until you press Enter, and `--yes` takes the defaults instead. The defaults are a web app on SQLite, which runs without a database server. The concise version is [azu new](../command-reference/azu-new.md).
+`azu new` creates a project from scratch: on a terminal it opens a wizard that shows a flight plan and writes nothing until you press Enter, and `--yes` takes the defaults instead. The defaults are a web app on SQLite, which runs without a database server.
 
 <figure><img src="../assets/terminal-ui/03-new-review.png" alt="The azu new review screen with the flight plan, the next steps and the equivalent command line"><figcaption><p>The review screen. Enter writes the project and Esc quits without writing anything. The "as a command" line is the same choice written as flags.</p></figcaption></figure>
 
@@ -193,7 +193,7 @@ Without a keyboard and screen (`--ui plain`, a pipe, `AZU_UI=plain`) the command
 blog/
 ├── shard.yml, README.md, LICENSE, .gitignore, .editorconfig, .tool-versions
 ├── .env (0600, git-ignored), .env.development, .env.test, .env.example
-├── config/           azu.yml, jobs.yml (JoobQ), mailer.yml, openapi.yml, api.yml
+├── config/           jobs.yml (JoobQ), mailer.yml, openapi.yml, api.yml
 ├── public/           assets/, templates/ (layout.jinja, helpers/_nav.jinja, <app>/welcome/index_page.jinja)
 ├── spec/             spec_helper.cr, blog_spec.cr
 └── src/

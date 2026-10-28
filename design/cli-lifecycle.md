@@ -15,7 +15,7 @@ middleware and plugin hooks, and turns the result into an exit code.
 flowchart TD
   A["azu db:migrate --steps 2"] --> B["AzuCLI.run"]
   B --> C["load_project_env (.env files)"]
-  C --> D["Config.load! (azu.yml, env vars)"]
+  C --> D["Config.load! (env vars)"]
   D --> E["CLI#run: find command by name"]
   E --> F["command.parse_args"]
   F --> G["middleware.before: Logging, ErrorHandler, Configuration"]

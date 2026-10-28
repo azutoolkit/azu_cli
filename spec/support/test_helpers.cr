@@ -210,7 +210,6 @@ module TestHelpers
 
         # Create basic Azu files
         File.write("src/server.cr", azu_server_content)
-        File.write("config/azu.yml", azu_config_content)
         File.write("src/db/schema.cr", azu_schema_content)
       end
     end
@@ -268,16 +267,6 @@ module TestHelpers
       # Your Azu application code here
       puts "Azu server starting..."
       CRYSTAL
-    end
-
-    private def self.azu_config_content
-      <<-YAML
-      database:
-        adapter: postgresql
-        database: test_db
-        host: localhost
-        port: 5432
-      YAML
     end
 
     private def self.azu_schema_content

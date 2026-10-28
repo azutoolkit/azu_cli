@@ -9,7 +9,7 @@
 # The JoobQ code it generates (a job, the worker and initializer of `azu new` and of `azu generate joobq`) must
 # compile against the pinned joobq.
 #
-# It also drives the CLI's own development commands against the project: `azu routes`, `azu openapi:export`, `azu doctor`, and
+# It also drives the CLI's own development commands against the project: `azu routes`, `azu config`, `azu openapi:export`, `azu doctor`, and
 # `azu dev` (rebuild and restart on a source change, no rebuild for a template, a failed build keeps the old app).
 #
 # Usage: scripts/e2e_generated_app.sh [web|api|cli]  (default: web; cli only builds, tests and runs the program)
@@ -419,6 +419,52 @@ check_openapi() {
   echo "ok: azu openapi:export rejects an unknown format with exit 2"
 }
 
+# `azu config`: the effective configuration of the app, as text and as JSON, one section, the exit codes it documents.
+# It must never print a secret, and a new project has no config/azu.yml (the CLI is configured by the environment).
+check_config() {
+  [ ! -e config/azu.yml ] || fail "azu new wrote config/azu.yml, which the CLI no longer reads"
+  echo "ok: the project has no config/azu.yml"
+
+  "$AZU_BIN" config --format json >"$WORK/config.json" || fail "azu config --format json failed"
+  [ "$(head -c 1 "$WORK/config.json")" = "{" ] || fail "azu config --format json prints something besides JSON: $(head -n 1 "$WORK/config.json")"
+  for expected in '"server": {' '"database": {' '"limits": {' '"CSRF_SECRET": "set"'; do
+    grep -q "$expected" "$WORK/config.json" || { cat "$WORK/config.json" >&2; fail "azu config --format json lacks: $expected"; }
+  done
+  # The secrets of .env must not appear: the file holds them, the output may only say set or not set.
+  for name in CSRF_SECRET SESSION_SECRET; do
+    value="$(sed -n "s/^$name=//p" .env | head -n 1)"
+    [ -z "$value" ] || ! grep -q -- "$value" "$WORK/config.json" || fail "azu config printed the value of $name"
+  done
+  echo "ok: azu config --format json is JSON only, and reports secrets as set or not set"
+
+  "$AZU_BIN" config --ui plain >"$WORK/config.txt" || fail "azu config failed"
+  grep -q '^SERVER$' "$WORK/config.txt" || fail "azu config has no SERVER section"
+  grep -Eq '^  port  +[0-9]+' "$WORK/config.txt" || fail "azu config does not list the port"
+  echo "ok: azu config lists the sections as text"
+
+  "$AZU_BIN" config --section limits --format json >"$WORK/config.json" || fail "azu config --section limits failed"
+  grep -q '"limits": {' "$WORK/config.json" || fail "azu config --section limits lacks the limits"
+  ! grep -q '"server": {' "$WORK/config.json" || fail "azu config --section limits also lists the server"
+  echo "ok: azu config --section filters"
+
+  if [ "$DB" = sqlite ]; then
+    "$AZU_BIN" config --section database --format json >"$WORK/config.json" || fail "azu config --section database failed"
+    grep -q 'sqlite3://' "$WORK/config.json" || fail "azu config does not show the SQLite DATABASE_URL"
+    secret_url="$(DATABASE_URL='postgres://admin:e2e-pw-9d1f@db.example:5432/app' "$AZU_BIN" config --section database --format json)" || fail "azu config with a DATABASE_URL failed"
+    case "$secret_url" in *e2e-pw-9d1f*) fail "azu config printed the database password" ;; esac
+    case "$secret_url" in *'admin:***@db.example'*) ;; *) fail "azu config did not mask the database password: $secret_url" ;; esac
+    echo "ok: azu config masks the password of DATABASE_URL"
+  fi
+
+  code=0
+  "$AZU_BIN" config --section nope >/dev/null 2>&1 || code=$?
+  [ "$code" = 2 ] || fail "azu config --section nope exited $code, expected 2"
+  code=0
+  "$AZU_BIN" config --format xml >/dev/null 2>&1 || code=$?
+  [ "$code" = 2 ] || fail "azu config --format xml exited $code, expected 2"
+  echo "ok: azu config rejects an unknown section and format with exit 2"
+}
+
 # doctor_status ID: the status of a check in $WORK/doctor.json (the JSON puts the id before the status).
 doctor_status() {
   grep -A1 "\"id\": \"$1\"" "$WORK/doctor.json" | sed -n 's/.*"status": "\([a-z]*\)".*/\1/p'
@@ -655,6 +701,9 @@ check_routes
 
 step "azu openapi:export"
 check_openapi
+
+step "azu config"
+check_config
 
 # The generated CI workflow must pass on a fresh project: run the commands it runs (the Crystal
 # version is the one this script runs with, the workflow pins another).

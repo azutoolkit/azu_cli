@@ -859,9 +859,9 @@ module AzuCLI
         puts "    Generate a background job class with parameters"
         puts "    Example: azu generate job EmailNotification user_id:int32 template:string"
         puts
-        puts "  middleware <name> [type]"
+        puts "  middleware <name> [--type authentication|authorization|logging|cors|rate_limiting]"
         puts "    Generate middleware for request/response processing"
-        puts "    Example: azu generate middleware Authentication --type auth"
+        puts "    Example: azu generate middleware Authentication --type authentication"
         puts
         puts "  migration <name> [attr:type]"
         puts "    Generate a database migration file"

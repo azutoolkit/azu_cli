@@ -80,19 +80,6 @@ module AzuCLI
         end
       end
 
-      def database_adapter_uri_prefix : String
-        case @database
-        when "postgresql", "postgres", "pg"
-          "postgresql"
-        when "mysql"
-          "mysql"
-        when "sqlite", "sqlite3"
-          "sqlite3"
-        else
-          "postgresql"
-        end
-      end
-
       # Get CQL adapter class name based on database choice
       def cql_adapter_class : String
         case @database

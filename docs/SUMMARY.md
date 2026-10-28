@@ -18,6 +18,7 @@
 * [azu dev](command-reference/azu-dev.md)
 * [azu serve](command-reference/azu-serve.md)
 * [azu routes](command-reference/azu-routes.md)
+* [azu config](command-reference/azu-config.md)
 * [azu console](command-reference/azu-console.md)
 * [azu doctor](command-reference/azu-doctor.md)
 * [azu test](command-reference/azu-test.md)
@@ -25,7 +26,6 @@
 * [azu jobs:*](command-reference/azu-jobs.md)
 * [azu session:*](command-reference/azu-session.md)
 * [azu openapi:*](command-reference/azu-openapi.md)
-* [azu config:*](command-reference/azu-config.md)
 * [azu completion](command-reference/azu-completion.md)
 * [Production Builds](command-reference/building-for-production.md)
 

@@ -18,9 +18,6 @@ module AzuCLI
           return error("Not in a valid Crystal project directory. Run this command from your project root.")
         end
 
-        # Initialize Azu configuration
-        initialize_configuration
-
         # Create basic project structure
         create_project_structure
 
@@ -30,16 +27,6 @@ module AzuCLI
 
       private def valid_project_directory? : Bool
         File.exists?("shard.yml")
-      end
-
-      private def initialize_configuration
-        Logger.info("Creating Azu configuration...")
-
-        # Create config directory if it doesn't exist
-        Dir.mkdir_p("config")
-
-        # Create basic configuration files
-        create_config_file("config/azu.yml", default_config_content)
       end
 
       private def create_project_structure
@@ -71,71 +58,13 @@ module AzuCLI
         end
       end
 
-      private def create_config_file(path : String, content : String)
-        unless File.exists?(path)
-          File.write(path, content)
-          Logger.info("Created #{path}")
-        end
-      end
-
-      private def default_config_content : String
-        <<-YAML
-        # Azu CLI Configuration
-        version: "1.0.0"
-
-        # Project settings
-        project:
-          name: "#{get_project_name}"
-          type: "web"
-
-        # Database configuration
-        database:
-          adapter: "postgresql"
-          url: "${DATABASE_URL}"
-          host: "localhost"
-          port: 5432
-          database: "#{get_project_name}_development"
-          username: "postgres"
-          password: ""
-
-        # Server configuration
-        server:
-          host: "localhost"
-          port: 4000
-          environment: "development"
-          reload: true
-
-        # Generator configuration
-        generators:
-          templates_path: "src/azu_cli/templates"
-          output_path: "src"
-          test_output_path: "spec"
-
-        # Plugin configuration
-        plugins: {}
-        YAML
-      end
-
-      private def get_project_name : String
-        if File.exists?("shard.yml")
-          content = File.read("shard.yml")
-          if match = content.match(/name:\s*(\w+)/)
-            return match[1]
-          end
-        end
-
-        File.basename(Dir.current)
-      end
-
       def show_help
         puts "Usage: azu init [options]"
         puts
         puts "Initialize Azu in an existing Crystal project."
         puts
         puts "This command will:"
-        puts "  - Create Azu configuration files"
-        puts "  - Set up project directory structure"
-        puts "  - Create config/azu.yml (never overwrites an existing one)"
+        puts "  - Create the directories Azu generators write to (src/models, src/endpoints, ...)"
         puts
         puts "It takes no options and does not edit shard.yml."
         puts

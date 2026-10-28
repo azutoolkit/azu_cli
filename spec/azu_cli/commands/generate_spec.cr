@@ -26,6 +26,18 @@ describe AzuCLI::Commands::Generate do
     end
   end
 
+  describe "#show_help" do
+    it "only suggests middleware types the generator knows" do
+      known = %w(authentication authorization logging cors rate_limiting)
+
+      output = TestHelpers::TestSetup.with_captured_output { AzuCLI::Commands::Generate.new.show_help }.stdout
+
+      types = output.scan(/azu generate middleware \w+ --type (\w+)/).map(&.[1])
+      types.should_not be_empty
+      types.each { |type| known.should contain(type) }
+    end
+  end
+
   describe "#execute" do
     it "handles generators without name requirements" do
       repository = Dir.current
@@ -456,8 +468,8 @@ describe AzuCLI::Commands::Generate do
   describe "project type detection" do
     it "detects API projects and sets api_only mode" do
       ScratchProject.new.in_generated_project do
-        Dir.mkdir_p("config")
-        File.write("config/azu.yml", "project:\n  type: api\n")
+        # What `azu new --api` does: the main target is src/api.cr
+        File.write("shard.yml", "name: blog\nversion: 0.1.0\ntargets:\n  blog:\n    main: src/api.cr\n")
 
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["model", "User"])
@@ -469,8 +481,8 @@ describe AzuCLI::Commands::Generate do
 
     it "keeps web mode for a web-only request in an API project" do
       ScratchProject.new.in_generated_project do
-        Dir.mkdir_p("config")
-        File.write("config/azu.yml", "project:\n  type: api\n")
+        # What `azu new --api` does: the main target is src/api.cr
+        File.write("shard.yml", "name: blog\nversion: 0.1.0\ntargets:\n  blog:\n    main: src/api.cr\n")
 
         command = AzuCLI::Commands::Generate.new
         command.parse_args(["model", "User", "--web-only"])

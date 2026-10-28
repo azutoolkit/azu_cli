@@ -25,8 +25,8 @@ describe AzuCLI::Commands::Init do
           result.message.should contain("Azu initialized in current project")
         end
 
-        # Verify configuration file was created
-        File.exists?("config/azu.yml").should be_true
+        # The CLI has no configuration file of its own
+        File.exists?("config/azu.yml").should be_false
 
         # Verify project structure was created
         Dir.exists?("src/models").should be_true
@@ -75,7 +75,7 @@ describe AzuCLI::Commands::Init do
       end
     end
 
-    it "creates proper configuration file" do
+    it "does not write a config/azu.yml" do
       TestHelpers::TestSetup.with_temp_project do |temp_project|
         temp_project.create_shard_yml
 
@@ -83,16 +83,10 @@ describe AzuCLI::Commands::Init do
         command.parse_args([] of String)
 
         TestHelpers::TestSetup.with_captured_output do |_|
-          result = command.execute
-          result.success?.should be_true
+          command.execute.success?.should be_true
         end
 
-        # Verify config file content
-        config_content = File.read("config/azu.yml")
-        config_content.should contain("database:")
-        config_content.should contain("adapter:")
-        config_content.should contain("host:")
-        config_content.should contain("port:")
+        Dir.glob("config/*").should be_empty
       end
     end
 
@@ -165,48 +159,6 @@ describe AzuCLI::Commands::Init do
           result = command.execute
           result.success?.should be_true
         end
-      end
-    end
-  end
-
-  describe "configuration initialization" do
-    it "creates config directory if it doesn't exist" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
-        temp_project.create_shard_yml
-
-        # Ensure config directory doesn't exist
-        FileUtils.rm_rf("config") if Dir.exists?("config")
-
-        command = AzuCLI::Commands::Init.new
-        command.parse_args([] of String)
-
-        TestHelpers::TestSetup.with_captured_output do |_|
-          result = command.execute
-          result.success?.should be_true
-        end
-
-        Dir.exists?("config").should be_true
-        File.exists?("config/azu.yml").should be_true
-      end
-    end
-
-    it "creates basic configuration file with default content" do
-      TestHelpers::TestSetup.with_temp_project do |temp_project|
-        temp_project.create_shard_yml
-
-        command = AzuCLI::Commands::Init.new
-        command.parse_args([] of String)
-
-        TestHelpers::TestSetup.with_captured_output do |_|
-          result = command.execute
-          result.success?.should be_true
-        end
-
-        config_content = File.read("config/azu.yml")
-        config_content.should contain("database:")
-        config_content.should contain(%(adapter: "postgresql"))
-        config_content.should contain(%(host: "localhost"))
-        config_content.should contain("port: 5432")
       end
     end
   end
@@ -297,7 +249,6 @@ describe AzuCLI::Commands::Init do
             command.execute.success?.should be_true
           end
           capture.stdout.should contain("Initializing Azu in current project")
-          capture.stdout.should contain("Creating Azu configuration")
           capture.stdout.should contain("Creating project structure")
           capture.stdout.should contain("Azu initialized successfully")
         end

@@ -13,6 +13,7 @@ azu undo [--dry-run|--list]   # Revert the files of the last azu generate
 azu serve [options]           # Start the development server (aliases: server, s)
 azu dev [options]             # Run the app; rebuild (not a release build) and restart when the code changes
 azu routes [options]          # List the routes: method, path, endpoint, request/response types, helpers
+azu config [options]          # Show the effective configuration of the app (secrets masked)
 azu console                   # Crystal's interpreter (crystal i) with the app loaded
 azu doctor [--json]           # Check Crystal, shards, database, env, secrets, port, docker, .env
 azu test [options]            # Run specs (alias: t)
@@ -152,14 +153,6 @@ azu session:clear [--backend TYPE] [--force]
 ```bash
 azu openapi:export [--output FILE] [--format yaml|json] [--project NAME] [--version V]
 azu openapi:generate <spec> [--force] [--models-only] [--endpoints-only]
-```
-
-## Configuration Commands
-
-```bash
-azu config:show [--format yaml|json|table] [--env ENV] [--section NAME]
-azu config:validate [--env ENV]
-azu config:env [--list|--show|--set K=V|--unset K]
 ```
 
 ## Other
