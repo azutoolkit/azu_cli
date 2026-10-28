@@ -167,8 +167,9 @@ Each command runs as `azu <command>` with plain output, one at a time, never whi
 
 | Command | Runs |
 | --- | --- |
-| `doctor`, `config:validate`, `config:show`, `config:env --list`, `version` | at start, and when `.env*`, `shard.yml`, `shard.lock` or the CLI configuration changes |
+| `doctor`, `version` | at start (`doctor` again when `.env*`, `shard.yml` or `shard.lock` changes) |
 | `routes` | after each successful build |
+| `config` | after each successful build, and when `.env*`, `shard.yml` or `shard.lock` changes |
 | `db:status` | at start, when `src/db/migrations` changes, and after `db:migrate` |
 | `test` | on Enter; `w` also runs it after each build |
 | `db:migrate`, `session:clear` | on Enter, then `y`: they change the database or the session store |

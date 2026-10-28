@@ -38,14 +38,12 @@ module AzuCLI
       def self.catalog(shell : String = Control.shell) : Array(Command)
         [
           Command.new("doctor", "Health", ["doctor"], Trigger::Start | Trigger::Config),
-          Command.new("config:validate", "Health", ["config:validate"], Trigger::Start | Trigger::Config),
           Command.new("routes", "App", ["routes"], Trigger::Build),
+          Command.new("config", "App", ["config"], Trigger::Build | Trigger::Config),
           Command.new("test", "App", ["test"]),
           Command.new("db:status", "Database", ["db:status"], Trigger::Start | Trigger::Migrations),
           Command.new("db:migrate", "Database", ["db:migrate"], confirm: true),
           Command.new("session:clear", "Sessions", ["session:clear", "--force"], confirm: true),
-          Command.new("config:show", "Config", ["config:show"], Trigger::Start | Trigger::Config),
-          Command.new("config:env", "Config", ["config:env", "--list"], Trigger::Start | Trigger::Config),
           Command.new("version", "Other", ["version"], Trigger::Start),
           Command.new("completion", "Other", ["completion", shell]),
         ]
@@ -86,11 +84,12 @@ module AzuCLI
           return {Status::Ok, lines.first? || "?"} unless failed
         when "completion"
           return {Status::Ok, "#{lines.size}-line script"} unless failed
-        when "config:env"
-          return {Status::Ok, "#{lines.count(&.matches?(/\A[A-Z][A-Z0-9_]+\s{2,}\S/))} variables"} unless failed
-        when "config:validate"
-          if !failed && (match = output.match(/completed with (\d+) warning/))
-            return {Status::Warn, "#{match[1]} warning#{match[1] == "1" ? "" : "s"}: #{lines.find(&.starts_with?("- ")).try(&.lchop("- ")) || ""}".rstrip(": ")}
+        when "config"
+          # `azu config` prints a section heading, then "  key  value" lines
+          unless failed
+            settings = output.lines.count(&.matches?(/\A  \S+\s{2,}\S/))
+            unset = output.lines.count(&.matches?(/\A  \S+\s{2,}not set\s*\z/))
+            return {Status::Ok, "#{settings} settings#{unset > 0 ? " · #{unset} not set" : ""}"}
           end
         end
         failed ? {Status::Fail, Control.reason(lines)} : {Status::Ok, last.empty? ? "done" : last}

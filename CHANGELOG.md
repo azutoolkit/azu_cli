@@ -54,8 +54,8 @@
   (rendered in a copy of the project), type-checks in the background and writes on Enter exactly what was shown;
   `--dry-run`, `--check`, `--yes`; no arguments open a menu. `azu undo` reverts the last write (`--dry-run`, `--list`),
   leaving files edited since
-- Added: `azu dev` is a control plane. Its Commands panel (key `2`) runs `doctor`, `config:validate`, `routes`,
-  `test`, `db:status`, `db:migrate`, `session:clear`, `config:show`, `config:env`, `version` and `completion` as
+- Added: `azu dev` is a control plane. Its Commands panel (key `2`) runs `doctor`, `routes`, `config`,
+  `test`, `db:status`, `db:migrate`, `session:clear`, `version` and `completion` as
   subprocesses, one at a time and not during a build, again when what they read changes (a build, a migration, `.env`
   or `shard.yml`), and shows each one's outcome and output; `db:migrate` and `session:clear` run only after `y`, and
   `w` re-runs the tests after each build. The overview has a one-line summary. Panels are numbered `1`-`7` now (Log is `7`)

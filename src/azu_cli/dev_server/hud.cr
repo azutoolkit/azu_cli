@@ -838,7 +838,7 @@ module AzuCLI
         events << "at start" if command.triggers.start?
         events << "after each build" if command.triggers.build?
         events << "when src/db/migrations changes" if command.triggers.migrations?
-        events << "when .env, shard.yml or the CLI config changes" if command.triggers.config?
+        events << "when .env or shard.yml changes" if command.triggers.config?
         events.empty? ? "runs on Enter" : "runs #{events.join(", ")} and on Enter"
       end
 

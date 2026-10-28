@@ -31,13 +31,13 @@ describe AzuCLI::DevServer::Control do
     Control.outcome("db:status", 0, "Total: 3 migrations (2 applied, 1 pending)").should eq({Control::Status::Warn, "2 applied · 1 pending"})
     Control.outcome("test", 1, "Finished in 2s\n12 examples, 1 failures, 0 errors, 2 pending\n").should eq({Control::Status::Fail, "12 examples · 1 failed · 2 pending"})
     Control.outcome("test", 0, "12 examples, 0 failures, 0 errors, 0 pending").should eq({Control::Status::Ok, "12 examples · 0 failed · 0 pending"})
-    Control.outcome("config:validate", 0, "WARNING: Warnings (1):\n  - Templates path does not exist: ./x\n[19:08:51] [INFO ] Configuration validation completed with 1 warning(s)\n").should eq({Control::Status::Warn, "1 warning: Templates path does not exist: ./x"})
-    Control.outcome("config:env", 0, "AZU_ENV                  Environment\nAZU_DEBUG                Debug mode\n\nUse --show to see current values\n").should eq({Control::Status::Ok, "2 variables"})
+    Control.outcome("config", 0, "SERVER\n  port         4000\n  host         127.0.0.1\n\nSECRETS\n  csrf_secret  not set\n").should eq({Control::Status::Ok, "3 settings · 1 not set"})
+    Control.outcome("config", 1, "ERROR: ./src/blog.cr not found: run 'azu config' in the root of an Azu project\n").should eq({Control::Status::Fail, "./src/blog.cr not found: run 'azu config' in the root of an Azu project"})
   end
 
   it "says why a run failed with its error line, without the log prefix" do
     Control.outcome("db:migrate", 1, "[19:00:00] [INFO ] Validating\nERROR: Database 'blog' does not exist.\n").should eq({Control::Status::Fail, "Database 'blog' does not exist."})
-    Control.outcome("config:show", 0, "[19:08:51] [INFO ] Configuration displayed successfully\n").should eq({Control::Status::Ok, "Configuration displayed successfully"})
+    Control.outcome("version", 0, "[19:08:51] [INFO ] Azu CLI v0.1.49\n").should eq({Control::Status::Ok, "Azu CLI v0.1.49"})
   end
 
   it "prints the completion script of the login shell, bash when it is another" do
@@ -52,22 +52,22 @@ describe "AzuCLI::DevServer::Hud control plane" do
     requested = [] of String
     screen = control_hud(requested)
     screen.update(TUI::Tick.new(Time.instant))
-    requested.should eq ["doctor", "config:validate", "db:status", "config:show", "config:env", "version"]
+    requested.should eq ["doctor", "db:status", "version"]
 
     requested.clear
     screen.update(Ev::BuildStarted.new)
     screen.update(Ev::BuildFinished.new(true, 4.0, ""))
-    requested.should eq ["routes"]
+    requested.should eq ["routes", "config"]
 
     requested.clear
-    %w[doctor config:validate db:status config:show config:env version routes].each do |id|
+    %w[doctor db:status version routes config].each do |id|
       screen.update(Ev::ControlFinished.new(id, 0, "", 0.5))
     end
     screen.update(Ev::Changed.new(["src/db/migrations/20261027_create_posts.cr"], AzuCLI::DevServer::Action::Rebuild))
     requested.should eq ["db:status"]
     requested.clear
     screen.update(Ev::Changed.new([".env.local"], AzuCLI::DevServer::Action::Restart))
-    requested.should eq ["doctor", "config:validate", "config:show", "config:env"]
+    requested.should eq ["doctor", "config"]
   end
 
   it "does not queue a command that is already queued or running" do
@@ -76,6 +76,9 @@ describe "AzuCLI::DevServer::Hud control plane" do
     screen.update(TUI::Tick.new(Time.instant))
     requested.clear
     screen.update(Ev::Changed.new([".env"], AzuCLI::DevServer::Action::Restart))
+    requested.should eq ["config"] # doctor is still queued from the start; config was not
+    requested.clear
+    screen.update(Ev::Changed.new([".env.local"], AzuCLI::DevServer::Action::Restart))
     requested.should be_empty
   end
 
@@ -126,7 +129,7 @@ describe "AzuCLI::DevServer::Hud control plane" do
     text.should contain "running"
     text.should contain "╭─ azu doctor "
     text.should contain "warn  database  missing"
-    text.should contain "runs at start, when .env, shard.yml or the CLI config changes"
+    text.should contain "runs at start, when .env or shard.yml changes"
     text.should contain "[Enter] Run"
   end
 
