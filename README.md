@@ -3,6 +3,8 @@
 Command-line tool for the Azu Toolkit: it creates Azu projects, generates code (models, endpoints, scaffolds,
 channels, session authentication, jobs and more), manages the CQL database and runs a development server.
 
+<img width="1990" height="480" alt="azu-cli-gitbook-cover" src="https://github.com/user-attachments/assets/1d3e67f1-f3ad-4b76-8c03-191468f18104" />
+
 ## Features
 
 - **Project generator** - `azu new` creates a web, API or CLI project; `--docker` adds a multi-stage Dockerfile, `--ci` a GitHub Actions workflow
