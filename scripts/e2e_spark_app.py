@@ -99,6 +99,17 @@ def main():
                 target.get_by_role('button', name='Save', exact=True).click()
             def record(target, name):
                 return target.locator('tbody tr').filter(has=target.get_by_role('link', name=name, exact=True))
+            def edit(target, name):
+                form = target.locator('form[spark-submit]')
+                previous_form = form.get_attribute('id')
+                row = record(target, name)
+                record_id = row.get_by_role('link', name=name, exact=True).get_attribute('href').rsplit('/', 1)[1]
+                row.get_by_role('button', name='Edit', exact=True).click()
+                # Edit is a WebSocket round trip that replaces the editor. Waiting
+                # for click actionability alone can type into the outgoing form.
+                expect(form).not_to_have_attribute('id', previous_form)
+                expect(target.get_by_role('heading', name=f'Edit product #{record_id}', exact=True)).to_be_visible()
+                expect(target.get_by_label('Name', exact=True)).to_have_value(name)
             try:
                 page.goto(base + '/counters/live')
                 expect(page.get_by_role('button', name='Increase count')).to_be_enabled()
@@ -131,7 +142,7 @@ def main():
                 expect(page.get_by_label('Active', exact=True)).not_to_be_checked()
                 passed('Live create commits to SQLite, resets its form and updates another tab')
 
-                record(page, 'Live <em>product</em>').get_by_role('button', name='Edit', exact=True).click()
+                edit(page, 'Live <em>product</em>')
                 page.get_by_label('Name', exact=True).fill('')
                 page.locator('form[spark-submit]').evaluate('form => form.noValidate = true')
                 save(page)
@@ -144,7 +155,7 @@ def main():
                 passed('Inline server validation rejects invalid data; edit persists unchecked booleans')
 
                 peer.get_by_label('Name', exact=True).fill('Unsaved draft')
-                record(page, 'Updated live product').get_by_role('button', name='Edit', exact=True).click()
+                edit(page, 'Updated live product')
                 fill(page, 'Final live product', '3099', True)
                 save(page)
                 expect(record(peer, 'Final live product')).to_be_visible()
@@ -170,8 +181,7 @@ def main():
                 record(page, 'Final live product').get_by_role('button', name='Delete', exact=True).click()
                 page.get_by_role('button', name='Keep record').click()
                 assert len(rows('select id from products')) == 2
-                record(peer, 'Final live product').get_by_role('button', name='Edit', exact=True).click()
-                expect(peer.get_by_label('Name', exact=True)).to_have_value('Final live product')
+                edit(peer, 'Final live product')
                 record(page, 'Final live product').get_by_role('button', name='Delete', exact=True).click()
                 page.get_by_role('button', name='Delete record', exact=True).click()
                 expect(record(peer, 'Final live product')).to_have_count(0)
