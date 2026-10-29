@@ -44,9 +44,15 @@ shards install
 # Auth requires its own session payload; session:setup is checked separately first.
 crystal build src/server.cr --no-codegen --error-trace
 if [ "$TYPE" = web ]; then
+  "$AZU_BIN" generate spark Counter count:int32 ratio:float32 total:int64 score:float64 enabled:bool title:string --page
+  "$AZU_BIN" generate spark:scaffold Inventory label:string price:float64 enabled:bool
   rm src/initializers/session.cr
   "$AZU_BIN" generate auth
 else
+  if "$AZU_BIN" generate spark Counter --page; then
+    echo "Spark must reject API-only projects" >&2
+    exit 1
+  fi
   if "$AZU_BIN" generate auth; then
     echo "API session authentication must be rejected explicitly" >&2
     exit 1
@@ -87,3 +93,7 @@ component.content
 puts "Generated messages, delivery job, validator and component passed"
 CR
 CRYSTAL_ENV=test crystal run verify_generators.cr --error-trace
+
+if [ "$TYPE" = web ]; then
+  crystal spec spec/components/counter_spark_spec.cr --error-trace
+fi

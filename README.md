@@ -104,3 +104,16 @@ For real browser acceptance, install Python Playwright (`python3 -m pip install 
 `azu joobq` provides queue, workflow-step and dead-letter views with bounded master/detail panes and confirmed atomic replay. `azu dev` adds an Errors tab and expands SQL with live queries, pool metrics and latency buckets. See [JoobQ dashboard](docs/command-reference/azu-joobq.md) and [dev telemetry requirements](docs/command-reference/azu-dev.md); expanded app telemetry requires the companion Azu producer changes, and PostgreSQL History Store support awaits a supported API.
 
 Run `scripts/check_generators.sh web` and `scripts/check_generators.sh api` to compile every generator family together and exercise lazy-compiled message, job, validator and component paths. Release CI requires these checks, the generated-app end-to-end matrix, and `scripts/check_joobq_adapter.sh` against published JoobQ 0.4.2 and the pinned revision with atomic DLQ support.
+
+### Spark generators
+
+Generate a typed live component or a complete live CRUD screen, styled with daisyUI:
+
+```sh
+azu generate spark Counter count:int32 --page
+azu generate scaffold Product name:string price_cents:int32 active:bool --spark
+azu db:setup
+azu serve
+```
+
+The demo appears at `/counters/live`; `/products` provides paging, inline validation, editing and confirmed deletion, with updates between tabs and shared services for HTTP form fallbacks. Navigation and Spark wiring are registered automatically. See [Spark generators](docs/generators/spark.md) for supported scalar fields, secret management, multi-process PubSub and authorization requirements. `scripts/e2e_spark_app.sh` generates and tests a disposable app in real Chromium.

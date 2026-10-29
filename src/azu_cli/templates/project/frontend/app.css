@@ -2,6 +2,7 @@
 @import "tailwindcss" source(none);
 @source "../public/templates";
 @source "../public/assets/app.js";
+@source "../src/components";
 @source "./generator-classes.txt";
 @plugin "daisyui" {
   themes: light --default, dark --prefersdark;

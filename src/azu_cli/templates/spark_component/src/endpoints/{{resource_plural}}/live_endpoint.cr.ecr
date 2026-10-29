@@ -1,0 +1,10 @@
+module <%= app_module %>
+  struct <%= namespace %>::LiveEndpoint
+    include Azu::Endpoint(<%= namespace %>::LiveRequest, <%= namespace %>::LivePage)
+    get "/<%= resource_plural %>/live"
+
+    def call : <%= namespace %>::LivePage
+      <%= namespace %>::LivePage.new
+    end
+  end
+end

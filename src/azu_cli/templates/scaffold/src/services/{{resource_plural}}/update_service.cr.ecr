@@ -5,6 +5,9 @@ module <%= app_module %>
       <%= change %>
 <% end -%>
       record.save!
+<% if broadcast? -%>
+      Azu::PubSub.broadcast("<%= app_dir %>:<%= resource_plural %>:changed", "changed")
+<% end -%>
       record
     end
   end

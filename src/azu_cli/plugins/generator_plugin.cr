@@ -68,6 +68,8 @@ module AzuCLI
           "migration - Generate database migrations",
           "scaffold - Generate complete CRUD resource",
           "component - Generate reusable components",
+          "spark - Generate typed live components",
+          "spark:scaffold - Generate live database CRUD",
           "channel - Generate WebSocket channels",
           "handler - Generate request handlers",
           "request - Generate request objects",

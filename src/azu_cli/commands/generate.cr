@@ -21,6 +21,8 @@ module AzuCLI
       property skip_tests : Bool = false
       property skip_components : Array(String) = [] of String
       property parse_error : String? = nil
+      property spark : Bool = false
+      property demo_page : Bool = false
 
       def initialize
         super("generate", "Generate code from templates")
@@ -83,6 +85,12 @@ module AzuCLI
         if RESOURCE_NAMED_GENERATORS.includes?(@generator_type) && (message = Generators::Resource.name_error(@generator_name))
           return error(message)
         end
+        if @spark && @generator_type != "scaffold"
+          return error("--spark is supported by scaffold; use generate spark for a live component")
+        end
+        if @demo_page && !{"spark", "spark:component"}.includes?(@generator_type)
+          return error("--page is supported by generate spark")
+        end
         if RESOURCE_GENERATORS.includes?(@generator_type) && (provided = Generators::Field.provided(@attributes)).any?
           Logger.warn("#{provided.join(", ")} #{provided.size == 1 ? "is" : "are"} provided by the model and left out of the attributes")
         end
@@ -119,6 +127,11 @@ module AzuCLI
           generate_seed
         when "component"
           generate_component
+        when "spark", "spark:component"
+          generate_spark
+        when "spark:scaffold"
+          @spark = true
+          generate_scaffold
         when "validator"
           generate_validator
         when "response"
@@ -152,6 +165,8 @@ module AzuCLI
           parser.banner = "Usage: azu generate <type> <name> [attributes] [options]"
 
           parser.on("--force", "Overwrite existing files") { @force = true }
+          parser.on("--spark", "Generate a database-backed live CRUD scaffold") { @spark = true }
+          parser.on("--page", "Include a runnable demo page for a Spark component") { @demo_page = true }
           parser.on("--api-only", "Generate API-only components") { @api_only = true }
           parser.on("--web-only", "Generate web-only components") { @web_only = true }
           parser.on("--skip-tests", "Do not generate the migration (generate model)") { @skip_tests = true }
@@ -527,6 +542,16 @@ module AzuCLI
         success("Generated component #{@generator_name} successfully")
       end
 
+      private def generate_spark : Result
+        return error("Spark components need a web project") unless ProjectDetector.new.web_project? && !@api_only
+        return error("Spark components take typed fields, not actions") unless @actions.empty?
+        if message = Generators::Spark.attributes_error(@attributes, component: true)
+          return error(message)
+        end
+        render_generator(Generators::Spark.new(@generator_name, @attributes, @demo_page), Generators::Spark::OUTPUT_DIR)
+        success("Generated Spark component #{@generator_name}; SPARK_SECRET and the local client endpoint are configured")
+      end
+
       private def generate_validator : Result
         Logger.info("Generating validator")
 
@@ -633,6 +658,14 @@ module AzuCLI
       private def generate_scaffold : Result
         Logger.info("Generating scaffold (complete CRUD)")
 
+        if @spark
+          return error("Spark scaffolds need a web project") unless ProjectDetector.new.web_project? && !@api_only
+          return error("--skip is not supported for Spark scaffolds; all live CRUD layers are required") unless @skip_components.empty?
+          if message = Generators::Spark.attributes_error(@attributes)
+            return error(message)
+          end
+        end
+
         validation_result = validate_scaffold_parameters
         return validation_result unless validation_result.success?
 
@@ -663,15 +696,20 @@ module AzuCLI
         if should_skip_component?("model")
           steps["migration"] = {[Generators::Migration.new("create_#{Generators::Resource.plural(@generator_name)}", @attributes, table: Generators::Resource.plural(@generator_name)).as(Teeplate::FileTree)], Generators::Migration::OUTPUT_DIR}
         end
-        steps["endpoint"] = {generators_for(scaffold_actions) { |action| Generators::Endpoint.new(@generator_name, action, type) }, Generators::Endpoint::OUTPUT_DIR}
-        steps["service"] = {generators_for(Generators::Service::ACTIONS) { |action| Generators::Service.new(@generator_name, action, @attributes) }, Generators::Service::OUTPUT_DIR}
+        endpoint_actions = @spark ? scaffold_actions.reject("index") : scaffold_actions
+        steps["endpoint"] = {generators_for(endpoint_actions) { |action| Generators::Endpoint.new(@generator_name, action, type) }, Generators::Endpoint::OUTPUT_DIR}
+        steps["service"] = {generators_for(Generators::Service::ACTIONS) { |action| Generators::Service.new(@generator_name, action, @attributes, broadcast: @spark) }, Generators::Service::OUTPUT_DIR}
         steps["request"] = {generators_for(scaffold_actions) { |action| Generators::Request.new(@generator_name, action, @attributes) }, Generators::Request::OUTPUT_DIR}
 
         if @api_only
           steps["response"] = {generators_for(Generators::Response::ACTIONS) { |action| Generators::Response.new(@generator_name, action, @attributes) }, Generators::Response::OUTPUT_DIR}
         else
-          steps["page"] = {generators_for(Generators::Page::ACTIONS) { |action| Generators::Page.new(@generator_name, action, @attributes) }, Generators::Page::OUTPUT_DIR}
-          steps["template"] = {generators_for(Generators::Page::ACTIONS) { |action| Generators::Template.new(@generator_name, action, @attributes) }, Generators::Template::OUTPUT_DIR}
+          page_actions = @spark ? Generators::Page::ACTIONS.reject("index") : Generators::Page::ACTIONS
+          steps["page"] = {generators_for(page_actions) { |action| Generators::Page.new(@generator_name, action, @attributes) }, Generators::Page::OUTPUT_DIR}
+          steps["template"] = {generators_for(page_actions) { |action| Generators::Template.new(@generator_name, action, @attributes) }, Generators::Template::OUTPUT_DIR}
+          if @spark
+            steps["spark"] = {[Generators::SparkScaffold.new(@generator_name, "index", @attributes).as(Teeplate::FileTree)], Generators::SparkScaffold::OUTPUT_DIR}
+          end
         end
         steps
       end
@@ -688,14 +726,14 @@ module AzuCLI
       # Every generator type `execute` routes (the generator plugin validates against this list)
       GENERATOR_TYPES = %w(
         model endpoint service request contract page job joobq middleware migration data:migration data_migration
-        seed component validator response template scaffold mailer channel auth authentication api_resource
+        seed component spark spark:component spark:scaffold validator response template scaffold mailer channel auth authentication api_resource
         api-resource validate
       )
       # The generators that take no name
       NAMELESS_GENERATORS = %w(auth authentication validate joobq)
 
       # The generators whose `name:type` arguments become columns, getters and form fields.
-      RESOURCE_GENERATORS = %w(model migration scaffold api_resource api-resource request page response template service endpoint)
+      RESOURCE_GENERATORS = %w(model migration scaffold spark spark:component spark:scaffold api_resource api-resource request page response template service endpoint)
       # Those among them whose name is the resource (a migration is named for what it does).
       RESOURCE_NAMED_GENERATORS = RESOURCE_GENERATORS - %w(migration)
       SCAFFOLD_TYPES            = %w(string text int32 integer int64 float32 float64 float bool boolean time datetime date json uuid email url references belongs_to)
@@ -852,6 +890,13 @@ module AzuCLI
         puts "  component <name> [attr:type]"
         puts "    Generate a reusable component class"
         puts "    Example: azu generate component UserCard name:string email:string"
+        puts ""
+        puts "  spark <name> [attr:type] [--page]"
+        puts "    Generate a typed Spark live component; --page adds a runnable demo and navigation"
+        puts "    Example: azu generate spark Counter count:int32 --page"
+        puts ""
+        puts "  spark:scaffold <name> [attr:type]"
+        puts "    Generate live database CRUD (also: scaffold <name> [attr:type] --spark)"
         puts
         puts "  validator <name> [type]"
         puts "    Generate a custom validator class"
@@ -898,6 +943,8 @@ module AzuCLI
         puts "  --ui MODE                  rich (the preview, the default on a terminal) or plain"
         puts "  --skip-tests               Do not generate the migration (generate model)"
         puts "  --api-only                 Generate API-only components (JSON responses)"
+        puts "  --spark                    Generate live CRUD for a web scaffold"
+        puts "  --page                     Include a demo page for a Spark component"
         puts "  --web-only                 Generate web-only components (HTML pages)"
         puts "  --skip COMPONENTS          Skip specific components (comma-separated)"
         puts "                             Available components: model,endpoint,request,response,template,migration,page,service"

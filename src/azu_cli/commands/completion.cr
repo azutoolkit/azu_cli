@@ -19,7 +19,7 @@ module AzuCLI
 
       # Generator types
       GENERATORS = %w[
-        endpoint model service middleware request page component
+        endpoint model service middleware request page component spark spark:component spark:scaffold
         migration scaffold auth channel mailer job joobq
       ]
 

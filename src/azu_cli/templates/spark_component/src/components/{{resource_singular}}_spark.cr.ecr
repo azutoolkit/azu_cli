@@ -1,0 +1,53 @@
+module <%= app_module %>
+  class <%= class_name %> < Azu::Spark::Component
+    mountable
+
+<% fields.each do |field| -%>
+    state <%= field.name %> : <%= field.crystal_type %> = <%= default_value(field) %>
+
+    event def change_<%= field.name %>(value : <%= field.crystal_type %>) : Nil
+      self.<%= field.name %> = value
+    end
+<% if {"Int32", "Int64", "Float32", "Float64"}.includes?(field.crystal_type) -%>
+
+    event def increment_<%= field.name %> : Nil
+<% if {"Int32", "Int64"}.includes?(field.crystal_type) -%>
+      return if <%= field.name %> == <%= field.crystal_type %>::MAX
+<% end -%>
+      self.<%= field.name %> += 1
+    end
+<% end -%>
+<% end -%>
+
+    event def reset : Nil
+<% fields.each do |field| -%>
+      self.<%= field.name %> = <%= default_value(field) %>
+<% end -%>
+    end
+
+    def render
+      div class: "card border border-base-300 bg-base-100 shadow-sm" do
+        div class: "card-body gap-6 p-6" do
+          h2 "<%= model_name %>", class: "card-title"
+          tag(:fieldset, disabled: !socket.connected?, class: "space-y-5") do
+<% fields.each do |field| -%>
+            label class: "fieldset block space-y-2", for: "#{id}-<%= field.name %>" do
+              span "<%= field.label %>", class: "fieldset-legend p-0"
+<% if field.bool? -%>
+              input **spark_change(:change_<%= field.name %>), type: "checkbox", id: "#{id}-<%= field.name %>", class: "checkbox checkbox-primary", checked: <%= field.name %>
+<% else -%>
+              input **spark_change(:change_<%= field.name %>, debounce: 150), type: "<%= field.input == "number" ? "number" : "text" %>", id: "#{id}-<%= field.name %>", value: <%= field.name %>.to_s, class: "input w-full"
+<% end -%>
+            end
+            tag(:output, id: "#{id}-<%= field.name %>-value", class: "badge badge-ghost") { text <%= field.name %>.to_s }
+<% if {"Int32", "Int64", "Float32", "Float64"}.includes?(field.crystal_type) -%>
+            button "Increase <%= field.label.downcase %>", **spark_click(:increment_<%= field.name %>), type: "button", class: "btn btn-primary"
+<% end -%>
+<% end -%>
+            button "Reset", **spark_click(:reset), type: "button", class: "btn btn-ghost"
+          end
+        end
+      end
+    end
+  end
+end

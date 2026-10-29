@@ -1,0 +1,14 @@
+require "../spec_helper"
+
+describe <%= app_module %>::<%= class_name %> do
+  it "owns typed state and resets it" do
+    component = <%= app_module %>::<%= class_name %>.new
+<% fields.each do |field| -%>
+    component.change_<%= field.name %>(<%= field.bool? ? "true" : field.string? ? %(">sample<") : default_value(field).sub("0", "3") %>)
+<% end -%>
+    component.reset
+<% fields.each do |field| -%>
+    component.<%= field.name %>.should eq(<%= default_value(field) %>)
+<% end -%>
+  end
+end

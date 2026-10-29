@@ -6,6 +6,8 @@ description: Generate a full CRUD resource in one command, with the model, migra
 
 `azu g scaffold` writes a complete CRUD resource in the Azu contract style: a model and its migration, seven endpoints, request contracts, services, pages and Jinja templates. In an API project, or with `--api-only`, it writes JSON responses instead of pages and templates. [`azu g api_resource`](api-resource.md) is the same generator with the API layout forced on.
 
+For live database CRUD with typed Spark events, paging and updates between open tabs, add `--spark`: `azu generate scaffold Product name:string price_cents:int32 active:bool --spark`. See [Spark components and live scaffolds](spark.md) for supported fields, deployment wiring and authorization boundaries.
+
 ## Overview & visual demo
 
 <figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate scaffold preview listing 28 new files and one changed schema file, with the schema diff"><figcaption><p><code>azu g scaffold comment</code> on a terminal: the file list, the <code>schema.cr</code> diff, and the count to write. Nothing is written until you press Enter.</p></figcaption></figure>

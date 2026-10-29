@@ -96,6 +96,38 @@ jobs:
           mkdir -p bin
           crystal build src/azu_cli.cr -o bin/azu --no-debug
           scripts/check_generators.sh ${{ matrix.type }}
+  spark-browser:
+    name: generated Spark app (Chromium, SQLite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: crystallang/crystal:1.22.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser validation dependencies
+        run: |
+          apt-get update
+          apt-get install -y python3 python3-venv redis-server libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev
+          python3 -m venv /tmp/spark-browser-tools
+          /tmp/spark-browser-tools/bin/pip install playwright==1.62.0
+          /tmp/spark-browser-tools/bin/python -m playwright install --with-deps chromium
+      - name: Generate, migrate, compile and click through live CRUD
+        run: |
+          export PATH="/tmp/spark-browser-tools/bin:$PATH"
+          shards install
+          mkdir -p bin
+          crystal build src/azu_cli.cr -o bin/azu --no-debug
+          scripts/e2e_spark_app.sh
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spark-browser-evidence
+          path: |
+            /tmp/azu-spark-e2e-*/evidence/*.png
+            /tmp/azu-spark-e2e-*/evidence/*.log
+            /tmp/azu-spark-e2e-*/evidence/report.json
+          retention-days: 7
   joobq-adapter:
     name: live JoobQ adapter (${{ matrix.ref }})
     strategy:
@@ -128,6 +160,7 @@ jobs:
       - generated-app
       - generators
       - joobq-adapter
+      - spark-browser
     # Releases and version bumps are for master only, never for pull requests.
     if: ${{ success() && github.event_name == 'push' }}
     steps:

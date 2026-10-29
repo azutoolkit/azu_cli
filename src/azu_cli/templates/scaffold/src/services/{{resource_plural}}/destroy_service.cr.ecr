@@ -1,7 +1,13 @@
 module <%= app_module %>
   class <%= namespace %>::DestroyService
     def call(record : <%= model_name %>) : Bool
+<% if broadcast? -%>
+      deleted = record.delete!
+      Azu::PubSub.broadcast("<%= app_dir %>:<%= resource_plural %>:changed", "changed") if deleted
+      deleted
+<% else -%>
       record.delete!
+<% end -%>
     end
   end
 end

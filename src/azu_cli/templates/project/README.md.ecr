@@ -145,3 +145,15 @@ Pages use **daisyUI 5 + Tailwind CSS 4**, with light/dark themes, a desktop side
 
 The legacy `layout.jinja` delegates its `page_body` block to the same daisyUI shell. No Bootstrap runtime is loaded.
 <% end -%>
+
+## Live components and CRUD
+
+```sh
+azu generate spark Counter count:int32 --page
+azu generate scaffold Product name:string price_cents:int32 active:bool --spark
+azu db:setup
+```
+
+Visit `/counters/live` and `/products`. Spark generators install the local client, register navigation, and add a development `SPARK_SECRET` to `.env`. Preserve that secret across restarts; supply a stable secret from your secret manager in production and enable WebSocket upgrades on `/spark`. The generated CSS sources include `src/components`.
+
+Live CRUD supports required scalar fields and shares validation/persistence services with its HTTP form fallbacks. PubSub updates reach tabs in the same process by default; configure Redis PubSub for multiple instances. Generated CRUD is public: add authorization and tenant scoping in both HTTP and live paths before handling private data.

@@ -42,6 +42,7 @@
 * [Service](generators/service.md)
 * [Middleware](generators/middleware.md)
 * [Component](generators/component.md)
+* [Spark components and live scaffolds](generators/spark.md)
 * [Custom Validator](generators/custom-validator.md)
 * [Migration](generators/migration.md)
 * [Data Migration](generators/data-migration.md)

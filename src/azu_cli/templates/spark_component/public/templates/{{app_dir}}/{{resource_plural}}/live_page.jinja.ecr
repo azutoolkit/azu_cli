@@ -1,0 +1,10 @@
+{% extends "app_layout.jinja" %}
+{% block title %}<%= model_name %>{% endblock %}
+{% block head %}{{ spark_script | safe }}{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+  <h1 class="text-3xl font-semibold tracking-tight"><%= model_name %> live component</h1>
+  <noscript><p class="alert alert-info">Enable JavaScript to interact with this live component.</p></noscript>
+  {{ component | safe }}
+</div>
+{% endblock %}

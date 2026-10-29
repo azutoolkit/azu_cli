@@ -1,0 +1,226 @@
+module <%= app_module %>
+  class <%= namespace %>::LiveComponent < Azu::Spark::Component
+    mountable
+    TOPIC = "<%= app_dir %>:<%= resource_plural %>:changed"
+
+    state records : Array(<%= model_name %>) = [] of <%= model_name %>
+    state page : Int32 = 1
+    state has_more : Bool = false
+    state editing_id : Int64? = nil
+    state editor_revision : Int64 = 0
+    state values : Hash(String, String) = {} of String => String
+    state errors : Array(String) = [] of String
+    state notice : String = ""
+    state pending_delete : Int64? = nil
+    @service = <%= namespace %>::LiveService.new
+
+    def mount(socket : Azu::Spark::Socket, params : Azu::Spark::Params) : Nil
+      socket.subscribe(TOPIC)
+      load_records
+    end
+
+    def handle_info(message : Azu::PubSub::Message, socket : Azu::Spark::Socket) : Nil
+      load_records if message.topic == TOPIC
+    end
+
+    private def load_records : Nil
+      result = @service.list(page)
+      if result.empty? && page > 1
+        self.page -= 1
+        result = @service.list(page)
+      end
+      self.has_more = result.size > <%= namespace %>::LiveService::PAGE_SIZE
+      self.records = result.first(<%= namespace %>::LiveService::PAGE_SIZE)
+    end
+
+    event def refresh : Nil
+      load_records
+    end
+
+    event def next_page : Nil
+      return unless has_more
+      self.page += 1
+      load_records
+    end
+
+    event def previous_page : Nil
+      return if page <= 1
+      self.page -= 1
+      load_records
+    end
+
+    event def edit(record_id : Int64) : Nil
+      record = @service.find(record_id)
+      self.editing_id = record_id
+      self.editor_revision += 1
+      self.values = {
+<% fields.each do |field| -%>
+        "<%= field.name %>" => record.<%= field.name %>.to_s,
+<% end -%>
+      } of String => String
+      self.errors = [] of String
+      self.notice = ""
+    rescue ex : <%= namespace %>::LiveService::MissingRecord
+      self.errors = [ex.message || "Record not found"]
+      load_records
+    end
+
+    event def cancel : Nil
+      self.editor_revision += 1
+      self.editing_id = nil
+      self.values = {} of String => String
+      self.errors = [] of String
+    end
+
+    event def save(request : <%= namespace %>::CreateRequest) : Nil
+      self.values = {
+<% fields.each do |field| -%>
+        "<%= field.name %>" => request.<%= field.name %>.to_s,
+<% end -%>
+      } of String => String
+      unless request.valid?
+        self.errors = request.errors.map { |error| "#{error.field}: #{error.message}" }
+        return
+      end
+      @service.save(editing_id, request)
+      cancel
+      self.notice = "<%= model_name %> saved."
+      load_records
+    rescue ex : <%= namespace %>::LiveService::MissingRecord
+      self.errors = [ex.message || "Record not found"]
+    rescue ex : Exception
+      Log.error(exception: ex) { "Failed to save <%= resource_singular %>" }
+      self.errors = ["Could not save this record. Check your values and try again."]
+    end
+
+    event def ask_delete(record_id : Int64) : Nil
+      @service.find(record_id)
+      self.pending_delete = record_id
+    rescue ex : <%= namespace %>::LiveService::MissingRecord
+      self.errors = [ex.message || "Record not found"]
+      load_records
+    end
+
+    event def cancel_delete : Nil
+      self.pending_delete = nil
+    end
+
+    event def confirm_delete : Nil
+      record_id = pending_delete
+      return unless record_id
+      @service.destroy(record_id)
+      cancel if editing_id == record_id
+      self.pending_delete = nil
+      self.notice = "<%= model_name %> deleted."
+      load_records
+    rescue ex : <%= namespace %>::LiveService::MissingRecord
+      self.pending_delete = nil
+      self.errors = [ex.message || "Record not found"]
+      load_records
+    rescue ex : Exception
+      Log.error(exception: ex) { "Failed to delete <%= resource_singular %>" }
+      self.errors = ["Could not delete this record. It may still be in use."]
+    end
+
+    def render
+      div class: "space-y-6" do
+        div class: "flex flex-wrap items-center justify-between gap-4" do
+          div do
+            h1 "<%= namespace %>", class: "text-3xl font-semibold tracking-tight"
+            tag(:p, class: "mt-2 text-sm text-base-content/70") { text "Changes appear here as they happen." }
+          end
+          span(socket.connected? ? "Live" : "Connecting…", class: "badge badge-primary badge-soft", role: "status")
+          button "Refresh", **spark_click(:refresh), type: "button", disabled: !socket.connected?, class: "btn btn-ghost"
+        end
+        unless notice.empty?
+          div notice, class: "alert alert-success alert-soft", role: "status", id: "#{id}-notice"
+        end
+        unless errors.empty?
+          div class: "alert alert-error alert-soft", role: "alert", id: "#{id}-errors" do
+            ul { errors.each { |error| li error } }
+          end
+        end
+        if pending_delete
+          div class: "card border border-error bg-base-100", role: "region", "aria-label": "Confirm deletion", id: "#{id}-confirmation" do
+            div class: "card-body gap-3" do
+              h2 "Delete this record?", class: "card-title"
+              tag(:p) { text "This action cannot be undone." }
+              div class: "flex gap-3" do
+                button "Keep record", **spark_click(:cancel_delete), type: "button", class: "btn btn-ghost"
+                button "Delete record", **spark_click(:confirm_delete, delivery: "at-most-once"), type: "button", class: "btn btn-error"
+              end
+            end
+          end
+        end
+        div class: "card min-w-0 border border-base-300 bg-base-100 shadow-sm", id: "#{id}-records" do
+          if records.empty?
+            div class: "card-body items-center py-12 text-center" do
+              h2 "No <%= resource_plural.tr("_", " ") %> yet", class: "card-title"
+              tag(:p) { text "Use the form below to add your first record." }
+            end
+          else
+            div class: "overflow-x-auto", tabindex: "0", role: "region", "aria-label": "<%= namespace %> table" do
+              table class: "table table-zebra" do
+                thead do
+                  tr do
+<% fields.each do |field| -%>
+                    th "<%= field.label %>", scope: "col"
+<% end -%>
+                    th "Actions", scope: "col"
+                  end
+                end
+                tbody do
+                  records.each do |record|
+                    tr id: "#{id}-record-#{record.id}" do
+<% fields.each_with_index do |field, index| -%>
+<% if index == 0 -%>
+                      td { a record.<%= field.name %>.to_s, href: "/<%= resource_plural %>/#{record.id}", class: "link link-primary" }
+<% else -%>
+                      td record.<%= field.name %>.to_s
+<% end -%>
+<% end -%>
+                      td do
+                        button "Edit", **spark_click(:edit, record_id: record.id), type: "button", disabled: !socket.connected?, class: "btn btn-sm btn-ghost"
+                        button "Delete", **spark_click(:ask_delete, record_id: record.id), type: "button", disabled: !socket.connected?, class: "btn btn-sm btn-error btn-soft"
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+          div class: "flex flex-wrap items-center justify-between gap-3 p-4" do
+            button "Previous", **spark_click(:previous_page), type: "button", disabled: page <= 1 || !socket.connected?, class: "btn btn-sm btn-ghost"
+            span "Page #{page}", class: "text-sm"
+            button "Next", **spark_click(:next_page), type: "button", disabled: !has_more || !socket.connected?, class: "btn btn-sm btn-ghost"
+          end
+        end
+        div class: "card border border-base-300 bg-base-100 shadow-sm", id: "#{id}-editor" do
+          div class: "card-body gap-5 p-6" do
+            h2(editing_id ? "Edit <%= resource_singular.tr("_", " ") %> ##{editing_id}" : "New <%= resource_singular.tr("_", " ") %>", class: "card-title")
+            form **spark_submit(:save, delivery: "at-most-once"), id: "#{id}-form-#{editor_revision}" do
+              tag(:fieldset, disabled: !socket.connected?, class: "space-y-5") do
+<% fields.each do |field| -%>
+                label class: "fieldset block space-y-2", for: "#{id}-<%= field.name %>" do
+                  span "<%= field.label %>", class: "fieldset-legend p-0"
+<% if field.bool? -%>
+                  input type: "checkbox", name: "<%= field.name %>", id: "#{id}-<%= field.name %>", value: "true", checked: values["<%= field.name %>"]? == "true", class: "checkbox checkbox-primary"
+<% elsif field.input == "textarea" -%>
+                  textarea values["<%= field.name %>"]? || "", name: "<%= field.name %>", id: "#{id}-<%= field.name %>", required: true, rows: "4", class: "textarea w-full"
+<% else -%>
+                  input type: "<%= {"email", "url"}.includes?(field.kind) ? field.kind : field.input %>", name: "<%= field.name %>", id: "#{id}-<%= field.name %>", value: values["<%= field.name %>"]? || "", required: true, class: "input w-full"<%= field.input == "number" ? %(, step: "#{field.crystal_type.starts_with?("Float") ? "any" : "1"}") : "" %>
+<% end -%>
+                end
+<% end -%>
+                div class: "flex flex-wrap gap-3 pt-4" do
+                  button "Save", type: "submit", class: "btn btn-primary"
+                  button "Cancel", **spark_click(:cancel), type: "button", class: "btn btn-ghost"
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end

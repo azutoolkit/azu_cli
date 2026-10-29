@@ -1,0 +1,12 @@
+module <%= app_module %>
+  struct <%= namespace %>::IndexPage
+    include Azu::Response::Negotiable
+    include Azu::Templates::Renderable
+
+    def render_html : String
+      # Pass trusted server-side session claims here when adding authorization.
+      view data: {"spark_script" => Azu::Spark.script_tag,
+                  "component" => Azu::Spark.render(<%= namespace %>::LiveComponent)}
+    end
+  end
+end
