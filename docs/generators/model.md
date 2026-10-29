@@ -70,10 +70,12 @@ azu g model post title:string --skip-tests          # no migration; you write it
 | `float64`, `float`   | `Float64`    | `column :name, Float64`                     |
 | `bool`, `boolean`    | `Bool`       | `boolean :name, default: false`             |
 | `time`, `datetime`   | `Time`       | `column :name, Time`                        |
-| `date`               | `Date`       | `column :name, Date`                        |
-| `uuid`               | `UUID`       | `column :name, UUID`                        |
-| `json`               | `JSON::Any`  | `column :name, JSON::Any`                   |
+| `date` | `Time` | `date :name` (SQL DATE) |
+| `uuid` | `UUID` | `text :name`, with a typed DB converter |
+| `json` | Unsupported for models on CQL 1.0.0 | Rejected before writing files |
 | `references`, `belongs_to` | `Int64` | `column :name_id, Int64`, plus a `belongs_to` and a foreign key |
+
+CQL 1.0.0 cannot persist `JSON::Any` ActiveRecord attributes. Use a text field with explicit application serialization until a compatible CQL release is validated. Standalone JSON requests and JSON migration columns remain supported. Nullable UUID fields use a converter that preserves SQL NULL.
 
 **Modifiers**
 

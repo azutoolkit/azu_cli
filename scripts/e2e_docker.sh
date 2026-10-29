@@ -1,7 +1,6 @@
 #!/bin/sh
 # End-to-end gate for `azu new --docker --ci`: generate a project, build its Dockerfile with the host
-# docker, run the image and check it from the host. It needs a docker daemon, so it is a local script;
-# the CI job (which runs inside a crystal container) does not run it.
+# docker, run the image and check it from the host. CI runs this on a Docker-enabled host.
 #
 # What it checks: the Dockerfile and the workflow are generated; the image builds; the container runs
 # as a non-root user; /health and / answer; the development handlers are not mounted in production; a
@@ -81,13 +80,8 @@ cd "$WORK"
 "$AZU_BIN" new "$NAME" --yes --author "E2E" --email e2e@example.com \
   --type "$TYPE" --db sqlite --no-git --docker --ci "GitHub Actions"
 cd "$NAME"
-# Opt-in: test against a branch of azu instead of the release the generated shard.yml requires (its version
-# constraint is dropped for the branch).
-if [ -n "${E2E_AZU_BRANCH:-}" ]; then
-  awk -v ref="$E2E_AZU_BRANCH" '/^    github: azutoolkit\/azu$/ { print; print "    branch: " ref; skip = 1; next } skip && /^    version:/ { skip = 0; next } { skip = 0; print }' shard.yml >shard.yml.new && mv shard.yml.new shard.yml
-  grep -q "branch: $E2E_AZU_BRANCH" shard.yml || fail "could not pin azu to $E2E_AZU_BRANCH in shard.yml"
-  echo "azu pinned to branch $E2E_AZU_BRANCH"
-fi
+crystal run "$REPO_ROOT/scripts/select_framework_versions.cr" -- shard.yml
+shards install
 for file in Dockerfile .dockerignore .github/workflows/ci.yml; do
   [ -f "$file" ] || fail "$file was not generated"
 done
@@ -121,7 +115,7 @@ fi
 
 step "run the container"
 PORT="$(free_port)" || fail "no free port found"
-docker run -d --name "$CONTAINER" --network host -e "PORT=$PORT" -e "CSRF_SECRET=$(secret)" -e "SESSION_SECRET=$(secret)" "$IMAGE" >/dev/null
+docker run -d --name "$CONTAINER" -p "127.0.0.1:$PORT:$PORT" -e "PORT=$PORT" -e "CSRF_SECRET=$(secret)" -e "SESSION_SECRET=$(secret)" "$IMAGE" >/dev/null
 
 tries=0
 until curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/health"; do

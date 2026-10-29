@@ -91,8 +91,10 @@ Attributes are `name:type[:modifier]`. A trailing `?` on the type makes the colu
 | `int64` | `Int64` | `column :n, Int64`, number input |
 | `float32`, `float64`, `float` | `Float32`, `Float64` | number input |
 | `bool`, `boolean` | `Bool` | `boolean ..., default: false`, checkbox |
-| `time`, `datetime`, `date` | `Time`, `Date` | `column` |
-| `json`, `uuid` | `JSON::Any`, `UUID` | `column` |
+| `time`, `datetime` | `Time` | timestamp column; RFC 3339 text input |
+| `date` | `Time` | SQL DATE; date-only or RFC 3339 text input |
+| `uuid` | `UUID` | text storage, typed DB and form converters |
+| `json` | Unsupported for models on CQL 1.0.0 | Rejected before writing files; use explicit text serialization |
 | `references`, `belongs_to` | `Int64` | foreign key, see below |
 
 | Modifier | Effect on the column |

@@ -223,10 +223,10 @@ targets:
 dependencies:
   azu:
     github: azutoolkit/azu
-    version: ~> 0.10.1
+    commit: 69163988a48e28b809ad09929f5d7f9bfb1079ee # Azu 1.0.2 + telemetry redaction; awaiting release
   cql:
     github: azutoolkit/cql
-    version: 0.0.604          # exact on purpose
+    version: 1.0.0          # exact on purpose
   session:
     github: azutoolkit/session
     version: ~> 1.1

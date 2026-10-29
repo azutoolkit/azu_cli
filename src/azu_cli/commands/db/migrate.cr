@@ -147,9 +147,6 @@ module AzuCLI
 
         # Create a temporary migration runner script
         private def create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
-          project_root = Dir.current
-          script_path = File.join(project_root, "tmp_migrate_#{Time.utc.to_unix}.cr")
-
           script_content = String.build do |io|
             io << migrator_script_header
 
@@ -176,8 +173,7 @@ module AzuCLI
             end
           end
 
-          File.write(script_path, script_content)
-          script_path
+          ScratchFile.create("tmp_migrate_", script_content, Dir.current)
         end
 
         # Execute the migration runner script
@@ -256,9 +252,6 @@ module AzuCLI
 
         # Create test rollback script
         private def create_test_rollback_script(version : Int64) : String
-          project_root = Dir.current
-          script_path = File.join(project_root, "tmp_test_rollback_#{Time.utc.to_unix}.cr")
-
           script_content = String.build do |io|
             io << migrator_script_header
             io << "# Test rollback for version #{version}\n"
@@ -276,8 +269,7 @@ module AzuCLI
             io << "end\n"
           end
 
-          File.write(script_path, script_content)
-          script_path
+          ScratchFile.create("tmp_test_rollback_", script_content, Dir.current)
         end
 
         # Public test helper to access private method for testing

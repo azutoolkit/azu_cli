@@ -1,206 +1,147 @@
 require "../database"
-require "db"
+require "../../scratch_file"
 
-module AzuCLI
-  module Commands
-    module DB
-      # Manages seed file execution with dependency tracking
-      class SeedRunner < Database
-        property environment : String
-        property seeds_dir : String
-        property executed_seeds : Array(String)
+module AzuCLI::Commands::DB
+  # Runs application seeds after loading their database configuration, with durable
+  # completion records. Seeds must remain idempotent: their effects and recording
+  # completion happen in separate processes and cannot share one transaction.
+  class SeedRunner < Database
+    property seeds_dir : String
+    getter executed_seeds = [] of String
 
-        def initialize(@environment : String = "development", @seeds_dir : String = "./src/db/seeds")
-          super("seed:runner", "Seed file runner with dependency management")
-          @executed_seeds = [] of String
+    def initialize(environment : String = "development", @seeds_dir : String = "./src/db/seeds")
+      super("seed:runner", "Seed file runner with dependency management")
+      @environment = environment
+    end
+
+    def execute : Result
+      success("Seed runner initialized")
+    end
+
+    def run_seeds(names : Array(String)? = nil) : Bool
+      files = names ? resolve_files(names) : find_seed_files
+      return true if files.empty?
+      files.all? { |file| run_seed_file(file) }
+    end
+
+    def run_seed_file(file : String) : Bool
+      path = seed_path(file)
+      ensure_seed_versions_table
+      load_executed_seeds
+      key = seed_key(path)
+      if executed?(path)
+        Logger.info("Skipping already executed seed: #{key}")
+        return true
+      end
+      script = database_script_header
+      script += "require \"./src/models/**\"\n" unless Dir.glob("./src/models/**/*.cr").empty?
+      script += "require #{("./" + key).inspect}\n"
+      env = {"DATABASE_URL" => database_connection_url, "AZU_ENV" => @environment, "CRYSTAL_ENV" => @environment}
+      ok = AzuCLI::ScratchFile.with(".azu_seed_", script) do |runner|
+        run_crystal_script(runner, "Seed", env)
+      end
+      return false unless ok
+      marker = @adapter.in?("postgres", "postgresql") ? "$1" : "?"
+      ::DB.open(database_connection_url) do |db|
+        db.exec("INSERT INTO seed_versions (seed_name) VALUES (#{marker})", key)
+      end
+      @executed_seeds << key
+      Logger.info("Seed completed: #{key}")
+      true
+    rescue ex
+      Logger.error("Seed failed: #{ex.message}")
+      false
+    end
+
+    # Directory-based seeds and the legacy entry point are both supported. New
+    # projects leave the legacy file as documentation only; it is safe to delete.
+    def find_seed_files : Array(String)
+      files = [] of String
+      files << "./src/db/seed.cr" if File.file?("./src/db/seed.cr")
+      files.concat(Dir.glob(File.join(@seeds_dir, "shared", "*.cr")).sort)
+      files.concat(Dir.glob(File.join(@seeds_dir, @environment, "*.cr")).sort)
+      files.uniq
+    end
+
+    def resolve_files(names : Array(String)) : Array(String)
+      available = find_seed_files
+      names.map do |name|
+        matches = available.select do |file|
+          stem = File.basename(file, ".cr")
+          name == file || name == seed_key(file) || name == File.basename(file) || name == stem || name == stem.sub(/^\d+_/, "")
         end
+        raise ArgumentError.new("Seed '#{name}' must match exactly one available seed (found #{matches.size}); use db:seed --list") unless matches.size == 1
+        matches.first
+      end.uniq
+    end
 
-        def execute : Result
-          # This class is used internally by other commands
-          # The main execution logic is in the run_seeds method
-          success("Seed runner initialized")
-        end
+    def get_seed_status : Hash(String, String)
+      load_executed_seeds
+      find_seed_files.to_h { |file| {seed_key(file), executed?(file) ? "executed" : "pending"} }
+    end
 
-        # Run seeds for the specified environment
-        def run_seeds(files : Array(String)? = nil) : Bool
-          ensure_seed_versions_table
-          load_executed_seeds
-
-          seed_files = files || find_seed_files
-
-          if seed_files.empty?
-            Logger.info("No seed files found for environment: #{@environment}")
-            return true
-          end
-
-          Logger.info("Running #{seed_files.size} seed files for environment: #{@environment}")
-
-          success = true
-          seed_files.each do |file|
-            unless run_seed_file(file)
-              success = false
-              break
-            end
-          end
-
-          success
-        end
-
-        # Run a specific seed file
-        def run_seed_file(file : String) : Bool
-          filename = File.basename(file, ".cr")
-
-          if @executed_seeds.includes?(filename)
-            Logger.info("Skipping already executed seed: #{filename}")
-            return true
-          end
-
-          Logger.info("Running seed: #{filename}")
-
-          begin
-            # Set environment variable for seed file to use
-            ENV["DATABASE_URL"] = database_connection_url
-            ENV["AZU_ENV"] = @environment
-
-            # Execute the seed file
-            output = IO::Memory.new
-            error = IO::Memory.new
-
-            status = Process.run(
-              "crystal",
-              ["run", file],
-              output: output,
-              error: error
-            )
-
-            if status.success?
-              Logger.info("✓ Seed completed: #{filename}")
-              mark_seed_as_executed(filename)
-              true
-            else
-              Logger.error("✗ Seed failed: #{filename}")
-              Logger.error("Error: #{error}")
-              false
-            end
-          rescue ex
-            Logger.error("✗ Seed execution failed: #{filename}")
-            Logger.error("Exception: #{ex.message}")
-            false
-          end
-        end
-
-        # Find seed files for the current environment
-        def find_seed_files : Array(String)
-          files = [] of String
-
-          # Look for environment-specific seeds
-          env_dir = File.join(@seeds_dir, @environment)
-          if Dir.exists?(env_dir)
-            files.concat(Dir.glob("#{env_dir}/*.cr").sort)
-          end
-
-          # Look for shared seeds
-          shared_dir = File.join(@seeds_dir, "shared")
-          if Dir.exists?(shared_dir)
-            files.concat(Dir.glob("#{shared_dir}/*.cr").sort)
-          end
-
-          files
-        end
-
-        # Load executed seeds from database
-        private def load_executed_seeds
-          @executed_seeds.clear
-
-          begin
-            query_database("SELECT seed_name FROM seed_versions ORDER BY executed_at") do |rs|
-              rs.each do
-                @executed_seeds << rs.read(String)
-              end
-            end
-          rescue
-            # Table might not exist yet, that's okay
-            @executed_seeds = [] of String
-          end
-        end
-
-        # Mark seed as executed in database
-        private def mark_seed_as_executed(seed_name : String)
-          execute_on_database(
-            "INSERT INTO seed_versions (seed_name, executed_at) VALUES ('#{seed_name}', '#{Time.utc}')"
-          )
-          @executed_seeds << seed_name
-        rescue ex
-          Logger.warn("Failed to mark seed as executed: #{ex.message}")
-        end
-
-        # Ensure seed_versions table exists
-        private def ensure_seed_versions_table
-          execute_on_database(<<-SQL)
-              CREATE TABLE IF NOT EXISTS seed_versions (
-                id SERIAL PRIMARY KEY,
-                seed_name VARCHAR(255) NOT NULL UNIQUE,
-                executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-              )
-            SQL
-
-        rescue ex
-          Logger.warn("Failed to create seed_versions table: #{ex.message}")
-        end
-
-        # Get seed status
-        def get_seed_status : Hash(String, String)
-          status = {} of String => String
-
-          find_seed_files.each do |file|
-            filename = File.basename(file, ".cr")
-            if @executed_seeds.includes?(filename)
-              status[filename] = "executed"
-            else
-              status[filename] = "pending"
-            end
-          end
-
-          status
-        end
-
-        # Force re-run a specific seed
-        def force_run_seed(file : String) : Bool
-          filename = File.basename(file, ".cr")
-
-          # Remove from executed seeds if it exists
-          @executed_seeds.delete(filename)
-
-          # Remove from database
-          begin
-            execute_on_database("DELETE FROM seed_versions WHERE seed_name = '#{filename}'")
-          rescue
-            # Ignore errors
-          end
-
-          # Run the seed
-          run_seed_file(file)
-        end
-
-        # List available seeds
-        def list_seeds
-          seed_files = find_seed_files
-
-          if seed_files.empty?
-            Logger.info("No seed files found for environment: #{@environment}")
-            return
-          end
-
-          Logger.info("Available seed files for environment: #{@environment}")
-          Logger.info("=" * 50)
-
-          seed_files.each do |file|
-            filename = File.basename(file, ".cr")
-            status = @executed_seeds.includes?(filename) ? "✓ executed" : "⏱ pending"
-            Logger.info("#{status} #{filename}")
-          end
+    def force_run_seed(file : String) : Bool
+      path = seed_path(file)
+      ensure_seed_versions_table
+      marker = @adapter.in?("postgres", "postgresql") ? "$1" : "?"
+      ::DB.open(database_connection_url) do |db|
+        db.exec("DELETE FROM seed_versions WHERE seed_name = #{marker}", seed_key(path))
+        # Remove unambiguous records written by the older basename-based runner.
+        if unique_legacy_name?(path)
+          db.exec("DELETE FROM seed_versions WHERE seed_name = #{marker}", File.basename(path, ".cr"))
         end
       end
+      run_seed_file(path)
+    rescue ex
+      Logger.error("Seed failed: #{ex.message}")
+      false
+    end
+
+    def list_seeds
+      get_seed_status.each { |name, status| Logger.info("#{status}: #{name}") }
+    end
+
+    private def seed_path(file : String) : String
+      root = File.realpath(Dir.current)
+      path = File.realpath(file)
+      unless path.starts_with?(root + File::SEPARATOR) && path.ends_with?(".cr") && File.file?(path)
+        raise ArgumentError.new("Seed file must be a Crystal file inside the project")
+      end
+      path
+    end
+
+    private def seed_key(file : String) : String
+      Path[seed_path(file)].relative_to(File.realpath(Dir.current)).to_s
+    end
+
+    private def unique_legacy_name?(file : String) : Bool
+      name = File.basename(file, ".cr")
+      find_seed_files.count { |candidate| File.basename(candidate, ".cr") == name } == 1
+    end
+
+    private def executed?(file : String) : Bool
+      @executed_seeds.includes?(seed_key(file)) ||
+        (@executed_seeds.includes?(File.basename(file, ".cr")) && unique_legacy_name?(file))
+    end
+
+    private def load_executed_seeds
+      @executed_seeds.clear
+      query_database("SELECT seed_name FROM seed_versions ORDER BY executed_at") do |rs|
+        rs.each { @executed_seeds << rs.read(String) }
+      end
+    rescue ex
+      # A fresh database has no tracking table. Connection and other errors must
+      # remain visible, rather than causing already-run seeds to execute again.
+      raise ex unless ex.message.to_s.matches?(/no such table|does not exist|doesn't exist/i)
+    end
+
+    private def ensure_seed_versions_table
+      execute_on_database(<<-SQL)
+        CREATE TABLE IF NOT EXISTS seed_versions (
+          seed_name VARCHAR(255) PRIMARY KEY,
+          executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        SQL
     end
   end
 end

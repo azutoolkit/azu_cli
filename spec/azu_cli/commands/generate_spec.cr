@@ -39,6 +39,22 @@ describe AzuCLI::Commands::Generate do
   end
 
   describe "#execute" do
+    it "rejects unsupported CQL JSON persistence before writing any files" do
+      ScratchProject.new.in_generated_project do
+        before = Dir.glob("**/*").sort
+        %w(model scaffold spark:scaffold api_resource).each do |kind|
+          command = AzuCLI::Commands::Generate.new
+          command.parse_args([kind, "Document", "metadata:json?"])
+          TestHelpers::TestSetup.with_captured_output do
+            result = command.execute
+            result.success?.should be_false
+            result.error.should contain("CQL 1.0.0 cannot persist JSON::Any")
+          end
+        end
+        Dir.glob("**/*").sort.should eq(before)
+      end
+    end
+
     it "handles generators without name requirements" do
       repository = Dir.current
       before = Dir.glob("#{repository}/**/*", match: :dot_files).reject { |path| path.includes?("/lib/") || path.includes?("/bin/") || path.includes?("/.git/") || path.ends_with?("/.git") || path.includes?("/tmp_test_") }.sort

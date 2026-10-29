@@ -288,7 +288,7 @@ describe AzuCLI::Generate::Project do
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render(test_dir)
 
       shard = File.read(File.join(test_dir, "shard.yml"))
-      shard.should match(/cql:\n    github: azutoolkit\/cql\n    version: 0\.0\.604\n/)
+      shard.should match(/cql:\n    github: azutoolkit\/cql\n    version: 1\.\d+\.\d+\n/)
       # ~> 1.1: the stray v1.0.32 tag (a pull-request merge ref) is below it, the session expiry and secret fixes are in it.
       shard.should match(/session:\n    github: azutoolkit\/session\n    version: ~> 1\.1\n/)
       File.read(File.join(test_dir, "src", "myapp.cr")).should contain(%(require "./channels/**"))
@@ -345,7 +345,7 @@ describe AzuCLI::Generate::Project do
     end
 
     it "uses the mysql and sqlite3 drivers in the initializer" do
-      {"mysql" => "mysql", "sqlite3" => "sqlite3"}.each do |database, driver|
+      {"mysql" => "cql/mysql", "sqlite3" => "sqlite3"}.each do |database, driver|
         generator = AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com", database: database)
 
         test_dir = "./tmp_test_cql_#{database}"
@@ -380,12 +380,13 @@ describe AzuCLI::Generate::Project do
       FileUtils.rm_rf("./tmp_test_db_require")
     end
 
-    it "pins azu to 0.10.x from 0.10.1, below the next minor (where azu's breaking changes go)" do
+    it "pins an exact Azu candidate and a released CQL v1 version" do
       FileUtils.mkdir_p("./tmp_test_azu_pin")
       AzuCLI::Generate::Project.new("myapp", "MyApp", "John Doe", "john@example.com").render("./tmp_test_azu_pin")
 
       shard = File.read("./tmp_test_azu_pin/shard.yml")
-      shard.should match(/github: azutoolkit\/azu\n\s+version: ~> 0\.10\.1\n/)
+      shard.should match(/github: azutoolkit\/azu\n\s+(?:version: 1\.\d+\.\d+|commit: [a-f0-9]{40})\n/)
+      shard.should match(/github: azutoolkit\/cql\n\s+version: 1\.\d+\.\d+\n/)
       shard.should_not contain("0.5.118")
       FileUtils.rm_rf("./tmp_test_azu_pin")
     end

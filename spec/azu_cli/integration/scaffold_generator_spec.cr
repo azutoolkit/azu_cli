@@ -153,7 +153,7 @@ describe "Scaffold Generator Integration" do
     it "generates scaffold with complex field types" do
       with_temp_project("complex_scaffold_test", "web") do |project_path|
         # Generate scaffold with various field types
-        result = run_generator("generate scaffold Product name:string description:text price:float64 in_stock:bool category_id:int32 tags:json created_at:time", project_path)
+        result = run_generator("generate scaffold Product name:string description:text price:float64 in_stock:bool category_id:int32 tags:text released_on:date token:uuid created_at:time", project_path)
         result.success?.should be_true
 
         Dir.cd(project_path) do
@@ -164,7 +164,10 @@ describe "Scaffold Generator Integration" do
           model_content.should contain("property price : Float64")
           model_content.should contain("property in_stock : Bool")
           model_content.should contain("property category_id : Int32")
-          model_content.should contain("property tags : JSON::Any")
+          model_content.should contain("property tags : String")
+          model_content.should contain("property released_on : Time")
+          model_content.should contain("property token : UUID")
+          model_content.should contain("CQL::UUIDConverter")
           model_content.should contain("property created_at : Time")
         end
       end

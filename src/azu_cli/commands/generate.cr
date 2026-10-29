@@ -82,6 +82,13 @@ module AzuCLI
           return error(parse_err)
         end
 
+        # CQL 1.0.0 model attributes are DB::Any; JSON::Any cannot be persisted.
+        # Reject before writing any model, migration or scaffold files.
+        if %w(model scaffold spark:scaffold api_resource api-resource).includes?(@generator_type) &&
+           @attributes.any? { |name, type| Generators::Field.new(name, type).kind == "json" }
+          return error("CQL 1.0.0 cannot persist JSON::Any model attributes. Use a text field with application-level JSON serialization, or wait for a compatible CQL release. JSON request fields and migration columns are supported separately.")
+        end
+
         if RESOURCE_NAMED_GENERATORS.includes?(@generator_type) && (message = Generators::Resource.name_error(@generator_name))
           return error(message)
         end

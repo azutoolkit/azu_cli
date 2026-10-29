@@ -125,9 +125,6 @@ module AzuCLI
 
         # Create rollback test script
         private def create_rollback_test_script(version : Int64) : String
-          project_root = Dir.current
-          script_path = File.join(project_root, "tmp_verify_rollback_#{Time.utc.to_unix}.cr")
-
           script_content = String.build do |io|
             io << migrator_script_header
             io << "# Test rollback for version #{version}\n"
@@ -145,8 +142,7 @@ module AzuCLI
             io << "end\n"
           end
 
-          File.write(script_path, script_content)
-          script_path
+          ScratchFile.create("tmp_verify_rollback_", script_content, Dir.current)
         end
 
         # Execute the test runner script

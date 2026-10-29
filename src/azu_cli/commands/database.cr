@@ -1,7 +1,9 @@
 require "./base"
+require "../scratch_file"
 require "db"
 require "pg"
-require "mysql"
+require "cql/mysql"
+require "sqlite3"
 require "uri"
 require "cql"
 
@@ -466,18 +468,24 @@ module AzuCLI
       # would otherwise replace it with a plain dump that embeds the database URI and password.
       protected def migrator_script_header(migrations_glob : String = "./#{AzuCLI::Config::Paths::MIGRATIONS}/*") : String
         schema_name, _ = detect_schema_info
+        database_script_header + <<-CR
+          require #{migrations_glob.inspect}
+          config = CQL::MigratorConfig.new(auto_sync: false)
+          migrator = #{schema_name}.migrator(config)
 
+          CR
+      end
+
+      # Migrations and seeds load the same configuration before evaluating models.
+      protected def database_script_header : String
         String.build do |io|
           io << "require \"cql\"\n"
-          io << "require \"#{adapter_shard}\"\n"
+          io << "require #{adapter_shard.inspect}\n"
           if initializers?
             io << "require \"azu\"\n"
             io << "require \"./src/initializers/**\"\n"
           end
           io << "require \"./src/db/schema.cr\"\n"
-          io << "require \"#{migrations_glob}\"\n\n"
-          io << "config = CQL::MigratorConfig.new(auto_sync: false)\n\n"
-          io << "migrator = #{schema_name}.migrator(config)\n\n"
         end
       end
 
@@ -485,7 +493,7 @@ module AzuCLI
       protected def adapter_shard : String
         case @adapter
         when "mysql"
-          "mysql"
+          "cql/mysql"
         when "sqlite", "sqlite3"
           "sqlite3"
         else
@@ -531,9 +539,7 @@ module AzuCLI
       end
 
       private def applied_versions_script : String
-        script_path = File.join(Dir.current, "tmp_applied_#{Time.utc.to_unix}.cr")
-        File.write(script_path, migrator_script_header + "migrator.applied_migrations.each { |migration| puts \"APPLIED \#{migration.version}\" }\n")
-        script_path
+        ScratchFile.create("tmp_applied_", migrator_script_header + "migrator.applied_migrations.each { |migration| puts \"APPLIED \#{migration.version}\" }\n", Dir.current)
       end
 
       private def warn_unreadable_migrations(message : String?)

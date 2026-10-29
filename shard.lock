@@ -6,7 +6,7 @@ shards:
 
   cql:
     git: https://github.com/azutoolkit/cql.git
-    version: 0.0.578+git.commit.f7fe5246e4fc43fda94f3cbd50d8ef471283c277
+    version: 1.0.0
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -39,6 +39,10 @@ shards:
   spec2:
     git: https://github.com/waterlink/spec2.cr.git
     version: 0.11.0+git.commit.f3d8aca8165d8a6ec7681b4355b5ee8b1d597a68
+
+  sqlite3:
+    git: https://github.com/crystal-lang/crystal-sqlite3.git
+    version: 0.24.0
 
   teeplate:
     git: https://github.com/amberframework/teeplate.git

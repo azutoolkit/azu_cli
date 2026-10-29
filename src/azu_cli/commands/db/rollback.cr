@@ -120,9 +120,6 @@ module AzuCLI
 
         # Create a temporary migration runner script
         private def create_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
-          project_root = Dir.current
-          script_path = File.join(project_root, "tmp_rollback_#{Time.utc.to_unix}.cr")
-
           script_content = String.build do |io|
             io << migrator_script_header
 
@@ -148,8 +145,7 @@ module AzuCLI
             end
           end
 
-          File.write(script_path, script_content)
-          script_path
+          ScratchFile.create("tmp_rollback_", script_content, Dir.current)
         end
 
         # Execute the migration runner script

@@ -20,7 +20,7 @@
 #        E2E_REDIS_URL  a Redis to run a generated job through (a worker builds and runs it); unset skips that check
 #        Secrets: CSRF_SECRET (web) always; SESSION_SECRET only once `azu generate auth` ran, which this script does for
 #        web on SQLite (not for PostgreSQL, which only boots). The production checks run in a clean environment.
-#        E2E_AZU_BRANCH  pin the generated project's azu dependency to this branch (e.g. master)
+#        E2E_AZU_VERSION / E2E_CQL_VERSION select releases; *_COMMIT or *_BRANCH select explicit canaries
 set -eu
 
 # The secrets come from the generated .env, which the app loads at boot: do not let the caller's shell supply them.
@@ -664,13 +664,8 @@ fi
 git check-ignore -q .env 2>/dev/null || grep -qx '/.env' .gitignore || fail ".env is not git-ignored"
 ! grep -Eq '[0-9a-f]{64}' .env.example || fail ".env.example holds a secret"
 
-# Opt-in: test against a branch of azu instead of the release the generated shard.yml requires (its version
-# constraint is dropped for the branch).
-if [ -n "${E2E_AZU_BRANCH:-}" ]; then
-  awk -v ref="$E2E_AZU_BRANCH" '/^    github: azutoolkit\/azu$/ { print; print "    branch: " ref; skip = 1; next } skip && /^    version:/ { skip = 0; next } { skip = 0; print }' shard.yml >shard.yml.new && mv shard.yml.new shard.yml
-  grep -q "branch: $E2E_AZU_BRANCH" shard.yml || fail "could not pin azu to $E2E_AZU_BRANCH in shard.yml"
-  echo "azu pinned to branch $E2E_AZU_BRANCH"
-fi
+crystal run "$REPO_ROOT/scripts/select_framework_versions.cr" -- shard.yml
+shards install
 
 if [ "$SCAFFOLD" = 1 ]; then
   step "generate a Post scaffold"

@@ -69,7 +69,7 @@ module AzuCLI
           return result unless result.success?
 
           # Seed database if requested
-          if @with_seed && File.exists?(seed_file)
+          if @with_seed
             Logger.info("Seeding database...")
             seed_cmd = Seed.new
             seed_cmd.database_name = @database_name

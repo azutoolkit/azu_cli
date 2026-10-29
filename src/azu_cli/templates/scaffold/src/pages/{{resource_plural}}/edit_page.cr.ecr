@@ -7,7 +7,14 @@ module <%= app_module %>
     end
 
     def render_html : String
-      view data: {"<%= resource_singular %>" => @<%= resource_singular %>.attributes.transform_keys(&.to_s), "csrf_tag" => @csrf_tag}
+      values = @<%= resource_singular %>.attributes.transform_keys(&.to_s).transform_values do |value|
+        case value
+        when Time      then value.to_rfc3339
+        when JSON::Any then value.to_json
+        else                value
+        end
+      end
+      view data: {"<%= resource_singular %>" => values, "csrf_tag" => @csrf_tag}
     end
   end
 end

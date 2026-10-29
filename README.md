@@ -101,7 +101,7 @@ For real browser acceptance, install Python Playwright (`python3 -m pip install 
 
 ### Terminal diagnostics and generator validation
 
-`azu joobq` provides queue, workflow-step and dead-letter views with bounded master/detail panes and confirmed atomic replay. `azu dev` adds an Errors tab and expands SQL with live queries, pool metrics and latency buckets. See [JoobQ dashboard](docs/command-reference/azu-joobq.md) and [dev telemetry requirements](docs/command-reference/azu-dev.md); expanded app telemetry requires the companion Azu producer changes, and PostgreSQL History Store support awaits a supported API.
+`azu joobq` provides queue, workflow-step and dead-letter views with bounded master/detail panes and confirmed atomic replay. `azu dev` adds an Errors tab and expands SQL with live queries, pool metrics and latency buckets. See [JoobQ dashboard](docs/command-reference/azu-joobq.md) and [dev telemetry requirements](docs/command-reference/azu-dev.md); expanded app telemetry is included in Azu 1.0.1, and PostgreSQL History Store support awaits a supported API.
 
 Run `scripts/check_generators.sh web` and `scripts/check_generators.sh api` to compile every generator family together and exercise lazy-compiled message, job, validator and component paths. Release CI requires these checks, the generated-app end-to-end matrix, and `scripts/check_joobq_adapter.sh` against published JoobQ 0.4.2 and the pinned revision with atomic DLQ support.
 
@@ -117,3 +117,28 @@ azu serve
 ```
 
 The demo appears at `/counters/live`; `/products` provides paging, inline validation, editing and confirmed deletion, with updates between tabs and shared services for HTTP form fallbacks. Navigation and Spark wiring are registered automatically. See [Spark generators](docs/generators/spark.md) for supported scalar fields, secret management, multi-process PubSub and authorization requirements. `scripts/e2e_spark_app.sh` generates and tests a disposable app in real Chromium.
+
+### Azu/CQL v1 compatibility
+
+The CLI and generated applications use CQL **1.0.0**. Generated web/API projects temporarily pin Azu **1.0.2 plus commit `69163988a48e28b809ad09929f5d7f9bfb1079ee`**, which redacts sensitive query parameters in request telemetry. The CQL v1 private-constant compilation fix is included in released Azu 1.0.2. This is an explicit unreleased patch, not a v1.0.3 release. Generated CLI-only projects remain dependency-free.
+
+For an existing application, replace its Azu/CQL entries in `shard.yml`, keeping its other dependencies:
+
+```yaml
+  azu:
+    github: azutoolkit/azu
+    commit: 69163988a48e28b809ad09929f5d7f9bfb1079ee
+  cql:
+    github: azutoolkit/cql
+    version: 1.0.0
+```
+
+Run `shards update azu cql`, build the application, and test migrations in a disposable database before upgrading an existing environment. Preserve customized schema and middleware files. Keep the error handler outside session middleware; configure Redis pooling for concurrent session access. For MySQL, load `cql/mysql` instead of `mysql` and supply a verified TLS URL. PostgreSQL now has the native CQL engine available: audit error handling for `CQL::Postgres::Error`, or retain crystal-db with `Azu::CQL.schema(..., driver: :db)`. See [database and seed behavior](docs/command-reference/azu-db.md).
+
+CQL 1.0.0 cannot persist `JSON::Any` ActiveRecord attributes. Model and scaffold generators reject `json` fields before writing files; use a text column with application-level serialization until CQL supports typed JSON persistence. Standalone request JSON fields and JSON migration columns remain available. UUID fields use text storage with a typed CQL converter. Date fields expose Crystal `Time`, create SQL `DATE` columns, and accept date-only or RFC 3339 form values.
+
+The CLI itself now links SQLite as well as PostgreSQL/MySQL; source builds need SQLite development headers (`libsqlite3-dev` on Ubuntu). Crystal 1.22.1 is the supported floor; hosted CI also tests latest Crystal.
+
+Compatibility CI covers generator compilation, real PostgreSQL/MySQL migrations and CRUD, seed repeatability/failures, verified MySQL TLS, SQL/error telemetry, daisyUI and Spark browser flows, Redis workers, and production Docker images. `E2E_AZU_VERSION` and `E2E_CQL_VERSION` select release candidates for scripts; the corresponding `_COMMIT` or `_BRANCH` variables select explicit canaries. These overrides are test-only and are not normal application configuration.
+
+A scheduled workflow proposes stable v1 dependency updates in draft PRs and dispatches the complete CI on the proposed branch. Releases are blocked while the generated dependencies use unreleased commits or stale stable-version pins. See [the implementation plan and current evidence](design/v1-compatibility-plan.md); adding CI gates alone is not evidence that they have passed.

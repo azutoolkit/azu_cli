@@ -102,7 +102,7 @@ describe AzuCLI::Generate::Middleware do
       generator.crystal_type("boolean").should eq("Bool")
       generator.crystal_type("time").should eq("Time")
       generator.crystal_type("datetime").should eq("Time")
-      generator.crystal_type("date").should eq("Date")
+      generator.crystal_type("date").should eq("Time")
       generator.crystal_type("user").should eq("User")
       generator.crystal_type("model").should eq("User")
       generator.crystal_type("array").should eq("Array(String)")

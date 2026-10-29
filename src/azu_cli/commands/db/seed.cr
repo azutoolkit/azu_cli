@@ -34,6 +34,8 @@ module AzuCLI
 
           # Initialize seed runner
           seed_runner = SeedRunner.new(@environment, "./src/db/seeds")
+          seed_runner.database_name = @database_name
+          seed_runner.ui = ui
 
           # Handle list command
           if @list
@@ -55,17 +57,6 @@ module AzuCLI
 
           # Handle specific file
           if file = @file
-            # Validate path to prevent directory traversal attacks
-            seeds_dir = File.expand_path("./src/db/seeds")
-            resolved_path = File.expand_path(file)
-            unless resolved_path.starts_with?(seeds_dir) || resolved_path.starts_with?(File.expand_path("."))
-              return error("Invalid seed file path: file must be within the project directory")
-            end
-
-            unless File.exists?(file)
-              return error("Seed file not found: #{file}")
-            end
-
             Logger.info("Running seed file: #{file}")
             show_database_info if @verbose
 
@@ -109,6 +100,8 @@ module AzuCLI
           else
             error("Seed execution failed")
           end
+        rescue ex
+          error("Seed execution failed: #{ex.message}")
         end
 
         private def parse_options

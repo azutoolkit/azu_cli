@@ -15,18 +15,16 @@ targets:
 <% unless @project_type == "cli" -%>
 
 dependencies:
-  # ~> 0.10.1 is >= 0.10.1, < 0.11.0. azu is 0.x and its API can change between minor versions (see its
-  # docs/reference/breaking-changes.md), so take a newer minor deliberately. 0.6 to 0.10 add CORS, the CSRF body
-  # cap, upload and server limits and problem+json; 0.10.1 frames chunked bodies under the limits and has Dev::Telemetry.
+  # Azu 1.0.2 plus request-telemetry redaction. Replace this exact
+  # commit with the first released version containing it after compatibility CI passes.
   azu:
     github: azutoolkit/azu
-    version: ~> 0.10.1
+    commit: 69163988a48e28b809ad09929f5d7f9bfb1079ee
 
-  # Exact on purpose: cql 0.0.N releases have broken generated apps before (0.0.562). To bump, change this
-  # version and run scripts/e2e_generated_app.sh web and api (and E2E_DB=postgresql web).
+  # Tested stable ORM release; update together with compatibility CI and lockfiles.
   cql:
     github: azutoolkit/cql
-    version: 0.0.604
+    version: 1.0.0
 
   # ~> 1.1, not ~> 1.0.31: the stray v1.0.32 tag is a pull-request merge ref, not a release.
   session:

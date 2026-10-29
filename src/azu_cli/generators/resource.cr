@@ -77,10 +77,12 @@ module AzuCLI
 
       # The CQL table DSL line that declares this column.
       def column : String
+        return "date :#{name}#{options}" if kind == "date"
+
         case base_type
-        when "String" then "text :#{name}#{options}"
-        when "Bool"   then "boolean :#{name}, default: false#{options}"
-        else               "column :#{name}, #{base_type}#{options}"
+        when "String", "UUID" then "text :#{name}#{options}"
+        when "Bool"           then "boolean :#{name}, default: false#{options}"
+        else                       "column :#{name}, #{base_type}#{options}"
         end
       end
 
@@ -127,7 +129,7 @@ module AzuCLI
         when "float64", "float"                  then "Float64"
         when "bool", "boolean"                   then "Bool"
         when "time", "datetime"                  then "Time"
-        when "date"                              then "Date"
+        when "date"                              then "Time"
         when "json"                              then "JSON::Any"
         when "uuid"                              then "UUID"
         else                                          "String"

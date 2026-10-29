@@ -106,9 +106,6 @@ module AzuCLI
 
         # Create a temporary data migration runner script
         private def create_data_migration_runner_script(action : String, version : Int64? = nil, steps : Int32? = nil) : String
-          project_root = Dir.current
-          script_path = File.join(project_root, "tmp_data_migrate_#{Time.utc.to_unix}.cr")
-
           script_content = String.build do |io|
             io << migrator_script_header("./src/db/data_migrations/*")
 
@@ -134,8 +131,7 @@ module AzuCLI
             end
           end
 
-          File.write(script_path, script_content)
-          script_path
+          ScratchFile.create("tmp_data_migrate_", script_content, Dir.current)
         end
 
         # Execute the data migration runner script

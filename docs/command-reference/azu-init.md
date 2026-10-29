@@ -32,10 +32,10 @@ Then add the dependencies the generated code uses. `azu init` does not do this f
 dependencies:
   azu:
     github: azutoolkit/azu
-    version: ~> 0.10.1
+    commit: 69163988a48e28b809ad09929f5d7f9bfb1079ee # Azu 1.0.2 + telemetry redaction; awaiting release
   cql:
     github: azutoolkit/cql
-    version: 0.0.604
+    version: 1.0.0
   sqlite3:
     github: crystal-lang/crystal-sqlite3
     version: ~> 0.24.0

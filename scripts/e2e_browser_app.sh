@@ -16,6 +16,9 @@ cd "$WORK"
 "$AZU_BIN" new browser_shop --yes --author 'Browser E2E' --email browser-e2e@example.test \
   --type web --db sqlite --no-git --no-docker --ci None > evidence/generate.log 2>&1
 cd browser_shop
+crystal run "$ROOT/scripts/select_framework_versions.cr" -- shard.yml
+shards install
+cp shard.lock ../evidence/shard.lock
 # Rebuild before the future pages exist: the class manifest must retain their styles.
 npm ci --ignore-scripts --no-audit --no-fund > ../evidence/npm-ci.log 2>&1
 npm run build:css > ../evidence/css-build.log 2>&1

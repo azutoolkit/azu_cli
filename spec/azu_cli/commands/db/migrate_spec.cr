@@ -231,3 +231,17 @@ describe AzuCLI::Commands::DB::Migrate do
     end
   end
 end
+
+describe "migration runner isolation" do
+  it "creates private, distinct scratch files for concurrent invocations" do
+    TestHelpers::TestSetup.with_temp_project("migration_scratch") do
+      command = AzuCLI::Commands::DB::Migrate.new
+      paths = Array.new(20) { command.test_create_migration_runner_script("up") }
+      paths.uniq.size.should eq(20)
+      paths.each do |path|
+        File.info(path).permissions.value.should eq(0o600)
+        File.read(path).should contain("migrator.up")
+      end
+    end
+  end
+end

@@ -13,6 +13,9 @@ trap 'echo "Spark fixture and evidence: $WORK"' EXIT
 cd "$WORK"
 "$AZU_BIN" new spark_lab --yes --author 'Spark E2E' --email spark@example.test --type web --db sqlite --no-git --no-docker --ci None > evidence/generate.log 2>&1
 cd spark_lab
+crystal run "$ROOT/scripts/select_framework_versions.cr" -- shard.yml
+shards install
+cp shard.lock ../evidence/shard.lock
 "$AZU_BIN" generate spark Counter count:int32 title:string enabled:bool --page >> ../evidence/generate.log 2>&1
 "$AZU_BIN" generate spark:scaffold Product name:string price_cents:int32 active:bool >> ../evidence/generate.log 2>&1
 cp .env ../evidence/env-before

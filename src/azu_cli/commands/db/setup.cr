@@ -51,14 +51,14 @@ module AzuCLI
           return result unless result.success?
 
           # Seed database if requested
-          if @with_seed && File.exists?(seed_file)
+          if @with_seed
             Logger.info("Seeding database...")
             seed_cmd = Seed.new
             seed_cmd.database_name = @database_name
             seed_cmd.environment = @environment
             seed_cmd.ui = ui
-            seed_cmd.execute
-            # Don't fail if seeding fails
+            result = seed_cmd.execute
+            return result unless result.success?
           end
 
           Logger.info("✓ Database setup completed successfully")

@@ -1,6 +1,7 @@
 name: Crystal CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [master]
   pull_request:
@@ -27,9 +28,11 @@ jobs:
       - name: Install system dependencies
         run: |
           apt-get update
-          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev
+          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev python3
       - name: Install shards
-        run: shards install
+        run: shards install --frozen
+      - name: Check dependency promotion guard
+        run: python3 scripts/test_framework_versions.py
       - name: Check formatting
         run: crystal tool format --check ./src
       # The integration specs run `bin/azu`.
@@ -66,7 +69,7 @@ jobs:
           apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev sqlite3 curl
       - name: Build the CLI
         run: |
-          shards install
+          shards install --frozen
           mkdir -p bin
           crystal build src/azu_cli.cr -o bin/azu --no-debug
       # On SQLite the script also generates a Post scaffold (and, for web, a Chat channel and authentication), migrates it
@@ -90,17 +93,75 @@ jobs:
       - name: Install system dependencies
         run: |
           apt-get update
-          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev
+          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev python3 redis-server
       - name: Build CLI and compile every generator
         run: |
-          shards install
+          shards install --frozen
           mkdir -p bin
           crystal build src/azu_cli.cr -o bin/azu --no-debug
           scripts/check_generators.sh ${{ matrix.type }}
-  spark-browser:
-    name: generated Spark app (Chromium, SQLite)
+  database-compatibility:
+    name: v1 ${{ matrix.adapter }} ${{ matrix.type }} integration
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [postgresql, mysql]
+        type: [web, api]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: "1.22.1"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev redis-server python3 openssl
+      - name: Build CLI and exercise disposable database applications
+        run: |
+          shards install --frozen
+          mkdir -p bin
+          crystal build src/azu_cli.cr -o bin/azu --no-debug
+          python3 scripts/e2e_database_app.py --adapter ${{ matrix.adapter }} --type ${{ matrix.type }}
+      - name: Upload resolved versions, database and telemetry evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v1-${{ matrix.adapter }}-${{ matrix.type }}
+          path: /tmp/azu-db-e2e-*/evidence/
+          retention-days: 7
+  production-image:
+    name: generated ${{ matrix.type }} production image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        type: [web, api]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: "1.22.1"
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev python3
+      - name: Build CLI and test generated image
+        run: |
+          shards install --frozen
+          mkdir -p bin
+          crystal build src/azu_cli.cr -o bin/azu --no-debug
+          scripts/e2e_docker.sh ${{ matrix.type }}
+  spark-browser:
+    name: generated daisyUI and Spark apps (Chromium, SQLite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     container:
       image: crystallang/crystal:1.22.1
     steps:
@@ -108,17 +169,21 @@ jobs:
       - name: Install browser validation dependencies
         run: |
           apt-get update
-          apt-get install -y python3 python3-venv redis-server libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev
+          apt-get install -y python3 python3-venv redis-server libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev python3
           python3 -m venv /tmp/spark-browser-tools
           /tmp/spark-browser-tools/bin/pip install playwright==1.62.0
           /tmp/spark-browser-tools/bin/python -m playwright install --with-deps chromium
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Generate, migrate, compile and click through live CRUD
         run: |
           export PATH="/tmp/spark-browser-tools/bin:$PATH"
-          shards install
+          shards install --frozen
           mkdir -p bin
           crystal build src/azu_cli.cr -o bin/azu --no-debug
           scripts/e2e_spark_app.sh
+          scripts/e2e_browser_app.sh
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -128,6 +193,8 @@ jobs:
             /tmp/azu-spark-e2e-*/evidence/*.png
             /tmp/azu-spark-e2e-*/evidence/*.log
             /tmp/azu-spark-e2e-*/evidence/report.json
+            /tmp/azu-spark-e2e-*/evidence/shard.lock
+            /tmp/azu-browser-e2e-*/evidence/
           retention-days: 7
   joobq-adapter:
     name: live JoobQ adapter (${{ matrix.ref }})
@@ -162,6 +229,8 @@ jobs:
       - generators
       - joobq-adapter
       - spark-browser
+      - database-compatibility
+      - production-image
     # Releases and version bumps are for master only, never for pull requests.
     if: ${{ success() && github.event_name == 'push' }}
     steps:
@@ -169,6 +238,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Require tested stable framework releases
+        run: python3 scripts/update_framework_versions.py --check
       - name: Compute Release Version
         id: semver
         uses: paulhatch/semantic-version@v4.0.2

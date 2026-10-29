@@ -22,7 +22,10 @@ dependencies:
     version: ~> 0.31.0
   cql:
     github: azutoolkit/cql
-    branch: master
+    version: 1.0.0
+  sqlite3:
+    github: crystal-lang/crystal-sqlite3
+    version: ~> 0.24.0
   mysql:
     github: crystal-lang/crystal-mysql
     version: ~> 0.18.0

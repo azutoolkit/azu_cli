@@ -9,10 +9,18 @@ describe AzuCLI::Generate::Field do
       "string" => "String", "text" => "String", "email" => "String", "unknown" => "String",
       "int32" => "Int32", "integer" => "Int32", "int64" => "Int64", "references" => "Int64",
       "float32" => "Float32", "float64" => "Float64", "bool" => "Bool", "boolean" => "Bool",
-      "time" => "Time", "date" => "Date", "json" => "JSON::Any", "uuid" => "UUID",
+      "time" => "Time", "date" => "Time", "json" => "JSON::Any", "uuid" => "UUID",
     }.each do |type, crystal_type|
       AzuCLI::Generate::Field.new("f", type).crystal_type.should eq(crystal_type)
     end
+  end
+
+  it "declares a date-only column while exposing Crystal Time" do
+    AzuCLI::Generate::Field.new("day", "date?").column.should eq("date :day, null: true")
+  end
+
+  it "stores UUIDs in portable text columns" do
+    AzuCLI::Generate::Field.new("token", "uuid").column.should eq("text :token")
   end
 
   it "keeps optional types optional" do

@@ -131,11 +131,11 @@ azu db:reset --force --seed
 | Option      | Short | Meaning                                                            | Default |
 | ----------- | ----- | ------------------------------------------------------------------ | ------- |
 | `--force`   | `-f`  | Do not ask first                                                   | off     |
-| `--seed`    |       | Seed after the migrations, when `src/db/seed.cr` exists            | on      |
+| `--seed`    |       | Seed after the migrations            | on      |
 | `--no-seed` |       | Do not seed                                                        | off     |
 | `--env ENV` | `-e`  | As for `db:create`                                                 | environment |
 
-It drops the database if it exists, creates it, runs every migration and then seeds it, unless `--no-seed` is given or there is no `src/db/seed.cr`.
+It drops the database if it exists, creates it, runs every migration and then seeds it, unless `--no-seed` is given. Seed failures fail the reset.
 
 ### azu db:setup
 
@@ -150,7 +150,7 @@ azu db:setup --seed
 | `--no-seed` | Do not seed                                                              | off     |
 | `--env ENV` | As for `db:create`                                                       | environment |
 
-It creates the database when it is missing, then migrates. With `--seed` it runs `db:seed`, but only when `src/db/seed.cr` exists. A seed failure does not fail the setup.
+It creates the database when it is missing, then migrates. With `--seed` it runs `db:seed` after migrations, including directory-based seeds even when the legacy seed file is absent. A seed failure fails setup.
 
 ### azu db:seed
 
@@ -172,7 +172,11 @@ azu db:seed --only users,posts
 | `--verbose`     |       | Show the database details                                            | off     |
 | `--env ENV`     | `-e`  | As for `db:create`                                                   | environment |
 
-Without options it runs `src/db/seeds/<environment>/*.cr`, then `src/db/seeds/shared/*.cr`, each in name order. Each seed is recorded when it runs, and a recorded seed is skipped the next time.
+Without options it runs the legacy `src/db/seed.cr` when present, then `src/db/seeds/shared/*.cr`, then `src/db/seeds/<environment>/*.cr`, each directory in name order. Configuration, the schema and models load before the seed. Completion is recorded by project-relative path; completed seeds are skipped on repeat runs. Unambiguous basename records from older CLI versions remain recognized. `--only` accepts a unique name (without the timestamp), filename or project-relative path; unknown or ambiguous names fail.
+
+Keep seeds idempotent. A seed process and its completion record cannot share a transaction: a crash after writes but before recording completion can require a retry. Tracking errors are reported as failures. Avoid non-idempotent external side effects in seeds.
+
+MySQL applications load `require "cql/mysql"` for MySQL 8.4 authentication. TLS certificate and hostname verification are enabled by default. Supply a trusted CA with `ssl-ca` and a bounded `connect_timeout` in `DATABASE_URL`, for example `mysql://app:password@db.example/app?ssl-mode=verify_identity&ssl-ca=/run/certs/ca.pem&connect_timeout=5`. PostgreSQL schemas use CQL’s native engine by default; explicitly pass `driver: :db` to `Azu::CQL.schema` to use crystal-db instead.
 
 ### azu db:status
 

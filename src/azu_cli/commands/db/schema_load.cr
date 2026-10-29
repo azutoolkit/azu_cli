@@ -93,7 +93,6 @@ module AzuCLI
         # Temporary script that evaluates the schema file with the project's initializers loaded
         private def create_schema_load_script(schema_path : String) : String
           schema_name, _ = detect_schema_info
-          script_path = File.join(Dir.current, "tmp_schema_load_#{Time.utc.to_unix}.cr")
 
           script_content = String.build do |io|
             io << "require \"cql\"\n"
@@ -109,8 +108,7 @@ module AzuCLI
             io << "end\n"
           end
 
-          File.write(script_path, script_content)
-          script_path
+          ScratchFile.create("tmp_schema_load_", script_content, Dir.current)
         end
 
         # Public test helper to access private method for testing

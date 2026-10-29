@@ -1,0 +1,49 @@
+name: Check latest Azu and CQL v1 releases
+on:
+  schedule:
+    - cron: '21 8 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+concurrency:
+  group: framework-dependency-update
+  cancel-in-progress: false
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: '1.22.1'
+      - name: Select stable v1 tags and resolve CLI dependencies
+        run: |
+          python3 scripts/update_framework_versions.py --update
+          shards update cql
+      - name: Propose the update for compatibility testing
+        id: proposal
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: codex/update-framework-v1
+          title: Update tested Azu and CQL v1 dependencies
+          commit-message: Update Azu and CQL v1 compatibility candidates
+          draft: true
+          body: |
+            Updates exact Azu/CQL pins to the latest stable v1 tags and refreshes the CLI lockfile.
+            The complete compatibility workflow is dispatched on this branch. Keep this PR in draft until all required gates pass on its reviewed commit. Update the compatibility documentation and evidence before approval. No automatic merge or release is performed.
+          add-paths: |
+            shard.yml
+            shard.lock
+            src/azu_cli/templates/project/shard.yml.ecr
+      # A PR created with GITHUB_TOKEN does not trigger pull_request workflows.
+      # workflow_dispatch is explicitly supported and runs all gates on this ref.
+      - name: Dispatch full compatibility CI on the proposed branch
+        if: steps.proposal.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run crystal.yaml --ref codex/update-framework-v1

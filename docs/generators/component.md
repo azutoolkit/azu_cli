@@ -60,7 +60,7 @@ azu g component UserCard name:string --dry-run   # list the file, write nothing
 | `float64`, `float` | `Float64` | none |
 | `bool`, `boolean` | `Bool` | `false` |
 | `time`, `datetime` | `Time` | none |
-| `date` | `Date` | none |
+| `date` | `Time` | none |
 | `array` | `Array(String)` | `[] of String` |
 | `hash` | `Hash(String, String)` | `{} of String => String` |
 | `json` | `JSON::Any` | none |

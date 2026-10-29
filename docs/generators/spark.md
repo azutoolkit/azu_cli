@@ -23,7 +23,7 @@ flowchart LR
 
 ## Quickstart & command syntax
 
-Run inside a generated **web** project. The browser acceptance fixture uses Azu **0.10.5**, CQL **0.0.604** and Crystal **1.22.1**. Existing projects need the typed Spark API (`state`, `event`, `mountable`); update their Azu dependency before using these generators if that API is absent:
+Run inside a generated **web** project. The current browser acceptance fixture uses Azu **1.0.2 plus bridge/redaction fixes `6916398`**, CQL **1.0.0** and Crystal **1.22.1**. The Azu commit pin is temporary and is not a published release. Existing projects need the typed Spark API (`state`, `event`, `mountable`); update their Azu dependency before using these generators if that API is absent:
 
 ```sh
 azu generate spark Counter count:int32 title:string enabled:bool --page
