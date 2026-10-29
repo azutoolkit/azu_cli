@@ -7,6 +7,7 @@ for tool in crystal shards redis-server python3; do command -v "$tool" >/dev/nul
 python3 -c 'import playwright.sync_api'
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/azu-spark-e2e-XXXXXX")
 export WORK
+export XDG_STATE_HOME="$WORK/state"
 unset DATABASE_URL SPARK_SECRET CSRF_SECRET SESSION_SECRET CRYSTAL_ENV PERFORMANCE_MONITORING REDIS_URL REDIS_PASS
 mkdir "$WORK/evidence"
 trap 'echo "Spark fixture and evidence: $WORK"' EXIT
@@ -17,7 +18,8 @@ crystal run "$ROOT/scripts/select_framework_versions.cr" -- shard.yml
 shards install
 cp shard.lock ../evidence/shard.lock
 "$AZU_BIN" generate spark Counter count:int32 title:string enabled:bool --page >> ../evidence/generate.log 2>&1
-"$AZU_BIN" generate spark:scaffold Product name:string price_cents:int32 active:bool >> ../evidence/generate.log 2>&1
+# Exercise the preview/apply path used by an interactive terminal as well as live CRUD.
+"$AZU_BIN" generate scaffold Product name:string price_cents:int32 active:bool --spark --check --yes >> ../evidence/generate.log 2>&1
 cp .env ../evidence/env-before
 cp public/templates/helpers/_sections.jinja ../evidence/nav-before
 "$AZU_BIN" generate spark Preview score:float64 --page --dry-run > ../evidence/preview.log 2>&1

@@ -30,8 +30,11 @@ module AzuCLI
 
       def execute : Result
         @all_args = without_ui_flags(@all_args)
+        # OptionParser removes switches and their values from @all_args. The
+        # shadow generator needs those original options, not only positionals.
+        preview_args = @all_args.dup
         parse_arguments
-        if result = preview_flow
+        if result = preview_flow(preview_args)
           return result
         end
 

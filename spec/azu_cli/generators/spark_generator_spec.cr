@@ -4,6 +4,59 @@ require "../../support/generator_helpers"
 include GeneratorHelpers
 
 describe "Spark generators" do
+  cli = File.expand_path("../../../bin/azu", __DIR__)
+
+  it "creates a live component from the documented scaffold --spark command" do
+    in_generated_project do
+      output = IO::Memory.new
+      status = Process.run(cli, %w(generate scaffold Product name:string price_cents:int32 active:bool --spark),
+        env: {"AZU_UI" => "plain"}, output: output, error: output)
+      status.success?.should be_true
+      File.read("src/components/products/live_component.cr").should contain("< Azu::Spark::Component")
+      File.read("src/services/products/create_service.cr").should contain("Azu::PubSub.broadcast")
+    end
+  end
+
+  it "preserves Spark switches in a dry-run without writing to the project" do
+    in_generated_project do
+      output = IO::Memory.new
+      status = Process.run(cli, %w(generate scaffold Product name:string price_cents:int32 active:bool --spark --dry-run),
+        output: output, error: output)
+      status.success?.should be_true
+      output.to_s.should contain("src/components/products/live_component.cr")
+      output.to_s.should contain("src/services/products/live_service.cr")
+      File.exists?("src/components/products/live_component.cr").should be_false
+      File.exists?("src/models/product.cr").should be_false
+      File.exists?(".env").should be_false
+    end
+  end
+
+  it "preserves --page and valued options in previews" do
+    in_generated_project do
+      output = IO::Memory.new
+      status = Process.run(cli, %w(generate spark Counter count:int32 --page --dry-run), output: output, error: output)
+      status.success?.should be_true
+      output.to_s.should contain("src/endpoints/counters/live_endpoint.cr")
+      File.exists?("src/endpoints/counters/live_endpoint.cr").should be_false
+
+      output = IO::Memory.new
+      status = Process.run(cli, %w(generate seed Products --env production --dry-run), output: output, error: output)
+      status.success?.should be_true
+      output.to_s.should contain("src/db/seeds/production/")
+      output.to_s.should_not contain("src/db/seeds/development/")
+    end
+  end
+
+  it "rejects incompatible Spark options even through a preview" do
+    in_generated_project do
+      output = IO::Memory.new
+      status = Process.run(cli, %w(generate scaffold Product name:string --spark --api-only --dry-run), output: output, error: output)
+      status.success?.should be_false
+      output.to_s.should contain("Spark scaffolds need a web project")
+      File.exists?("src/models/product.cr").should be_false
+    end
+  end
+
   it "validates names/types before writing and explains unsupported fields" do
     AzuCLI::Generate::Spark.attributes_error({"count" => "int32"}, true).should be_nil
     AzuCLI::Generate::Spark.attributes_error({"render" => "string"}, true).not_nil!.should contain("reserved")

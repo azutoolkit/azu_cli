@@ -53,7 +53,7 @@ module AzuCLI
 
       # The result when the preview handled the command; nil to generate directly (a pipe, CI, --ui plain without
       # --dry-run or --check, `validate`, or the shadow run itself).
-      private def preview_flow : Result?
+      private def preview_flow(original_args : Array(String)) : Result?
         return nil if ENV[GeneratePlan::SHADOW_ENV]?
         if (mode = @ui_mode) && !{"rich", "plain"}.includes?(mode)
           return usage_error("--ui must be rich or plain")
@@ -61,7 +61,7 @@ module AzuCLI
 
         ui = UI::Reporter.build(@ui_mode, stdout)
         interactive = interactive?(ui)
-        args = @all_args.reject { |arg| PREVIEW_FLAGS.includes?(arg) }
+        args = original_args.reject { |arg| PREVIEW_FLAGS.includes?(arg) }
         type = args.find { |arg| !arg.starts_with?("-") } || ""
         if type.empty?
           return nil unless interactive
