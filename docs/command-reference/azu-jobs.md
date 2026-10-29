@@ -6,6 +6,10 @@ description: Run JoobQ workers and inspect, retry, clear or browse the backgroun
 
 The `jobs:*` commands drive a JoobQ project: they start the worker process and read or change the queues kept in Redis. The jobs themselves, and the queues they go to, are defined in your project's code; these commands only operate on them.
 
+{% hint style="danger" %}
+The legacy `jobs:status`, `jobs:clear`, and `jobs:retry` commands currently assume Redis keys that do not match the supported JoobQ store. Do not use their counts or success messages as operational evidence, or use their mutations in production. Use [`azu joobq`](azu-joobq.md) for runtime-backed queue inspection and atomic DLQ replay where the installed JoobQ version supports it. Migrating these legacy commands to that adapter remains a release blocker.
+{% endhint %}
+
 ## Overview & visual demo
 
 Start `jobs:worker` next to the app, check `jobs:status` when a queue grows, and use `jobs:retry` and `jobs:clear` on failed work. The commands connect to Redis with `REDIS_URL`, which defaults to `redis://localhost:6379`.
@@ -44,8 +48,8 @@ azu jobs:worker --verbose
 | ----------------- | ----- | ----------------------------------------------------------------------- | --------- |
 | `--workers N`     | `-w`  | Passed to the worker as `JOOBQ_WORKERS`. One process is started either way | `1`    |
 | `--queues LIST`   | `-q`  | Passed to the worker as `JOOBQ_QUEUES` (comma-separated). See the warning below | `default` |
-| `--daemon`        | `-d`  | Sets a flag that is printed. The worker still runs in the foreground    | off       |
-| `--verbose`       | `-v`  | Show the worker's own output instead of hiding it                       | off       |
+| `--daemon`        | `-d`  | Rejected; use an external process supervisor    | off       |
+| `--verbose`       | `-v`  | Accepted for compatibility; child output is always visible                       | off       |
 
 It runs `crystal run src/worker.cr -- --worker` with the Redis URL in `REDIS_URL`, and waits for it. The generated initializer turns `REDIS_URL` into the host, port and password that JoobQ's store reads. The generated worker runs the queues configured in `src/initializers/joobq.cr`. Stop it with Ctrl+C.
 
@@ -103,9 +107,9 @@ azu jobs:ui --port 5000 --host 0.0.0.0
 | -------------- | ----- | ---------------------------------------------------- | ----------- |
 | `--port PORT`  | `-p`  | The port of the UI                                   | `4000`      |
 | `--host HOST`  | `-h`  | The host of the UI. Here `-h` is the host, not help  | `localhost` |
-| `--verbose`    | `-v`  | Show the UI process's own output                     | off         |
+| `--verbose`    | `-v`  | Accepted; child output is always visible                     | off         |
 
-The web interface is JoobQUI, a separate shard. The command looks for it in `lib/joobqui` or `../joobqui`, and runs `lib/joobqui/src/joobqui.cr` with `REDIS_URL`, `JOOBQUI_PORT` and `JOOBQUI_HOST` set. Without it, the command prints a warning with the `shard.yml` lines to add, starts nothing, and exits `0`.
+The web interface is JoobQUI, a separate shard. The command looks for it in `lib/joobqui` or `../joobqui`, and runs that checkout’s `src/joobqui.cr` with `REDIS_URL`, `JOOBQUI_PORT` and `JOOBQUI_HOST` set. Without it, the command prints a warning with the `shard.yml` lines to add, starts nothing, and returns an error.
 
 <details>
 
@@ -150,7 +154,7 @@ WARNING: JoobQUI not found in dependencies
 ```
 {% endcode %}
 
-*The warning is followed by the `shard.yml` lines to add. The command then exits `0` without starting a server.*
+*The warning is followed by the `shard.yml` lines to add. The command then exits with an error without starting a server.*
 
 ## Do's and don'ts
 
@@ -167,7 +171,7 @@ In production, run `azu jobs:worker` under a process manager such as systemd, Fo
 {% endhint %}
 
 {% hint style="warning" %}
-`jobs:worker` reports success when the worker exits, whatever the worker's exit code was. Look at the worker's logs or your process manager's status when a deploy looks wrong.
+`jobs:worker` and `jobs:ui` propagate unsuccessful child exits as command failures. Child stdout and stderr remain visible, so compiler errors can be diagnosed and busy workers cannot block on unread output pipes.
 {% endhint %}
 
 {% hint style="danger" %}
@@ -175,5 +179,5 @@ In production, run `azu jobs:worker` under a process manager such as systemd, Fo
 {% endhint %}
 
 {% hint style="danger" %}
-`jobs:status` prints `REDIS_URL` in full, password included. Redact it before you paste the output into a ticket.
+Redis URL passwords are redacted in command configuration output. Application logs can still contain application data; review them before sharing.
 {% endhint %}

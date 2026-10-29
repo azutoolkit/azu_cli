@@ -49,6 +49,7 @@ jobs:
         include:
           - { crystal: "1.22.1", db: sqlite, type: web }
           - { crystal: "1.22.1", db: sqlite, type: api }
+          - { crystal: "1.22.1", db: sqlite, type: cli }
           - { crystal: "latest", db: sqlite, type: web }
           - { crystal: "latest", db: postgresql, type: web }
     container:

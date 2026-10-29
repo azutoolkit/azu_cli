@@ -58,7 +58,7 @@ module AzuCLI
             Logger.info("  joobqui:")
             Logger.info("    github: azutoolkit/joobqui")
             Logger.info("")
-            return
+            raise "JoobQUI is not installed"
           end
 
           Logger.info("Starting JoobQUI server on http://#{@host}:#{@port}")
@@ -75,19 +75,19 @@ module AzuCLI
           # This assumes JoobQUI has a server entry point
           process = Process.new(
             "crystal",
-            ["run", "lib/joobqui/src/joobqui.cr"],
+            ["run", Dir.exists?("lib/joobqui") ? "lib/joobqui/src/joobqui.cr" : "../joobqui/src/joobqui.cr"],
             env: env,
-            output: @verbose ? Process::Redirect::Inherit : Process::Redirect::Pipe,
-            error: @verbose ? Process::Redirect::Inherit : Process::Redirect::Pipe
+            output: Process::Redirect::Inherit,
+            error: Process::Redirect::Inherit
           )
 
           Logger.info("✓ JoobQUI started (PID: #{process.pid})")
           Logger.info("Open http://#{@host}:#{@port} in your browser")
 
-          process.wait
+          status = process.wait
+          raise "Child process exited with status #{status.exit_code}" unless status.success?
         rescue ex
-          Logger.error("Failed to start JoobQUI: #{ex.message}")
-          Logger.info("Make sure JoobQUI is properly installed in your project")
+          raise "Failed to start JoobQUI: #{ex.message}"
         end
       end
     end

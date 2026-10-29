@@ -633,8 +633,11 @@ module AzuCLI
 
     # Sanitize database URL for safe logging
     def sanitize_database_url(url : String) : String
-      # Remove password from connection string
-      url.gsub(/(:\/\/[^:]+:)[^@]+(@)/, "\\1***\\2")
+      uri = URI.parse(url)
+      uri.password = "REDACTED" if uri.password
+      uri.to_s
+    rescue URI::Error
+      "[invalid connection URL]"
     end
 
     # Sanitize hash/options for logging (removes sensitive keys)

@@ -22,6 +22,9 @@ module AzuCLI
         def execute : Result
           parse_options
 
+          return error("--daemon is not supported; run jobs:worker under a process supervisor") if @daemon
+          return error("--workers must be positive") unless @workers > 0
+
           Logger.info("🚀 Starting JoobQ workers...")
           show_job_info
           Logger.info("Workers: #{@workers}")
@@ -31,7 +34,7 @@ module AzuCLI
 
           start_workers
 
-          success("Workers started")
+          success("Workers stopped")
         rescue ex
           Logger.info("\n🛑 Stopping workers...")
           error("Worker error: #{ex.message}")
@@ -70,14 +73,15 @@ module AzuCLI
             "crystal",
             ["run", "src/worker.cr", "--", "--worker"], # --worker: the generated initializer turns the REST API off
             env: env,
-            output: @verbose ? Process::Redirect::Inherit : Process::Redirect::Pipe,
-            error: @verbose ? Process::Redirect::Inherit : Process::Redirect::Pipe
+            output: Process::Redirect::Inherit,
+            error: Process::Redirect::Inherit
           )
 
           Logger.info("✓ Workers started (PID: #{process.pid})")
           Logger.info("Press Ctrl+C to stop workers")
 
-          process.wait
+          status = process.wait
+          raise "Child process exited with status #{status.exit_code}" unless status.success?
         rescue ex
           raise "Failed to start workers: #{ex.message}"
         end

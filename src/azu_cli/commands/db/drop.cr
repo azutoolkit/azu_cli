@@ -62,16 +62,10 @@ module AzuCLI
         private def drop_database(db_name : String)
           case @adapter
           when "postgres", "postgresql"
-            # Terminate existing connections
-            execute_on_server(<<-SQL)
-              SELECT pg_terminate_backend(pg_stat_activity.pid)
-              FROM pg_stat_activity
-              WHERE pg_stat_activity.datname = '#{db_name}'
-                AND pid <> pg_backend_pid()
-            SQL
-            execute_on_server("DROP DATABASE #{db_name}")
+            terminate_database_connections(db_name)
+            execute_on_server("DROP DATABASE #{quote_database_name(db_name)}")
           when "mysql"
-            execute_on_server("DROP DATABASE #{db_name}")
+            execute_on_server("DROP DATABASE #{quote_database_name(db_name)}")
           when "sqlite", "sqlite3"
             File.delete(sqlite_path(db_name)) if File.exists?(sqlite_path(db_name))
           else
