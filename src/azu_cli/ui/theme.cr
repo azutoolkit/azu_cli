@@ -20,6 +20,7 @@ module AzuCLI
       Amber
       Red
       Blue
+      Pink
     end
 
     record Rgb, r : UInt8, g : UInt8, b : UInt8 do
@@ -50,10 +51,11 @@ module AzuCLI
     record Style, fg : Token? = nil, bg : Token? = nil, attrs : Attr = Attr::None, rgb : Rgb? = nil
 
     class Theme
+      # Azu documentation cover palette: https://azutopia.gitbook.io/azu
       # {true color, 256-color index, 16-color SGR foreground code}
       PALETTE = {
         Token::Backplate => {0x0B0E14, 233, 39},
-        Token::Text      => {0xC9D1D9, 252, 37},
+        Token::Text      => {0xE6EDF3, 255, 37},
         Token::Muted     => {0x8B949E, 246, 90},
         Token::Faint     => {0x2A313C, 236, 90},
         Token::Cyan      => {0x22D3EE, 44, 36},
@@ -62,6 +64,7 @@ module AzuCLI
         Token::Amber     => {0xFBBF24, 214, 33},
         Token::Red       => {0xF87171, 203, 31},
         Token::Blue      => {0x60A5FA, 75, 34},
+        Token::Pink      => {0xF472B6, 211, 35},
       }
 
       GRADIENT_STEPS = 16

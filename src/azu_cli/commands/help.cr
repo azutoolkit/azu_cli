@@ -47,6 +47,7 @@ module AzuCLI
         puts "Development Commands:"
         puts "  joobq                  Manage queues, workflows and dead letters in a terminal dashboard"
         puts "  dev                    Run the app, rebuilding and restarting it when the code changes"
+        puts "  connect                Monitor production over verified SSH (read-only local HUD)"
         puts "  serve                  Compile and run the app with a --production build (alias: s)"
         puts "  routes                 List the routes: method, path, endpoint, request/response, helpers"
         puts "  config                 Show the configuration of the application (secrets masked)"
@@ -104,6 +105,8 @@ module AzuCLI
           show_db_help
         when "dev"
           Dev.new.show_help
+        when "connect"
+          Connect.new.show_help
         when "routes"
           Routes.new.show_help
         when "config"

@@ -1,0 +1,40 @@
+ ╭─ ▲ AZU / storefront · SAMPLE DATA / SQL ───────────────────────────────────────────────────────────────────────────────── running ─╮
+ │ c console · e exceptions · ? commands                                                                                              │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ╭─ Workspace ────╮ ╭─ SQL · connected ────────────────────── 2 ─╮ ╭─ Details · Tab switches pane ────────────────────────────────────╮
+ │ OBSERVE        │ │ ›2.3ms SELECT p.id, p.name FROM products   │ │  SELECT p.id, p.name FROM products AS p WHERE p.active = TRUE A  │
+ │   Dashboard  1 │ │  0.8ms SELECT * FROM carts WHERE id = $1   │ │  ND p.category_id = $1 ORDER BY p.created_at DESC LIMIT 20       │
+ │   Server     2 │ │                                            │ │  Caller: product_repository.cr:41                                │
+ │   Jobs       3 │ │                                            │ │  Model: Product                                                  │
+ │                │ │                                            │ │  Pool wait: 0.1ms                                                │
+ │ DATA & ACCESS  │ │                                            │ │                                                                  │
+ │   DB         4 │ │                                            │ │                                                                  │
+ │ ▌ SQL        5 │ │                                            │ │                                                                  │
+ │   Auth       6 │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │ DEVELOP        │ │                                            │ │                                                                  │
+ │   Logs       7 │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ │                │ │                                            │ │                                                                  │
+ ╰────────────────╯ ╰────────────────────────────────────────────╯ ╰──────────────────────────────────────────────────────────────────╯
+ c console · e exceptions · ? commands · telemetry connected
+ Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit

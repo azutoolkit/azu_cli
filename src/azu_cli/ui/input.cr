@@ -25,6 +25,7 @@ module AzuCLI
       CtrlE
       CtrlL
       CtrlO
+      CtrlP
       # Alt-Enter (ESC, then CR): a new line in an editor where Enter runs
       AltEnter
       Paste
@@ -49,7 +50,7 @@ module AzuCLI
         0x03_u8 => KeyCode::CtrlC, 0x04_u8 => KeyCode::CtrlD, 0x09_u8 => KeyCode::Tab, 0x0A_u8 => KeyCode::Enter,
         0x0B_u8 => KeyCode::CtrlK, 0x0D_u8 => KeyCode::Enter, 0x13_u8 => KeyCode::CtrlS, 0x15_u8 => KeyCode::CtrlU,
         0x08_u8 => KeyCode::Backspace, 0x7F_u8 => KeyCode::Backspace, 0x01_u8 => KeyCode::CtrlA, 0x05_u8 => KeyCode::CtrlE,
-        0x0C_u8 => KeyCode::CtrlL, 0x0F_u8 => KeyCode::CtrlO,
+        0x0C_u8 => KeyCode::CtrlL, 0x0F_u8 => KeyCode::CtrlO, 0x10_u8 => KeyCode::CtrlP,
       }
       PASTE_START = "\e[200~"
       PASTE_END   = "\e[201~"

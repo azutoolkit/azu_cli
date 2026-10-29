@@ -1,4 +1,6 @@
 require "../ui"
+require "../bounded_capture"
+require "../process_tree"
 
 module AzuCLI
   module DevServer
@@ -31,7 +33,7 @@ module AzuCLI
       # store) and run only after `y`; `check` commands only read, and `a` runs them all.
       record Command, id : String, group : String, args : Array(String), triggers : Trigger = Trigger::None, confirm : Bool = false, check : Bool = false do
         def line : String
-          "azu #{args.join(" ")}"
+          "azu #{Process.quote_posix(args)}"
         end
 
         # What a `confirm` command changes, for its prompt.
@@ -48,7 +50,7 @@ module AzuCLI
       # The registered commands the panel leaves out (aliases aside): they need names, files or choices typed with
       # them, or they keep running or own the terminal.
       LEFT_OUT = {"new", "init", "help", "generate", "undo", "session:setup", "openapi:generate",
-                  "serve", "dev", "console", "joobq", "jobs:worker", "jobs:ui"}
+                  "serve", "dev", "connect", "console", "joobq", "jobs:worker", "jobs:ui"}
 
       # Every other command: they run to an end without a terminal. Commands that would ask "are you sure?" get
       # --force: `y` here is that answer. The jobs commands are listed in JoobQ projects (config/jobs.yml).
@@ -156,11 +158,13 @@ module AzuCLI
         @running : Command?
         @wake = ::Channel(Nil).new(1)
         @stopped = false
+        @process : Process?
 
         def initialize(@report : Proc(UI::Message, Nil), @executable : String = Process.executable_path || "azu", @directory : String = Dir.current)
         end
 
         def enqueue(command : Command) : Bool
+          return false if @stopped || queue.size >= 32
           return false if queue.any? { |queued| queued.id == command.id } || @running.try(&.id) == command.id
 
           queue << command
@@ -184,6 +188,8 @@ module AzuCLI
 
         def stop : Nil
           @stopped = true
+          queue.clear
+          @process.try { |process| ProcessTree.terminate(process) }
           wake
         end
 
@@ -200,18 +206,22 @@ module AzuCLI
           @running = command
           @report.call(Events::ControlStarted.new(command.id))
           started = Time.instant
-          output = IO::Memory.new
+          output = BoundedCapture.new(524_288)
           env = {"AZU_UI" => "plain", "NO_COLOR" => "1", "AZU_CONTROL" => "1"}
           code = begin
-            Process.run(@executable, command.args, env: env, chdir: @directory, input: Process::Redirect::Close, output: output, error: output).exit_code? || -1
+            process = Process.new(@executable, command.args, env: env, chdir: @directory, input: Process::Redirect::Close, output: output, error: output)
+            @process = process
+            process.wait.exit_code? || -1
           rescue ex : IO::Error
             output << ex.message
             127
           end
-          text = output.to_s.lines.map { |line| Control.clean(line) }.join('\n')
+          text = output.text.lines.map { |line| Control.clean(line) }.join('\n')
+          text += "\n[output truncated at 512 KiB]" if output.truncated?
           @report.call(Events::ControlFinished.new(command.id, code, text, (Time.instant - started).total_seconds))
         ensure
           @running = nil
+          @process = nil
         end
       end
     end

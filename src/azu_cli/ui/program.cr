@@ -43,7 +43,9 @@ module AzuCLI
     # The event loop: keys, ticks, resizes and messages from sources all arrive on one channel, and one fiber owns
     # the frame, so drawing needs no locks. A burst of messages (log lines, telemetry) is drawn as one frame.
     class Program
-      TICK = 80.milliseconds
+      TICK           = 80.milliseconds
+      MAX_BATCH      = 128
+      FRAME_INTERVAL = 33.milliseconds
 
       getter events = Channel(Event).new(1024)
       @stopped = false
@@ -76,11 +78,23 @@ module AzuCLI
           spawn tick
           Signal::WINCH.trap { send_event(Resize.new(*@terminal.size)) }
           draw
+          next_draw = Time.instant + FRAME_INTERVAL
+          redraw = false
           loop do
-            redraw = false
-            event = events.receive
+            event = if redraw
+                      select
+                      when incoming = events.receive
+                        incoming
+                      when timeout(Math.max(next_draw - Time.instant, Time::Span.zero))
+                        nil
+                      end
+                    else
+                      events.receive
+                    end
+            handled = 0
             while event
-              case @screen.update(event)
+              action = event.is_a?(Tick) && !@screen.animating? ? Action::Continue : @screen.update(event)
+              case action
               in .quit?     then return
               in .redraw?   then redraw = true
               in .continue? then nil
@@ -88,9 +102,16 @@ module AzuCLI
                 hand_off(input)
                 redraw = true
               end
+              handled += 1
+              break if handled >= MAX_BATCH
               event = poll
             end
-            draw if redraw
+            if redraw && Time.instant >= next_draw
+              draw
+              redraw = false
+              next_draw = Time.instant + FRAME_INTERVAL
+            end
+            Fiber.yield if handled >= MAX_BATCH
           end
         end
       ensure
@@ -171,7 +192,8 @@ module AzuCLI
       private def tick : Nil
         until @stopped
           sleep TICK
-          send_event(Tick.new(Time.instant)) if @screen.animating?
+          # Only the render-loop fiber reads screen state, including animation state.
+          send_event(Tick.new(Time.instant))
         end
       end
     end

@@ -1,0 +1,40 @@
+ ╭─ ▲ AZU / storefront · SAMPLE DATA / Dashboard ─────────────────────────────────────────────────────────────────────────── running ─╮
+ │ c console · e exceptions · ? commands                                                                                              │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ╭─ Workspace ────╮ ╭─ Requests/s ─────────────╮ ╭─ P95 ms ─────────────────╮ ╭─ Processing ─────────────╮ ╭─ DB pool ────────────────╮
+ │ OBSERVE        │ │ 1284                     │ │ 8.4                      │ │ 10                       │ │ 6/20                     │
+ │ ▌ Dashboard  1 │ │                          │ │                          │ │                          │ │                          │
+ │   Server     2 │ ╰──────────────────────────╯ ╰──────────────────────────╯ ╰──────────────────────────╯ ╰──────────────────────────╯
+ │   Jobs       3 │ ╭─ Server ────────────────────────────────── connected ─╮ ╭─ Jobs ──────────────────────────────────── connected ─╮
+ │                │ │  GET /products  200  4.8ms                            │ │ default  wait 24  processing 8  failed 0              │
+ │ DATA & ACCESS  │ │  POST /checkout  200  18.1ms                          │ │ mailers  wait 7  processing 2  failed 1               │
+ │   DB         4 │ │                                                       │ │ reports  wait 0  processing 0  failed 0               │
+ │   SQL        5 │ │                                                       │ │                                                       │
+ │   Auth       6 │ │               ╭─ Navigate · Enter opens · Esc closes ────────────────────────╮                                  │
+ │                │ │               │ > ▏                                                          │                                  │
+ │ DEVELOP        │ │               │                                                              │                                  │
+ │   Logs       7 │ │               │ › Open Dashboard  [1]                                        │                                  │
+ │                │ │               │   Open Server  [2]                                           │                                  │
+ │                │ │               │   Open Jobs  [3]                                             │                                  │
+ │                │ │               │   Open DB  [4]                                               │                                  │
+ │                │ │               │   Open SQL  [5]                                              │                                  │
+ │                │ │               │   Open Auth  [6]                                             │                                  │
+ │                │ ╰───────────────│   Open Logs  [7]                                             │──────────────────────────────────╯
+ │                │ ╭─ SQL ─────────│   Run azu command  [:]                                       │────────────────────── connected ─╮
+ │                │ │  2.3ms SELECT │   Generate code  [g]                                         │epted                             │
+ │                │ │  0.8ms SELECT │   Open console  [c]                                          │applied                           │
+ │                │ │               │   Inspect exceptions  [e]                                    │                                  │
+ │                │ │               │   Open command center  [?]                                   │                                  │
+ │                │ │               ╰──────────────────────────────────────────────────────────────╯                                  │
+ │                │ │                                                       │ │                                                       │
+ │                │ │                                                       │ │                                                       │
+ │                │ │                                                       │ │                                                       │
+ │                │ │                                                       │ │                                                       │
+ │                │ │                                                       │ │                                                       │
+ │                │ │                                                       │ │                                                       │
+ │                │ │                                                       │ │                                                       │
+ │                │ │                                                       │ │                                                       │
+ │                │ │                                                       │ │                                                       │
+ ╰────────────────╯ ╰───────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────╯
+ c console · e exceptions · ? commands · telemetry connected
+ Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit

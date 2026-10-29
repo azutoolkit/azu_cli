@@ -8,6 +8,14 @@ module AzuCLI
   module DevServer
     # What `azu dev` tells its dashboard. Each is a message on the dashboard's event channel.
     module Events
+      struct RemoteStatus < UI::Message
+        getter message : String
+        getter connected : Bool
+
+        def initialize(@message : String, @connected : Bool)
+        end
+      end
+
       struct BuildStarted < UI::Message
         getter files : Array(String)
 

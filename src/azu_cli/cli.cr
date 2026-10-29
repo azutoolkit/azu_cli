@@ -52,6 +52,7 @@ module AzuCLI
 
       # Development workflow commands
       register_command("dev", Commands::Dev)
+      register_command("connect", Commands::Connect)
       register_command("routes", Commands::Routes)
       register_command("console", Commands::Console)
       register_command("config", Commands::Config)

@@ -4,6 +4,47 @@ description: Run your app in development, rebuilding and restarting it on every 
 
 # azu dev
 
+## Mission-control preview
+
+`azu dev --ui mission` enables the new workspace rail, Ctrl-P navigation palette,
+SQL/log syntax highlighting and responsive list/detail panes. Press `b` to collapse
+the rail, `/` to filter, `c` for the existing console, and Esc to return from it.
+The default remains `--ui rich`. Auth and schema views require application adapters;
+see the [architecture and integration plan](../architecture/mission-control.md).
+
+### Run commands inside the HUD
+
+In `azu dev --ui mission`, press **g** to compose a generator command or **:**
+to enter a supported Azu command. For example:
+
+```text
+generate scaffold Product name:string price_cents:int32 active:bool --spark
+```
+
+Press **Enter** to review the exact arguments and working directory, then **y**
+to run, **n** to edit, or **Esc** to cancel. Results and exit status appear in
+the same panel; PageUp/PageDown scroll output. Esc closes the panel; `:` reopens
+it while a command runs. Closing the panel does not cancel its process.
+
+Commands execute locally, using the dev session's environment and configured
+services. A local database command can still affect a remote database if your
+project's connection string points there. The review step identifies the local
+directory; it does not prove your service URLs point to development.
+
+Generators accept normal arguments, including `--spark`. Other commands use the
+exact arguments listed in **? Commands** (for example `version`, `test`,
+`db:status`, or `db:rollback --force`). This is an argv composer, not a shell:
+pipes, redirects, command substitution and nested terminal commands are rejected.
+Runs are serialized with existing checks, pause during builds/console compilation,
+and capture at most 512 KiB of output while draining the remainder. The panel
+retains the last 500 lines of that captured prefix. Commands are not persisted in
+history, and generator conflicts retain their usual behavior; `--force` is never
+silently added to a generator command. Quit requests termination of the active
+local process tree; applications that trap SIGTERM may still require operator cleanup.
+
+For production use [azu connect](azu-connect.md), which has no command runner,
+console, local app boot or rebuild capability.
+
 ## Overview & visual demo
 
 `azu dev` builds the app with `shards build` (a debug build, not a release), runs it, and keeps it current: source and config changes rebuild and restart it, a failed build keeps the previous app running, and template changes need no build at all. On a terminal it draws a dashboard with the build, the app, the CLI's own commands (doctor, routes, db:status, tests, ...) re-run as you work, a console that runs Crystal with your app loaded, requests, SQL, jobs and the log. The concise version is [azu dev](../command-reference/azu-dev.md).
@@ -39,7 +80,7 @@ azu dev --port 3000 --env test --ui plain
 | `--env NAME` | `CRYSTAL_ENV` for the app | your environment or `.env`, else `development` |
 | `--debounce MS` | Quiet time before a change is acted on | `300` |
 | `--interval MS` | How often the files are polled | `250` |
-| `--ui MODE` | `rich` (the dashboard) or `plain` (lines) | the dashboard on a terminal of at least 60x16 |
+| `--ui MODE` | `rich` (classic dashboard), `mission` (workspace HUD), or `plain` (lines) | the classic dashboard on a terminal of at least 60x16 |
 | `--help` | Show the help | |
 
 What a change does:

@@ -66,14 +66,19 @@ module AzuCLI::UI
       result
     end
 
-    def draw(frame : Frame, area : Rect, lines : Array(String), selected : Int32? = nil) : Nil
+    def draw(frame : Frame, area : Rect, lines : Array(String), selected : Int32? = nil, highlight : Proc(String, Array(Seg))? = nil) : Nil
       configure(lines.size, area.h)
       return if area.empty?
       content_width = Math.max(0, area.w - 1)
       lines.skip(offset).first(height).each_with_index do |line, row|
         active = selected == offset + row
-        frame.text(area.x, area.y + row, line, active ? Token::Cyan : Token::Text,
-          active ? Attr::Bold : Attr::None, max: content_width)
+        if painter = highlight
+          frame.text(area.x, area.y + row, active ? "›" : " ", Token::Cyan, max: content_width)
+          frame.line(area.x + 1, area.y + row, painter.call(line), Math.max(0, content_width - 1))
+        else
+          frame.text(area.x, area.y + row, line, active ? Token::Cyan : Token::Text,
+            active ? Attr::Bold : Attr::None, max: content_width)
+        end
       end
       return if total <= height || height == 0
       thumb = Math.max(1, height * height // total)
@@ -136,7 +141,7 @@ module AzuCLI::UI
       true
     end
 
-    def draw(frame : Frame, area : Rect, title : String, empty : String) : Nil
+    def draw(frame : Frame, area : Rect, title : String, empty : String, highlight : Proc(String, Array(Seg))? = nil) : Nil
       return if area.empty?
       left, right = area.split_left(area.w * 2 // 5, 1)
       if area.w < 70
@@ -150,13 +155,13 @@ module AzuCLI::UI
         else
           list.configure(items.size, inner.h)
           list.reveal(selected)
-          list.draw(frame, inner, items.map(&.label), selected)
+          list.draw(frame, inner, items.map(&.label), selected, highlight)
         end
       end
       if area.w >= 70 || detail_focus?
         inner = frame.card(right, "Details · Tab switches pane", border: detail_focus? ? Token::Cyan : Token::Faint)
-        lines = Viewport.wrap(selected_item.try(&.details) || [empty], inner.w - 1)
-        detail.draw(frame, inner, lines)
+        lines = Viewport.wrap(selected_item.try(&.details) || [empty], inner.w - (highlight ? 2 : 1))
+        detail.draw(frame, inner, lines, highlight: highlight)
       end
     end
   end
