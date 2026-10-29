@@ -27,7 +27,7 @@ module AzuCLI
 
         # Display job configuration info
         protected def show_job_info
-          AzuCLI::Logger.info("Redis: #{@redis_url}")
+          AzuCLI::Logger.info("Redis: #{Utils.sanitize_database_url(@redis_url)}")
           AzuCLI::Logger.info("Queue: #{@queue}")
         end
       end

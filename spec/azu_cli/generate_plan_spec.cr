@@ -33,7 +33,59 @@ private def plan_for(project : String, shadow : String) : AzuCLI::GeneratePlan
   AzuCLI::GeneratePlan.new(shadow, project, AzuCLI::GeneratePlan.compare(shadow, project), "")
 end
 
+private class FailingGeneratePlan < AzuCLI::GeneratePlan
+  @writes = 0
+
+  private def write_atomically(path : String, content : String, permissions : File::Permissions) : Nil
+    @writes += 1
+    raise IO::Error.new("injected write failure") if @writes == 2
+    super
+  end
+end
+
 describe AzuCLI::GeneratePlan do
+  it "refuses stale previews before changing any file" do
+    with_project do |project, shadow|
+      plan = plan_for(project, shadow)
+      path = File.join(project, "src/db/schema.cr")
+      File.write(path, "# edited while preview was open\n")
+      expect_raises(Exception, /changed after the preview/) { plan.apply("test") }
+      File.read(path).should eq("# edited while preview was open\n")
+      File.exists?(File.join(project, "src/models/post.cr")).should be_false
+      AzuCLI::Undo.records(project).should be_empty
+    end
+  end
+
+  it "keeps recovery data when a later write fails" do
+    with_project do |project, shadow|
+      plan = plan_for(project, shadow)
+      path = File.join(project, "src/db/schema.cr")
+      before = File.read(path)
+      failing = FailingGeneratePlan.new(shadow, project, plan.entries, "")
+      expect_raises(Exception, /Run azu undo/) { failing.apply("test") }
+      File.read(path).should_not eq(before)
+      records = AzuCLI::Undo.records(project)
+      records.size.should eq(1)
+      AzuCLI::Undo.apply(records.first, project)
+      File.read(path).should eq(before)
+    end
+  end
+
+  it "does not traverse nested symlinks when copying or applying a preview" do
+    with_project do |project, shadow|
+      outside = File.join(File.dirname(project), "outside")
+      Dir.mkdir_p(outside)
+      File.write(File.join(outside, "secret.cr"), "external")
+      File.symlink(outside, File.join(project, "src/models"))
+      AzuCLI::GeneratePlan.copy_project(project, shadow)
+      File.exists?(File.join(shadow, "src/models")).should be_false
+      generate_into(shadow)
+      entries = AzuCLI::GeneratePlan.compare(shadow, project)
+      entries.map(&.path).should_not contain("src/models/post.cr")
+      File.exists?(File.join(outside, "post.cr")).should be_false
+    end
+  end
+
   it "lists the files the generator created and the ones it changed, with a diff" do
     with_project do |project, shadow|
       plan = plan_for(project, shadow)

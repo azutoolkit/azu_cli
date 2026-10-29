@@ -197,9 +197,11 @@ On a terminal, `azu generate` shows what it is about to do before it does it:
 
 1. The generator runs in a copy of the project in the temp directory. `lib/` is linked; `bin/`, `.git/`, `node_modules/`, `tmp/`, `log/`, `.crystal/`, `.shards/` and database files (`*.db`, `*.sqlite3`) are left out.
 2. A file list shows every file it would create (`+`) and change (`~`), with the selected file or its diff on the right. Meanwhile the copy is type-checked with `crystal build --no-codegen`, and the result shows under the list.
-3. Enter writes exactly the files shown, each through a temporary file and a rename. Esc writes nothing.
+3. Enter checks that none of the target files changed since the preview, then writes the files shown, each through a temporary file and a rename. Esc writes nothing. Symlink targets and parent directories are skipped.
 
 `azu generate` with no arguments opens a menu on a terminal (the generator, then its name and fields, then the same preview). Without a terminal it prints the help.
+
+Backups and the undo manifest are saved before the first project file is changed. If a later write fails, the command reports the recovery record; run `azu undo` to restore the files already written. The whole group of writes is not one atomic transaction.
 
 Every write through the preview keeps an undo record in `$XDG_STATE_HOME/azu` (default `~/.local/state/azu`), outside the project. `azu undo` reverts the most recent one: it deletes the files it created and puts back the files it changed. `azu undo --list` lists the records, `azu undo --dry-run` shows what it would do, and `azu undo --help` shows the options.
 

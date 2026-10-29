@@ -74,11 +74,11 @@ module AzuCLI
 
         uri = URI.parse(url)
         @adapter = uri.scheme || "postgres"
-        @host = uri.host || "localhost"
+        @host = uri.hostname || "localhost"
         @port = uri.port || default_port_for_adapter
         @username = uri.user || "postgres"
         @password = uri.password || ""
-        @database_name = uri.path.try(&.lstrip('/')) || ""
+        @database_name = URI.decode(uri.path.lstrip('/'))
       end
 
       # The file a SQLite URL names (`sqlite3://./db/app.db?journal_mode=wal` is `./db/app.db`), and the
@@ -142,9 +142,9 @@ module AzuCLI
       protected def server_connection_url : String
         case @adapter
         when "postgres", "postgresql"
-          "postgresql://#{@username}:#{@password}@#{@host}:#{@port}/postgres"
+          network_connection_url("postgresql", "postgres")
         when "mysql"
-          "mysql://#{@username}:#{@password}@#{@host}:#{@port}/mysql"
+          network_connection_url("mysql", "mysql")
         when "sqlite", "sqlite3"
           "sqlite3:#{sqlite_path(@database_name || infer_database_name)}"
         else
@@ -158,13 +158,33 @@ module AzuCLI
 
         case @adapter
         when "postgres", "postgresql"
-          "postgresql://#{@username}:#{@password}@#{@host}:#{@port}/#{db}"
+          network_connection_url("postgresql", db)
         when "mysql"
-          "mysql://#{@username}:#{@password}@#{@host}:#{@port}/#{db}"
+          network_connection_url("mysql", db)
         when "sqlite", "sqlite3"
           "sqlite3:#{sqlite_path(db)}"
         else
           raise "Unsupported database adapter: #{@adapter}"
+        end
+      end
+
+      # Preserve driver TLS/deadline options when selecting the administrative database.
+      private def network_connection_url(scheme : String, db_name : String) : String
+        URI.new(scheme: scheme, host: @host, port: @port,
+          user: @username, password: @password,
+          path: "/#{URI.encode_path_segment(db_name)}",
+          query: @database_url.try { |url| URI.parse(url).query }).to_s
+      end
+
+      protected def quote_database_name(name : String) : String
+        raise "Database name must not be empty or contain NUL" if name.empty? || name.includes?('\0')
+        quote = @adapter == "mysql" ? "`" : "\""
+        quote + name.gsub(quote, quote + quote) + quote
+      end
+
+      protected def terminate_database_connections(name : String)
+        ::DB.open(server_connection_url) do |db|
+          db.exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()", name)
         end
       end
 

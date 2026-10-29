@@ -75,8 +75,8 @@ module AzuCLI
             seed_cmd.database_name = @database_name
             seed_cmd.environment = @environment
             seed_cmd.ui = ui
-            seed_cmd.execute
-            # Don't fail if seeding fails
+            result = seed_cmd.execute
+            return result unless result.success?
           end
 
           Logger.info("✓ Database reset completed successfully")

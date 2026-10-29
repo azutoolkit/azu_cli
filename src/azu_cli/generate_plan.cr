@@ -18,7 +18,7 @@ module AzuCLI
 
     record DiffLine, op : Char, number : Int32?, text : String
 
-    record Entry, path : String, kind : Kind, lines : Int32, diff : Array(DiffLine)
+    record Entry, path : String, kind : Kind, lines : Int32, diff : Array(DiffLine), before_digest : String? = nil
 
     getter shadow : String
     getter project : String
@@ -61,7 +61,7 @@ module AzuCLI
         source = File.join(from, name)
         next if File.symlink?(source)
         if File.directory?(source)
-          FileUtils.cp_r(source, File.join(to, name))
+          copy_directory(source, File.join(to, name))
         else
           File.copy(source, File.join(to, name))
         end
@@ -71,6 +71,30 @@ module AzuCLI
       File.symlink(File.realpath(shards), File.join(to, "lib")) if Dir.exists?(shards)
     end
 
+    private def self.copy_directory(from : String, to : String) : Nil
+      Dir.mkdir_p(to)
+      Dir.each_child(from) do |name|
+        source = File.join(from, name)
+        next if File.symlink?(source)
+        target = File.join(to, name)
+        File.directory?(source) ? copy_directory(source, target) : File.copy(source, target)
+      end
+    end
+
+    # Refuse paths redirected by symlinks, including parent directories. A preview
+    # must never write outside its project or silently replace a linked directory.
+    def self.target_path(project : String, relative : String) : String
+      root = File.expand_path(project)
+      target = File.expand_path(relative, root)
+      raise "Unsafe generated path: #{relative}" unless target.starts_with?(root + File::SEPARATOR)
+      current = target
+      until current == root
+        raise "Generated path is a symlink: #{relative}" if File.symlink?(current)
+        current = File.dirname(current)
+      end
+      target
+    end
+
     def self.compare(shadow : String, project : String) : Array(Entry)
       entries = [] of Entry
       Dir.glob(File.join(shadow, "**", "*"), match: File::MatchOptions::DotFiles).sort.each do |path|
@@ -78,15 +102,17 @@ module AzuCLI
         relative = Path[path].relative_to(shadow).to_s
         next if relative.split('/').first.in?(SKIP)
         theirs = File.join(project, relative)
-        if File.symlink?(theirs)
-          Logger.warn("#{relative} is a symlink; generated changes were skipped. Configure it manually.")
+        begin
+          target_path(project, relative)
+        rescue ex
+          Logger.warn("#{ex.message}; generated changes were skipped. Configure it manually.")
           next
         end
         written = File.read(path)
         if !File.exists?(theirs)
           entries << Entry.new(relative, Kind::New, written.lines.size, written.lines.first(400).map_with_index { |line, index| DiffLine.new('+', index + 1, line) })
         elsif (before = File.read(theirs)) != written
-          entries << Entry.new(relative, Kind::Changed, written.lines.size, Diff.lines(before.lines, written.lines))
+          entries << Entry.new(relative, Kind::Changed, written.lines.size, Diff.lines(before.lines, written.lines), Undo.digest(before))
         end
       end
       entries
@@ -124,22 +150,41 @@ module AzuCLI
 
     # Copies the plan's files into the project, after saving an undo record. Returns the record's directory.
     def apply(command : String) : String
+      # Validate the whole preview before writing even the first file. The user may
+      # have edited a file while the preview was open or compilation was running.
+      entries.each do |entry|
+        target = GeneratePlan.target_path(project, entry.path)
+        if entry.kind.new?
+          raise "#{entry.path} was created after the preview; generate again" if File.exists?(target)
+        elsif !File.file?(target) || Undo.digest(File.read(target)) != entry.before_digest
+          raise "#{entry.path} changed after the preview; generate again"
+        end
+      end
       record = Undo.record_directory(project)
       manifest = Undo::Manifest.new(command, Time.utc.to_rfc3339, [] of Undo::FileRecord)
       entries.each do |entry|
-        target = File.join(project, entry.path)
+        target = GeneratePlan.target_path(project, entry.path)
         backup = nil
         if entry.kind.changed?
           backup = File.join(record, "before", entry.path)
           Dir.mkdir_p(File.dirname(backup))
           File.copy(target, backup)
         end
-        source = File.join(shadow, entry.path)
-        content = File.read(source)
-        write_atomically(target, content, File.info(source).permissions)
+        content = File.read(File.join(shadow, entry.path))
         manifest.files << Undo::FileRecord.new(entry.path, entry.kind.new?, Undo.digest(content), backup ? Path[backup].relative_to(record).to_s : nil)
       end
-      File.write(File.join(record, "manifest.json"), manifest.to_pretty_json)
+      # Persist recovery information before changing any project file. If a later
+      # replacement fails, `azu undo` can still restore the completed replacements.
+      File.write(File.join(record, "manifest.json"), manifest.to_pretty_json, perm: 0o600)
+      begin
+        entries.each do |entry|
+          target = GeneratePlan.target_path(project, entry.path)
+          source = File.join(shadow, entry.path)
+          write_atomically(target, File.read(source), File.info(source).permissions)
+        end
+      rescue ex
+        raise "Generation stopped: #{ex.message}. Run azu undo to revert files already written (record: #{record})"
+      end
       record
     end
 
@@ -275,7 +320,11 @@ module AzuCLI
     def self.steps(record : String, project : String) : Array(Step)
       manifest = Manifest.from_json(File.read(File.join(record, "manifest.json")))
       manifest.files.map do |file|
-        target = File.join(project, file.path)
+        begin
+          target = GeneratePlan.target_path(project, file.path)
+        rescue ex
+          next Step.new(file.path, file.created ? "delete" : "restore", false, ex.message)
+        end
         current = File.exists?(target) ? digest(File.read(target)) : nil
         action = file.created ? "delete" : "restore"
         if current.nil?
