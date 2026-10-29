@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="{% block description %}Your Azu workspace{% endblock %}">
+  {% block head %}{% endblock %}
+  <title>{% block title %}{{ project_title | default("Azu") }}{% endblock %}</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <script src="/assets/theme.js"></script>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body class="min-h-screen bg-base-200 text-base-content antialiased">
+  <a class="btn btn-primary fixed -top-20 left-4 z-50 focus:top-4" href="#main">Skip to content</a>
+  <div class="mx-auto min-h-screen max-w-screen-2xl lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+    <aside class="hidden border-r border-base-300 bg-base-100 lg:block">
+      <div class="sticky top-0 flex h-screen flex-col p-5">
+        <a class="flex items-center gap-3 px-2 py-4 text-lg font-bold" href="/" aria-label="Azu overview">
+          <span class="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-content" aria-hidden="true">A</span>
+          <span>{{ project_title | default("<%= @module_name %>", true) }}</span>
+        </a>
+        <p class="mt-9 px-3 text-xs font-semibold uppercase tracking-widest text-base-content/60">Workspace</p>
+        <nav class="mt-3 min-h-0 flex-1 overflow-y-auto" aria-label="Main">
+          <ul class="menu w-full gap-1">{% include "helpers/_sections.jinja" %}</ul>
+        </nav>
+        <div class="card border border-base-300 bg-base-200 mt-6">
+          <div class="card-body gap-2 p-4">
+            <p class="text-sm font-semibold">Made for your next idea.</p>
+            <p class="text-xs leading-relaxed text-base-content/70">Build with Crystal. Make it yours.</p>
+            <a class="link link-primary text-sm" href="https://azutoolkit.org" rel="noopener noreferrer">Explore the docs ↗</a>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="flex min-w-0 flex-col">
+      <header class="sticky top-0 z-30 border-b border-base-300 bg-base-100/95 backdrop-blur">
+        <div class="navbar gap-3 px-4 sm:px-8">
+          <details class="dropdown lg:hidden" data-mobile-nav>
+            <summary class="btn btn-ghost btn-square" aria-label="Open navigation">
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </summary>
+            <nav class="dropdown-content z-40 mt-3 w-64 max-w-[85vw] rounded-box border border-base-300 bg-base-100 p-2 shadow-xl" aria-label="Mobile">
+              <ul class="menu w-full">{% include "helpers/_sections.jinja" %}</ul>
+            </nav>
+          </details>
+          <div class="flex-1 min-w-0"><span class="text-sm font-semibold">{{ project_title | default("<%= @module_name %>", true) }}</span><span class="ml-3 badge badge-sm badge-outline hidden sm:inline-flex">Built with Azu</span></div>
+          <a href="https://azutoolkit.org" class="btn btn-sm btn-ghost hidden sm:inline-flex" rel="noopener noreferrer">Docs ↗</a>
+          <button type="button" class="btn btn-sm btn-ghost" data-theme-toggle hidden>
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v16"/></svg>
+            <span data-theme-label>Auto</span>
+          </button>
+        </div>
+      </header>
+      <main class="w-full flex-1 min-w-0 px-4 py-8 sm:px-8 lg:px-10 lg:py-10" id="main" tabindex="-1">
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-4 py-5 text-xs text-base-content/60 sm:px-8">
+        <p>Built with <a class="link" href="https://github.com/azutoolkit/azu" rel="noopener noreferrer">Azu</a> &amp; Crystal.</p>
+        <p>daisyUI components. Your next great idea.</p>
+      </footer>
+    </div>
+  </div>
+  <dialog class="modal" id="delete-confirmation" aria-labelledby="delete-title" aria-describedby="delete-description">
+    <div class="modal-box max-w-md">
+      <h2 class="text-xl font-semibold" id="delete-title">Delete this record?</h2>
+      <p class="mt-3 text-sm text-base-content/70" id="delete-description">This action cannot be undone. You can cancel to keep the record.</p>
+      <div class="modal-action"><form method="dialog"><button class="btn btn-ghost" autofocus>Cancel</button></form><button class="btn btn-error" type="button" data-confirm-submit>Delete record</button></div>
+    </div>
+  </dialog>
+</body>
+</html>

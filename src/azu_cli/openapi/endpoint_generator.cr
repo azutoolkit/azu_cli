@@ -79,7 +79,7 @@ module AzuCLI
         response_class = "#{resource_class}::#{resource_class}#{action.camelcase}Page"
 
         method = op_info.method.downcase
-        path = op_info.path
+        path = op_info.path.gsub(/\{([^}]+)\}/, ":\\1")
         summary = op_info.operation.summary || ""
 
         <<-ENDPOINT
@@ -88,11 +88,12 @@ module AzuCLI
         struct #{endpoint_name}
           include Azu::Endpoint(#{request_class}, #{response_class})
 
-          #{method} "#{path}"
+          #{method} #{path.inspect}
 
           def call : #{response_class}
-            # TODO: Implement #{action} action
-            #{response_class}.new
+            # Delegate to an application service and return the typed response.
+            # A specification cannot supply domain behavior or required response values.
+            raise Azu::Response::Error.new("Implement the #{action} application service", HTTP::Status::NOT_IMPLEMENTED, [] of String)
           end
         end
         ENDPOINT
@@ -143,8 +144,8 @@ module AzuCLI
         responses = op_info.operation.responses
         return nil unless responses
 
-        # Look for 200 response
-        response = responses["200"]?
+        # Prefer 200, then another documented success response (for example 201).
+        response = responses["200"]? || responses.find { |status, _| status.starts_with?("2") }.try(&.[1])
         return nil unless response
 
         content = response.content

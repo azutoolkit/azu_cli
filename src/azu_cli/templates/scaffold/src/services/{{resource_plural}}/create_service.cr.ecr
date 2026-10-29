@@ -3,6 +3,9 @@ module <%= app_module %>
     def call(request : <%= request_type %>) : <%= model_name %>
       record = <%= model_name %>.new(<%= assignments %>)
       record.save!
+<% if broadcast? -%>
+      Azu::PubSub.broadcast("<%= app_dir %>:<%= resource_plural %>:changed", "changed")
+<% end -%>
       record
     end
   end

@@ -48,7 +48,9 @@ describe AzuCLI::Generate::Mailer do
 
       methods = generator.mailer_methods
       methods.should contain("def welcome(to email : Carbon::Address")
-      methods.should contain("Carbon::Email.new")
+      methods.should contain("Message.new")
+      methods.should_not contain("Carbon::Email.new")
+      methods.should contain("Carbon::Address.new(from_name, from_email)")
       methods.should contain("text_body")
       methods.should contain("html_body")
     end

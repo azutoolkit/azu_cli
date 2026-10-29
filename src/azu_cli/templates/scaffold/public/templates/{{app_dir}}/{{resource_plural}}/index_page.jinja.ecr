@@ -1,36 +1,43 @@
 {% extends "app_layout.jinja" %}
-
 {% block title %}<%= namespace %>{% endblock %}
-
 {% block content %}
-<div class="page-head row row--between">
-  <h1><%= namespace %></h1>
-  <a class="btn" href="/<%= resource_plural %>/new">New <%= resource_singular.tr("_", " ") %></a>
-</div>
-
-{% if <%= resource_plural %> %}
-<div class="table-wrap">
-  <table class="table">
-    <thead>
-      <tr><% fields.each do |field| %><th><%= field.label %></th><% end %><th></th></tr>
-    </thead>
-    <tbody>
-      {% for <%= resource_singular %> in <%= resource_plural %> %}
-      <tr>
+<div class="mx-auto max-w-6xl space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div><p class="text-xs font-semibold uppercase tracking-widest text-primary">Your workspace</p><h1 class="mt-2 text-3xl font-semibold tracking-tight"><%= namespace %></h1><p class="mt-2 text-sm text-base-content/70">View, organize, and manage your <%= resource_plural.tr("_", " ") %>.</p></div>
+    <a class="btn btn-primary" href="/<%= resource_plural %>/new"><span aria-hidden="true">＋</span> New <%= resource_singular.tr("_", " ") %></a>
+  </div>
+  {% if <%= resource_plural %> | length > 0 %}
+  <section class="card min-w-0 border border-base-300 bg-base-100 shadow-sm">
+    <div class="flex items-center justify-between gap-3 border-b border-base-300 p-5"><h2 class="text-sm font-semibold">All <%= resource_plural.tr("_", " ") %></h2><span class="badge badge-ghost">{{ <%= resource_plural %> | length }} records</span></div>
+    <div class="overflow-x-auto rounded-b-box" tabindex="0" role="region" aria-label="<%= namespace %> table">
+      <table class="table table-zebra">
+        <caption class="sr-only"><%= namespace %> and available actions</caption>
+        <thead><tr><% fields.each do |field| %><th scope="col"><%= field.label %></th><% end %><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          {% for <%= resource_singular %> in <%= resource_plural %> %}
+          <tr class="hover:bg-base-200/60">
 <% fields.each_with_index do |field, index| -%>
 <% if index == 0 -%>
-        <td><a href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}">{{ <%= resource_singular %>.<%= field.name %> | e }}</a></td>
+            <td class="max-w-xs whitespace-normal break-words"><a class="link link-primary font-medium" href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}">{{ <%= resource_singular %>.<%= field.name %> | e }}</a></td>
+<% elsif field.bool? -%>
+            <td><span class="badge badge-sm {% if <%= resource_singular %>.<%= field.name %> %}badge-success badge-soft{% else %}badge-ghost{% endif %}">{{ <%= resource_singular %>.<%= field.name %> | e }}</span></td>
 <% else -%>
-        <td>{{ <%= resource_singular %>.<%= field.name %> | e }}</td>
+            <td class="max-w-xs whitespace-normal break-words">{{ <%= resource_singular %>.<%= field.name %> | e }}</td>
 <% end -%>
 <% end -%>
-        <td><a href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}/edit">Edit</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+            <td><a class="btn btn-sm btn-ghost" href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}/edit">Edit</a><% if fields.empty? %><a class="btn btn-sm btn-ghost" href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}">View</a><% end %></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% else %}
+  <section class="card border border-dashed border-base-300 bg-base-100"><div class="card-body items-center gap-4 px-6 py-16 text-center">
+    <div class="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary" aria-hidden="true"><svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 12h8m-4-4v8"/></svg></div>
+    <div><h2 class="text-xl font-semibold">No <%= resource_plural.tr("_", " ") %> yet</h2><p class="mt-2 max-w-sm text-sm text-base-content/70">Add your first <%= resource_singular.tr("_", " ") %> to start managing your collection.</p></div>
+    <a class="btn btn-primary btn-sm" href="/<%= resource_plural %>/new">Create your first <%= resource_singular.tr("_", " ") %></a>
+  </div></section>
+  {% endif %}
 </div>
-{% else %}
-<p>No <%= resource_plural.tr("_", " ") %> yet.</p>
-{% endif %}
 {% endblock %}

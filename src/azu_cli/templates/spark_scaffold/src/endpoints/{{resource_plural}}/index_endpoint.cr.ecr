@@ -1,0 +1,10 @@
+module <%= app_module %>
+  struct <%= namespace %>::IndexEndpoint
+    include Azu::Endpoint(<%= namespace %>::IndexRequest, <%= namespace %>::IndexPage)
+    get "/<%= resource_plural %>"
+
+    def call : <%= namespace %>::IndexPage
+      <%= namespace %>::IndexPage.new
+    end
+  end
+end

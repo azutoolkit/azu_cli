@@ -1,0 +1,11 @@
+module <%= app_module %>
+  struct <%= namespace %>::LivePage
+    include Azu::Response::Negotiable
+    include Azu::Templates::Renderable
+
+    def render_html : String
+      view data: {"spark_script" => Azu::Spark.script_tag,
+                  "component" => Azu::Spark.render(<%= class_name %>)}
+    end
+  end
+end

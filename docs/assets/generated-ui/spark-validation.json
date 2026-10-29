@@ -1,0 +1,40 @@
+{
+  "checks": [
+    "Standalone component: typed events, escaped text and reset",
+    "Live create commits to SQLite, resets its form and updates another tab",
+    "Inline server validation rejects invalid data; edit persists unchecked booleans",
+    "Peer broadcasts preserve a draft; explicit cancel clears it",
+    "HTTP create/update services also invalidate live lists",
+    "Confirmed delete refreshes peers; saving a concurrently deleted record fails safely",
+    "Restart/reconnect retains persisted data without duplicate writes",
+    "Bounded 25-row paging, refresh, next and previous",
+    "Responsive live UI has no document overflow on mobile",
+    "Without JavaScript, disabled live controls and usable HTTP form fallback"
+  ],
+  "failures": [],
+  "cli_suite": {
+    "examples": 1457,
+    "failures": 0,
+    "errors": 0
+  },
+  "focused_spark_and_preview_specs": {
+    "examples": 14,
+    "failures": 0,
+    "errors": 0
+  },
+  "generated_app_specs": {
+    "examples": 4,
+    "failures": 0,
+    "errors": 0
+  },
+  "generator_matrices": [
+    "web",
+    "api"
+  ],
+  "versions": {
+    "crystal": "1.22.1",
+    "azu": "0.10.5",
+    "cql": "0.0.604"
+  },
+  "hosted_ci": "pending"
+}

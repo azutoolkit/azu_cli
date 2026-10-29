@@ -1,0 +1,42 @@
+/* Edit this source, then npm run build:css. public/assets/app.css is generated. */
+@import "tailwindcss" source(none);
+@source "../public/templates";
+@source "../public/assets/app.js";
+@source "../src/components";
+@source "./generator-classes.txt";
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+  logs: false;
+}
+
+/* Keep Azu's blue accent while daisyUI supplies every component and theme. */
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  --color-primary: #1d4ed8;
+  --color-primary-content: #ffffff;
+  --color-base-200: #f3f5f9;
+  --radius-box: 1rem;
+  --radius-field: 0.625rem;
+}
+@plugin "daisyui/theme" {
+  name: "dark";
+  prefersdark: true;
+  --color-primary: #93b4ff;
+  --color-primary-content: #0e1834;
+  --color-base-100: #151b27;
+  --color-base-200: #0d121c;
+  --color-base-300: #283245;
+  --color-base-content: #e5ebf5;
+  --radius-box: 1rem;
+  --radius-field: 0.625rem;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
+  :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}

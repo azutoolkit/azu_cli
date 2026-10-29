@@ -1,0 +1,14 @@
+{
+  "name": "azu-app-ui",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build:css": "tailwindcss -i ./frontend/app.css -o ./public/assets/app.css --minify",
+    "watch:css": "tailwindcss -i ./frontend/app.css -o ./public/assets/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "daisyui": "5.7.50",
+    "tailwindcss": "4.3.3"
+  }
+}

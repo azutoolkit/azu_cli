@@ -40,6 +40,12 @@ azu openapi:generate openapi.yaml --force
 
 It writes `src/models/` (from schemas), and `src/endpoints/<resource>/`, `src/requests/<resource>/` and `src/pages/<resource>/` (from paths and bodies). The resource is the first path segment that is not `api`, a version like `v1`, or a parameter. An existing file is skipped with a warning unless you pass `--force`. Exit `0` on success, `1` when the spec is missing or generation fails.
 
+Generated models are JSON data-transfer structs. Required constructor arguments precede optional arguments even when the schema lists them in a different order. JSON field names such as `displayName` remain unchanged on the wire while Crystal accessors use `display_name`. Responses have typed constructors; array responses accept a `data` array and render it directly. The generator resolves the 200 response first, then another documented 2xx response such as 201.
+
+Path placeholders such as `/invoices/{id}` become Azu routes such as `/invoices/:id`. Endpoint methods return HTTP 501 until you connect an application service and construct the required response. The specification defines contracts; your service supplies business behavior and persistence. This keeps transport contracts separate from application logic.
+
+The web/API generator CI matrix compiles object and array responses, required-after-optional schema properties, request bodies and parameterized routes from `spec/fixtures/generators/openapi.yaml`.
+
 ### azu openapi:export
 
 ```bash

@@ -129,3 +129,31 @@ This project is licensed under the <%= @license %> License - see the [LICENSE](L
 <% unless @project_type == "cli" -%>
 - [CQL ORM](https://github.com/azutoolkit/cql)
 <% end -%>
+
+<% if @project_type == "web" -%>
+## UI and navigation
+
+Pages use **daisyUI 5 + Tailwind CSS 4**, with light/dark themes, a desktop sidebar and a mobile menu. The CSS is already compiled and served locally; Node and a CDN are not needed to run your app.
+
+- Edit pages in `public/templates/` and reusable layout in `public/templates/app_layout.jinja`.
+- Edit theme colors in `frontend/app.css`. Use daisyUI classes (`btn btn-primary`, `card`, `input`, `avatar`) directly in templates.
+- To customize styles, install Node.js 20+ and run `npm ci`, then `npm run watch:css` alongside `azu dev`. Run `npm run build:css` before committing/deploying and include `public/assets/app.css`.
+- `frontend/generator-classes.txt` keeps future scaffold/auth components available when CSS is rebuilt before those pages exist. Keep this file if you will continue generating pages.
+- Navigation lives in `public/templates/helpers/_sections.jinja`. Scaffold generators and web `endpoint ... index` generators append links automatically. Authentication adds Account. Both desktop and mobile menus use this partial.
+- Change labels/order or add your own links freely; keep `{# azu:sections:end #}` for future registration. Repeated generation preserves existing links and labels. API endpoints, writes and routes needing an `:id` do not get links. A standalone endpoint still needs its request/page/model dependencies.
+- Delete buttons show a confirmation dialog when JavaScript is available. Forms, navigation, and theme defaults work without JavaScript.
+
+The legacy `layout.jinja` delegates its `page_body` block to the same daisyUI shell. No Bootstrap runtime is loaded.
+<% end -%>
+
+## Live components and CRUD
+
+```sh
+azu generate spark Counter count:int32 --page
+azu generate scaffold Product name:string price_cents:int32 active:bool --spark
+azu db:setup
+```
+
+Visit `/counters/live` and `/products`. Spark generators install the local client, register navigation, and add a development `SPARK_SECRET` to `.env`. Preserve that secret across restarts; supply a stable secret from your secret manager in production and enable WebSocket upgrades on `/spark`. The generated CSS sources include `src/components`.
+
+Live CRUD supports required scalar fields and shares validation/persistence services with its HTTP form fallbacks. PubSub updates reach tabs in the same process by default; configure Redis PubSub for multiple instances. Generated CRUD is public: add authorization and tenant scoping in both HTTP and live paths before handling private data.

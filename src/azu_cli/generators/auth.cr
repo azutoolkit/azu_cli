@@ -1,6 +1,7 @@
 require "teeplate"
 require "./model"
 require "./session_wiring"
+require "./navigation"
 
 module AzuCLI
   module Generate
@@ -59,6 +60,7 @@ module AzuCLI
         Model.new("User", USER_ATTRIBUTES).render(File.join(out_dir, "src", "models"), force: force, interactive: interactive, list: list, color: color)
         SessionWiring.add_handler(self.class.app_file_path(out_dir))
         SessionWiring.add_secret(File.join(out_dir, ".env"))
+        Navigation.register(out_dir, "Account", "/account")
       end
     end
   end

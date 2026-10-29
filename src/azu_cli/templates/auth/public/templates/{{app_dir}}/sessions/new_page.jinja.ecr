@@ -1,22 +1,22 @@
 {% extends "app_layout.jinja" %}
-
 {% block title %}Sign in{% endblock %}
-
 {% block content %}
-<div class="page-head"><h1>Sign in</h1></div>
-{% if messages.notice %}<p class="notice" role="status">{{ messages.notice | e }}</p>{% endif %}
-{% if messages.error %}<p class="alert" role="alert">{{ messages.error | e }}</p>{% endif %}
-<form action="/login" method="post" class="stack">
-  {{ csrf_tag | safe }}
-  <label class="field">Email
-    <input type="email" name="email" autocomplete="email" required>
-  </label>
-  <label class="field">Password
-    <input type="password" name="password" autocomplete="current-password" required>
-  </label>
-  <div class="row">
-    <button class="btn" type="submit">Sign in</button>
-    <a class="btn btn--secondary" href="/register">Sign up</a>
-  </div>
-</form>
+<div class="mx-auto max-w-md py-6 sm:py-12">
+  <div class="mb-8 space-y-3 text-center"><span class="badge badge-primary badge-soft">Your workspace</span><h1 class="text-3xl font-semibold tracking-tight">Welcome back</h1><p class="text-sm text-base-content/70">Sign in to pick up where you left off.</p></div>
+  <section class="card border border-base-300 bg-base-100 shadow-sm"><div class="card-body gap-6 p-6 sm:p-8">
+    {% if messages.notice %}<p class="alert alert-success alert-soft text-sm" role="status">{{ messages.notice | e }}</p>{% endif %}
+    {% if messages.error %}<p class="alert alert-error alert-soft text-sm" role="alert">{{ messages.error | e }}</p>{% endif %}
+    <form action="/login" method="post" class="space-y-5">
+      {{ csrf_tag | safe }}
+      <label class="fieldset block space-y-2"><span class="fieldset-legend p-0">Email</span>
+        <input class="input w-full" type="email" name="email" autocomplete="email" placeholder="you@example.com" required>
+      </label>
+      <label class="fieldset block space-y-2"><span class="fieldset-legend p-0">Password</span>
+        <input class="input w-full" type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn-primary w-full" type="submit">Sign in</button>
+    </form>
+    <p class="text-center text-sm text-base-content/70">New here? <a class="link link-primary font-medium" href="/register">Sign up</a></p>
+  </div></section>
+</div>
 {% endblock %}

@@ -1,157 +1,49 @@
 {% extends "app_layout.jinja" %}
-
 {% block title %}Welcome to {{ project_title }}{% endblock %}
-{% block description %}Your new Azu application is running. Typed request and response contracts with real-time built in.{% endblock %}
+{% block description %}Your Azu workspace. Turn your next idea into a working application.{% endblock %}
 {% block head %}{{ csrf_metatag | safe }}{% endblock %}
-
 {% block content %}
-<section class="hero" aria-labelledby="hero-title">
-  <div class="hero__status">
-    <span class="badge is-good badge--dot">Running</span>
-    <span class="badge">{{ environment }}</span>
-  </div>
-  <p class="eyebrow">Welcome to {{ project_title }}</p>
-  <h1 id="hero-title">Typed contracts. <em>Real-time</em> by default.</h1>
-  <p>Your Azu app is up. Every route is a small struct with a typed request and response, checked when you compile, and the same app can push live updates over WebSockets.</p>
-  <div class="row">
-    <a class="btn" href="#next-steps">Build your first page</a>
-    <a class="btn btn--secondary" href="https://azutoolkit.org" rel="noopener noreferrer">Read the docs</a>
-  </div>
-</section>
-
-<section class="section" aria-labelledby="what-title">
-  <div class="section__head">
-    <p class="eyebrow">What is Azu</p>
-    <h2 id="what-title">A Crystal web framework that catches mistakes before your users do</h2>
-  </div>
-  <div class="grid">
-    <article class="card">
-      <span class="card__icon"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></span>
-      <h3>Typed contracts</h3>
-      <p class="muted">An endpoint is declared as <code>Endpoint(Request, Response)</code>. Params are validated into the request type and the compiler checks the response you return.</p>
-    </article>
-    <article class="card">
-      <span class="card__icon"><svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg></span>
-      <h3>Real-time built in</h3>
-      <p class="muted">Channels and Spark live components keep pages in sync over WebSockets, with no separate service to run.</p>
-    </article>
-    <article class="card">
-      <span class="card__icon"><svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg></span>
-      <h3>Fast as C, slick as Ruby</h3>
-      <p class="muted">Compiled by Crystal, routed with a radix tree and cached where it counts, with a Rails-like CLI on top.</p>
-    </article>
-  </div>
-</section>
-
-<section class="section" id="next-steps" aria-labelledby="steps-title">
-  <div class="section__head">
-    <p class="eyebrow">Next steps</p>
-    <h2 id="steps-title">From this page to a working CRUD in three commands</h2>
-    <p>Run these from the <span class="path">{{ project }}</span> directory.</p>
-  </div>
-  <ol class="steps" role="list">
-    <li class="card step">
-      <h3>Generate a resource</h3>
-      <p>Creates the model, migration, endpoints, requests, pages and templates for <code>Post</code>.</p>
-      <div class="cmd">
-        <code>azu generate scaffold Post title:string</code>
-        <button type="button" class="btn btn--ghost btn--sm" data-copy="azu generate scaffold Post title:string" aria-label="Copy command: azu generate scaffold" hidden>
-          <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span>
-        </button>
+<div class="mx-auto max-w-6xl space-y-10">
+  <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]" aria-labelledby="hero-title">
+    <div class="card border border-base-300 bg-base-100 shadow-sm">
+      <div class="card-body gap-6 p-6 sm:p-10">
+        <div class="flex flex-wrap gap-2"><span class="badge badge-success badge-soft gap-2"><span class="status status-success"></span>App is running</span><span class="badge badge-ghost">{{ environment }}</span></div>
+        <div class="space-y-4"><p class="text-xs font-semibold uppercase tracking-widest text-primary">Welcome to {{ project_title }}</p>
+          <h1 class="max-w-xl text-4xl font-semibold tracking-tight sm:text-5xl leading-tight" id="hero-title">A fresh start.<br><span class="text-primary">Make something great.</span></h1>
+          <p class="max-w-xl text-base leading-relaxed text-base-content/70">Your workspace is ready. Go from an idea to a working app with typed contracts, beautiful pages, and Real-time updates built in.</p>
+        </div>
+        <div class="card-actions gap-3"><a class="btn btn-primary" href="#next-steps">Build your first page <span aria-hidden="true">→</span></a><a class="btn btn-ghost" href="https://azutoolkit.org" rel="noopener noreferrer">Read the docs ↗</a></div>
       </div>
-    </li>
-    <li class="card step">
-      <h3>Migrate the database</h3>
-      <p>Applies the new migration and refreshes <code>src/db/schema.cr</code>.</p>
-      <div class="cmd">
-        <code>azu db:migrate</code>
-        <button type="button" class="btn btn--ghost btn--sm" data-copy="azu db:migrate" aria-label="Copy command: azu db:migrate" hidden>
-          <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span>
-        </button>
-      </div>
-    </li>
-    <li class="card step">
-      <h3>Serve with hot reload</h3>
-      <p>Rebuilds when files change. Then open <a href="/posts"><span class="path">/posts</span></a> to see your new resource.</p>
-      <div class="cmd">
-        <code>azu serve</code>
-        <button type="button" class="btn btn--ghost btn--sm" data-copy="azu serve" aria-label="Copy command: azu serve" hidden>
-          <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span>
-        </button>
-      </div>
-    </li>
-  </ol>
-  <p class="sr-only" role="status" aria-live="polite" data-copy-status></p>
-</section>
-
-<section class="section" aria-labelledby="route-title">
-  <div class="section__head">
-    <p class="eyebrow">This page</p>
-    <h2 id="route-title">How this page is served</h2>
-    <p>The root route is a plain Azu endpoint. Edit it, or delete it once your own home page is ready.</p>
-  </div>
-  <div class="split">
-    <div class="table-wrap">
-      <table class="table table--stack">
-        <caption class="sr-only">Routes in this app</caption>
-        <thead><tr><th scope="col">Method</th><th scope="col">Path</th><th scope="col">Endpoint</th></tr></thead>
-        <tbody>
-          <tr>
-            <td data-label="Method"><span class="badge verb is-good">GET</span></td>
-            <td data-label="Path"><code>/</code></td>
-            <td data-label="Endpoint" class="path">{{ module_name }}::Welcome::IndexEndpoint</td>
-          </tr>
-          <tr>
-            <td data-label="Method"><span class="badge verb is-info">GET</span></td>
-            <td data-label="Path"><code>/assets/*</code></td>
-            <td data-label="Endpoint" class="path">Azu::Handler::Static (public/)</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
-    <div class="card">
-      <h3>Your environment</h3>
-      <dl class="facts">
-        <div><dt>Azu</dt><dd>{{ azu_version }}</dd></div>
-        <div><dt>Crystal</dt><dd>{{ crystal_version }}</dd></div>
-        <div><dt>{{ project }}</dt><dd>{{ app_version }}</dd></div>
-        <div><dt>Environment</dt><dd>{{ environment }}</dd></div>
+    <div class="card border border-base-300 bg-base-100 shadow-sm"><div class="card-body gap-5 p-6">
+      <div class="flex items-center justify-between"><h2 class="font-semibold">Your environment</h2><span class="status status-success" aria-label="Running"></span></div>
+      <p class="text-sm text-base-content/70">Everything you need. Ready to build.</p>
+      <dl class="divide-y divide-base-300 text-sm">
+        <div class="flex justify-between gap-4 py-4"><dt class="text-base-content/60">Azu</dt><dd class="font-mono font-medium">{{ azu_version }}</dd></div>
+        <div class="flex justify-between gap-4 py-4"><dt class="text-base-content/60">Crystal</dt><dd class="font-mono font-medium">{{ crystal_version }}</dd></div>
+        <div class="flex justify-between gap-4 py-4"><dt class="text-base-content/60">Application</dt><dd class="font-mono font-medium">{{ app_version }}</dd></div>
+        <div class="flex justify-between gap-4 py-4"><dt class="text-base-content/60">UI</dt><dd class="font-medium">daisyUI + Tailwind</dd></div>
       </dl>
-    </div>
-  </div>
-  <pre class="code" tabindex="0" aria-label="src/endpoints/welcome/index_endpoint.cr"><code>struct {{ module_name }}::Welcome::IndexEndpoint
-  include Azu::Endpoint(Welcome::IndexRequest, Welcome::IndexPage)
-
-  get "/"
-
-  def call : Welcome::IndexPage
-    Welcome::IndexPage.new
-  end
-end</code></pre>
-</section>
-
-<section class="section" aria-labelledby="docs-title">
-  <div class="section__head">
-    <p class="eyebrow">Learn more</p>
-    <h2 id="docs-title">Docs and source</h2>
-  </div>
-  <div class="links">
-    <a class="card" href="https://azutoolkit.org" rel="noopener noreferrer">
-      <h3><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>Documentation</h3>
-      <p class="muted">Guides for endpoints, requests, templates, channels and Spark.</p>
-    </a>
-    <a class="card" href="https://github.com/azutoolkit/azu" rel="noopener noreferrer">
-      <h3><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Azu on GitHub</h3>
-      <p class="muted">The framework source, issues and the example app.</p>
-    </a>
-    <a class="card" href="https://github.com/azutoolkit/cql" rel="noopener noreferrer">
-      <h3><svg class="icon" aria-hidden="true"><use href="#i-db"/></svg>CQL ORM</h3>
-      <p class="muted">Models, migrations and queries for your database.</p>
-    </a>
-    <a class="card" href="https://github.com/azutoolkit/azu_cli" rel="noopener noreferrer">
-      <h3><svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg>Azu CLI</h3>
-      <p class="muted">Every generator and command, from <code>azu new</code> to <code>azu jobs:worker</code>.</p>
-    </a>
-  </div>
-</section>
+    </div></div>
+  </section>
+  <section class="grid gap-4 md:grid-cols-3" aria-label="Built for productive development">
+    <article class="card border border-base-300 bg-base-100"><div class="card-body gap-3 p-6"><span class="badge badge-primary badge-soft">01 / Reliable</span><h2 class="card-title text-lg">Typed contracts</h2><p class="text-sm leading-relaxed text-base-content/70">Validated requests and checked responses. Catch mistakes while you build.</p></div></article>
+    <article class="card border border-base-300 bg-base-100"><div class="card-body gap-3 p-6"><span class="badge badge-primary badge-soft">02 / Connected</span><h2 class="card-title text-lg">Real-time by default</h2><p class="text-sm leading-relaxed text-base-content/70">Channels and Spark components bring live updates to your application.</p></div></article>
+    <article class="card border border-base-300 bg-base-100"><div class="card-body gap-3 p-6"><span class="badge badge-primary badge-soft">03 / Yours</span><h2 class="card-title text-lg">A head start on every page</h2><p class="text-sm leading-relaxed text-base-content/70">Editable daisyUI components, responsive layouts, and navigation that grows with your app.</p></div></article>
+  </section>
+  <section class="space-y-5" id="next-steps" aria-labelledby="steps-title">
+    <div class="flex flex-wrap items-end justify-between gap-3"><div><p class="text-xs font-semibold uppercase tracking-widest text-primary">Your next steps</p><h2 class="mt-2 text-2xl font-semibold tracking-tight" id="steps-title">An idea to an app. Three commands.</h2></div><span class="badge badge-outline">Run in {{ project }}</span></div>
+    <ol class="grid gap-4 lg:grid-cols-3" role="list">
+      <li class="card border border-base-300 bg-base-100"><div class="card-body p-5 gap-4"><span class="text-sm font-mono text-primary">01</span><h3 class="font-semibold">Generate your first resource</h3><p class="text-sm text-base-content/70">Models, forms, pages, and a navigation link. All ready to edit.</p><div class="rounded-box bg-base-200 p-3 space-y-3"><code class="block break-words text-xs">azu generate scaffold Post title:string</code><button class="btn btn-xs btn-ghost" type="button" data-copy="azu generate scaffold Post title:string" hidden><span data-copy-label>Copy command</span></button></div></div></li>
+      <li class="card border border-base-300 bg-base-100"><div class="card-body p-5 gap-4"><span class="text-sm font-mono text-primary">02</span><h3 class="font-semibold">Prepare your database</h3><p class="text-sm text-base-content/70">Apply the migration and get your new resource ready for real data.</p><div class="rounded-box bg-base-200 p-3 space-y-3"><code class="block break-words text-xs">azu db:migrate</code><button class="btn btn-xs btn-ghost" type="button" data-copy="azu db:migrate" hidden><span data-copy-label>Copy command</span></button></div></div></li>
+      <li class="card border border-base-300 bg-base-100"><div class="card-body p-5 gap-4"><span class="text-sm font-mono text-primary">03</span><h3 class="font-semibold">Bring it to life</h3><p class="text-sm text-base-content/70">Start your app, then open your new section from the navigation.</p><div class="rounded-box bg-base-200 p-3 space-y-3"><code class="block break-words text-xs">azu serve</code><button class="btn btn-xs btn-ghost" type="button" data-copy="azu serve" hidden><span data-copy-label>Copy command</span></button></div></div></li>
+    </ol>
+    <p class="sr-only" role="status" aria-live="polite" data-copy-status></p>
+  </section>
+  <section class="card border border-base-300 bg-base-100" aria-labelledby="route-title"><div class="card-body p-6 gap-4">
+    <div class="flex flex-wrap justify-between gap-3"><div><h2 class="card-title" id="route-title">Make this workspace your own</h2><p class="mt-2 text-sm text-base-content/70">Edit your templates, customize your theme, and start building.</p></div><a class="btn btn-sm btn-ghost" href="https://daisyui.com/components/" rel="noopener noreferrer">Explore components ↗</a></div>
+    <div class="flex flex-wrap items-center gap-3 rounded-box bg-base-200 p-4 text-sm"><span class="badge badge-success badge-soft">GET /</span><code class="break-all">{{ module_name }}::Welcome::IndexEndpoint</code></div>
+    <p class="text-xs text-base-content/60 break-words">Start in public/templates. Customize frontend/app.css with npm run watch:css.</p>
+  </div></section>
+</div>
 {% endblock %}

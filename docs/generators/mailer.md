@@ -1,246 +1,107 @@
 ---
-description: Generate a Carbon mailer with one method per email, a background job for async delivery, and stubs to fill in.
+description: Generate a Carbon message factory and an optional JoobQ delivery job with typed, serializable parameters.
 ---
 
 # Mailer
 
-`azu g mailer` writes a `Carbon::Email` subclass under `src/mailers/`: one method per email you name, a `_later` method per email that enqueues a JoobQ job, and the job that sends it. The bodies are stubs, and the Carbon dependency is not added to `shard.yml` for you. Treat the output as a skeleton to finish.
-
 ## Overview & visual demo
 
-<figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing mailer"><figcaption><p><code>azu g</code> lists <code>mailer</code>. Name the mailer for the domain (<code>User</code>), and the command adds the <code>Mailer</code> suffix.</p></figcaption></figure>
+`azu g mailer` generates a factory under `src/mailers/` and, by default, a delivery job. The factory composes concrete Carbon messages; Carbon's adapter handles transport; the JoobQ job handles background delivery. Email bodies are starter content to replace with your application's templates.
+
+<figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The generator picker includes the mailer generator"><figcaption><p>Select mailer or use the command directly.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
-  A["UserMailer#welcome(to:)"] --> B["Carbon::Email"]
-  C["UserMailer#welcome_later(to:)"] --> D["UserMailerJob on queue mailers"]
-  D --> E["perform calls mailer.welcome"]
-  E --> B
-  B --> F["email.deliver"]
+  A[UserMailer factory] --> B[Concrete Message]
+  B --> C[Configured Carbon adapter]
+  A --> D[Serializable delivery job]
+  D --> A
 ```
 
 ## Quickstart & command syntax
 
 ```bash
 azu g mailer User welcome password_reset
-azu g mailer User welcome password_reset --skip job
+azu g mailer Receipt receipt --skip job
 ```
 
-{% tabs %}
-{% tab title="Methods" %}
-```bash
-azu g mailer User welcome password_reset   # welcome and password_reset methods
-azu g mailer User                          # a single welcome method
+Add the optional dependency, then run `shards install`:
+
+```yaml
+dependencies:
+  carbon:
+    github: luckyframework/carbon
+    version: 0.6.1
 ```
 
-Each name after the mailer becomes a method. With none, the mailer gets `welcome`.
-{% endtab %}
+| Argument/flag | Effect |
+| --- | --- |
+| `<name>` | Domain name such as `User`; the generator appends `Mailer` |
+| `[methods]` | One factory method per name; default `welcome` |
+| `--skip job` | Generate synchronous delivery only |
+| `--dry-run`, `--check`, `--yes`, `--force` | Shared preview, compilation and overwrite controls |
 
-{% tab title="Sync only" %}
-```bash
-azu g mailer User welcome --skip job
+```crystal
+message = UserMailer.new.welcome(
+  to: Carbon::Address.new("Recipient", "user@example.com"),
+  params: {"name" => "Ada"}
+)
+message.deliver
+UserMailer.new.welcome_later(to: Carbon::Address.new("user@example.com"), name: "Ada")
 ```
 
-`--skip job` leaves out the `welcome_later` method and doesn't write the job file.
-{% endtab %}
+Named keyword values are converted to `Hash(String, String)` before enqueueing. The job stores the raw email address, not its formatted display name. It reconstructs the same message factory call with `params: @params`.
 
-{% tab title="Preview" %}
-```bash
-azu g mailer User welcome --dry-run   # list the files, write nothing
+### Delivery configuration
+
+Each factory contains an abstract `Delivery < Carbon::Email` configuration base and a concrete `Message < Delivery`. Configure the base from the application initializer:
+
+```crystal
+require "../mailers/user_mailer"
+UserMailer::Delivery.configure do |settings|
+  settings.adapter = Carbon::DevAdapter.new
+end
 ```
-{% endtab %}
-{% endtabs %}
 
-| Argument or option | Meaning | Default |
-| --- | --- | --- |
-| `name` | The domain, such as `User`. The class is `<name>Mailer`, the file `<name>_mailer.cr` | required |
-| `methods` | One method per name, in snake case (`password_reset`). Subjects are generated from them | `welcome` |
-| `--skip job` | No `_later` methods and no job file | off |
-| `--force` | Overwrite existing files | off |
-| `--dry-run` | List the files, write nothing | off |
-
-Don't put `Mailer` in the name. `azu g mailer UserMailer` writes `class UserMailerMailer`.
+The generated development default uses Carbon's in-memory adapter. In production, supply an installed transport adapter explicitly; the generator does not silently discard production email through the development adapter. `MAILER_FROM_EMAIL` and `MAILER_FROM_NAME` configure the sender. Register `UserMailerJob` and its `mailers` queue in the JoobQ initializer before asynchronous use.
 
 ## Realistic output
 
-{% code title="src/mailers/user_mailer.cr (excerpt)" %}
-```crystal
-# User Mailer
-# Email functionality for User using Carbon
-# Carbon: https://github.com/luckyframework/carbon
-#
-# Usage:
-#   mailer = UserMailer.new
-#   email = mailer.welcome(to: Carbon::Address.new("user@example.com"), name: "John")
-#   email.deliver
-
-#
-#   # Or send asynchronously:
-#   mailer.welcome_later(to: Carbon::Address.new("user@example.com"), name: "John")
-
-
-require "carbon"
-
-class UserMailer < Carbon::Email
-  # Configure mailer defaults
-  def from_email : String
-    ENV["MAILER_FROM_EMAIL"]? || "noreply@example.com"
-  end
-
-  def from_name : String
-    ENV["MAILER_FROM_NAME"]? || "User"
-  end
-
-    def welcome(to email : Carbon::Address, **params)
-      welcome_email(to: email, **params)
-    end
-
-    private def welcome_email(to email : Carbon::Address, **params)
-      Carbon::Email.new(
-        to: email,
-        from: Carbon::Address.new(from_email, from_name),
-        subject: "Welcome",
-        text_body: render_text("user/welcome", params),
-        html_body: render_html("user/welcome", params)
-      )
-    end
-
-    # ... password_reset, with the same shape and subject "Password Reset" ...
-
-  # Deliver welcome email asynchronously
-  def welcome_later(to email : Carbon::Address, **params)
-    UserMailerJob.enqueue(
-      action: "welcome",
-      to: email.to_s,
-      params: params.to_h
-    )
-  end
-
-  # Render text template
-  private def render_text(template : String, params : NamedTuple) : String
-    # TODO: Implement text template rendering
-    # You can use ECR, Jinja, or any template engine
-    # Example with ECR:
-    # ECR.render "src/mailers/templates/#{template}.txt.ecr"
-
-    "Text version of #{template}"
-  end
-
-  # Render HTML template
-  private def render_html(template : String, params : NamedTuple) : String
-    # TODO: Implement HTML template rendering
-    # You can use ECR, Jinja, or any template engine
-    # Example with ECR:
-    # ECR.render "src/mailers/templates/#{template}.html.ecr"
-
-    "<html><body><h1>#{template}</h1></body></html>"
-  end
-  # ... preview(method_name) and the Carbon adapter block follow ...
+```text
+src/mailers/user_mailer.cr
+src/jobs/user_job.cr
 ```
-{% endcode %}
 
-*Excerpt of the mailer for `azu g mailer User welcome password_reset`. The `password_reset` method repeats `welcome`, and the file ends with a `preview` helper and a Carbon adapter block.*
+*Files produced by `azu g mailer User welcome password_reset`; the second file defines `UserMailerJob`.*
 
-<details>
-
-<summary>The job that sends it: src/jobs/user_job.cr</summary>
-
-For `azu g mailer User welcome password_reset` the job file is `src/jobs/user_job.cr` and it defines `UserMailerJob`. The header comment says it is generated "when using --async flag"; no such flag exists. With `--skip job` the file isn't written.
-
-{% code title="src/jobs/user_job.cr (excerpt)" %}
 ```crystal
-require "../mailers/user_mailer"
-
-struct UserMailerJob
-  include JoobQ::Job
-
-  # Queue configuration for mailer jobs
-  @queue = "mailers"
-  # Retry failed emails up to 3 times
-  @retries = 3
-  # Expire after 1 hour (JoobQ stores the Unix time in milliseconds)
-  @expires = 1.hour.from_now.to_unix_ms
-
-  # Job parameters
-  property action : String
-  property to : String
-  property params : Hash(String, String)
-
-  def initialize(@action : String, @to : String, @params : Hash(String, String) = {} of String => String)
-  end
-
-  # Perform the email delivery
-  def perform
-    mailer = UserMailer.new
-    email_address = Carbon::Address.new(@to)
-
-    # Call the appropriate mailer method based on action
-    email = case @action
-
-            when "welcome"
-              mailer.welcome(to: email_address, **named_tuple_from_params)
-
-            when "password_reset"
-              mailer.password_reset(to: email_address, **named_tuple_from_params)
-
-            else
-              raise "Unknown mailer action: #{@action}"
-            end
-
-    # Deliver the email
-    email.deliver
-
-    Log.info { "✓ Email sent: #{@action} to #{@to}" }
-  rescue ex : Exception
-    Log.error(exception: ex) { "✗ Failed to send email: #{@action} to #{@to}" }
-    raise ex # Re-raise for JoobQ's retry mechanism
-  end
-
-  # Convert params hash to named tuple for mailer methods
-  private def named_tuple_from_params : NamedTuple
-    # Convert Hash to NamedTuple for mailer methods
-    # This is a simple implementation - you may need to adjust based on your needs
-    {} of Symbol => String
-  end
+abstract class Delivery < Carbon::Email
 end
 
-# Add this job to the registry in src/initializers/joobq.cr:
-# JoobQ::QueueFactory.register_job_type(UserMailerJob)
+class Message < Delivery
+  getter to : Array(Carbon::Address)
+  getter from : Carbon::Address
+  getter subject : String
+  getter text_body : String
+  getter html_body : String
+
+  def initialize(@to, @from, @subject, @text_body, @html_body)
+  end
+end
 ```
-{% endcode %}
 
-*`named_tuple_from_params` always returns an empty hash, so a `_later` call sends the email with no params.*
-
-</details>
+*The generated factory's nested delivery and message classes. The concrete class satisfies Carbon's abstract contract.*
 
 ## Do's and don'ts
 
 {% hint style="success" %}
-Name the mailer for the domain (`User`, `Order`) and the methods for the emails (`welcome`, `receipt`). One mailer per domain keeps the job and the methods together.
+Keep message composition in the factory, delivery configuration in initializers, and retry scheduling in the job. The generated application loads synchronous mailers even when no delivery job is generated.
+{% endhint %}
+
+{% hint style="warning" %}
+Replace the starter `render_text` and `render_html` bodies before sending customer email. Configure a real production adapter and the worker queue; generating the files does not configure an email service. The preview method returns a message for development tooling and does not mount an HTTP route.
 {% endhint %}
 
 {% hint style="info" %}
-**Pro tip:** register the job the way its comment says, with `JoobQ::QueueFactory.register_job_type(UserMailerJob)` in `src/initializers/joobq.cr`. A job that is not registered is not run by the worker.
+Use `User`, not `UserMailer`, as the generator name. `--force` replaces existing files; customize generated mailers after generating them.
 {% endhint %}
-
-{% hint style="warning" %}
-Carbon is not in the generated `shard.yml`. The project template comments it out: uncomment `carbon` there and run `shards install` before the mailer compiles.
-{% endhint %}
-
-{% hint style="warning" %}
-The bodies are stubs: `render_text` and `render_html` return placeholder strings, and the `_later` methods drop their params. Finish both before you send anything real.
-{% endhint %}
-
-{% hint style="danger" %}
-`--force` overwrites a mailer you have started to write. Generate once, then edit the file.
-{% endhint %}
-
-<details>
-
-<summary>Related generators</summary>
-
-- [JoobQ](joobq.md) sets up the queue and worker that run the `_later` methods.
-- [Service](service.md) is where the code that decides when to send an email should live.
-- The command's full reference is [azu generate](../command-reference/azu-generate.md).
-
-</details>

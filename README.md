@@ -68,12 +68,16 @@ azu generate job SendEmail user_id:int64
 
 ## Delivery
 
+Generated web apps use **daisyUI + Tailwind CSS**, with ready-to-run local styles, light/dark themes, responsive navigation, CRUD forms, empty states and account avatars. Scaffolds and web index endpoints automatically add their sections to the shared navigation. Customize Jinja templates directly; use `npm ci` and `npm run watch:css` when changing styles. See [Generated UI and Navigation](docs/generators/ui.md).
+
 ```bash
 azu new my_app --docker               # Dockerfile + .dockerignore (production image, non-root, /health check)
 azu new my_app --no-ci                # skip the GitHub Actions workflow
 ```
 
 `scripts/e2e_generated_app.sh` (CI) and `scripts/e2e_docker.sh` (needs a docker daemon) build and boot generated projects.
+
+For real browser acceptance, install Python Playwright (`python3 -m pip install playwright`), Chromium, Redis and Node.js 20+, then run `sh scripts/e2e_browser_app.sh` after building `bin/azu`. Set `CHROMIUM_PATH` if Chromium is not on `PATH`. It generates a disposable SQLite web app, rebuilds CSS before generating its pages, and clicks through navigation, product CRUD, mobile forms, registration, login and logout; checks chat broadcasts with browser WebSockets; and verifies incremental migration rollback/reapply, idempotence and session/data persistence across a server rebuild/restart. The retained temporary directory contains the app, screenshots, logs and a report. The private Playwright trace contains synthetic session/CSRF cookies; do not publish it. This is a local acceptance runner, separate from hosted CI and deployment validation.
 
 ## Documentation
 
@@ -94,3 +98,22 @@ azu new my_app --no-ci                # skip the GitHub Actions workflow
 ## Contributors
 
 - [Elias J. Perez](https://github.com/eliasjpr) - creator and maintainer
+
+### Terminal diagnostics and generator validation
+
+`azu joobq` provides queue, workflow-step and dead-letter views with bounded master/detail panes and confirmed atomic replay. `azu dev` adds an Errors tab and expands SQL with live queries, pool metrics and latency buckets. See [JoobQ dashboard](docs/command-reference/azu-joobq.md) and [dev telemetry requirements](docs/command-reference/azu-dev.md); expanded app telemetry requires the companion Azu producer changes, and PostgreSQL History Store support awaits a supported API.
+
+Run `scripts/check_generators.sh web` and `scripts/check_generators.sh api` to compile every generator family together and exercise lazy-compiled message, job, validator and component paths. Release CI requires these checks, the generated-app end-to-end matrix, and `scripts/check_joobq_adapter.sh` against published JoobQ 0.4.2 and the pinned revision with atomic DLQ support.
+
+### Spark generators
+
+Generate a typed live component or a complete live CRUD screen, styled with daisyUI:
+
+```sh
+azu generate spark Counter count:int32 --page
+azu generate scaffold Product name:string price_cents:int32 active:bool --spark
+azu db:setup
+azu serve
+```
+
+The demo appears at `/counters/live`; `/products` provides paging, inline validation, editing and confirmed deletion, with updates between tabs and shared services for HTTP form fallbacks. Navigation and Spark wiring are registered automatically. See [Spark generators](docs/generators/spark.md) for supported scalar fields, secret management, multi-process PubSub and authorization requirements. `scripts/e2e_spark_app.sh` generates and tests a disposable app in real Chromium.

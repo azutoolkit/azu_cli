@@ -1,0 +1,33 @@
+module <%= app_module %>
+  # The persistence/policy boundary shared by every live action. Like the standard
+  # scaffold this is public CRUD. Add authorization and tenant scoping here and in
+  # the HTTP services before exposing private data; scope the PubSub topic too.
+  class <%= namespace %>::LiveService
+    PAGE_SIZE = 25
+
+    class MissingRecord < Exception
+    end
+
+    def list(page : Int32) : Array(<%= model_name %>)
+      <%= model_name %>.order(id: :desc).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE + 1).all
+    end
+
+    def find(id : Int64) : <%= model_name %>
+      <%= model_name %>.find?(id) || raise MissingRecord.new("This record no longer exists. Refresh the list.")
+    end
+
+    def save(id : Int64?, request : <%= namespace %>::CreateRequest) : <%= model_name %>
+      raise ArgumentError.new("Invalid request") unless request.valid?
+      if id
+        update = <%= namespace %>::UpdateRequest.from_json(request.to_json)
+        <%= namespace %>::UpdateService.new.call(find(id), update)
+      else
+        <%= namespace %>::CreateService.new.call(request)
+      end
+    end
+
+    def destroy(id : Int64) : Bool
+      <%= namespace %>::DestroyService.new.call(find(id))
+    end
+  end
+end

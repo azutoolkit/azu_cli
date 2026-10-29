@@ -7,6 +7,7 @@
 * [Installation](getting-started/installation.md)
 * [Quickstart](getting-started/quickstart.md)
 * [Project Structure](getting-started/project-structure.md)
+* [Generated UI and Navigation](generators/ui.md)
 * [Terminal UI](getting-started/terminal-ui.md)
 
 ## Command Reference
@@ -16,6 +17,7 @@
 * [azu init](command-reference/azu-init.md)
 * [azu generate](command-reference/azu-generate.md)
 * [azu dev](command-reference/azu-dev.md)
+* [azu joobq](command-reference/azu-joobq.md)
 * [azu serve](command-reference/azu-serve.md)
 * [azu routes](command-reference/azu-routes.md)
 * [azu config](command-reference/azu-config.md)
@@ -40,6 +42,7 @@
 * [Service](generators/service.md)
 * [Middleware](generators/middleware.md)
 * [Component](generators/component.md)
+* [Spark components and live scaffolds](generators/spark.md)
 * [Custom Validator](generators/custom-validator.md)
 * [Migration](generators/migration.md)
 * [Data Migration](generators/data-migration.md)

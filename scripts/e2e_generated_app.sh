@@ -195,7 +195,8 @@ check_web_scaffold() {
   expect_status /posts/1 200
   expect_body 'Hello &lt;e2e&gt;'
   expect_body 'First post'
-  expect_body '<dd>true</dd>'
+  # Styling attributes must not change the value assertion (daisyUI adds classes to dd).
+  expect_body '<dd[^>]*>true</dd>'
   expect_status /posts 200
   expect_body 'href="/posts/1"'
   for page in /posts /posts/new /posts/1 /posts/1/edit; do expect_content_type "$page" text/html; done
@@ -210,13 +211,13 @@ check_web_scaffold() {
   expect_redirect /posts/1
   expect_status /posts/1 200
   expect_body 'Updated title'
-  expect_body '<dd>true</dd>' # a PATCH without published keeps it
+  expect_body '<dd[^>]*>true</dd>' # a PATCH without published keeps it
 
   rm -f "$jar"
   fetch /posts/1/edit "$jar" >/dev/null
   submit "$jar" /posts/1 303 --data-urlencode _method=patch --data-urlencode published=false
   expect_status /posts/1 200
-  expect_body '<dd>false</dd>'
+  expect_body '<dd[^>]*>false</dd>'
   expect_body 'Updated title'
 
   rm -f "$jar"

@@ -80,6 +80,39 @@ describe AzuCLI::GeneratePlan do
     end
   end
 
+  it "leaves an existing symlink alone when the shadow generated a secret file" do
+    with_project do |project, shadow|
+      shared = File.join(File.dirname(project), "shared.env")
+      File.write(shared, "SPARK_SECRET=managed-externally\n")
+      File.symlink(shared, File.join(project, ".env"))
+      AzuCLI::GeneratePlan.copy_project(project, shadow)
+      AzuCLI::Generate::SparkWiring.install(shadow)
+      plan = AzuCLI::GeneratePlan.new(shadow, project, AzuCLI::GeneratePlan.compare(shadow, project), "")
+      plan.entries.map(&.path).should_not contain(".env")
+      plan.apply("azu generate spark Counter")
+      File.symlink?(File.join(project, ".env")).should be_true
+      File.read(shared).should eq("SPARK_SECRET=managed-externally\n")
+    end
+  end
+
+  it "preserves private generated secret file permissions when applying a preview" do
+    previous_umask = LibC.umask(0o022)
+    with_project do |project, shadow|
+      File.write(File.join(project, ".env"), "APP_ENV=test\n", perm: 0o600)
+      AzuCLI::GeneratePlan.copy_project(project, shadow)
+      AzuCLI::Generate::SparkWiring.install(shadow)
+      plan = AzuCLI::GeneratePlan.new(shadow, project, AzuCLI::GeneratePlan.compare(shadow, project), "")
+      plan.apply("azu generate spark Counter")
+      File.read(File.join(project, ".env")).should contain("SPARK_SECRET=")
+      File.info(File.join(project, ".env")).permissions.value.should eq(0o600)
+      AzuCLI::Undo.apply(AzuCLI::Undo.records(project).first, project)
+      File.read(File.join(project, ".env")).should eq("APP_ENV=test\n")
+      File.info(File.join(project, ".env")).permissions.value.should eq(0o600)
+    end
+  ensure
+    LibC.umask(previous_umask) if previous_umask
+  end
+
   it "leaves a file edited after it was generated" do
     with_project do |project, shadow|
       plan_for(project, shadow).apply("azu generate model post")

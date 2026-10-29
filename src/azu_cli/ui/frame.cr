@@ -6,11 +6,12 @@ module AzuCLI
       @ids = {} of Style => UInt16
       @sgr = [] of String
 
-      def initialize(@theme : Theme)
+      def initialize(@theme : Theme, @background : Token? = nil)
         id(Style.new) # 0: the reset style
       end
 
       def id(style : Style) : UInt16
+        style = style.copy_with(bg: style.bg || @background)
         @ids[style] ||= begin
           @sgr << @theme.sgr(style)
           (@sgr.size - 1).to_u16

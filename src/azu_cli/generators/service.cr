@@ -9,6 +9,12 @@ module AzuCLI
       OUTPUT_DIR = "./src/services"
       ACTIONS    = %w(create update destroy)
 
+      getter? broadcast : Bool
+
+      def initialize(name : String, action : String = "create", attributes = {} of String => String, @broadcast : Bool = false)
+        super(name, action, attributes)
+      end
+
       def service_class_name : String
         "#{action_class}Service"
       end

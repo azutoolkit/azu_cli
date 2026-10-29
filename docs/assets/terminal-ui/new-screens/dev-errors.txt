@@ -1,0 +1,40 @@
+ ▲ AZU  dev · storefront    ● running   pid 48231   :4000   development                                                     18:30:29
+ [1] Overview   [2] Commands   [3] Console   [4] Requests   [5] SQL   [6] Jobs   [7] Log   [8] Config   [9] Errors
+╭─ Errors ────────────────────────────────────── 36 ─╮ ╭─ Details · Tab switches pane ─────────────────────────────────────────────────╮
+│ 14:32:57 POST /orders PaymentGatewayError        █ │ │ PaymentGatewayError: Payment provider did not respond within 2 seconds      █ │
+│ 14:32:56 POST /orders ValidationError            █ │ │ Request: POST /orders                                                       █ │
+│ 14:32:55 POST /orders ValidationError            █ │ │                                                                             █ │
+│ 14:32:54 POST /orders ValidationError            █ │ │ RFC 7807 problem details:                                                   █ │
+│ 14:32:53 POST /orders ValidationError            █ │ │ {                                                                           █ │
+│ 14:32:52 POST /orders ValidationError            █ │ │   "type": "about:blank",                                                    █ │
+│ 14:32:51 POST /orders ValidationError            █ │ │   "title": "Bad Gateway",                                                   █ │
+│ 14:32:50 POST /orders ValidationError            █ │ │   "status": 502,                                                            █ │
+│ 14:32:49 POST /orders ValidationError            █ │ │   "detail": "Payment provider did not respond within 2 seconds",            █ │
+│ 14:32:48 POST /orders ValidationError            █ │ │   "instance": "/orders",                                                    █ │
+│ 14:32:47 POST /orders ValidationError            █ │ │   "error_id": "err-1"                                                       █ │
+│ 14:32:46 POST /orders ValidationError            █ │ │ }                                                                           █ │
+│ 14:32:45 POST /orders ValidationError            █ │ │                                                                             █ │
+│ 14:32:44 POST /orders ValidationError            █ │ │ Request parameters (redacted by app):                                       █ │
+│ 14:32:43 POST /orders ValidationError            █ │ │ {                                                                           █ │
+│ 14:32:42 POST /orders ValidationError            █ │ │   "order_id": "ord_1841",                                                   █ │
+│ 14:32:41 POST /orders ValidationError            █ │ │   "amount": "129.00",                                                       █ │
+│ 14:32:40 POST /orders ValidationError            █ │ │   "currency": "USD",                                                        █ │
+│ 14:32:39 POST /orders ValidationError            █ │ │   "authorization": "[FILTERED]"                                             █ │
+│ 14:32:38 POST /orders ValidationError            █ │ │ }                                                                           █ │
+│ 14:32:37 POST /orders ValidationError            █ │ │                                                                             █ │
+│ 14:32:36 POST /orders ValidationError            █ │ │ Stack trace:                                                                ░ │
+│ 14:32:35 POST /orders ValidationError            █ │ │ src/services/payments/charge_service.cr:82:9 in 'call'                      ░ │
+│ 14:32:34 POST /orders ValidationError            █ │ │ src/services/orders/create_service.cr:46:11 in 'call'                       ░ │
+│ 14:32:33 POST /orders ValidationError            █ │ │ src/endpoints/orders/create_endpoint.cr:19:7 in 'call'                      ░ │
+│ 14:32:32 POST /orders ValidationError            █ │ │ lib/azu/src/azu/handler/endpoint.cr:120:5 in 'call'                         ░ │
+│ 14:32:31 POST /orders ValidationError            █ │ │ lib/azu/src/azu/handler/endpoint.cr:121:5 in 'call'                         ░ │
+│ 14:32:30 POST /orders ValidationError            █ │ │ lib/azu/src/azu/handler/endpoint.cr:122:5 in 'call'                         ░ │
+│ 14:32:29 POST /orders ValidationError            █ │ │ lib/azu/src/azu/handler/endpoint.cr:123:5 in 'call'                         ░ │
+│ 14:32:28 POST /orders ValidationError            █ │ │ lib/azu/src/azu/handler/endpoint.cr:124:5 in 'call'                         ░ │
+│ 14:32:27 POST /orders ValidationError            █ │ │ lib/azu/src/azu/handler/endpoint.cr:125:5 in 'call'                         ░ │
+│ 14:32:26 POST /orders ValidationError            █ │ │ lib/azu/src/azu/handler/endpoint.cr:126:5 in 'call'                         ░ │
+│ 14:32:25 POST /orders ValidationError            ░ │ │ lib/azu/src/azu/handler/endpoint.cr:127:5 in 'call'                         ░ │
+│ 14:32:24 POST /orders ValidationError            ░ │ │ lib/azu/src/azu/handler/endpoint.cr:128:5 in 'call'                         ░ │
+╰────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────────────────────────────╯
+ [Tab] Pane   [↑/↓] Select/scroll   [PgUp/PgDn] Page   [1-9] Panels   [q] Quit
+ cli — · ~/projects/storefront                                                                                  Illustrative telemetry

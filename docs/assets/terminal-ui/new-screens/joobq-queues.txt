@@ -1,0 +1,39 @@
+ azu joobq · Queues / Workflows / DLQ
+ [1] Queues & Workers  [2] Workflows  [3] DLQ & Retries
+╭─ Queues · 5 ─────────────────────────────╮ ╭─ Workers · 8 ────────────────────────────╮ ╭─ Throughput ───────────────────────────────╮
+│ 207 pending                              │ │ 48 processing                            │ │ 405.9 jobs/s                               │
+│                                          │ │                                          │ │                                            │
+╰──────────────────────────────────────────╯ ╰──────────────────────────────────────────╯ ╰────────────────────────────────────────────╯
+╭─ Queues ─────────────────────────────────────── 5 ─╮ ╭─ Details · Tab switches pane ─────────────────────────────────────────────────╮
+│ critical pending 12 busy 8                         │ │ Queue: critical                                                               │
+│ payments pending 38 busy 12                        │ │ Pending: 12                                                                   │
+│ mailers pending 124 busy 16                        │ │ Processing: 8                                                                 │
+│ reports pending 7 busy 4                           │ │ Processed: 18452                                                              │
+│ webhooks pending 26 busy 8                         │ │ Processing rate: 42.8 jobs/s                                                  │
+│                                                    │ │                                                                               │
+│                                                    │ │ Workers:                                                                      │
+│                                                    │ │ worker-01 running active 3/16                                                 │
+│                                                    │ │ worker-02 running active 4/16                                                 │
+│                                                    │ │ worker-03 running active 5/16                                                 │
+│                                                    │ │ worker-04 running active 6/16                                                 │
+│                                                    │ │ worker-05 running active 7/16                                                 │
+│                                                    │ │ worker-06 running active 8/16                                                 │
+│                                                    │ │ worker-07 running active 9/16                                                 │
+│                                                    │ │ worker-08 running active 10/16                                                │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+│                                                    │ │                                                                               │
+╰────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────────────────────────────╯
+ Illustrative data · Redis workflow provider · PostgreSQL history not configured
+ 1–3 tabs · Tab pane · ↑↓ select · PgUp/PgDn scroll · r replay · q quit

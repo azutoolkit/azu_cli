@@ -78,6 +78,10 @@ module AzuCLI
         relative = Path[path].relative_to(shadow).to_s
         next if relative.split('/').first.in?(SKIP)
         theirs = File.join(project, relative)
+        if File.symlink?(theirs)
+          Logger.warn("#{relative} is a symlink; generated changes were skipped. Configure it manually.")
+          next
+        end
         written = File.read(path)
         if !File.exists?(theirs)
           entries << Entry.new(relative, Kind::New, written.lines.size, written.lines.first(400).map_with_index { |line, index| DiffLine.new('+', index + 1, line) })
@@ -130,8 +134,9 @@ module AzuCLI
           Dir.mkdir_p(File.dirname(backup))
           File.copy(target, backup)
         end
-        content = File.read(File.join(shadow, entry.path))
-        write_atomically(target, content)
+        source = File.join(shadow, entry.path)
+        content = File.read(source)
+        write_atomically(target, content, File.info(source).permissions)
         manifest.files << Undo::FileRecord.new(entry.path, entry.kind.new?, Undo.digest(content), backup ? Path[backup].relative_to(record).to_s : nil)
       end
       File.write(File.join(record, "manifest.json"), manifest.to_pretty_json)
@@ -144,11 +149,13 @@ module AzuCLI
       FileUtils.rm_rf(shadow)
     end
 
-    private def write_atomically(path : String, content : String) : Nil
+    private def write_atomically(path : String, content : String, permissions : File::Permissions) : Nil
       Dir.mkdir_p(File.dirname(path))
       temporary = "#{path}.azu-#{Random::Secure.hex(4)}"
-      File.write(temporary, content)
+      File.write(temporary, content, perm: permissions.value)
       File.rename(temporary, path)
+    ensure
+      File.delete(temporary) if temporary && File.exists?(temporary)
     end
 
     # A line diff (longest common subsequence) shown as hunks with two lines of context; large files fall back to

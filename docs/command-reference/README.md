@@ -48,6 +48,7 @@ azu serve
 | `azu test` (`t`) | Run the application's tests | [test](azu-test.md) |
 | `azu db:*` | Create, migrate, roll back, seed and inspect the database | [database](azu-db.md) |
 | `azu jobs:worker`, `jobs:status`, `jobs:clear`, `jobs:retry`, `jobs:ui` | Run and manage JoobQ background jobs | [jobs](azu-jobs.md) |
+| `azu joobq` | Terminal queue, workflow and dead-letter dashboard | [joobq](azu-joobq.md) |
 | `azu session:setup`, `azu session:clear` | Configure sessions and clear them | [session](azu-session.md) |
 | `azu openapi:generate`, `azu openapi:export` | Generate code from, or export, an OpenAPI document | [openapi](azu-openapi.md) |
 | `azu completion` | Print a shell completion script for bash, zsh or fish | [completion](azu-completion.md) |

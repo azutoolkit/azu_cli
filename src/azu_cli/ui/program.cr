@@ -49,7 +49,7 @@ module AzuCLI
       @stopped = false
 
       def initialize(@screen : Screen, @terminal : Terminal, @renderer : Renderer)
-        @styles = StyleTable.new(@terminal.theme)
+        @styles = StyleTable.new(@terminal.theme, @renderer.full_screen? ? Token::Backplate : nil)
       end
 
       # Sources call this from their own fibers. Dropped when the program has ended.

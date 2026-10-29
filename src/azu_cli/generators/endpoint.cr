@@ -1,4 +1,5 @@
 require "./resource"
+require "./navigation"
 
 module AzuCLI
   module Generate
@@ -17,6 +18,13 @@ module AzuCLI
 
       def api? : Bool
         @endpoint_type == "api"
+      end
+
+      def render(out_dir : String, force : Bool = false, interactive : Bool = false, list : Bool = false, color : Bool = false)
+        super
+        if !api? && @action == "index"
+          Navigation.register(File.expand_path("../..", out_dir), @resource_plural.split('_').map(&.capitalize).join(' '), route)
+        end
       end
 
       def verb : String

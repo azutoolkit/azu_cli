@@ -223,7 +223,7 @@ describe "AzuCLI::DevServer::Hud control plane" do
   it "scrolls the Requests tab through the recent requests" do
     screen = control_hud([] of String)
     recent = (1..40).map { |n| {"at" => "12:00:#{n}", "method" => "GET", "path" => "/posts/#{n}", "status" => 200, "ms" => 1.5, "endpoint" => "Show"} }
-    screen.update(Ev::Telemetry.new(JSON.parse({"requests" => {"total" => 40, "rps" => 1.0, "recent" => recent}}.to_json)))
+    screen.update(Ev::Telemetry.new(JSON.parse({"v" => 1, "requests" => {"total" => 40, "rps" => 1.0, "recent" => recent}}.to_json)))
     screen.update(key('4'))
     text = render(screen, 120, 16)
     text.should contain "/posts/1 "
@@ -278,8 +278,10 @@ describe "AzuCLI::DevServer::Hud control plane" do
 
   it "fits every tab in the tab bar, narrowing the gaps" do
     screen = control_hud([] of String)
-    render(screen, 100, 20).should contain "[7] Log  [8] Config"
-    render(screen, 120, 20).should contain "[7] Log   [8] Config"
+    render(screen, 100, 20).should contain "[7] Log [8] Config [9] Errors"
+    render(screen, 120, 20).should contain "[9] Errors"
+    screen.update(key('9'))
+    render(screen, 60, 20).lines[1].should contain "9:Errors"
   end
 
   it "says why azu config failed on the Config tab" do

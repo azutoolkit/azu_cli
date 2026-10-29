@@ -96,6 +96,8 @@ The generator type is the first argument. Attributes follow the name as `name:ty
 | `template` | `<name> [attr:type]` | `public/templates/<app>/<plural>/<action>_page.jinja` |
 | `service` | `<name> [actions]` | `src/services/<plural>/<action>_service.cr` for `create update destroy` |
 | `response` | `<name> [attr:type]` | `src/responses/` (API responses) |
+| `spark`, `spark:component` | `<name> [attr:type] [--page]` | typed state, events, spec and optional demo page |
+| `spark:scaffold` | `<name> [attr:type]` | live database CRUD; equivalent to `scaffold --spark` |
 | `scaffold` | `<name> [attr:type]` | all of the above and the migration, for web or API |
 | `migration` | `<name> [attr:type]` | `src/db/migrations/<version>_<name>.cr` |
 | `data:migration` | `<name>` | `src/db/data_migrations/` |
@@ -229,3 +231,5 @@ The generator detects an API project and switches to API components. For a scaff
 - **A file you want to replace**: `--force` overwrites it. `--dry-run` shows first whether the file would change (`~`).
 
 </details>
+
+See [Spark generators](../generators/spark.md) for live components and `scaffold --spark`, including the narrower required-scalar field support and deployment wiring.

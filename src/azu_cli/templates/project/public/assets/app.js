@@ -35,6 +35,50 @@
     paint();
   }
 
+  /* ---- One shared navigation partial; match whole path segments for detail pages. ---- */
+  var path = location.pathname.replace(/\/$/, "") || "/";
+  $all("[data-nav-link]").forEach(function (link) {
+    var target = link.getAttribute("href");
+    var active = path === target || (target !== "/" && path.indexOf(target + "/") === 0);
+    link.classList.toggle("menu-active", active);
+    if (active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+  var mobile = $("[data-mobile-nav]");
+  if (mobile) {
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && mobile.open) {
+        mobile.open = false;
+        $("summary", mobile).focus();
+      }
+    });
+    document.addEventListener("click", function (event) {
+      if (!mobile.contains(event.target)) mobile.open = false;
+    });
+  }
+
+  /* ---- Native dialog gives destructive actions keyboard/focus handling. ---- */
+  var dialog = $("#delete-confirmation");
+  var pendingDelete;
+  if (dialog && typeof dialog.showModal === "function") {
+    $all("[data-confirm-delete]").forEach(function (form) {
+      form.addEventListener("submit", function (event) {
+        if (form.dataset.confirmed === "true") return;
+        event.preventDefault();
+        pendingDelete = form;
+        dialog.showModal();
+      });
+    });
+    $("[data-confirm-submit]", dialog).addEventListener("click", function () {
+      if (!pendingDelete) return;
+      var form = pendingDelete;
+      dialog.close();
+      form.dataset.confirmed = "true";
+      form.requestSubmit();
+    });
+    dialog.addEventListener("close", function () { pendingDelete = null; });
+  }
+
   /* ---- Copy buttons: <button data-copy="text" hidden> next to a command ---- */
   var status = $("[data-copy-status]");
   function announce(message) {

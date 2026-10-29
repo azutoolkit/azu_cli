@@ -6,6 +6,8 @@ description: Generate an Azu::Component class with typed properties and a starte
 
 `azu g component` writes one `Azu::Component` class under `src/components/`. Each `name:type` attribute becomes a typed property, with a default for the types that have one, and the class comes with a placeholder `content` method to replace. The project loads `src/components/**` at boot, so a new component is available to the app without a require.
 
+For stateful events, live rendering and database-backed CRUD, use the [Spark generators](spark.md). This generator remains the static component option.
+
 ## Overview & visual demo
 
 <figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing: each file with its line count and a reminder that azu undo reverts them"><figcaption><p>After Enter, <code>azu g</code> lists each file it wrote with its line count. <code>azu undo</code> reverts them.</p></figcaption></figure>

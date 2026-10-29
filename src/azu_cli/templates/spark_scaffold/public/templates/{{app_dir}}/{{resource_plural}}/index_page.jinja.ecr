@@ -1,0 +1,9 @@
+{% extends "app_layout.jinja" %}
+{% block title %}<%= namespace %>{% endblock %}
+{% block head %}{{ spark_script | safe }}{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-6xl space-y-6">
+  <noscript><p class="alert alert-info">Live editing needs JavaScript. <a class="link" href="/<%= resource_plural %>/new">Use the standard form</a> or open a record's details.</p></noscript>
+  {{ component | safe }}
+</div>
+{% endblock %}

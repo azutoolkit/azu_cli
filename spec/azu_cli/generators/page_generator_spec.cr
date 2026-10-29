@@ -92,8 +92,8 @@ describe "page generators" do
       form.should contain(%(<form action="{{ form_action }}" method="post"))
       form.should contain("{{ csrf_tag | safe }}")
       form.should contain(%(name="_method" value="{{ form_method }}"))
-      form.should contain(%(<textarea name="body"))
-      form.should contain(%(<input type="hidden" name="published" value="false">\n    <input type="checkbox" name="published" value="true"{% if post.published %} checked{% endif %}>))
+      form.should contain(%(class="textarea w-full" name="body"))
+      form.should contain(%(<input type="hidden" name="published" value="false">\n    <input class="checkbox checkbox-primary" type="checkbox" name="published" value="true"{% if post.published %} checked{% endif %}>))
     end
 
     it "edits with PATCH and deletes from the show page" do

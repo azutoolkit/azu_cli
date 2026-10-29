@@ -45,6 +45,7 @@ module AzuCLI
         puts "  db:validate            Validate the database configuration and connection"
         puts
         puts "Development Commands:"
+        puts "  joobq                  Manage queues, workflows and dead letters in a terminal dashboard"
         puts "  dev                    Run the app, rebuilding and restarting it when the code changes"
         puts "  serve                  Compile and run the app with a --production build (alias: s)"
         puts "  routes                 List the routes: method, path, endpoint, request/response, helpers"
@@ -75,7 +76,7 @@ module AzuCLI
         puts
         puts "Generator Types:"
         puts "  model, endpoint, service, request, response, page, migration, data:migration, seed"
-        puts "  scaffold, component, middleware, validator, job, mailer, channel, auth, template, api_resource"
+        puts "  scaffold, component, spark, spark:scaffold, middleware, validator, job, mailer, channel, auth, template, api_resource"
         puts
         puts "Examples:"
         puts "  azu new my-app"
@@ -167,6 +168,8 @@ module AzuCLI
         puts "  seed <name>                    Seed file"
         puts "  scaffold <name> [attr:type]    CRUD: model, endpoints, requests, pages, templates, migration"
         puts "  component <name> [attr:type]   Component"
+        puts "  spark <name> [attr:type]       Live component (--page adds a demo route)"
+        puts "  scaffold <name> --spark        Live database CRUD with shared updates"
         puts "  middleware <name>              Middleware (--type authentication, ...)"
         puts "  validator <name>               Custom validator (--record RECORD)"
         puts "  mailer <name>                  Mailer"

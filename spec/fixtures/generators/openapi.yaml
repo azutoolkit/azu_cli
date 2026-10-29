@@ -1,0 +1,53 @@
+openapi: 3.1.0
+info:
+  title: Generator compilation
+  version: 1.0.0
+paths:
+  /invoices:
+    get:
+      operationId: listInvoices
+      responses:
+        '200':
+          description: Invoice collection
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+    post:
+      operationId: createInvoice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Invoice'
+      responses:
+        '201':
+          description: Created invoice
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      responses:
+        '200':
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+components:
+  schemas:
+    Invoice:
+      type: object
+      required: [name]
+      properties:
+        displayName:
+          type: string
+        description:
+          type: string
+        name:
+          type: string

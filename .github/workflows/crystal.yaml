@@ -74,10 +74,93 @@ jobs:
         env:
           E2E_REDIS_URL: redis://redis:6379
         run: E2E_DB=${{ matrix.db }} scripts/e2e_generated_app.sh ${{ matrix.type }}
+  generators:
+    name: all generators (${{ matrix.type }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        type: [web, api]
+    container:
+      image: crystallang/crystal:1.22.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev
+      - name: Build CLI and compile every generator
+        run: |
+          shards install
+          mkdir -p bin
+          crystal build src/azu_cli.cr -o bin/azu --no-debug
+          scripts/check_generators.sh ${{ matrix.type }}
+  spark-browser:
+    name: generated Spark app (Chromium, SQLite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: crystallang/crystal:1.22.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser validation dependencies
+        run: |
+          apt-get update
+          apt-get install -y python3 python3-venv redis-server libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev
+          python3 -m venv /tmp/spark-browser-tools
+          /tmp/spark-browser-tools/bin/pip install playwright==1.62.0
+          /tmp/spark-browser-tools/bin/python -m playwright install --with-deps chromium
+      - name: Generate, migrate, compile and click through live CRUD
+        run: |
+          export PATH="/tmp/spark-browser-tools/bin:$PATH"
+          shards install
+          mkdir -p bin
+          crystal build src/azu_cli.cr -o bin/azu --no-debug
+          scripts/e2e_spark_app.sh
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spark-browser-evidence
+          path: |
+            /tmp/azu-spark-e2e-*/evidence/*.png
+            /tmp/azu-spark-e2e-*/evidence/*.log
+            /tmp/azu-spark-e2e-*/evidence/report.json
+          retention-days: 7
+  joobq-adapter:
+    name: live JoobQ adapter (${{ matrix.ref }})
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: ["0.4.2", "b38961d62ef1d70237a6f701b9af8ff34c9dbe8b"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: crystallang/crystal:1.22.1
+    services:
+      redis:
+        image: redis:7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install validation dependencies
+        run: |
+          apt-get update
+          apt-get install -y python3 libssl-dev libevent-dev libyaml-dev
+      - name: Check redaction and atomic replay against Redis
+        env:
+          JOOBQ_REF: ${{ matrix.ref }}
+          REDIS_HOST: redis
+          REDIS_PORT: "6379"
+        run: scripts/check_joobq_adapter.sh
   release:
     runs-on: ubuntu-latest
     needs:
       - build
+      - generated-app
+      - generators
+      - joobq-adapter
+      - spark-browser
     # Releases and version bumps are for master only, never for pull requests.
     if: ${{ success() && github.event_name == 'push' }}
     steps:
