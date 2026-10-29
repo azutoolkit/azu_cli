@@ -1,25 +1,25 @@
-<form action="{{ form_action }}" method="post" class="stack">
+<form action="{{ form_action }}" method="post" class="space-y-6">
   {{ csrf_tag | safe }}
   {% if form_method %}<input type="hidden" name="_method" value="{{ form_method }}">{% endif %}
 <% fields.each do |field| -%>
 <% if field.input == "checkbox" -%>
-  <label class="field field--check">
+  <label class="flex cursor-pointer items-center gap-3 rounded-box border border-base-300 p-4">
     <input type="hidden" name="<%= field.name %>" value="false">
-    <input type="checkbox" name="<%= field.name %>" value="true"{% if <%= resource_singular %>.<%= field.name %> %} checked{% endif %}>
-    <%= field.label %>
+    <input class="checkbox checkbox-primary" type="checkbox" name="<%= field.name %>" value="true"{% if <%= resource_singular %>.<%= field.name %> %} checked{% endif %}>
+    <span class="text-sm font-medium"><%= field.label %></span>
   </label>
 <% elsif field.input == "textarea" -%>
-  <label class="field"><%= field.label %>
-    <textarea name="<%= field.name %>" rows="6"<%= " required" unless field.nilable? %>>{{ <%= resource_singular %>.<%= field.name %> | e }}</textarea>
+  <label class="fieldset block space-y-2"><span class="fieldset-legend p-0"><%= field.label %></span>
+    <textarea class="textarea w-full" name="<%= field.name %>" rows="6"<%= " required" unless field.nilable? %>>{{ <%= resource_singular %>.<%= field.name %> | e }}</textarea>
   </label>
 <% else -%>
-  <label class="field"><%= field.label %>
-    <input type="<%= field.input %>"<%= %( step="any") if field.input == "number" && !field.crystal_type.starts_with?("Int") %> name="<%= field.name %>" value="{{ <%= resource_singular %>.<%= field.name %> | e }}"<%= " required" unless field.nilable? %>>
+  <label class="fieldset block space-y-2"><span class="fieldset-legend p-0"><%= field.label %></span>
+    <input class="input w-full" type="<%= field.input %>"<%= %( step="any") if field.input == "number" && !field.crystal_type.starts_with?("Int") %> name="<%= field.name %>" value="{{ <%= resource_singular %>.<%= field.name %> | e }}"<%= " required" unless field.nilable? %>>
   </label>
 <% end -%>
 <% end -%>
-  <div class="row">
-    <button class="btn" type="submit">Save</button>
-    <a class="btn btn--secondary" href="/<%= resource_plural %>">Cancel</a>
+  <div class="flex flex-wrap gap-3 border-t border-base-300 pt-6">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-ghost" href="/<%= resource_plural %>">Cancel</a>
   </div>
 </form>

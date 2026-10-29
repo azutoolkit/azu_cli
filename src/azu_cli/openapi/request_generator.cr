@@ -48,15 +48,7 @@ module AzuCLI
 
           # Build property definitions
           property_defs = properties.map do |prop_name, prop_schema|
-            crystal_type = SchemaMapper.to_crystal_type(prop_schema)
-            is_required = required_fields.includes?(prop_name)
-            snake_name = prop_name.underscore
-
-            unless is_required
-              crystal_type = "#{crystal_type}?" unless crystal_type.ends_with?("?")
-            end
-
-            "  property #{snake_name} : #{crystal_type}"
+            SchemaMapper.property_definition(prop_name, prop_schema, required_fields.includes?(prop_name))
           end.join("\n")
 
           <<-REQUEST

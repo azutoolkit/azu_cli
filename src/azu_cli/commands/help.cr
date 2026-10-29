@@ -45,6 +45,7 @@ module AzuCLI
         puts "  db:validate            Validate the database configuration and connection"
         puts
         puts "Development Commands:"
+        puts "  joobq                  Manage queues, workflows and dead letters in a terminal dashboard"
         puts "  dev                    Run the app, rebuilding and restarting it when the code changes"
         puts "  serve                  Compile and run the app with a --production build (alias: s)"
         puts "  routes                 List the routes: method, path, endpoint, request/response, helpers"

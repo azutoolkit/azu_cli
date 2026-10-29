@@ -13,8 +13,7 @@ private def render_landing_project(type : String, project : String = "blog", mod
   end
 end
 
-# The landing page served at "/" by a freshly generated project. It shares its design tokens,
-# theme toggle and layout with the Azu example app (azutoolkit/azu playground).
+# The landing page, shared daisyUI shell and editable build sources of a fresh app.
 describe "Generated project landing page" do
   describe "web project" do
     it "generates the layout, landing template and same-origin assets" do
@@ -26,7 +25,12 @@ describe "Generated project landing page" do
           public/assets/theme.js
           public/assets/app.js
           public/assets/favicon.svg
+          public/templates/helpers/_sections.jinja
+          frontend/app.css
+          package.json
+          package-lock.json
           src/pages/welcome/index_page.cr
+          src/mailers/README.txt
         ].each { |path| File.exists?(File.join(dir, path)).should be_true }
       end
     end
@@ -71,12 +75,17 @@ describe "Generated project landing page" do
       end
     end
 
-    it "keeps the design tokens of the Azu example app" do
+    it "ships real daisyUI components and editable theme/build sources" do
       render_landing_project("web") do |dir|
+        source = File.read(File.join(dir, "frontend/app.css"))
+        source.should contain(%(@plugin "daisyui"))
+        source.should contain("--color-primary: #1d4ed8")
+        source.should contain("prefers-reduced-motion")
         css = File.read(File.join(dir, "public/assets/app.css"))
-        {"--accent: #1d4ed8", "--accent: #7ba4ff", "--bg: #f3f5f9", "--bg: #0a0d13",
-         ":root[data-theme=\"dark\"]", "prefers-color-scheme: dark", "prefers-reduced-motion: reduce",
-         ":focus-visible", ".skip-link"}.each { |token| css.should contain(token) }
+        %w(.avatar .btn .card .input .modal .menu-active).each { |component| css.should contain(component) }
+        package = JSON.parse(File.read(File.join(dir, "package.json")))
+        package["devDependencies"]["daisyui"].as_s.should eq("5.7.50")
+        package["scripts"]["watch:css"].as_s.should contain("--watch")
 
         theme = File.read(File.join(dir, "public/assets/theme.js"))
         theme.should contain("azu-theme")
@@ -110,12 +119,15 @@ describe "Generated project landing page" do
         layout = File.read(File.join(dir, "public/templates/app_layout.jinja"))
         layout.should contain(%(name="viewport"))
         layout.should contain(%(lang="en"))
-        layout.should contain("skip-link")
-        layout.should contain(%(<main class="shell" id="main"))
+        layout.should contain(%(href="#main">Skip to content))
+        layout.should contain(%(id="main" tabindex="-1"))
         layout.should contain("data-theme-toggle")
 
-        css = File.read(File.join(dir, "public/assets/app.css"))
-        css.should contain("@media (max-width: 40rem)")
+        layout.should contain(%(aria-label="Mobile"))
+        layout.should contain(%(aria-label="Main"))
+        layout.should contain("helpers/_sections.jinja")
+        File.read(File.join(dir, "public/templates/layout.jinja")).should contain("app_layout.jinja")
+        File.exists?(File.join(dir, "public/assets/css/bootstrap.min.css")).should be_false
       end
     end
 

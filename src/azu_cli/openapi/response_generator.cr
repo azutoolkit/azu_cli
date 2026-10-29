@@ -43,20 +43,29 @@ module AzuCLI
         response_class = "#{resource_class}::#{resource_class}#{@action.camelcase}Page"
 
         if schema = @schema
+          if schema.type != "object" && schema.properties.nil?
+            return <<-RESPONSE
+            require "json"
+
+            struct #{response_class}
+              include Azu::Response::Negotiable
+              getter data : #{SchemaMapper.to_crystal_type(schema)}
+
+              def initialize(@data)
+              end
+
+              def render_json : String
+                data.to_json
+              end
+            end
+            RESPONSE
+          end
           properties = schema.properties || {} of String => Schema
           required_fields = schema.required || [] of String
 
           # Build property definitions
           property_defs = properties.map do |prop_name, prop_schema|
-            crystal_type = SchemaMapper.to_crystal_type(prop_schema)
-            is_required = required_fields.includes?(prop_name)
-            snake_name = prop_name.underscore
-
-            unless is_required
-              crystal_type = "#{crystal_type}?" unless crystal_type.ends_with?("?")
-            end
-
-            "  property #{snake_name} : #{crystal_type}"
+            SchemaMapper.property_definition(prop_name, prop_schema, required_fields.includes?(prop_name))
           end.join("\n")
 
           <<-RESPONSE
@@ -69,6 +78,9 @@ module AzuCLI
             include JSON::Serializable
 
           #{property_defs}
+
+            def initialize(#{SchemaMapper.initializer_params(properties, required_fields)})
+            end
 
             def render_json : String
               to_json
@@ -85,6 +97,9 @@ module AzuCLI
           struct #{response_class}
             include Azu::Response::Negotiable
             include JSON::Serializable
+
+            def initialize
+            end
 
             def render_json : String
               to_json

@@ -187,6 +187,9 @@ module AzuCLI
     class TelemetryServer
       getter path : String
       @server : UNIXServer?
+      @clients = Set(UNIXSocket).new
+      MAX_SNAPSHOT = 1_048_576
+      MAX_CLIENTS  =         4
 
       # The socket lives in a directory only this user can enter, so no one else can connect, even in the moment
       # between creating the socket and restricting it.
@@ -203,23 +206,55 @@ module AzuCLI
         @server = server
         spawn do
           while client = server.accept?
-            spawn read(client, on_snapshot)
+            if @clients.size >= MAX_CLIENTS
+              client.close
+            else
+              @clients << client
+              client.read_timeout = 5.seconds
+              spawn read(client, on_snapshot)
+            end
           end
         end
       end
 
       private def read(client : UNIXSocket, on_snapshot : JSON::Any ->) : Nil
-        client.each_line do |line|
+        while line = client.gets('
+', MAX_SNAPSHOT + 1)
+          break if line.bytesize > MAX_SNAPSHOT
           snapshot = JSON.parse(line) rescue nil
-          on_snapshot.call(snapshot) if snapshot && snapshot["v"]?.try(&.as_i?) == 1
+          on_snapshot.call(snapshot.not_nil!) if snapshot && self.class.valid_snapshot?(snapshot)
         end
       rescue IO::Error
       ensure
+        @clients.delete(client)
         client.close rescue nil
+      end
+
+      # Legacy overview cards expect objects; reject incompatible shapes at the boundary.
+      def self.valid_snapshot?(snapshot : JSON::Any) : Bool
+        root = snapshot.as_h?
+        return false unless root && root["v"]?.try(&.as_i?) == 1
+        %w(requests sql runtime).each do |key|
+          value = root[key]?
+          next if value.nil? || value.raw.nil?
+          fields = value.as_h?
+          return false unless fields
+          %w(recent slowest n_plus_one).each do |list|
+            next unless rows = fields[list]?
+            entries = rows.as_a?
+            return false unless entries && entries.all?(&.as_h?)
+          end
+          if pool = fields["pool"]?
+            return false unless pool.raw.nil? || pool.as_h?
+          end
+        end
+        true
       end
 
       def stop : Nil
         @server.try(&.close) rescue nil
+        @clients.to_a.each { |client| client.close rescue nil }
+        @clients.clear
         File.delete?(path)
         Dir.delete(@directory) rescue nil
       end

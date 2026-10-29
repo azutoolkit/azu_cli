@@ -1,0 +1,45 @@
+{
+  "cli_specs": {
+    "examples": 1452,
+    "failures": 0,
+    "errors": 0
+  },
+  "browser_acceptance": {
+    "checks": 13,
+    "failures": [],
+    "covered": [
+      "Home, internal navigation and theme control",
+      "Generated section is reachable from the sidebar with an active state and empty-state action",
+      "Browser required validation and server 422 reject an empty product",
+      "Clicked product create, list, show, edit, checkbox update and delete; escaped HTML",
+      "Mobile 390px product forms/list work without horizontal overflow",
+      "Clicked registration, invalid/valid login, protected account and logout; bcrypt and cookie flags",
+      "A state-changing request without a CSRF token is refused",
+      "Two real browser WebSocket clients receive the generated chat broadcast",
+      "Mobile navigation and required forms work with application JavaScript disabled",
+      "Incremental migration, rollback, reapply and idempotence preserve existing app data",
+      "Authenticated browser session and product survive rebuild and server restart",
+      "Generated application Crystal specs",
+      "No browser JavaScript exceptions or HTTP 5xx responses"
+    ]
+  },
+  "generated_app_specs": {
+    "examples": 12,
+    "failures": 0,
+    "errors": 0
+  },
+  "dependencies": {
+    "daisyui": "5.7.50",
+    "tailwindcss": "4.3.3",
+    "azu": "0.10.5",
+    "cql": "0.0.604",
+    "crystal": "1.22.1"
+  },
+  "rendered_examples": {
+    "screens": 13,
+    "products": 5,
+    "customers": 3,
+    "browser_errors": []
+  },
+  "scope": "Local generated SQLite web application; all example data is illustrative."
+}

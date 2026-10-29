@@ -1,0 +1,21 @@
+{
+  "screenshots": {
+    "overview": "Workspace overview \u00b7 dark",
+    "products-dark": "Products \u00b7 dark",
+    "product-details": "Product details \u00b7 dark",
+    "product-edit": "Edit product \u00b7 dark",
+    "products-light": "Products \u00b7 light",
+    "customers": "Customers \u00b7 light",
+    "delete-confirmation": "Delete confirmation",
+    "sign-in": "Sign in",
+    "account": "Account with daisyUI avatar",
+    "mobile-account": "Account \u00b7 mobile",
+    "mobile-navigation": "Registered sections \u00b7 mobile",
+    "mobile-products": "Products \u00b7 mobile",
+    "mobile-form": "New product form \u00b7 mobile"
+  },
+  "products": 5,
+  "customers": 3,
+  "errors": [],
+  "application": "browser_shop"
+}

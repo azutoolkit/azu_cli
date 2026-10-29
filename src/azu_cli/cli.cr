@@ -57,6 +57,8 @@ module AzuCLI
       register_command("config", Commands::Config)
       register_command("doctor", Commands::Doctor)
 
+      register_command("joobq", Commands::JoobQ)
+
       # Job queue commands
       register_command("jobs:worker", Commands::Jobs::Worker)
       register_command("jobs:status", Commands::Jobs::Status)

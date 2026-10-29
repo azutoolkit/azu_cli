@@ -7,8 +7,9 @@
 # Example Carbon configuration:
 # require "carbon"
 #
-# Carbon.configure do |settings|
-#   case ENV["AZU_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
+# require "../mailers/user_mailer"
+# UserMailer::Delivery.configure do |settings|
+#   case ENV["CRYSTAL_ENV"]? || "development"
 #   when "development", "test"
 #     settings.adapter = Carbon::DevAdapter.new
 #   when "production"

@@ -1,25 +1,23 @@
 {% extends "app_layout.jinja" %}
-
 {% block title %}<%= model_name %> #{{ <%= resource_singular %>.id }}{% endblock %}
-
 {% block content %}
-<div class="page-head">
-  <h1><%= model_name %> #{{ <%= resource_singular %>.id }}</h1>
-</div>
-
-<dl class="stack">
+<div class="mx-auto max-w-4xl space-y-6">
+  <div class="breadcrumbs text-sm text-base-content/60"><ul><li><a href="/<%= resource_plural %>"><%= namespace %></a></li><li>Details</li></ul></div>
+  <div class="flex flex-wrap items-center justify-between gap-4"><div><h1 class="text-3xl font-semibold tracking-tight"><%= model_name %> #{{ <%= resource_singular %>.id }}</h1><p class="mt-2 text-sm text-base-content/70">Everything about this <%= resource_singular.tr("_", " ") %>, in one place.</p></div><a class="btn btn-primary" href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}/edit">Edit</a></div>
+  <section class="card border border-base-300 bg-base-100 shadow-sm"><div class="card-body p-6 sm:p-8">
+    <dl class="divide-y divide-base-300">
 <% fields.each do |field| -%>
-  <div><dt><%= field.label %></dt><dd>{{ <%= resource_singular %>.<%= field.name %> | e }}</dd></div>
+      <div class="grid gap-2 py-5 first:pt-0 last:pb-0 sm:grid-cols-[12rem_minmax(0,1fr)]"><dt class="text-sm text-base-content/60"><%= field.label %></dt><dd class="whitespace-pre-wrap break-words font-medium">{{ <%= resource_singular %>.<%= field.name %> | e }}</dd></div>
 <% end -%>
-</dl>
-
-<div class="row">
-  <a class="btn" href="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}/edit">Edit</a>
-  <a class="btn btn--secondary" href="/<%= resource_plural %>">Back</a>
-  <form action="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}" method="post">
-    {{ csrf_tag | safe }}
-    <input type="hidden" name="_method" value="delete">
-    <button class="btn btn--secondary" type="submit">Delete</button>
-  </form>
+    </dl>
+  </div></section>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <a class="btn btn-ghost" href="/<%= resource_plural %>">Back</a>
+    <form action="/<%= resource_plural %>/{{ <%= resource_singular %>.id }}" method="post" data-confirm-delete>
+      {{ csrf_tag | safe }}
+      <input type="hidden" name="_method" value="delete">
+      <button class="btn btn-error btn-soft" type="submit">Delete</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

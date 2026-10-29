@@ -1,0 +1,39 @@
+ azu joobq · Queues / Workflows / DLQ
+ [1] Queues & Workers  [2] Workflows  [3] DLQ & Retries
+╭─ Queues · 5 ─────────────────────────────╮ ╭─ Workers · 8 ────────────────────────────╮ ╭─ Throughput ───────────────────────────────╮
+│ 207 pending                              │ │ 48 processing                            │ │ 405.9 jobs/s                               │
+│                                          │ │                                          │ │                                            │
+╰──────────────────────────────────────────╯ ╰──────────────────────────────────────────╯ ╰────────────────────────────────────────────╯
+╭─ DLQ ───────────────────────────────────────── 39 ─╮ ╭─ Details · Tab switches pane ─────────────────────────────────────────────────╮
+│ webhooks job-9201 HTTP 503: upstream unavailable █ │ │ Dead letter: job-9201                                                         │
+│ webhooks job-9202 HTTP 503: upstream unavailable █ │ │ HTTP 503: upstream unavailable                                                │
+│ webhooks job-9203 HTTP 503: upstream unavailable █ │ │ {                                                                             │
+│ webhooks job-9204 HTTP 503: upstream unavailable █ │ │   "jid": "job-9201",                                                          │
+│ webhooks job-9205 HTTP 503: upstream unavailable █ │ │   "queue": "webhooks",                                                        │
+│ webhooks job-9206 HTTP 503: upstream unavailable █ │ │   "error": "HTTP 503: upstream unavailable",                                  │
+│ webhooks job-9207 HTTP 503: upstream unavailable █ │ │   "failed_at": "14:32:08",                                                    │
+│ webhooks job-9208 HTTP 503: upstream unavailable █ │ │   "job": {                                                                    │
+│ webhooks job-9209 HTTP 503: upstream unavailable █ │ │     "event": "order.shipped",                                                 │
+│ webhooks job-9210 HTTP 503: upstream unavailable █ │ │     "order_id": "order-2026-1841",                                            │
+│ webhooks job-9211 HTTP 503: upstream unavailable █ │ │     "url": "https://partner.example/hooks/orders",                            │
+│ webhooks job-9212 HTTP 503: upstream unavailable █ │ │     "attempt": 5,                                                             │
+│ webhooks job-9213 HTTP 503: upstream unavailable █ │ │     "token": "[FILTERED]",                                                    │
+│ webhooks job-9214 HTTP 503: upstream unavailable █ │ │     "retry_history": [                                                        │
+│ webhooks job-9215 HTTP 503: upstream unavailable █ │ │       "14:30:12 timeout",                                                     │
+│ webhooks job-9216 HTTP 503: upstream unavailable █ │ │       "14:30:45 HTTP 503",                                                    │
+│ webhooks job-9217 HTTP 503: upstream unavailable █ │ │       "14:31:20 HTTP 503",                                                    │
+│ webhooks job-9218 HTTP 503: upstream unavailable █ │ │       "14:32:08 exhausted"                                                    │
+│ webhooks job-9219 HTTP 503: upstream unavailable █ │ │     ]                                                                         │
+│ webhooks job-9220 HTTP 503: upstream unavailable █ │ │   }                                                                           │
+│ webhooks job-9221 HTTP 503: upstream unavailable █ │ │ }                                                                             │
+│ webhooks job-9222 HTTP 503: upstream unavailable ░ │ │                                                                               │
+│ webhooks job-9223 HTTP 503: upstream unavailable ░ │ │                                                                               │
+│ webhooks job-9224 HTTP 503: upstream unavailable ░ │ │                                                                               │
+│ webhooks job-9225 HTTP 503: upstream unavailable ░ │ │                                                                               │
+│ webhooks job-9226 HTTP 503: upstream unavailable ░ │ │                                                                               │
+│ webhooks job-9227 HTTP 503: upstream unavailable ░ │ │                                                                               │
+│ webhooks job-9228 HTTP 503: upstream unavailable ░ │ │                                                                               │
+│ webhooks job-9229 HTTP 503: upstream unavailable ░ │ │                                                                               │
+╰────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────────────────────────────╯
+ Replay job-9201? y confirms; any other key cancels
+ 1–3 tabs · Tab pane · ↑↓ select · PgUp/PgDn scroll · r replay · q quit

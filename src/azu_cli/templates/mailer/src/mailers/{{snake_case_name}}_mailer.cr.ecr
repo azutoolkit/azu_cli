@@ -14,7 +14,22 @@
 
 require "carbon"
 
-class <%=camel_case_name%>Mailer < Carbon::Email
+# A factory composes messages; Carbon owns delivery through its configured adapter.
+class <%=camel_case_name%>Mailer
+  abstract class Delivery < Carbon::Email
+  end
+
+  class Message < Delivery
+    getter to : Array(Carbon::Address)
+    getter from : Carbon::Address
+    getter subject : String
+    getter text_body : String
+    getter html_body : String
+
+    def initialize(@to, @from, @subject, @text_body, @html_body)
+    end
+  end
+
   # Configure mailer defaults
   def from_email : String
     ENV["MAILER_FROM_EMAIL"]? || "noreply@example.com"
@@ -29,7 +44,7 @@ class <%=camel_case_name%>Mailer < Carbon::Email
 <%=async_methods%>
 
   # Render text template
-  private def render_text(template : String, params : NamedTuple) : String
+  private def render_text(template : String, params : Hash(String, String)) : String
     # TODO: Implement text template rendering
     # You can use ECR, Jinja, or any template engine
     # Example with ECR:
@@ -39,7 +54,7 @@ class <%=camel_case_name%>Mailer < Carbon::Email
   end
 
   # Render HTML template
-  private def render_html(template : String, params : NamedTuple) : String
+  private def render_html(template : String, params : Hash(String, String)) : String
     # TODO: Implement HTML template rendering
     # You can use ECR, Jinja, or any template engine
     # Example with ECR:
@@ -49,14 +64,14 @@ class <%=camel_case_name%>Mailer < Carbon::Email
   end
 
   # Preview emails in development
-  # Access at: http://localhost:4000/dev/emails/<%=snake_case_name%>/preview
+  # Call <%=camel_case_name%>Mailer.preview("<%=template_names.first%>") from your development tooling.
   def self.preview(method_name : String)
     mailer = new
     case method_name
 <%- template_names.each do |method_name| %>
     when "<%=method_name%>"
       mailer.<%=method_name%>(
-        to: Carbon::Address.new("preview@example.com", "Preview User")
+        to: Carbon::Address.new("Preview User", "preview@example.com")
         # Add preview params here
       )
 <%- end %>

@@ -164,6 +164,7 @@ module AzuCLI
           parser.on("--type TYPE", "Generator-specific type") do |type|
             @options["type"] = type
           end
+          parser.on("--env ENV", "Seed environment (development)") { |env| @options["env"] = env }
           parser.on("--record RECORD", "Record type for validators") do |record|
             @options["record"] = record
           end
@@ -508,37 +509,10 @@ module AzuCLI
       end
 
       private def generate_seed : Result
-        Logger.info("Generating seed file")
-
         environment = @options["env"]? || "development"
-        seed_name = @generator_name
-
-        # Create seed file in appropriate environment directory
-        seeds_dir = "./src/db/seeds"
-        env_dir = File.join(seeds_dir, environment)
-        Dir.mkdir_p(env_dir) unless Dir.exists?(env_dir)
-
-        seed_filename = "#{Time.utc.to_s("%Y%m%d%H%M%S")}_#{seed_name.underscore}.cr"
-        seed_path = File.join(env_dir, seed_filename)
-
-        seed_content = String.build do |io|
-          io << "# Seed file: #{seed_name}\n"
-          io << "# Environment: #{environment}\n"
-          io << "# Generated: #{Time.utc}\n\n"
-          io << "require \"../models/**\"\n\n"
-          io << "puts \"Seeding #{seed_name} for #{environment} environment...\"\n\n"
-          io << "# TODO: Add your seed data here\n"
-          io << "# Example:\n"
-          io << "# #{seed_name}.create!(\n"
-          io << "#   name: \"Example #{seed_name}\",\n"
-          io << "#   description: \"This is a sample #{seed_name.downcase}\"\n"
-          io << "# )\n\n"
-          io << "puts \"✓ #{seed_name} seeded successfully\"\n"
-        end
-
-        File.write(seed_path, seed_content)
-        Logger.info("✓ Seed file created: #{seed_path}")
-        success("Generated seed file #{seed_name} for #{environment} environment")
+        generator = Generators::Seed.new(@generator_name, environment)
+        render_generator(generator, Generators::Seed::OUTPUT_DIR)
+        success("Generated seed file #{@generator_name} for #{environment} environment")
       end
 
       private def generate_component : Result

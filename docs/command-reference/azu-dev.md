@@ -133,14 +133,17 @@ Don't stop `azu dev` with SIGKILL. It cannot stop the app then, and the app keep
 | Build | The compiler's stage while it builds, the build time, the last builds and the changed files |
 | App | pid, uptime, restarts, crashes, resident memory and its trend, the GC heap |
 | Requests | Rate, p50 and p95, 4xx and 5xx counts, and the last requests (from the app) |
-| SQL | Query count, average, slow queries, the connection pool, N+1 alerts, the slowest statements (from the app) |
+| SQL | Live statements, duration and origin; pool checkouts, latency histogram and N+1 warnings |
+| Errors | Recent exceptions, route, redacted parameters, stack trace and normalized RFC 7807 details |
 | Jobs | Pending, busy and failed jobs per queue in `config/jobs.yml`, read from `REDIS_URL` (default `redis://localhost:6379`) |
 | Log | The app's stdout and stderr |
 | Config | What the app runs with, as `azu config` last read it: server, TLS, templates, database, limits, uploads, WebSocket, i18n, assets; secrets only as set or not set |
 
-Keys: `1` to `8` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
+Keys: `1` to `9` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
 
-The Log, Requests, SQL and Config panels scroll: `↑`/`↓` (or `k`/`j`) a line, PgUp/PgDn a page, Home/End (or `g`/`G`) to either end. The card's badge says which rows it shows (`21-40 of 80`). A Log scrolled back stays where it is as lines arrive; End follows the newest line again.
+SQL and Errors use a master/detail viewport: Tab switches panes, arrows select or scroll, and PgUp/PgDn and Home/End navigate longer content. Block scrollbars mark overflow; selected IDs remain stable across refreshes.
+
+The Log, Requests and Config panels scroll: `↑`/`↓` (or `k`/`j`) a line, PgUp/PgDn a page, Home/End (or `g`/`G`) to either end. The card's badge says which rows it shows (`21-40 of 80`). A Log scrolled back stays where it is as lines arrive; End follows the newest line again.
 
 The Config panel shows the last run of `azu config`, which the Commands panel repeats after each successful build and whenever `.env*`, `shard.yml` or `shard.lock` changes. Enter (or `u`) reads it again. Values are colored by what they say: a setting that is not set in amber, on and set in green, off in muted, numbers and durations in cyan, URLs and addresses in blue. When the app does not load, the panel shows the error instead.
 
@@ -148,9 +151,9 @@ The Config panel shows the last run of `azu config`, which the Commands panel re
 
 <details>
 
-<summary>Requests and SQL come from the app</summary>
+<summary>Requests, SQL and errors come from the app</summary>
 
-`azu dev` listens on a Unix socket (mode 0600) and passes its path to the app in `AZU_TELEMETRY_SOCKET`. An app that requires `azu/dev` and runs in development writes a JSON snapshot per second. Requests are recorded only with `PERFORMANCE_MONITORING=true`, which `.env.development` sets in a generated project. Projects generated now pin azu 0.10.1 or newer, which has the telemetry. With an older azu, the two panels say what they need instead of showing data.
+`azu dev` listens on a Unix socket (mode 0600) and passes its path to the app in `AZU_TELEMETRY_SOCKET`. An app that requires `azu/dev` and runs in development writes a JSON snapshot per second. Requests are recorded only with `PERFORMANCE_MONITORING=true`, which `.env.development` sets in a generated project. Projects generated now pin azu 0.10.1 or newer, which has the telemetry. The expanded SQL stream and Errors tab require the companion Azu telemetry changes (`codex/dev-hud-telemetry`) until included in a published Azu release. Older producers retain slow-query display and show a waiting notice for errors. Load `azu/cql` and attach the application schema through `Azu::CQL` to capture native async-engine query telemetry and pool snapshots. Exception reports come from the existing server rescuer instrumentation. Problem details are normalized from the captured report, not a copy of arbitrary application problem extensions. SQL parameters are not transmitted. The socket reader bounds messages to 1 MiB and rejects incompatible object shapes.
 
 </details>
 

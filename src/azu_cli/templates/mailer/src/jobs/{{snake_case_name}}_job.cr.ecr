@@ -1,6 +1,6 @@
 # <%=camel_case_name%> Mailer Job
 # Background job for async email delivery
-# This job is automatically generated when using --async flag
+# Omit this job with --skip job
 #
 # To enqueue this job:
 #   <%=camel_case_name%>MailerJob.enqueue(action: "welcome", to: "user@example.com", params: {...})
@@ -37,7 +37,7 @@ struct <%=camel_case_name%>MailerJob
     email = case @action
 <%- template_names.each do |method_name| %>
             when "<%=method_name%>"
-              mailer.<%=method_name%>(to: email_address, **named_tuple_from_params)
+              mailer.<%=method_name%>(to: email_address, params: @params)
 <%- end %>
             else
               raise "Unknown mailer action: #{@action}"
@@ -52,12 +52,7 @@ struct <%=camel_case_name%>MailerJob
     raise ex # Re-raise for JoobQ's retry mechanism
   end
 
-  # Convert params hash to named tuple for mailer methods
-  private def named_tuple_from_params : NamedTuple
-    # Convert Hash to NamedTuple for mailer methods
-    # This is a simple implementation - you may need to adjust based on your needs
-    {} of Symbol => String
-  end
+
 end
 
 # Add this job to the registry in src/initializers/joobq.cr:

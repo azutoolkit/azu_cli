@@ -2,6 +2,7 @@ require "../ui"
 require "./telemetry"
 require "./control"
 require "./console"
+require "./diagnostic_tabs"
 
 module AzuCLI
   module DevServer
@@ -19,6 +20,7 @@ module AzuCLI
         Jobs
         Log
         Config
+        Errors
       end
 
       enum State
@@ -33,6 +35,8 @@ module AzuCLI
       HISTORY_SIZE  =  60
       TELEMETRY_TTL = 5.seconds
 
+      getter errors_tab = ErrorsTab.new
+      getter sql_tab = SQLTab.new
       getter tab = Tab::Overview
       getter state = State::Starting
       getter rebuilds = 0
@@ -183,6 +187,8 @@ module AzuCLI
           @console_focus = true if tab.console?
           return UI::Action::Redraw
         end
+        return UI::Action::Redraw if tab.errors? && errors_tab.key(key)
+        return UI::Action::Redraw if tab.sql? && sql_tab.key(key)
         return commands_key(key) if tab.commands? && commands_key?(key)
         if tab.config? && (key.code.enter? || key.char?('u'))
           @commands.find(&.id.==("config")).try { |command| run(command) }
@@ -560,6 +566,9 @@ module AzuCLI
         when Events::JobsSample
           @jobs = event
         when Events::Telemetry
+          return Action::Continue unless TelemetryServer.valid_snapshot?(event.data)
+          errors_tab.update(event.data)
+          sql_tab.update(event.data)
           @telemetry = event.data
           @telemetry_at = @clock.call
           rps = event.data.dig?("requests", "rps").try { |value| value.as_f? || value.as_i?.try(&.to_f) } || 0.0
@@ -593,10 +602,11 @@ module AzuCLI
           in .commands? then commands_panel(frame, body)
           in .console?  then console_panel(frame, body)
           in .requests? then requests(frame, body, full: true)
-          in .sql?      then sql(frame, body, full: true)
+          in .sql?      then sql_tab.draw(frame, body)
           in .jobs?     then jobs(frame, body)
           in .log?      then log_card(frame, body, "Log", full: true)
           in .config?   then config_panel(frame, body)
+          in .errors?   then errors_tab.draw(frame, body)
           end
         end
         keys = if tab.console? && console_focus?
@@ -611,6 +621,8 @@ module AzuCLI
                  [{"↑/↓", "Select"}, {"Enter", "Run"}, {"PgUp/PgDn", "Scroll output"}, {"a", "Run all checks"}, {"w", "Tests after builds: #{test_watch? ? "on" : "off"}"}, {"1-#{Tab.values.size}", "Panels"}, {"q", "Quit"}]
                elsif tab.config?
                  [{"↑/↓", "Scroll"}, {"PgUp/PgDn", "Page"}, {"Enter", "Read it again"}, {"1-#{Tab.values.size}", "Panels"}, {"r", "Rebuild"}, {"q", "Quit"}]
+               elsif tab.sql? || tab.errors?
+                 [{"Tab", "Pane"}, {"↑/↓", "Select/scroll"}, {"PgUp/PgDn", "Page"}, {"1-9", "Panels"}, {"q", "Quit"}]
                elsif Hud.scrollable?(tab)
                  [{"↑/↓", "Scroll"}, {"PgUp/PgDn", "Page"}, {"Home/End", Hud.tail?(tab) ? "Oldest/Newest" : "Top/Bottom"}, {"1-#{Tab.values.size}", "Panels"}, {"r", "Rebuild"}, {"c", "Clear log"}, {"q", "Quit"}]
                else
@@ -646,6 +658,9 @@ module AzuCLI
       # "[1] Overview   [2] Commands ...": the gaps narrow to fit the terminal.
       private def tabs(frame : Frame, width : Int32) : Nil
         labels = Tab.values.map_with_index { |entry, index| "[#{index + 1}] #{entry}" }
+        if labels.sum(&.size) + labels.size > width - 2
+          labels = Tab.values.map_with_index { |entry, index| "#{index + 1}:#{entry == tab ? entry.to_s : entry.to_s[0, 1]}" }
+        end
         room = width - 2 - labels.sum { |label| Width.of(label) }
         gap = (room // Math.max(1, labels.size - 1)).clamp(1, 3)
         x = 1

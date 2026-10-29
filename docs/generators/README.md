@@ -77,6 +77,14 @@ Flags every generator takes:
 
 Names are singular or plural (`post` and `posts` both work). Attribute types are `string`, `text`, `int32`, `int64`, `float64`, `bool`, `time`, `uuid` and a few more; the [model](model.md) page has the full list.
 
+### Application boundaries and validation
+
+Generated endpoints handle HTTP contracts, delegate writes to services, and render response/page objects. Services own use-case logic; CQL models own persistence mapping. Initializers compose handlers, stores and transport adapters. Mailers compose messages and background jobs schedule delivery. Keep business rules in the service layer so web and API endpoints can share them.
+
+Web applications load both pages and API responses, allowing `api_resource` alongside HTML scaffolds. Seed files use the same rendering pipeline as other generators and accept `--env`; component date properties use Crystal's `Time` type.
+
+`scripts/check_generators.sh web` and `scripts/check_generators.sh api` generate every public code-generator family in isolated SQLite projects, also import OpenAPI contracts, compile the server and worker, and execute mailer, delivery-job, validator and component contracts. The existing `scripts/e2e_generated_app.sh` covers boot, HTTP CRUD, authentication, WebSockets, migrations and optional Redis job execution. Hosted releases require both jobs and the CLI suite. These gates exercise supported examples; generated domain-specific method bodies still need application tests.
+
 ## Realistic output
 
 Each generator writes to the same place for a resource. With `post` in a `blog` project, the files from the Quickstart are:

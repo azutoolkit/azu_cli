@@ -8,7 +8,7 @@ module AzuCLI
 
       # All available commands for completion
       COMMANDS = %w[
-        new init generate g undo serve server s dev routes config console doctor test t help version
+        new init generate g undo serve server s dev joobq routes config console doctor test t help version
         db:create db:drop db:migrate db:rollback db:seed db:reset db:status db:setup
         db:schema:load db:data:migrate db:migrations:verify db:validate
         jobs:worker jobs:status jobs:clear jobs:retry jobs:ui
@@ -229,6 +229,7 @@ module AzuCLI
         when "generate", "g"        then "Generate code components"
         when "undo"                 then "Revert the last generate"
         when "serve", "server", "s" then "Start development server"
+        when "joobq"                then "Manage JoobQ queues, workflows and dead letters"
         when "dev"                  then "Run the app, rebuild and restart on changes"
         when "routes"               then "List the routes"
         when "config"               then "Show the configuration of the application"

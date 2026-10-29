@@ -4,6 +4,29 @@ module AzuCLI
   module OpenAPI
     # Maps OpenAPI types to Crystal types and vice versa
     class SchemaMapper
+      def self.property_definition(name : String, schema : Schema, required : Bool) : String
+        type = to_crystal_type(schema)
+        type += "?" unless required || type.ends_with?("?")
+        snake = name.underscore
+        comment = schema.description.try { |description| description.lines.map { |line| "  # #{line}" }.join("\n") + "\n" } || ""
+        attribute_line = name == snake ? "" : "  @[JSON::Field(key: #{name.inspect})]\n"
+        "#{comment}#{attribute_line}  property #{snake} : #{type}"
+      end
+
+      # Required constructor arguments must precede defaulted arguments, regardless
+      # of the property order in the input document. Shared by DTOs and responses.
+      def self.initializer_params(properties : Hash(String, Schema), required : Array(String)) : String
+        properties.to_a.sort_by { |name, _| required.includes?(name) ? 0 : 1 }.map do |name, schema|
+          type = to_crystal_type(schema)
+          if required.includes?(name)
+            "@#{name.underscore} : #{type}"
+          else
+            type += "?" unless type.ends_with?("?")
+            "@#{name.underscore} : #{type} = nil"
+          end
+        end.join(", ")
+      end
+
       # Map OpenAPI type to Crystal type
       def self.to_crystal_type(schema : Schema) : String
         # Handle $ref

@@ -24,17 +24,15 @@ module AzuCLI
       def mailer_methods : String
         @methods.map do |method_name|
           <<-METHOD
-              def #{method_name}(to email : Carbon::Address, **params)
-                #{method_name}_email(to: email, **params)
-              end
-
-              private def #{method_name}_email(to email : Carbon::Address, **params)
-                Carbon::Email.new(
-                  to: email,
-                  from: Carbon::Address.new(from_email, from_name),
+              def #{method_name}(to email : Carbon::Address, params : Hash(String, String) = {} of String => String, **values) : Message
+                data = params.dup
+                values.each { |key, value| data[key.to_s] = value.to_s }
+                Message.new(
+                  to: [email],
+                  from: Carbon::Address.new(from_name, from_email),
                   subject: "#{method_name.split("_").map(&.capitalize).join(" ")}",
-                  text_body: render_text("#{@snake_case_name}/#{method_name}", params),
-                  html_body: render_html("#{@snake_case_name}/#{method_name}", params)
+                  text_body: render_text("#{@snake_case_name}/#{method_name}", data),
+                  html_body: render_html("#{@snake_case_name}/#{method_name}", data)
                 )
               end
           METHOD
@@ -47,11 +45,13 @@ module AzuCLI
           @methods.map do |method_name|
             <<-ASYNC
               # Deliver #{method_name} email asynchronously
-              def #{method_name}_later(to email : Carbon::Address, **params)
+              def #{method_name}_later(to email : Carbon::Address, params : Hash(String, String) = {} of String => String, **values)
+                data = params.dup
+                values.each { |key, value| data[key.to_s] = value.to_s }
                 #{@camel_case_name}MailerJob.enqueue(
                   action: "#{method_name}",
-                  to: email.to_s,
-                  params: params.to_h
+                  to: email.address,
+                  params: data
                 )
               end
             ASYNC
@@ -64,27 +64,15 @@ module AzuCLI
       # Generate Carbon adapter configuration
       def adapter_config : String
         <<-CONFIG
-          # Configure Carbon email adapter
-          # Default: Development adapter (prints to console)
-          # Production: Use SendGrid, SMTP, or custom adapter
-
-          # Development: Print emails to console
-          Carbon::DevAdapter.configure do |settings|
-            settings.print_emails = true
+          # Select a delivery adapter at the application composition root. Never silently
+          # discard production mail through the development adapter.
+          unless ENV["CRYSTAL_ENV"]? == "production"
+            #{@camel_case_name}Mailer::Delivery.configure do |settings|
+              settings.adapter = Carbon::DevAdapter.new
+            end
           end
-
-          # Production example (SendGrid):
-          # Carbon::SendGridAdapter.configure do |settings|
-          #   settings.api_key = ENV["SENDGRID_API_KEY"]
-          # end
-
-          # Production example (SMTP):
-          # Carbon::SmtpAdapter.configure do |settings|
-          #   settings.host = ENV["SMTP_HOST"]
-          #   settings.port = ENV["SMTP_PORT"].to_i
-          #   settings.username = ENV["SMTP_USERNAME"]
-          #   settings.password = ENV["SMTP_PASSWORD"]
-          # end
+          # In production configure #{@camel_case_name}Mailer::Delivery with your
+          # Carbon::SendGridAdapter or Carbon::SmtpAdapter (separate dependencies).
         CONFIG
       end
 

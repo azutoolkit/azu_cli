@@ -4,7 +4,7 @@ require "../logger"
 
 module AzuCLI
   module OpenAPI
-    # Generate CQL models from OpenAPI schemas
+    # Generate JSON data-transfer models from OpenAPI schemas
     class ModelGenerator
       getter name : String
       getter schema : Schema
@@ -44,19 +44,7 @@ module AzuCLI
 
         # Build property definitions
         property_defs = properties.map do |prop_name, prop_schema|
-          crystal_type = SchemaMapper.to_crystal_type(prop_schema)
-          is_required = required_fields.includes?(prop_name)
-
-          # Make non-required fields nullable
-          unless is_required
-            crystal_type = "#{crystal_type}?" unless crystal_type.ends_with?("?")
-          end
-
-          snake_name = prop_name.underscore
-          description = prop_schema.description
-
-          comment = description ? "  # #{description}\n" : ""
-          "#{comment}  property #{snake_name} : #{crystal_type}"
+          SchemaMapper.property_definition(prop_name, prop_schema, required_fields.includes?(prop_name))
         end.join("\n")
 
         <<-MODEL
@@ -78,18 +66,7 @@ module AzuCLI
 
       # Generate initializer parameters
       private def generate_initializer_params(properties : Hash(String, Schema), required : Array(String)) : String
-        properties.map do |prop_name, prop_schema|
-          crystal_type = SchemaMapper.to_crystal_type(prop_schema)
-          is_required = required.includes?(prop_name)
-          snake_name = prop_name.underscore
-
-          if is_required
-            "@#{snake_name} : #{crystal_type}"
-          else
-            crystal_type = "#{crystal_type}?" unless crystal_type.ends_with?("?")
-            "@#{snake_name} : #{crystal_type} = nil"
-          end
-        end.join(", ")
+        SchemaMapper.initializer_params(properties, required)
       end
 
       # Generate initializer body

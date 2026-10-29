@@ -119,6 +119,7 @@ module <%= @module_name %>
   end
 end
 
+require "./mailers/**"
 require "./models/**"
 require "./requests/**"
 require "./validators/**"
@@ -130,6 +131,7 @@ require "./channels/**"
 require "./responses/**"
 require "./pages/**"
 <% elsif @project_type == "web" -%>
+require "./responses/**"
 require "./pages/**"
 <% end -%>
 require "./endpoints/**"
