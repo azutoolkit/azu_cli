@@ -33,6 +33,8 @@ jobs:
         run: shards install --frozen
       - name: Check dependency promotion guard
         run: python3 scripts/test_framework_versions.py
+      - name: Verify CQL JSON APIs and the generated-save boundary
+        run: python3 scripts/check_cql_json.py
       - name: Check formatting
         run: crystal tool format --check ./src
       # The integration specs run `bin/azu`.
@@ -126,6 +128,9 @@ jobs:
           mkdir -p bin
           crystal build src/azu_cli.cr -o bin/azu --no-debug
           python3 scripts/e2e_database_app.py --adapter ${{ matrix.adapter }} --type ${{ matrix.type }}
+      - name: Verify PostgreSQL JSONB models and query APIs
+        if: matrix.adapter == 'postgresql' && matrix.type == 'api'
+        run: python3 scripts/check_cql_json.py --postgres
       - name: Upload resolved versions, database and telemetry evidence
         if: always()
         uses: actions/upload-artifact@v4

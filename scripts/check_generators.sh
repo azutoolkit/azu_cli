@@ -40,9 +40,9 @@ shards install
 "$AZU_BIN" generate model Author name:string
 "$AZU_BIN" generate model OptionalToken token:uuid?
 "$AZU_BIN" generate scaffold TypeProbe count:int32 total:int64 ratio:float32 score:float64 enabled:bool happened_at:time day:date token:uuid contact:email homepage:url author_id:references
-# CQL v1 cannot persist JSON::Any in ActiveRecord; fail before writing a broken model.
+# The generated instance save! path lacks JSON mapping; CQL JSON APIs are checked separately.
 if "$AZU_BIN" generate scaffold JsonProbe metadata:json; then
-  echo "JSON persistence must be rejected until CQL supports it" >&2
+  echo "Unmapped generated JSON instance persistence must be rejected" >&2
   exit 1
 fi
 [ ! -f src/models/json_probe.cr ]

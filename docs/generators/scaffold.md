@@ -94,7 +94,7 @@ Attributes are `name:type[:modifier]`. A trailing `?` on the type makes the colu
 | `time`, `datetime` | `Time` | timestamp column; RFC 3339 text input |
 | `date` | `Time` | SQL DATE; date-only or RFC 3339 text input |
 | `uuid` | `UUID` | text storage, typed DB and form converters |
-| `json` | Unsupported for models on CQL 1.0.0 | Rejected before writing files; use explicit text serialization |
+| `json` | `JSON::Any` | CQL supports JSON; automatic CLI CRUD mapping is currently gated—see [JSON persistence boundary](model.md#json-support-and-the-generator-boundary) |
 | `references`, `belongs_to` | `Int64` | foreign key, see below |
 
 | Modifier | Effect on the column |

@@ -72,10 +72,32 @@ azu g model post title:string --skip-tests          # no migration; you write it
 | `time`, `datetime`   | `Time`       | `column :name, Time`                        |
 | `date` | `Time` | `date :name` (SQL DATE) |
 | `uuid` | `UUID` | `text :name`, with a typed DB converter |
-| `json` | Unsupported for models on CQL 1.0.0 | Rejected before writing files |
+| `json` | `JSON::Any` | CQL JSON column; automatic CLI instance-persistence mapping is currently gated (see below) |
 | `references`, `belongs_to` | `Int64` | `column :name_id, Int64`, plus a `belongs_to` and a foreign key |
 
-CQL 1.0.0 cannot persist `JSON::Any` ActiveRecord attributes. Use a text field with explicit application serialization until a compatible CQL release is validated. Standalone JSON requests and JSON migration columns remain supported. Nullable UUID fields use a converter that preserves SQL NULL.
+### JSON support and the generator boundary
+
+**CQL 1.0.0 supports JSON**, including JSON columns, JSON predicates, typed model queries and PostgreSQL JSONB conversion. The earlier wording “Unsupported for models on CQL 1.0.0” was too broad.
+
+The CLI currently gates `json` fields in automatic model/scaffold generation because its generated services call `record.save!`. With a `JSON::Any` property, that specific instance-save path fails to compile in CQL 1.0.0 `ActiveRecord#attributes`: it inserts the value into `Hash(Symbol, DB::Any)` without converting it. Adding `@[DB::Field(converter: CQL::JSONBConverter)]` handles PostgreSQL reads but does not change that attribute serializer.
+
+Other CQL JSON paths work. The query builder accepts `JSON::Any` for inserts and updates. A PostgreSQL model with `JSONBConverter` can be created through the class API with explicitly serialized JSON (`Document.create!(data: CQL::JSONBConverter.to_db(value))`) and read with `find!`. These paths preserve a JSON/JSONB column; changing it to a plain text column is not required. Standalone `azu generate migration ... data:json` and JSON request fields remain available.
+
+Validation against CQL tag `v1.0.0` (`f48e7ee2305a7f7c7a849774c28e04fde4c76930`), using SQLite and the PostgreSQL crystal-db adapter:
+
+| Path | Result |
+| --- | --- |
+| JSON column and query-builder create/read/update/delete | Passed on SQLite and PostgreSQL 18 |
+| Typed model JSON predicates | Passed on both; containment passed on PostgreSQL |
+| Typed model JSON partial projection | Passed on SQLite |
+| PostgreSQL model class-level create, converted reads and delete | Passed with explicit JSON serialization and `JSONBConverter` |
+| Generated instance `save!`, including a read-converter annotation | Reproduces the `JSON::Any` → `DB::Any` attribute compilation error |
+
+Run `python3 scripts/check_cql_json.py` from the CLI repository for isolated SQLite and compiler checks. Add `--postgres` to run the model/converter checks in a disposable PostgreSQL container. The retained [validation fixtures](https://github.com/azutoolkit/azu_cli/tree/codex/azu-cql-v1-compatibility/spec/fixtures/cql_json) separate working JSON APIs from the failing generated call. CI runs these checks and fails if a future CQL version makes `save!` compile, prompting removal or revision of the generator gate after runtime validation.
+
+See CQL's tagged [JSON query documentation](https://github.com/azutoolkit/cql/blob/v1.0.0/docs/how-to/advanced-sql/json-and-geo-predicates.md), [converter](https://github.com/azutoolkit/cql/blob/v1.0.0/src/converters/jsonb_converter.cr) and [attribute serializer](https://github.com/azutoolkit/cql/blob/v1.0.0/src/active_record/attributes.cr).
+
+Nullable UUID fields use a converter that preserves SQL NULL.
 
 **Modifiers**
 

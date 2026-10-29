@@ -19,7 +19,7 @@ The project is **not yet ready for an unqualified v1 production release**. The g
 - Docker smoke testing is now a required hosted release prerequisite for web and API. Local production-image validation exhausted cloud workspace disk space before compilation; packaging remains unverified.
 - Azu 1.0.1 contains Errors/native SQL telemetry, but its CQL bridge cannot compile with CQL 1.0.0. Azu 1.0.2 released the bridge fix during this follow-up. Generated apps temporarily pin an explicit request-telemetry redaction patch on 1.0.2. Publish and test a compatible Azu release before release acceptance.
 - CLI and generated CQL now pin 1.0.0; installs use the committed CLI lockfile. Stable framework update proposals and a release guard prevent silent canary promotion. Generated transitive dependencies still resolve at install time; evidence records each resolved lockfile.
-- CQL 1.0.0 does not support persisting `JSON::Any` model attributes. The CLI rejects these models/scaffolds before writing broken code. Typed JSON persistence needs an upstream fix and its own release validation.
+- CQL 1.0.0 supports JSON persistence and converted models. The CLI’s automatic JSON model/scaffold generation remains gated because the generated instance `save!` path fails in `ActiveRecord#attributes`. This integration needs a compatible mapping and runtime validation; the broader CQL JSON-support claim has been corrected and covered by positive SQLite/PostgreSQL checks.
 
 ## Fixes applied during this review
 
