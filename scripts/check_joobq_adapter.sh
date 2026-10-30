@@ -15,7 +15,9 @@ dependencies:
     github: azutoolkit/joobq
     version: 0.4.2
 YAML
-if [ "${JOOBQ_REF:-0.4.2}" != 0.4.2 ]; then
+if [ "${JOOBQ_REF:-0.4.2}" = 0.5.1 ]; then
+  sed -i "s/version: 0.4.2/version: 0.5.1/" shard.yml
+elif [ "${JOOBQ_REF:-0.4.2}" != 0.4.2 ]; then
   sed -i "s/version: 0.4.2/commit: $JOOBQ_REF/" shard.yml
 fi
 shards install
@@ -56,7 +58,7 @@ PY
 
 # Compile the CLI operator without any application job types. This catches
 # NoReturn inference failures hidden by concrete jobs in the normal fixture.
-if [ "${JOOBQ_REF:-}" = "500f990f1f1013c25399a337aec0dc418084e512" ]; then
+if [ "${JOOBQ_REF:-}" = "0.5.1" ]; then
   cp "$ROOT/src/azu_cli/integrations/jobs_operator.cr" empty_operator.cr
   crystal build empty_operator.cr -o empty_operator --error-trace
   python3 - <<'PY_CHECK'

@@ -4,7 +4,7 @@ description: Run JoobQ workers and inspect or manage queues using the applicatio
 
 # Background jobs commands
 
-Generated applications target Azu `~> 1.0.4`, CQL `~> 1.0.1` and JoobQ `~> 0.5.0`.
+Generated applications target Azu `~> 1.0.4`, CQL `~> 1.0.1` and JoobQ `~> 0.5.1`.
 The jobs commands compile a temporary adapter against **your application's JoobQ**.
 This preserves its queue types, DLQ replay rules and Redis configuration. It takes
 longer than a direct Redis lookup; use `azu dev` for continuous queue metrics.
@@ -45,8 +45,9 @@ Redis database and TLS scheme. Credentials belong in the environment, not the
 
 For an existing application, update the dependencies in `shard.yml` and run
 `shards update`. The empty-worker compilation and typed `queue ...` discovery
-fixes require [JoobQ PR #21](https://github.com/azutoolkit/joobq/pull/21); until it is
-released, register classes with `QueueFactory.register_job_type` and populate
+fixes from [JoobQ PR #21](https://github.com/azutoolkit/joobq/pull/21) are released
+in JoobQ 0.5.1. Upgrade before using an empty worker or the typed `queue` DSL.
+Generated jobs register classes with `QueueFactory.register_job_type` and populate
 `queue_configs` before running the worker. See the
 [local HUD setup](azu-dev.md#display-local-joobq-jobs).
 

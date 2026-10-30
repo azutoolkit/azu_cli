@@ -466,7 +466,7 @@ module AzuCLI
         Logger.info("   dependencies:")
         Logger.info("     joobq:")
         Logger.info("       github: azutoolkit/joobq")
-        Logger.info("       version: ~> 0.5.0")
+        Logger.info("       version: ~> 0.5.1")
         Logger.info("     redis:")
         Logger.info("       github: stefanwille/crystal-redis")
         Logger.info("")

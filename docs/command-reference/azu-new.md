@@ -230,7 +230,7 @@ dependencies:
   session:
     github: azutoolkit/session
     version: ~> 1.1
-  # with JoobQ: joobq ~> 0.5.0 and redis
+  # with JoobQ: joobq ~> 0.5.1 and redis
   topia:
     github: azutoolkit/topia
   sqlite3:                    # pg ~> 0.31.0 or mysql ~> 0.18.0 for the other databases

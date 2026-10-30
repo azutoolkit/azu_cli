@@ -2,8 +2,8 @@ require "../../spec_helper"
 require "file_utils"
 require "teeplate"
 
-# The JoobQ code the generators write must use the API of the release generated projects pin (joobq ~> 0.5.0).
-# scripts/e2e_generated_app.sh compiles it; these catch the calls 0.5.0 does not have before a compile does.
+# The JoobQ code the generators write must use the API of the release generated projects pin (joobq ~> 0.5.1).
+# scripts/e2e_generated_app.sh compiles it; these catch the calls 0.5.1 does not have before a compile does.
 private def render_joobq_code(&)
   dir = File.tempname("azu_joobq_api")
   Dir.mkdir_p(dir)
@@ -19,7 +19,7 @@ ensure
 end
 
 describe "Generated JoobQ code" do
-  it "calls only what joobq 0.5.0 has" do
+  it "calls only what joobq 0.5.1 has" do
     render_joobq_code do |files|
       files.keys.any?(&.ends_with?("worker.cr")).should be_true
       files.keys.any?(&.ends_with?("send_email_job.cr")).should be_true
@@ -68,7 +68,7 @@ describe "Generated JoobQ code" do
   it "pins joobq to the release the generated code is written for" do
     dir = File.tempname("azu_joobq_pin")
     AzuCLI::Generate::Project.new("blog", "Blog", "Jane", "jane@example.com").render(dir)
-    File.read(File.join(dir, "shard.yml")).should contain("  joobq:\n    github: azutoolkit/joobq\n    version: ~> 0.5.0\n")
+    File.read(File.join(dir, "shard.yml")).should contain("  joobq:\n    github: azutoolkit/joobq\n    version: ~> 0.5.1\n")
   ensure
     FileUtils.rm_rf(dir) if dir
   end
