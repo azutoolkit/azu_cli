@@ -234,8 +234,9 @@ module AzuCLI::DevServer
         @sidebar = !@sidebar
       elsif key.char?('l')
         select_tab(Tab::Logs)
-      elsif (tab.logs? || (tab.dashboard? && @overview_focus == 0)) && key.char?('f')
+      elsif (tab.logs? || (tab.dashboard? && overview_feed == Tab::Logs)) && key.char?('f')
         @follow_logs = true
+        @overview_logs.reset
         @inspectors[Tab::Logs].key(Key.new(KeyCode::Home))
       elsif chosen = tabs.find { |item| key.char?(shortcut(item)) }
         select_tab(chosen)

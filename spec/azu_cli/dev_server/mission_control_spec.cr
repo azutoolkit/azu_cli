@@ -26,6 +26,53 @@ describe MC do
     screen.tab.should eq MC::Tab::Tracing
   end
 
+  it "aligns five cards on each row above highlighted log and query feeds" do
+    screen = mission
+    screen.update(MCE::Telemetry.new(JSON.parse(File.read("spec/fixtures/telemetry/azu-dashboard-v1.json"))))
+    screen.update(MCE::LogLine.new("INFO newest overview event"))
+    [{200, 60}, {140, 45}].each do |width, height|
+      rows = mission_frame(screen, width, height).to_text.lines.map { |line| line.chars.skip(22).join }
+      first = rows.find { |line| line.includes?("Memory (RSS)") }.not_nil!
+      second = rows.find { |line| line.includes?("Cache") && line.includes?("Runtime") }.not_nil!
+      {"Uptime", "Memory (RSS)", "Latency", "Active routes", "Traffic"}.zip({"Errors", "Cache", "Database", "Components", "Runtime"}).each do |top, bottom|
+        first.index(top).should eq second.index(bottom)
+      end
+      feeds = rows.index { |line| line.includes?("Latest logs") && line.includes?("Latest queries") }.not_nil!
+      feeds.should be > rows.index(second).not_nil!
+      rows.join.should contain "newest overview event"
+      rows.join.should contain "SELECT"
+    end
+    10.times { screen.update(MCUI::Key.new(MCUI::KeyCode::Tab)) }
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Tab))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    screen.tab.should eq MC::Tab::SQL
+  end
+
+  it "pages to both feeds on a compact terminal and scrolls or filters recent logs" do
+    screen = mission
+    screen.update(MCE::Telemetry.new(JSON.parse(File.read("spec/fixtures/telemetry/azu-dashboard-v1.json"))))
+    30.times { |i| screen.update(MCE::LogLine.new("INFO overview event #{i}")) }
+    10.times do
+      break if mission_frame(screen, 80, 24).to_text.includes?("Latest logs")
+      screen.update(MCUI::Key.new(MCUI::KeyCode::Char, ']'))
+    end
+    text = mission_frame(screen, 80, 24).to_text
+    text.should contain "Latest logs"
+    text.should contain "Latest queries"
+    text.should contain "overview event 29"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::End))
+    mission_frame(screen, 80, 24).to_text.should contain "overview event 0"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'f'))
+    mission_frame(screen, 80, 24).to_text.should contain "overview event 29"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '/'))
+    "missing".each_char { |char| screen.update(MCUI::Key.new(MCUI::KeyCode::Char, char)) }
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    mission_frame(screen, 80, 24).to_text.should contain "No matching entries"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Esc))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    screen.tab.should eq MC::Tab::Logs
+  end
+
   it "offers a bottom-right launcher for SQL, N+1 and schema without a second screen" do
     screen = mission
     screen.update(MCUI::Key.new(MCUI::KeyCode::CtrlP))

@@ -6,7 +6,7 @@ description: Navigate Azu's development dashboard, inspect live data, and keep y
 
 ## Overview & visual demo
 
-`azu dev` combines Azu's browser dashboard metrics with local development tools. Its header identifies the application, section, process state, PID, and port. The sidebar groups observation, data, jobs, and development features.
+`azu dev` combines Azu's browser dashboard metrics with local development tools. Overview uses five aligned metric cards per row when space allows, followed by side-by-side latest logs and SQL queries. Tab focuses either feed, `j/k` or PgUp/PgDn scrolls it, and Enter opens its full inspector. Narrow terminals reduce columns; shorter terminals give the feeds a separate `[` / `]` page. Its header identifies the application, section, process state, PID, and port. The sidebar groups observation, data, jobs, and development features.
 
 <figure><img src="../assets/terminal-ui/mission-control/overview-theme-preview.png" alt="Azu Overview with a fixed sidebar and a paged metric grid"><figcaption><p>Real renderer, sample data. The grid adapts to your terminal.</p></figcaption></figure>
 

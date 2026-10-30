@@ -187,7 +187,7 @@ module AzuCLI::DevServer
       when .commands?
         "j/k select · Enter run/review · PgUp/PgDn output"
       when .dashboard?
-        "[ / ] page · Tab card · Enter inspect · j/k select"
+        "[ / ] page · Tab focus · Enter inspect · j/k scroll"
       when .logs?
         "j/k select · Tab details · f follow · t source · / filter"
       when .build?
@@ -214,7 +214,7 @@ module AzuCLI::DevServer
       navigation_tabs.each { |section| lines << "#{shortcut(section).to_s.ljust(13)}#{section_name(section)}" }
       lines.concat(["", "LISTS AND OVERVIEW", "j/k or ↑/↓   Select a row", "Tab          Switch pane", "PgUp/PgDn    Scroll the focused list or detail pane",
                     "Home/End     First/last row", "/            Filter data; Enter applies; Esc clears",
-                    "f            Follow newest logs", "t            Toggle app output / azu/dev requests", "[ / ]        Overview pages / Database subviews", "Enter        Open the focused Overview card"])
+                    "f            Follow newest logs", "t            Toggle app output / azu/dev requests", "[ / ]        Overview pages / Database subviews", "Enter        Open the focused Overview card or feed"])
       unless @read_only
         lines.concat(["", "LOCAL COMMANDS", ":            Compose an azu command", "g            Compose a generator", "Enter, y/n   Review, then confirm/cancel a command",
                       "r            Rebuild application", "", "CONSOLE", "Enter        Evaluate", "Alt-Enter    Insert newline", "Ctrl-O       Interpreter", "Esc          Back; Ctrl-P opens hints/menu", "Letters are input while editing Console or search."])
