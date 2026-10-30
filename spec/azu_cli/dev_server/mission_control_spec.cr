@@ -54,6 +54,67 @@ describe MC do
     screen.tab.should eq MC::Tab::Dashboard
   end
 
+  it "lists Develop tools in order and reaches every screen on compact and wide terminals" do
+    screen = mission
+    expected = {MC::Tab::Commands, MC::Tab::Console, MC::Tab::Build, MC::Tab::Config,
+                MC::Tab::Generators, MC::Tab::Serve, MC::Tab::Server, MC::Tab::Doctor,
+                MC::Tab::Components, MC::Tab::Mailers}
+    MC::NAVIGATION.to_a.last(10).should eq expected.to_a
+    [{200, 60}, {140, 45}, {100, 30}, {80, 24}].each do |width, height|
+      screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'x'))
+      expected.each_with_index do |section, index|
+        screen.tab.should eq section
+        frame = mission_frame(screen, width, height)
+        frame.to_text.should contain "Develop"
+        frame.to_text.lines.size.should eq height
+        screen.update(MCUI::Key.new(MCUI::KeyCode::AltRight))
+      end
+      screen.tab.should eq MC::Tab::Dashboard
+    end
+  end
+
+  it "runs dedicated diagnostics and routes through the control runner and reuses the server lifecycle" do
+    called = [] of String
+    commands = [AzuCLI::DevServer::Control::Command.new("doctor", "Health", ["doctor"]),
+                AzuCLI::DevServer::Control::Command.new("routes", "App", ["routes"])]
+    workspace = AzuCLI::DevServer::Hud.new("store", "4000", "development", "", commands: commands,
+      on_rebuild: -> { called << "restart"; nil }, on_control: ->(command : AzuCLI::DevServer::Control::Command) { called << command.id; nil })
+    screen = MC.new(workspace, "store")
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'D'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    called.should eq ["doctor"]
+    screen.update(MCE::ControlFinished.new("doctor", 0, "9 ok, 0 warnings, 0 failures", 0.1))
+    mission_frame(screen).to_text.should contain "9 ok, 0 warnings, 0 failures"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'a'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    screen.update(MCE::ControlFinished.new("routes", 0, "GET /products Products::Index", 0.1))
+    mission_frame(screen).to_text.should contain "GET /products Products::Index"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'S'))
+    mission_frame(screen).to_text.should contain "Server output"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    called.should eq ["doctor", "routes", "restart"]
+    60.times { |i| screen.update(MCE::LogLine.new("serve line #{i}")) }
+    mission_frame(screen, 80, 24).to_text.should contain "serve line 59"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Home))
+    mission_frame(screen, 80, 24).to_text.should contain "serve line 0"
+  end
+
+  it "opens the generator editor from Develop and executes only after review" do
+    submitted = [] of Array(String)
+    screen = MC.new(AzuCLI::DevServer::Hud.new("store", "4000", "development", ""), "store",
+      on_command: ->(command : AzuCLI::DevServer::Control::Command) { submitted << command.args; true })
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'g'))
+    screen.tab.should eq MC::Tab::Generators
+    mission_frame(screen).to_text.should contain "Generators"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    "model Product name:string".each_char { |char| screen.update(MCUI::Key.new(MCUI::KeyCode::Char, char)) }
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    submitted.should be_empty
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'y'))
+    submitted.should eq [["generate", "model", "Product", "name:string"]]
+  end
+
   it "renders the web dashboard hierarchy and opens a focused card" do
     screen = mission
     screen.update(MCE::Telemetry.new(JSON.parse(File.read("spec/fixtures/telemetry/azu-dashboard-v1.json"))))

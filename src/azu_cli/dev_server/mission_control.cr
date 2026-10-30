@@ -33,17 +33,22 @@ module AzuCLI::DevServer
       Components
       Mailers
       Runtime
+      Generators
+      Serve
+      Doctor
     end
 
     # Stable keys follow the sidebar, even when an optional integration is hidden.
     NAVIGATION = {Tab::Dashboard, Tab::Errors, Tab::Tracing, Tab::Logs, Tab::Profiler,
                   Tab::Auth, Tab::Database, Tab::Cache, Tab::JoobQ, Tab::Jobs,
-                  Tab::Components, Tab::Mailers}
+                  Tab::Commands, Tab::Console, Tab::Build, Tab::Config, Tab::Generators,
+                  Tab::Serve, Tab::Server, Tab::Doctor, Tab::Components, Tab::Mailers}
     SHORTCUTS = {
       Tab::Dashboard => '1', Tab::Errors => '2', Tab::Tracing => '3',
       Tab::Logs => '4', Tab::Profiler => '5', Tab::Auth => '6',
       Tab::Database => '7', Tab::Cache => '8', Tab::JoobQ => '9', Tab::Jobs => '0',
       Tab::Components => 'c', Tab::Mailers => 'm',
+      Tab::Generators => 'g', Tab::Serve => 'S', Tab::Doctor => 'D',
       Tab::SQL => 's', Tab::DB => 'u', Tab::Migrations => 'i',
       Tab::Console => '`', Tab::Build => 'd', Tab::Commands => 'x',
       Tab::Config => 'v', Tab::Server => 'a', Tab::Runtime => 'w',
@@ -199,6 +204,14 @@ module AzuCLI::DevServer
         return Action::Redraw
       end
       return menu_key(key) if menu_open?
+      if !searching? && (key.code.alt_left? || key.code.alt_right?)
+        sections = navigation_tabs
+        unless sections.empty?
+          index = sections.index(tab) || 0
+          select_tab(sections[(index + (key.code.alt_right? ? 1 : -1)) % sections.size])
+        end
+        return Action::Redraw
+      end
       if tab.console?
         if key.code.esc?
           @workspace.panel_key(Hud::Tab::Console, key)
@@ -209,7 +222,7 @@ module AzuCLI::DevServer
           return @workspace.panel_key(Hud::Tab::Console, key)
         end
       end
-      if tab.commands? && @workspace.confirming
+      if tab.commands? && (@workspace.confirming || key.char?('a') || key.char?('w'))
         return @workspace.panel_key(Hud::Tab::Commands, key)
       end
       if searching?
@@ -226,23 +239,17 @@ module AzuCLI::DevServer
       if tab.joob_q? && @joobq.confirming
         return @joobq.update(key) unless @read_only
       end
-      if key.code.alt_left? || key.code.alt_right?
-        sections = navigation_tabs
-        unless sections.empty?
-          index = sections.index(tab) || 0
-          select_tab(sections[(index + (key.code.alt_right? ? 1 : -1)) % sections.size])
-        end
-      elsif key.char?('h') || key.char?('?')
+      if key.char?('h') || key.char?('?')
         @help_open = true
         @help_viewport.reset
       elsif (tab.logs? || tab.dashboard?) && key.char?('t')
         @shared_logs = !using_shared_logs?
         refresh_logs
-      elsif @read_only && (key.char?('`') || key.char?('2') || key.char?('x') || key.char?('r') || key.char?(':') || key.char?('g') || key.char?('d') || key.char?('v'))
+      elsif @read_only && (key.char?('`') || key.char?('2') || key.char?('x') || key.char?('r') || key.char?(':') || key.char?('g') || key.char?('d') || key.char?('v') || key.char?('S') || key.char?('D'))
         @notice = read_only_notice
-      elsif key.char?(':') || key.char?('g')
-        @composer.open(key.char?('g'))
-      elsif key.char?('/') && panel.nil? && !tab.joob_q?
+      elsif key.char?(':')
+        @composer.open
+      elsif key.char?('/') && panel.nil? && !tab.joob_q? && !tab.generators? && !tab.serve? && !tab.doctor? && !tab.server?
         @searching = true
       elsif key.code.esc?
         @query = ""
@@ -264,6 +271,16 @@ module AzuCLI::DevServer
         @inspectors[Tab::Logs].key(Key.new(KeyCode::Home))
       elsif chosen = tabs.find { |item| key.char?(shortcut(item)) }
         select_tab(chosen)
+      elsif tab.generators?
+        key.code.enter? ? @composer.open(true) : @generators_viewport.key(key)
+      elsif tab.serve?
+        if key.code.enter? || key.char?('r')
+          @workspace.panel_key(Hud::Tab::Overview, Key.new(KeyCode::Char, 'r'))
+        else
+          @workspace.panel_key(Hud::Tab::Log, key)
+        end
+      elsif !@read_only && (tab.doctor? || tab.server?)
+        return @workspace.command_output_key(tab.doctor? ? "doctor" : "routes", key)
       elsif tab.joob_q?
         return @joobq.update(key) unless @read_only && key.char?('r')
       elsif key.char?('r')
@@ -328,7 +345,7 @@ module AzuCLI::DevServer
     end
 
     private def tabs : Array(Tab)
-      @read_only ? Tab.values.reject { |t| t.build? || t.commands? || t.console? || t.config? || t.errors? } : Tab.values
+      @read_only ? Tab.values.reject { |t| t.build? || t.commands? || t.console? || t.config? || t.errors? || t.generators? || t.serve? || t.doctor? } : Tab.values
     end
 
     private def shortcut(section : Tab) : Char
@@ -354,6 +371,7 @@ module AzuCLI::DevServer
       @searching = false
       filter
       @workspace.open_panel(panel || Hud::Tab::Overview)
+      @workspace.reset_command_scroll if section.doctor? || section.server?
     end
 
     private def replace(tab : Tab, rows : Array(Inspector::Item)) : Nil

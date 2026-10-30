@@ -32,7 +32,7 @@ module AzuCLI::DevServer
         return Control::Command.new("interactive", "Local", args, confirm: true)
       end
       command = Control.catalog(jobs: true).find { |entry| entry.args == args }
-      raise ArgumentError.new("Use generate with arguments, or a command from ? Commands (exact arguments)") unless command
+      raise ArgumentError.new("Use generate with arguments, or a command from Commands (x) (exact arguments)") unless command
       Control::Command.new("interactive", "Local", args, confirm: true)
     end
 

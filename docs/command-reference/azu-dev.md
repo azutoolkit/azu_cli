@@ -8,7 +8,7 @@ description: Run your app in development, rebuilding and restarting it on every 
 
 The workspace mirrors Azu's browser dashboard with a health banner and paged cards for uptime, memory, latency, routes, traffic, errors, cache, database, components, and runtime. Optional features are hidden when explicitly disabled; missing telemetry remains labeled unavailable.
 
-Use Ctrl-P to navigate the four sidebar groups. Errors lives under **Observe**; **Sessions** replaces Auth; **Database** contains SQL, pool, schema, and migration subviews. **Jobs** holds JoobQ management and Queues & Activity. Components and Mailers live under **Develop**. Build, console, configuration, routes, and command composition remain available through the palette.
+Use Ctrl-P to navigate the four sidebar groups. Errors lives under **Observe**; **Sessions** replaces Auth; **Database** contains SQL, pool, schema, and migration subviews. **Jobs** holds JoobQ management and Queues & Activity. **Develop** contains Commands, Console, Build, Config, Generators, Serve, Routes, Doctor, Components and Mailers. Serve controls the existing development server. Enter in Routes or Doctor refreshes the command output; Enter in Generators opens the reviewed editor. All destinations also remain in the command palette.
 
 Press `[` / `]` to change Overview pages or Database subviews, Tab to move focus, Enter to inspect, and `h` for contextual help. The sidebar collapses below 104 columns. Dense lists and stack traces scroll inside their panes. See [Terminal UI](../getting-started/terminal-ui.md) for the complete key map.
 

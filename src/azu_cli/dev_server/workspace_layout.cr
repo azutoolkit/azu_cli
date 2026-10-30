@@ -18,10 +18,10 @@ module AzuCLI::DevServer
 
     private def section_group(section : Tab) : String
       case section
-      when .db?, .migrations?, .auth?, .sql?, .database?, .cache?            then "Data & Access"
-      when .jobs?, .joob_q?                                                  then "Jobs"
-      when .console?, .commands?, .build?, .config?, .components?, .mailers? then "Develop"
-      else                                                                        "Observe"
+      when .db?, .migrations?, .auth?, .sql?, .database?, .cache?                                                       then "Data & Access"
+      when .jobs?, .joob_q?                                                                                             then "Jobs"
+      when .console?, .commands?, .build?, .config?, .generators?, .serve?, .server?, .doctor?, .components?, .mailers? then "Develop"
+      else                                                                                                                   "Observe"
       end
     end
 
@@ -61,7 +61,13 @@ module AzuCLI::DevServer
       end
       header, content = body.split_top(3)
       draw_header(frame, header)
-      if active = panel
+      if tab.generators?
+        draw_generators(frame, content)
+      elsif tab.serve?
+        @workspace.serve_view(frame, content)
+      elsif !@read_only && (tab.doctor? || tab.server?)
+        @workspace.command_output_view(frame, content, tab.doctor? ? "doctor" : "routes")
+      elsif active = panel
         @workspace.panel_view(frame, content, active)
       elsif tab.jobs? && content.h >= 20
         queues, details = content.split_top(10)
@@ -190,6 +196,12 @@ module AzuCLI::DevServer
         "Tab focus · ↑/↓ select/scroll · Enter open · [ ] page"
       when .logs?
         "Tab pane · ↑/↓ select · Enter inspect · / filter · f follow · t source"
+      when .generators?
+        "Enter compose generator · Esc close editor"
+      when .serve?
+        "Enter start/restart · r rebuild · PgUp/PgDn output"
+      when .doctor?, .server?
+        "Enter refresh · ↑/↓ scroll · PgUp/PgDn page"
       when .joob_q?
         "[ ] view · Tab pane · ↑/↓ select · r replay"
       when .build?
@@ -220,7 +232,7 @@ module AzuCLI::DevServer
                     "Home/End     First/last row", "/            Filter data; Enter applies; Esc clears",
                     "f            Follow newest logs", "t            Toggle app output / azu/dev requests", "[ / ]        Overview pages / Database or JoobQ subviews", "s / u / i    SQL / Schema / Migrations", "Enter        Open the focused Overview card or feed"])
       unless @read_only
-        lines.concat(["", "LOCAL TOOLS", "`            Console", "d / x / v    Build / Commands / Configuration", "", "LOCAL COMMANDS", ":            Compose an azu command", "g            Compose a generator", "Enter, y/n   Review, then confirm/cancel a command",
+        lines.concat(["", "LOCAL TOOLS", "`            Console", "d / x / v    Build / Commands / Configuration", "S / a / D    Serve / Routes / Doctor", "", "LOCAL COMMANDS", ":            Compose an azu command", "g            Open Generators; Enter composes", "Enter, y/n   Review, then confirm/cancel a command",
                       "r            Rebuild application", "", "CONSOLE", "Enter        Evaluate", "Alt-Enter    Insert newline", "Ctrl-O       Interpreter", "Esc          Back; Ctrl-P opens hints/menu", "Letters are input while editing Console or search."])
       end
       @help_viewport.draw(frame, inner, Viewport.wrap(lines, Math.max(1, inner.w - 1)))
@@ -338,3 +350,5 @@ require "./overview"
 require "./database_navigation"
 
 require "./section_panels"
+
+require "./develop_sections"

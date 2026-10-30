@@ -39,7 +39,7 @@ Rich mode uses the terminal's alternate screen and restores it on exit. `--ui ri
 | Enter | Inspect the selection |
 | `/`, Esc | Filter, then clear the filter |
 | PageUp / PageDown | Scroll the focused list or details |
-| `g`, `:` | Compose a generator or command |
+| `g`, `:` | Open Generators / compose a command |
 | Backtick | Open the local console |
 | `q` | Quit; disconnect in production monitoring |
 
@@ -65,9 +65,9 @@ Text-entry views keep letters as input. Ctrl-P remains available from the consol
 | Observe | Overview health/cards; Errors and exception details; Tracing distributions/endpoints; highlighted Logs; Profiler spans and GC trend |
 | Data & Access | Sessions lifecycle and backend; Database summary, SQL/pool, schema, migrations; Cache operations |
 | Jobs | JoobQ workers/workflows/DLQ; Queues & Activity counters |
-| Develop | Components lifecycle; Mailers delivery outcomes and static previews |
+| Develop | Commands, Console, Build, Config, Generators, Serve, Routes, Doctor, Components, Mailers |
 
-Build, console, commands, configuration, and routes remain available through Ctrl-P. SQL is a Database subview; the `s` shortcut opens its inspector.
+Develop contains the local tools in this order: Commands (`x`), Console (backtick), Build (`d`), Config (`v`), Generators (`g`), Serve (`S`), Routes (`a`), Doctor (`D`), then Components (`c`) and Mailers (`m`). They are also searchable through Ctrl-P. Enter in Generators opens the reviewed command editor. Serve shows and restarts the existing development server; it does not spawn a second server. Enter in Routes or Doctor refreshes their command output through the existing runner. Local execution tools are hidden in production monitoring. SQL is a Database subview; the `s` shortcut opens its inspector.
 
 ## Realistic output
 
