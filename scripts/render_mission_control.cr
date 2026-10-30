@@ -23,7 +23,7 @@ screen.update(MissionDev::Events::Telemetry.new(JSON.parse(<<-JSON
 {"requests":{"rps":1284,"p95_ms":8.4,"recent":[
  {"at":"14:32:08","method":"GET","path":"/products","status":200,"ms":4.8,"endpoint":"Products::Index","id":"req_8f31"},
  {"at":"14:32:07","method":"POST","path":"/checkout","status":200,"ms":18.1,"endpoint":"Checkout::Create"}]},
- "sql":{"pool":{"in_flight":6,"max":20},"recent":[
+ "sql":{"total":2,"avg_ms":1.55,"slow":0,"histogram":[{"label":"0–1","count":1,"bar":12},{"label":"1–5","count":1,"bar":12}],"pool":{"in_flight":6,"max":20,"idle":2},"recent":[
  {"id":"query-1","sql":"SELECT p.id, p.name FROM products AS p WHERE p.active = TRUE AND p.category_id = $1 ORDER BY p.created_at DESC LIMIT 20","ms":2.3,"caller":"product_repository.cr:41","model":"Product","pool_wait_ms":0.1},
  {"id":"query-2","sql":"SELECT * FROM carts WHERE id = $1","ms":0.8,"caller":"cart_repository.cr:28"}]},
  "auth":{"recent":[{"id":"event-1","at":"14:32:08","event":"sign-in","outcome":"accepted"},{"id":"event-2","at":"14:31:42","event":"rate-limit","outcome":"applied"}]},

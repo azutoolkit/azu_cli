@@ -4,17 +4,28 @@ description: Run your app in development, rebuilding and restarting it on every 
 
 # azu dev
 
-## Mission-control preview
+## Workspace HUD
 
-`azu dev --ui mission` enables the new workspace rail, Ctrl-P navigation palette,
+`azu dev` opens the workspace rail, Ctrl-P navigation palette,
 SQL/log syntax highlighting and responsive list/detail panes. Press `b` to collapse
 the rail, `/` to filter, `c` for the existing console, and Esc to return from it.
-The default remains `--ui rich`. Auth and schema views require application adapters;
+`--ui rich` and `--ui mission` are aliases for this same interface; the old
+dashboard is no longer selectable. Build (`d`), Errors (`e`), Commands (`?`),
+Console (`c`) and Config (`v`) stay inside the workspace. Ctrl-P navigates even
+while the console is accepting input; Esc returns from the console. Auth and
+schema views require application adapters;
 see the [architecture and integration plan](../architecture/mission-control.md).
+
+The SQL tab accepts both `sql.recent` and the `sql.slowest` snapshots emitted by
+older Azu v1 exporters. The latter is labeled **slowest sample** and shows the
+available sample rather than a complete query stream. If no SQL samples arrive,
+verify that the application loads `azu/cql`, attaches its schema with
+`Azu::CQL.attach`, and executes queries while development telemetry is enabled.
+An active search can hide rows; **Esc** clears the filter.
 
 ### Run commands inside the HUD
 
-In `azu dev --ui mission`, press **g** to compose a generator command or **:**
+In `azu dev`, press **g** to compose a generator command or **:**
 to enter a supported Azu command. For example:
 
 ```text
@@ -80,7 +91,7 @@ azu dev --port 3000 --env test --ui plain
 | `--env NAME` | `CRYSTAL_ENV` for the app | your environment or `.env`, else `development` |
 | `--debounce MS` | Quiet time before a change is acted on | `300` |
 | `--interval MS` | How often the files are polled | `250` |
-| `--ui MODE` | `rich` (classic dashboard), `mission` (workspace HUD), or `plain` (lines) | the classic dashboard on a terminal of at least 60x16 |
+| `--ui MODE` | `rich` or `mission` (same workspace HUD), or `plain` (lines) | the workspace HUD on a terminal of at least 60x16 |
 | `--help` | Show the help | |
 
 What a change does:

@@ -6,7 +6,7 @@ description: Native mission-control architecture, navigation, command execution 
 
 ## Overview
 
-An opt-in native terminal workspace built on the CLI's existing renderer.
+The native terminal workspace used by `azu dev`, built on the CLI's renderer.
 
 {% hint style="info" %}
 The HUD owns the terminal; adapters deliver typed events to its bounded mailbox.
@@ -15,9 +15,10 @@ The HUD owns the terminal; adapters deliver typed events to its bounded mailbox.
 ## Quickstart
 
 ```sh
-azu dev --ui mission
-# Existing dashboards remain available:
+azu dev
+# Explicit aliases for the same workspace:
 azu dev --ui rich
+azu dev --ui mission
 azu joobq
 ```
 
@@ -63,9 +64,11 @@ Color is supplementary: severity names, status codes and a selection marker rema
 visible with `NO_COLOR`.
 
 Navigation groups are Observe, Data & Access, and Develop; shorter windows omit
-group labels to preserve the navigation items. The prototype has seven sections,
+group labels to preserve the navigation items. The workspace has twelve sections,
 a collapsible rail with numbered shortcuts, breadcrumbs, and a searchable
-Ctrl-P palette. Console, exceptions and the command center reuse the classic HUD.
+Ctrl-P palette. Build, Errors, Commands, Console and Config reuse stateful
+components inside the workspace; they do not switch to a separate dashboard.
+The navigation viewport keeps the active section visible in short terminals.
 At less than 104 columns, the rail collapses into a breadcrumb. Below 48x14 the
 screen displays a resize message. `azu dev` itself retains its existing 60x16
 interactive-mode threshold and plain-output fallback.
@@ -111,7 +114,7 @@ crystal run scripts/render_mission_control.cr -- --interactive
 | `UI::Terminal` | TTY detection, alternate screen, raw input, cursor visibility, bracketed paste and restoration in `ensure`. |
 | `UI::Program` | Sole owner of screen updates and writes; bounded channel, bounded batches and frame pacing. |
 | `UI::FullScreenRenderer` | Compares current/previous cells and batches changed runs into one output write, with synchronized-output escape sequences. |
-| `MissionControl` | State machine: active section, palette/search state, freshness, bounded samples and legacy-panel focus. |
+| `MissionControl` | State machine: active section, palette/search state, freshness, bounded samples and component focus. |
 | `UI::Inspector`, `Viewport` | Selection, independent list/detail scrolling, resize clamping and block-character scroll indicators. |
 | `UI::Highlight` | Bounded visual lexer returning styled segments; never executes SQL or forwards application ANSI escapes. |
 | Existing `Hud` / `Console::Evaluator` | Compiler lifecycle, command execution, exceptions, history and compiled console fallback. |
@@ -119,7 +122,7 @@ crystal run scripts/render_mission_control.cr -- --interactive
 
 The reducer handles `Key`, `Resize`, `Tick`, and typed application messages.
 Ctrl-P opens a navigation palette; its query is separate from `/` filtering.
-Enter changes section, Esc closes the palette or returns from a classic panel.
+Enter changes section; Esc closes the palette or returns from the console.
 `j/k`, arrows, PageUp/PageDown and Tab reuse the viewport manager. `l` opens logs;
 logs follow new records until navigation pauses them, and `f` resumes following.
 The palette also opens the local command composer: `g` starts a generator and `:`
@@ -220,7 +223,7 @@ can load: the current CLI documents Azu/CQL interpreter limitations on Crystal
 
 ## Delivery roadmap
 
-1. **Implemented:** opt-in shell, responsive rail, command palette, SQL/log colors,
+1. **Implemented:** default workspace, responsive rail, command palette, SQL/log colors,
    bounded views, bounded event draining, paced frames, console reuse, local command
    composer, read-only SSH snapshot transport and fixtures.
 2. **Integration:** unify the JoobQ agent controller with this shell; add versioned

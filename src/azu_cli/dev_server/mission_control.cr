@@ -2,8 +2,8 @@ require "./hud"
 require "./command_composer"
 
 module AzuCLI::DevServer
-  # An opt-in shell around the existing HUD. The existing console, compiler,
-  # command runner and error inspector retain their lifecycle and callbacks.
+  # The dev workspace shell. Build, console and command components share this
+  # navigation and frame; their controller retains lifecycle and callbacks.
   class MissionControl < UI::Screen
     include UI
 
@@ -15,6 +15,11 @@ module AzuCLI::DevServer
       SQL
       Auth
       Logs
+      Build
+      Errors
+      Commands
+      Console
+      Config
     end
 
     getter tab = Tab::Dashboard
@@ -29,7 +34,8 @@ module AzuCLI::DevServer
     @follow_logs = true
     SQL_COLOR = ->(line : String) { Highlight.sql(line) }
     LOG_COLOR = ->(line : String) { Highlight.log(line) }
-    @legacy_visible = false
+    @previous_tab = Tab::Dashboard
+    @nav_viewport = Viewport.new
     @rows = {} of Tab => Array(Inspector::Item)
     @inspectors = {} of Tab => Inspector
     @snapshot : JSON::Any?
@@ -37,11 +43,11 @@ module AzuCLI::DevServer
     @jobs_received : Time::Instant?
     @jobs : Events::JobsSample?
     @second = -1_i64
-    @notice = "c console · e exceptions · ? commands"
+    @notice = "d build · c console · e errors · ? commands · v config"
     @now = Time.instant
     @composer : CommandComposer
 
-    def initialize(@legacy : Hud, @project : String, @reduced_motion : Bool = false,
+    def initialize(@workspace : Hud, @project : String, @reduced_motion : Bool = false,
                    @clock : Proc(Time::Instant) = -> { Time.instant },
                    @read_only : Bool = false,
                    on_command : Proc(Control::Command, Bool) = ->(_command : Control::Command) { false })
@@ -54,12 +60,12 @@ module AzuCLI::DevServer
     end
 
     def summary : String
-      @legacy.summary
+      @workspace.summary
     end
 
     def handoff : Proc(Nil)?
       return nil if @read_only
-      @legacy.handoff
+      @workspace.handoff
     end
 
     # Ticks also expire telemetry. Idle ticks update nothing visible until the
@@ -71,15 +77,8 @@ module AzuCLI::DevServer
     def update(event : Event) : Action
       @now = @clock.call
       @composer.update(event) unless event.is_a?(Key)
-      if @legacy_visible
-        if event.is_a?(Key) && event.code.esc?
-          @legacy_visible = false
-          return Action::Redraw
-        end
-        return @legacy.update(event)
-      end
       return key(event) if event.is_a?(Key)
-      @legacy.update(event) unless @read_only
+      @workspace.update(event) unless @read_only
       case event
       when Events::Telemetry
         @snapshot = event.data
@@ -105,14 +104,17 @@ module AzuCLI::DevServer
         @inspectors[Tab::Logs].key(Key.new(KeyCode::Home)) if @follow_logs
       when Tick
         second = (@now - Widgets::EPOCH).total_seconds.to_i64
-        return Action::Continue if second == @second && (@reduced_motion || !@legacy.animating?)
+        return Action::Continue if second == @second && (@reduced_motion || !@workspace.animating?)
         @second = second
       end
       Action::Redraw
     end
 
     private def key(key : Key) : Action
-      return Action::Quit if key.code.ctrl_c?
+      if key.code.ctrl_c?
+        return @workspace.panel_key(Hud::Tab::Console, key) if tab.console? && !menu_open?
+        return Action::Quit
+      end
       return @composer.update(key) if @composer.active?
       if key.code.ctrl_p?
         @menu_open = !menu_open?
@@ -121,6 +123,19 @@ module AzuCLI::DevServer
         return Action::Redraw
       end
       return menu_key(key) if menu_open?
+      if tab.console?
+        if key.code.esc?
+          @workspace.panel_key(Hud::Tab::Console, key)
+          select_tab(@previous_tab)
+          return Action::Redraw
+        end
+        if @workspace.console_focus? || key.code.enter? || key.char?('i') || key.code.ctrl_o?
+          return @workspace.panel_key(Hud::Tab::Console, key)
+        end
+      end
+      if tab.commands? && @workspace.confirming
+        return @workspace.panel_key(Hud::Tab::Commands, key)
+      end
       if searching?
         case key.code
         when .esc?       then @searching = false; @query = ""
@@ -132,30 +147,28 @@ module AzuCLI::DevServer
         return Action::Redraw
       end
       return Action::Quit if key.char?('q')
-      if @read_only && (key.char?('c') || key.char?('e') || key.char?('?') || key.char?('r') || key.char?(':') || key.char?('g'))
+      if @read_only && (key.char?('c') || key.char?('e') || key.char?('?') || key.char?('r') || key.char?(':') || key.char?('g') || key.char?('d') || key.char?('v'))
         @notice = read_only_notice
       elsif key.char?(':') || key.char?('g')
         @composer.open(key.char?('g'))
-      elsif key.char?('/')
+      elsif key.char?('/') && panel.nil?
         @searching = true
       elsif key.code.esc?
         @query = ""
         filter
-      elsif key.char?('c') || key.char?('e') || key.char?('?')
-        @legacy_visible = true
-        @legacy.update(Key.new(KeyCode::Char, key.char?('c') ? '3' : key.char?('e') ? '9' : '2'))
       elsif key.char?('b')
         @sidebar = !@sidebar
       elsif key.char?('l')
-        @tab = Tab::Logs
+        select_tab(Tab::Logs)
       elsif tab.logs? && key.char?('f')
         @follow_logs = true
         @inspectors[tab].key(Key.new(KeyCode::Home))
-      elsif (char = key.char) && ('1'..'7').includes?(char)
-        @tab = Tab.from_value(char.ord - '1'.ord)
-        filter
+      elsif chosen = tabs.find { |item| key.char?(shortcut(item)) }
+        select_tab(chosen)
       elsif key.char?('r')
-        @legacy.update(key)
+        @workspace.panel_key(Hud::Tab::Overview, key)
+      elsif active = panel
+        return @workspace.panel_key(active, key)
       else
         @follow_logs = false if tab.logs?
         @inspectors[tab].key(key)
@@ -164,9 +177,9 @@ module AzuCLI::DevServer
     end
 
     private def menu_items : Array({String, Char})
-      entries = Tab.values.map { |item| {"Open #{item}", ('1'.ord + item.value).chr} }
+      entries = tabs.map { |item| {"Open #{item}", shortcut(item)} }
       unless @read_only
-        entries.concat([{"Run azu command", ':'}, {"Generate code", 'g'}, {"Open console", 'c'}, {"Inspect exceptions", 'e'}, {"Open command center", '?'}])
+        entries.concat([{"Run azu command", ':'}, {"Generate code", 'g'}])
       end
       entries.select { |entry| self.class.matches?(entry[0], @menu_query) }
     end
@@ -185,11 +198,51 @@ module AzuCLI::DevServer
       when .enter?
         if chosen = menu_items[@menu_selected]?
           @menu_open = false
-          return key(Key.new(KeyCode::Char, chosen[1]))
+          if section = tabs.find { |item| shortcut(item) == chosen[1] }
+            select_tab(section)
+          elsif !@read_only
+            @composer.open(chosen[1] == 'g')
+          end
+          return Action::Redraw
         end
       end
       @menu_selected = @menu_selected.clamp(0, Math.max(0, menu_items.size - 1))
       Action::Redraw
+    end
+
+    private def tabs : Array(Tab)
+      @read_only ? Tab.values.first(7) : Tab.values
+    end
+
+    private def shortcut(section : Tab) : Char
+      case section
+      when .build?    then 'd'
+      when .errors?   then 'e'
+      when .commands? then '?'
+      when .console?  then 'c'
+      when .config?   then 'v'
+      else                 ('1'.ord + section.value).chr
+      end
+    end
+
+    private def panel : Hud::Tab?
+      case tab
+      when .build?    then Hud::Tab::Overview
+      when .errors?   then Hud::Tab::Errors
+      when .commands? then Hud::Tab::Commands
+      when .console?  then Hud::Tab::Console
+      when .config?   then Hud::Tab::Config
+      end
+    end
+
+    private def select_tab(section : Tab) : Nil
+      return unless tabs.includes?(section)
+      @previous_tab = tab if tab != section
+      @tab = section
+      @query = ""
+      @searching = false
+      filter
+      @workspace.open_panel(panel || Hud::Tab::Overview)
     end
 
     private def replace(tab : Tab, rows : Array(Inspector::Item)) : Nil
@@ -229,11 +282,7 @@ module AzuCLI::DevServer
           [label, "Time: #{text(row, "at")}", "Endpoint: #{text(row, "endpoint")}", "Trace ID: #{text(row, "id")}"])
       end)
       sql = field(@snapshot, "sql")
-      replace(Tab::SQL, DiagnosticData.rows(sql, "recent", 200).map do |row|
-        statement = text(row, "sql")
-        Inspector::Item.new(text(row, "id"), "#{text(row, "ms")}ms #{statement}",
-          [statement, "Caller: #{text(row, "caller")}", "Model: #{text(row, "model")}", "Pool wait: #{text(row, "pool_wait_ms")}ms"])
-      end)
+      replace(Tab::SQL, SQLTab.items(sql))
       # Extension contracts: no database credentials, SQL parameters or auth tokens.
       database = field(@snapshot, "database")
       replace(Tab::DB, DiagnosticData.rows(database, "tables", 200).map do |row|
@@ -258,50 +307,57 @@ module AzuCLI::DevServer
     end
 
     def view(frame : Frame) : Nil
-      if @legacy_visible
-        @legacy.view(frame)
-        frame.text(0, frame.height - 1, "Esc mission control · existing console / errors / commands", Token::Cyan, max: frame.width)
-        return
-      end
       if frame.width < 48 || frame.height < 14
         frame.text(0, 0, "azu dev · enlarge to 48x14 or use --ui plain", Token::Amber, max: frame.width)
         return
       end
       header, rest = frame.area.inset(1, 0).split_top(3)
-      inner = frame.card(header, "▲ AZU / #{@project} / #{tab}", @read_only ? "READ ONLY" : @legacy.state.to_s.downcase)
+      inner = frame.card(header, "▲ AZU / #{@project} / #{tab}", @read_only ? "READ ONLY" : @workspace.state.to_s.downcase)
       frame.gradient(header.x + 3, header.y, frame.glyphs.brand, Attr::Bold)
-      spinner = @legacy.animating? ? Widgets.spinner(frame.glyphs, @now, @reduced_motion) + " " : ""
+      spinner = @workspace.animating? ? Widgets.spinner(frame.glyphs, @now, @reduced_motion) + " " : ""
       frame.text(inner.x, inner.y, spinner + @notice, Token::Muted, max: inner.w)
       content = Rect.new(rest.x, rest.y, rest.w, rest.h - 2)
       if frame.width >= 104 && @sidebar
         sidebar, content = content.split_left(18, 1)
         nav = frame.card(sidebar, "Workspace")
-        row = nav.y
-        Tab.each do |item|
+        labels = [] of String
+        selected = 0
+        tabs.each do |item|
           if nav.h >= 17 && (item.dashboard? || item.db? || item.logs?)
             group = item.dashboard? ? "OBSERVE" : item.db? ? "DATA & ACCESS" : "DEVELOP"
-            row += 1 unless item.dashboard?
-            frame.text(nav.x, row, group, Token::Muted, max: nav.w)
-            row += 1
+            labels << "" unless item.dashboard?
+            labels << group
           end
-          break if row >= nav.bottom
-          frame.text(nav.x, row, "#{item == tab ? '▌' : ' '} #{item}",
-            item == tab ? Token::Cyan : Token::Muted, max: nav.w)
-          frame.text(nav.right - 1, row, (item.value + 1).to_s, Token::Muted, max: 1)
-          row += 1
+          selected = labels.size if item == tab
+          labels << "#{item == tab ? '▌' : ' '} #{Width.pad(item.to_s, Math.max(0, nav.w - 5))} #{shortcut(item)}"
         end
+        @nav_viewport.configure(labels.size, nav.h)
+        @nav_viewport.reveal(selected)
+        @nav_viewport.draw(frame, nav, labels, selected)
       else
         nav, content = content.split_top(2)
         frame.text(nav.x, nav.y, "#{tab}  /  Ctrl-P navigate", Token::Cyan, max: nav.w)
       end
-      if tab.dashboard?
+      if active = panel
+        @workspace.panel_view(frame, content, active)
+      elsif tab.dashboard?
         dashboard(frame, content)
       else
-        @inspectors[tab].draw(frame, content, "#{tab} · #{freshness(tab.jobs? ? @jobs_received : @received)}",
-          tab.db? || tab.auth? ? "No adapter data · see integration contract" : "No samples received", highlighter(tab))
+        content = SQLTab.draw_metrics(frame, content, field(@snapshot, "sql")) if tab.sql?
+        title = tab.sql? ? "SQL · #{SQLTab.feed_label(field(@snapshot, "sql"))}" : tab.to_s
+        empty = if !query.empty? && !@rows[tab].empty?
+                  "No matching samples · Esc clears the filter"
+                elsif tab.sql?
+                  "No SQL samples · check azu/cql schema attachment"
+                else
+                  tab.db? || tab.auth? ? "No adapter data · see integration contract" : "No samples received"
+                end
+        @inspectors[tab].draw(frame, content, "#{title} · #{freshness(tab.jobs? ? @jobs_received : @received)}", empty, highlighter(tab))
       end
       frame.text(1, frame.height - 2, searching? ? "/ #{query}▏" : "#{query.empty? ? @notice : "filter: #{query}"} · telemetry #{freshness(@received)}", Token::Muted, max: frame.width - 2)
       shortcuts = @read_only ? "Ctrl-P menu  b sidebar  j/k select  Tab pane  / search  q disconnect" : "Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit"
+      shortcuts = "Ctrl-P menu  Enter run  Alt-Enter newline  Ctrl-O interpreter  Esc back" if tab.console?
+      shortcuts = "Ctrl-P menu  ↑/↓ select  Enter run  y confirm  PgUp/PgDn output  q quit" if tab.commands?
       frame.text(1, frame.height - 1, shortcuts, Token::Cyan, max: frame.width - 2)
       draw_menu(frame) if menu_open?
       @composer.view(frame) if @composer.active?

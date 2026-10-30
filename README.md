@@ -101,7 +101,9 @@ For real browser acceptance, install Python Playwright (`python3 -m pip install 
 
 ### Terminal diagnostics and generator validation
 
-`azu dev --ui mission` opens the workspace HUD. Press **g** to compose a generator
+`azu dev` opens the workspace HUD (`--ui rich` and `--ui mission` select the same
+interface). Build, errors, console, configuration and commands share its navigation.
+Press **g** to compose a generator
 or **:** to enter an Azu command, review its arguments, then confirm execution
 without leaving the dashboard. See [commands inside the HUD](docs/command-reference/azu-dev.md).
 

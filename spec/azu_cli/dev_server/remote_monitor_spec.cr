@@ -23,6 +23,13 @@ describe RemoteTarget do
 end
 
 describe AzuMonitor::Snapshot do
+  it "accepts older slowest SQL samples without disclosing statements in production" do
+    safe = AzuMonitor::Snapshot.filter(JSON.parse(%({"v":1,"sql":{"slowest":[{"sql":"SELECT 'SECRET'","ms":2.5}]}})), require_fresh: false)
+    safe["sql"]["recent"][0]["ms"].as_f.should eq 2.5
+    safe["sql"]["recent"][0]["sql"].as_s.should eq "[statement redacted]"
+    safe.to_json.should_not contain "SECRET"
+  end
+
   it "allowlists metrics and redacts application data before transport/display" do
     data = JSON.parse(%({"v":1,"captured_at":"#{Time.utc.to_rfc3339}","secret":"NEVER_RENDER",
       "requests":{"rps":12,"recent":[{"method":"GET","path":"/users/SECRET?token=SECRET","ms":2,"status":200}]},
@@ -76,7 +83,7 @@ describe "production HUD boundary" do
       on_control: ->(command : AzuCLI::DevServer::Control::Command) { called << command.id; nil })
     screen = AzuCLI::DevServer::MissionControl.new(classic, "prod", read_only: true,
       on_command: ->(_command : AzuCLI::DevServer::Control::Command) { called << "command"; true })
-    "c?erg:".each_char { |char| screen.update(RemoteUI::Key.new(RemoteUI::KeyCode::Char, char)) }
+    "c?erg:dv".each_char { |char| screen.update(RemoteUI::Key.new(RemoteUI::KeyCode::Char, char)) }
     screen.update(RemoteUI::Tick.new(Time.instant))
     screen.handoff.should be_nil
     called.should be_empty
@@ -85,7 +92,7 @@ describe "production HUD boundary" do
     screen.view(frame)
     frame.to_text.should contain "READ ONLY"
     frame.to_text.should_not contain "Generate code"
-    frame.to_text.should_not contain "Open console"
+    %w(Console Build Config Commands).each { |name| frame.to_text.should_not contain "Open #{name}" }
   end
 
   it "does not load a working directory's .env for connect" do

@@ -38,7 +38,7 @@ module AzuMonitor
             source = root[section]?
             json.field section do
               json.object do
-                metrics(json, source, %w(total rps p50_ms p95_ms p99_ms errors))
+                metrics(json, source, %w(total rps avg_ms slow p50_ms p95_ms p99_ms errors))
                 if section == "sql"
                   json.field "pool" do
                     json.object { metrics(json, source.try(&.as_h?).try(&.["pool"]?), %w(in_flight max waiting idle)) }
@@ -47,6 +47,9 @@ module AzuMonitor
                 json.field "recent" do
                   json.array do
                     rows = source.try(&.as_h?).try(&.["recent"]?).try(&.as_a?) || [] of JSON::Any
+                    if section == "sql" && rows.empty?
+                      rows = source.try(&.as_h?).try(&.["slowest"]?).try(&.as_a?) || [] of JSON::Any
+                    end
                     rows.first(100).each_with_index do |row, index|
                       next unless row.as_h?
                       json.object do

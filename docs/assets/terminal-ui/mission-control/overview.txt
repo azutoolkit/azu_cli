@@ -1,28 +1,28 @@
  ╭─ ▲ AZU / storefront · SAMPLE DATA / Dashboard ─────────────────────────────────────────────────────────────────────────── running ─╮
- │ c console · e exceptions · ? commands                                                                                              │
+ │ d build · c console · e errors · ? commands · v config                                                                             │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
  ╭─ Workspace ────╮ ╭─ Requests/s ─────────────╮ ╭─ P95 ms ─────────────────╮ ╭─ Processing ─────────────╮ ╭─ DB pool ────────────────╮
  │ OBSERVE        │ │ 1284                     │ │ 8.4                      │ │ 10                       │ │ 6/20                     │
- │ ▌ Dashboard  1 │ │                          │ │                          │ │                          │ │                          │
- │   Server     2 │ ╰──────────────────────────╯ ╰──────────────────────────╯ ╰──────────────────────────╯ ╰──────────────────────────╯
- │   Jobs       3 │ ╭─ Server ────────────────────────────────── connected ─╮ ╭─ Jobs ──────────────────────────────────── connected ─╮
+ │ ▌ Dashboard 1  │ │                          │ │                          │ │                          │ │                          │
+ │   Server    2  │ ╰──────────────────────────╯ ╰──────────────────────────╯ ╰──────────────────────────╯ ╰──────────────────────────╯
+ │   Jobs      3  │ ╭─ Server ────────────────────────────────── connected ─╮ ╭─ Jobs ──────────────────────────────────── connected ─╮
  │                │ │  GET /products  200  4.8ms                            │ │ default  wait 24  processing 8  failed 0              │
  │ DATA & ACCESS  │ │  POST /checkout  200  18.1ms                          │ │ mailers  wait 7  processing 2  failed 1               │
- │   DB         4 │ │                                                       │ │ reports  wait 0  processing 0  failed 0               │
- │   SQL        5 │ │                                                       │ │                                                       │
- │   Auth       6 │ │                                                       │ │                                                       │
+ │   DB        4  │ │                                                       │ │ reports  wait 0  processing 0  failed 0               │
+ │   SQL       5  │ │                                                       │ │                                                       │
+ │   Auth      6  │ │                                                       │ │                                                       │
  │                │ │                                                       │ │                                                       │
  │ DEVELOP        │ │                                                       │ │                                                       │
- │   Logs       7 │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
+ │   Logs      7  │ │                                                       │ │                                                       │
+ │   Build     d  │ │                                                       │ │                                                       │
+ │   Errors    e  │ │                                                       │ │                                                       │
+ │   Commands  ?  │ │                                                       │ │                                                       │
+ │   Console   c  │ │                                                       │ │                                                       │
+ │   Config    v  │ │                                                       │ │                                                       │
  │                │ ╰───────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────╯
  │                │ ╭─ SQL ───────────────────────────────────── connected ─╮ ╭─ Auth ──────────────────────────────────── connected ─╮
- │                │ │  2.3ms SELECT p.id, p.name FROM products AS p WHERE   │ │ 14:32:08 sign-in accepted                             │
- │                │ │  0.8ms SELECT * FROM carts WHERE id = $1              │ │ 14:31:42 rate-limit applied                           │
+ │                │ │   2.3 ms product_repository.cr:41 SELECT p.id, p.na…  │ │ 14:32:08 sign-in accepted                             │
+ │                │ │   0.8 ms cart_repository.cr:28 SELECT * FROM carts …  │ │ 14:31:42 rate-limit applied                           │
  │                │ │                                                       │ │                                                       │
  │                │ │                                                       │ │                                                       │
  │                │ │                                                       │ │                                                       │
@@ -36,5 +36,5 @@
  │                │ │                                                       │ │                                                       │
  │                │ │                                                       │ │                                                       │
  ╰────────────────╯ ╰───────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────╯
- c console · e exceptions · ? commands · telemetry connected
+ d build · c console · e errors · ? commands · v config · telemetry connected
  Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit

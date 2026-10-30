@@ -77,7 +77,7 @@ module AzuCLI
         app_file = "./src/#{Utils.project_name}.cr"
         evaluator = AzuCLI::DevServer::Console::Evaluator.new(->(message : UI::Message) { emit(message) }, app_file,
           on_busy: ->(busy : Bool) { control.paused = busy; nil })
-        classic = AzuCLI::DevServer::Hud.new(target, (@port || ENV["PORT"]? || DEFAULT_PORT).to_s, @environment || ENV["CRYSTAL_ENV"]? || "development",
+        workspace = AzuCLI::DevServer::Hud.new(target, (@port || ENV["PORT"]? || DEFAULT_PORT).to_s, @environment || ENV["CRYSTAL_ENV"]? || "development",
           "watching src, config · poll #{@interval.total_milliseconds.to_i} ms", on_rebuild: -> { @rebuild_requested = true; nil }, branch: git_branch,
           on_control: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command); nil },
           history: AzuCLI::DevServer::Console::History.for_project,
@@ -85,12 +85,8 @@ module AzuCLI
           on_prewarm: -> { evaluator.prewarm; nil },
           on_cancel_eval: -> { evaluator.cancel; nil },
           on_interpreter: ->(prelude : Array(String)) { run_interpreter(app_file, prelude); nil })
-        screen = if (@ui_mode || ENV["AZU_UI"]?) == "mission"
-                   AzuCLI::DevServer::MissionControl.new(classic, target, terminal.reduced_motion?,
-                     on_command: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command) })
-                 else
-                   classic
-                 end
+        screen = AzuCLI::DevServer::MissionControl.new(workspace, target, terminal.reduced_motion?,
+          on_command: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command) })
         program = UI::Program.new(screen, terminal, UI::FullScreenRenderer.new(terminal.output))
         @hud = program
         @child.try do |child|
@@ -116,7 +112,7 @@ module AzuCLI
           stop
           telemetry.stop
         end
-        stdout.puts classic.summary
+        stdout.puts workspace.summary
         success
       end
 
@@ -368,7 +364,7 @@ module AzuCLI
             --env NAME         CRYSTAL_ENV for the app (default: your environment or .env, else development)
             --debounce MS      Quiet time before a change is acted on (default #{DEFAULT_DEBOUNCE_MS})
             --interval MS      Polling interval (default #{DEFAULT_INTERVAL_MS})
-            --ui MODE          rich: classic dashboard (default), mission: unified HUD, plain: lines
+            --ui MODE          rich: workspace HUD (default), mission: alias for rich, plain: lines
             --help             Show this help
 
           Exit codes: 0 stopped by Ctrl-C or SIGTERM, 1 not an Azu project, 2 invalid usage.

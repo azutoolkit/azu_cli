@@ -1,24 +1,24 @@
  ╭─ ▲ AZU / storefront · SAMPLE DATA / SQL ───────────────────────────────────────────────────────────────────────────────── running ─╮
- │ c console · e exceptions · ? commands                                                                                              │
+ │ d build · c console · e errors · ? commands · v config                                                                             │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
- ╭─ Workspace ────╮ ╭─ SQL · connected ────────────────────── 2 ─╮ ╭─ Details · Tab switches pane ────────────────────────────────────╮
- │ OBSERVE        │ │ ›2.3ms SELECT p.id, p.name FROM products   │ │  SELECT p.id, p.name FROM products AS p WHERE p.active = TRUE A  │
- │   Dashboard  1 │ │  0.8ms SELECT * FROM carts WHERE id = $1   │ │  ND p.category_id = $1 ORDER BY p.created_at DESC LIMIT 20       │
- │   Server     2 │ │                                            │ │  Caller: product_repository.cr:41                                │
- │   Jobs       3 │ │                                            │ │  Model: Product                                                  │
- │                │ │                                            │ │  Pool wait: 0.1ms                                                │
- │ DATA & ACCESS  │ │                                            │ │                                                                  │
- │   DB         4 │ │                                            │ │                                                                  │
- │ ▌ SQL        5 │ │                                            │ │                                                                  │
- │   Auth       6 │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │ DEVELOP        │ │                                            │ │                                                                  │
- │   Logs       7 │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
+ ╭─ Workspace ────╮ ╭─ SQL · Pool ──────────────────────────────────────────╮ ╭─ Latency histogram · ms ──────────────────────────────╮
+ │ OBSERVE        │ │ 2 queries · avg 1.55 ms                               │ │ 0–1 ████████████ 1  1–5 ████████████ 1                │
+ │   Dashboard 1  │ │ checkouts 6/20 · idle 2                               │ │                                                       │
+ │   Server    2  │ │ N+1 warnings: 0 · slow 0                              │ │                                                       │
+ │   Jobs      3  │ ╰───────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────╯
+ │                │ ╭─ SQL · recent queries · connected ───── 2 ─╮ ╭─ Details · Tab switches pane ────────────────────────────────────╮
+ │ DATA & ACCESS  │ │ › 2.3 ms product_repository.cr:41 SELECT   │ │  SELECT p.id, p.name FROM products AS p WHERE p.active = TRUE A  │
+ │   DB        4  │ │   0.8 ms cart_repository.cr:28 SELECT * …  │ │  ND p.category_id = $1 ORDER BY p.created_at DESC LIMIT 20       │
+ │ ▌ SQL       5  │ │                                            │ │                                                                  │
+ │   Auth      6  │ │                                            │ │  Duration: 2.3 ms                                                │
+ │                │ │                                            │ │  Origin: product_repository.cr:41                                │
+ │ DEVELOP        │ │                                            │ │  Pool wait: 0.1 ms                                               │
+ │   Logs      7  │ │                                            │ │  Endpoint: —                                                     │
+ │   Build     d  │ │                                            │ │                                                                  │
+ │   Errors    e  │ │                                            │ │                                                                  │
+ │   Commands  ?  │ │                                            │ │                                                                  │
+ │   Console   c  │ │                                            │ │                                                                  │
+ │   Config    v  │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
@@ -36,5 +36,5 @@
  │                │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
  ╰────────────────╯ ╰────────────────────────────────────────────╯ ╰──────────────────────────────────────────────────────────────────╯
- c console · e exceptions · ? commands · telemetry connected
+ d build · c console · e errors · ? commands · v config · telemetry connected
  Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit

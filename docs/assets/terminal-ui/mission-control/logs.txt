@@ -1,24 +1,24 @@
  ╭─ ▲ AZU / storefront · SAMPLE DATA / Logs ──────────────────────────────────────────────────────────────────────────────── running ─╮
- │ c console · e exceptions · ? commands                                                                                              │
+ │ d build · c console · e errors · ? commands · v config                                                                             │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
  ╭─ Workspace ────╮ ╭─ Logs · connected ───────────────────── 5 ─╮ ╭─ Details · Tab switches pane ────────────────────────────────────╮
  │ OBSERVE        │ │ ›14:32:08.104 INFO  Azu GET /products 200  │ │  14:32:08.104 INFO  Azu GET /products 200 4.8ms req_8f31         │
- │   Dashboard  1 │ │  14:32:08.106 DEBUG CQL query.complete 2…  │ │                                                                  │
- │   Server     2 │ │  14:32:08.110 INFO  JoobQ mailer.complet…  │ │                                                                  │
- │   Jobs       3 │ │  14:32:08.203 WARN  CQL N+1 detected 12 …  │ │                                                                  │
+ │   Dashboard 1  │ │  14:32:08.106 DEBUG CQL query.complete 2…  │ │                                                                  │
+ │   Server    2  │ │  14:32:08.110 INFO  JoobQ mailer.complet…  │ │                                                                  │
+ │   Jobs      3  │ │  14:32:08.203 WARN  CQL N+1 detected 12 …  │ │                                                                  │
  │                │ │  14:32:08.318 ERROR JoobQ mailer.failed …  │ │                                                                  │
  │ DATA & ACCESS  │ │                                            │ │                                                                  │
- │   DB         4 │ │                                            │ │                                                                  │
- │   SQL        5 │ │                                            │ │                                                                  │
- │   Auth       6 │ │                                            │ │                                                                  │
+ │   DB        4  │ │                                            │ │                                                                  │
+ │   SQL       5  │ │                                            │ │                                                                  │
+ │   Auth      6  │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
  │ DEVELOP        │ │                                            │ │                                                                  │
- │ ▌ Logs       7 │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
- │                │ │                                            │ │                                                                  │
+ │ ▌ Logs      7  │ │                                            │ │                                                                  │
+ │   Build     d  │ │                                            │ │                                                                  │
+ │   Errors    e  │ │                                            │ │                                                                  │
+ │   Commands  ?  │ │                                            │ │                                                                  │
+ │   Console   c  │ │                                            │ │                                                                  │
+ │   Config    v  │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
@@ -36,5 +36,5 @@
  │                │ │                                            │ │                                                                  │
  │                │ │                                            │ │                                                                  │
  ╰────────────────╯ ╰────────────────────────────────────────────╯ ╰──────────────────────────────────────────────────────────────────╯
- c console · e exceptions · ? commands · telemetry connected
+ d build · c console · e errors · ? commands · v config · telemetry connected
  Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit

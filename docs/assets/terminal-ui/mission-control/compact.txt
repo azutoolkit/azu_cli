@@ -1,5 +1,5 @@
  ╭─ ▲ AZU / storefront · SAMPLE DATA / Dashboard ─────────────────── running ─╮
- │ c console · e exceptions · ? commands                                      │
+ │ d build · c console · e errors · ? commands · v config                     │
  ╰────────────────────────────────────────────────────────────────────────────╯
  Dashboard  /  Ctrl-P navigate
 
@@ -14,11 +14,11 @@
  │                                    │ │                                     │
  ╰────────────────────────────────────╯ ╰─────────────────────────────────────╯
  ╭─ SQL ────────────────── connected ─╮ ╭─ Auth ────────────────── connected ─╮
- │  2.3ms SELECT p.id, p.name FROM …  │ │ 14:32:08 sign-in accepted           │
- │  0.8ms SELECT * FROM carts WHERE   │ │ 14:31:42 rate-limit applied         │
+ │   2.3 ms product_repository.cr:41  │ │ 14:32:08 sign-in accepted           │
+ │   0.8 ms cart_repository.cr:28 S…  │ │ 14:31:42 rate-limit applied         │
  │                                    │ │                                     │
  │                                    │ │                                     │
  │                                    │ │                                     │
  ╰────────────────────────────────────╯ ╰─────────────────────────────────────╯
- c console · e exceptions · ? commands · telemetry connected
+ d build · c console · e errors · ? commands · v config · telemetry connected
  Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit
