@@ -4,6 +4,20 @@ require "../../src/azu_cli/dev_server/snapshot_export"
 require "../../src/azu_cli/dev_server/telemetry"
 
 describe AzuCLI::MCPBridge do
+  it "keeps nested database files and symlinks out of generator shadows" do
+    root = File.join(Dir.tempdir, "azu-mcp-shadow-#{Random::Secure.hex(6)}")
+    project = File.join(root, "project")
+    shadow = File.join(root, "shadow")
+    Dir.mkdir_p(File.join(project, "db"))
+    %w(app.db app.db-wal app.sqlite3 app.sqlite3-shm).each { |name| File.write(File.join(project, "db", name), "database bytes") }
+    File.write(File.join(project, "db/migration.cr"), "# source")
+    File.symlink("/tmp", File.join(project, "db/escape"))
+    AzuCLI::GeneratePlan.copy_project(project, shadow)
+    Dir.children(File.join(shadow, "db")).should eq(["migration.cr"])
+  ensure
+    FileUtils.rm_rf(root) if root
+  end
+
   it "refuses traversal arguments and nested symlinks before launching a preview" do
     root = File.join(Dir.tempdir, "azu-mcp-preview-#{Random::Secure.hex(6)}")
     Dir.mkdir_p(File.join(root, "src"))
