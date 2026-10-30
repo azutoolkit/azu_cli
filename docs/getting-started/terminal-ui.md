@@ -78,7 +78,7 @@ Page 1/2 · [ / ] page · Tab select · Enter inspect
 {% endhint %}
 
 {% hint style="warning" %}
-**Counts have scope.** Cookie sessions cannot report an active-session inventory. Redis connectivity does not prove workers are running. Memory graphs show GC heap samples; the RSS number is separate.
+**Counts have scope.** Cookie sessions cannot report an active-session inventory. Redis connectivity does not prove workers are running. Overview graphs use filled bars with a zero baseline, scaled to the visible peak. When samples must be grouped, each bar retains the highest value in its group. Memory graphs show GC heap samples; the RSS number is separate. ASCII terminals use `#` and `+` bars.
 {% endhint %}
 
 {% hint style="success" %}

@@ -2,6 +2,46 @@ module AzuCLI
   module UI
     # Small drawing helpers shared by the screens and reporters.
     module Widgets
+      # Solid columns with a shared zero baseline and eighth-cell vertical steps.
+      # Adjacent samples share a peak bucket when the terminal is narrow, so short
+      # spikes survive resizing. Fewer samples produce wider bars, never fake data.
+      def self.filled_bars(values : Array(Float64), width : Int32, glyphs : Glyphs, height : Int32 = 3) : Array(String)
+        return [] of String if width <= 0 || height <= 0
+        return Array.new(height, " " * width) if values.empty?
+        count = Math.min(values.size, (width + 1) // 2)
+        bar_width = (width - count + 1) // count
+        padding = width - (count * bar_width + count - 1)
+        peaks = Array.new(count) do |index|
+          first = index * values.size // count
+          last = (index + 1) * values.size // count
+          peak = 0.0
+          (first...last).each do |sample|
+            value = values[sample]
+            peak = value if value.finite? && value > peak
+          end
+          peak
+        end
+        maximum = peaks.max
+        levels = peaks.map { |peak| maximum > 0 ? (peak / maximum * height * 8).ceil.to_i : 0 }
+        Array.new(height) do |row|
+          String.build do |io|
+            padding.times { io << ' ' }
+            levels.each_with_index do |level, index|
+              filled = (level - (height - row - 1) * 8).clamp(0, 8)
+              char = if filled == 0
+                       ' '
+                     elsif glyphs == Glyphs::ASCII
+                       filled == 8 ? '#' : '+'
+                     else
+                       (0x2580 + filled).chr
+                     end
+              bar_width.times { io << char }
+              io << ' ' unless index == count - 1
+            end
+          end
+        end
+      end
+
       # Values scaled to the sparkline glyphs, the last `width` values.
       # Two terminal rows represent eight vertical pixels per point pair.
       def self.braille_sparkline(values : Array(Float64), width : Int32, glyphs : Glyphs) : Array(String)

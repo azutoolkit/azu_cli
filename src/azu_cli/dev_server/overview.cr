@@ -132,14 +132,14 @@ module AzuCLI::DevServer
     private def draw_overview_card(frame : Frame, rect : Rect, card : DashboardState::Card, selected : Bool) : Nil
       frame.fill(rect, style: frame.style(Token::Text, bg: Token::Surface))
       inner = frame.card(rect, card.title, border: selected ? Token::Blue : Token::Border, title_color: Token::Muted)
-      chart = !card.series.empty? && inner.h >= 4
-      count = chart ? inner.h - 2 : inner.h
+      chart = !card.series.empty? && inner.h >= 5
+      count = chart ? inner.h - 3 : inner.h
       Viewport.wrap(card.lines, inner.w).first(count).each_with_index do |line, i|
         frame.text(inner.x, inner.y + i, line, frame.style(i == 0 ? Token::Text : Token::Muted, bg: Token::Surface), max: inner.w)
       end
       if chart
-        Widgets.braille_sparkline(card.series, inner.w, frame.glyphs).each_with_index do |line, i|
-          frame.text(inner.x, inner.bottom - 2 + i, line, frame.style(Token::Blue, bg: Token::Surface), max: inner.w)
+        Widgets.filled_bars(card.series, inner.w, frame.glyphs).each_with_index do |line, i|
+          frame.text(inner.x, inner.bottom - 3 + i, line, frame.style(Token::Blue, bg: Token::Surface), max: inner.w)
         end
       end
     end
