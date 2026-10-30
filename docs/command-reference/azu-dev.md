@@ -8,7 +8,7 @@ description: Run your app in development, rebuilding and restarting it on every 
 
 The workspace mirrors Azu's browser dashboard with a health banner and paged cards for uptime, memory, latency, routes, traffic, errors, cache, database, components, and runtime. Optional features are hidden when explicitly disabled; missing telemetry remains labeled unavailable.
 
-Use Ctrl-P to navigate the four sidebar groups. Errors lives under **Observe**; **Sessions** replaces Auth; **Database** contains SQL, pool, schema, and migration subviews. **Jobs** holds JoobQ management and Queues & Activity. Components and Mailers live under **Develop**. Build, console, configuration, routes, and command composition remain available through the palette.
+Use Ctrl-P to navigate the four sidebar groups. Errors lives under **Observe**; **Sessions** replaces Auth; **Database** contains SQL, pool, schema, and migration subviews. **Jobs** holds JoobQ management and Queues & Activity. **Develop** contains Commands, Console, Build, Config, Generators, Serve, Routes, Doctor, Components and Mailers. Serve controls the existing development server. Enter in Routes or Doctor refreshes the command output; Enter in Generators opens the reviewed editor. All destinations also remain in the command palette.
 
 Press `[` / `]` to change Overview pages or Database subviews, Tab to move focus, Enter to inspect, and `h` for contextual help. The sidebar collapses below 104 columns. Dense lists and stack traces scroll inside their panes. See [Terminal UI](../getting-started/terminal-ui.md) for the complete key map.
 
@@ -95,7 +95,7 @@ ERROR: Build failed after 5.5s. The previous build keeps running (pid 1195); sav
 {% code title="terminal: azu dev, the dashboard after a failed build" %}
 ```text
 ▲ AZU  dev · demo_app   ✖ build failed · serving the previous build   pid 1195  :4000  develo…  16:04:33
-[1] Overview   [2] Commands   [3] Console   [4] Requests   [5] SQL   [6] Jobs   [7] Log   [8] Config
+[1] Overview  [2] Errors  [3] Tracing  [4] Logs  [5] Profiler  [6] Sessions  [7] Database
 Build failed · the app keeps running the previous build (pid 1195)                         5.5s
 ✖ src/demo_app.cr:79:6
 
@@ -151,13 +151,13 @@ Don't stop `azu dev` with SIGKILL. It cannot stop the app then, and the app keep
 | Log | The app's stdout and stderr |
 | Config | What the app runs with, as `azu config` last read it: server, TLS, templates, database, limits, uploads, WebSocket, i18n, assets; secrets only as set or not set |
 
-Keys: `1` to `9` switch panels, `r` rebuilds now, `l` shows the log, `c` clears it, `q` or Ctrl-C quits. Quitting prints a one-line summary of the session.
+Keys follow the sidebar: `1` Overview, `2` Errors, `3` Tracing, `4` Logs, `5` Profiler, `6` Sessions, `7` Database, `8` Cache, `9` JoobQ, `0` Queues, `c` Components and `m` Mailers. Alt-Left/Right moves between sections. Ctrl-P searches all views and tools; `?` opens help; `q` or Ctrl-C quits. The backtick key opens Console. In JoobQ, `r` requests a confirmed DLQ replay; elsewhere it rebuilds the application.
 
 SQL and Errors use a master/detail viewport: Tab switches panes, arrows select or scroll, and PgUp/PgDn and Home/End navigate longer content. Block scrollbars mark overflow; selected IDs remain stable across refreshes.
 
-The Log, Requests and Config panels scroll: `↑`/`↓` (or `k`/`j`) a line, PgUp/PgDn a page, Home/End (or `g`/`G`) to either end. The card's badge says which rows it shows (`21-40 of 80`). A Log scrolled back stays where it is as lines arrive; End follows the newest line again.
+The Log, Requests and Config panels scroll: `↑`/`↓` (or `k`/`j`) a line, PgUp/PgDn a page, Home/End to either end. The card's badge says which rows it shows (`21-40 of 80`). A Log scrolled back stays where it is as lines arrive; `f` follows newest logs again.
 
-The Config panel shows the last run of `azu config`, which the Commands panel repeats after each successful build and whenever `.env*`, `shard.yml` or `shard.lock` changes. Enter (or `u`) reads it again. Values are colored by what they say: a setting that is not set in amber, on and set in green, off in muted, numbers and durations in cyan, URLs and addresses in blue. When the app does not load, the panel shows the error instead.
+The Config panel shows the last run of `azu config`, which the Commands panel repeats after each successful build and whenever `.env*`, `shard.yml` or `shard.lock` changes. Enter reads it again. Values are colored by what they say: a setting that is not set in amber, on and set in green, off in muted, numbers and durations in cyan, URLs and addresses in blue. When the app does not load, the panel shows the error instead.
 
 </details>
 

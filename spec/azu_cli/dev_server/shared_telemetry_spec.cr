@@ -16,8 +16,8 @@ end
 describe "workspace keyboard hints" do
   it "shows shortcut labels and a scrollable help panel without stealing text input" do
     screen = shared_screen
-    shared_text(screen).should contain "[D]"
-    shared_text(screen).should contain "h help"
+    shared_text(screen).should contain "[7]"
+    shared_text(screen).should contain "? help"
     screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, 'h'))
     shared_text(screen).should contain "Keyboard hints"
     screen.update(SharedUI::Key.new(SharedUI::KeyCode::End))
@@ -28,7 +28,7 @@ describe "workspace keyboard hints" do
     screen.query.should eq "h"
     shared_text(screen).should_not contain "Keyboard hints"
     screen.update(SharedUI::Key.new(SharedUI::KeyCode::Esc))
-    screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, 'c'))
+    screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '`'))
     screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, 'h'))
     shared_text(screen).should_not contain "Keyboard hints"
     screen.update(SharedUI::Key.new(SharedUI::KeyCode::CtrlP))
@@ -59,7 +59,7 @@ describe AzuCLI::DevServer::SharedTelemetry do
     data["sql"]["n_plus_one"].as_a.size.should eq 1
     screen = shared_screen
     screen.update(SharedEvents::Telemetry.new(data))
-    screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '5'))
+    screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, 's'))
     text = shared_text(screen)
     text.should contain "export_azu_cql_telemetry.cr"
     text.should contain "N+1"
@@ -72,7 +72,7 @@ describe AzuCLI::DevServer::SharedTelemetry do
   it "uses shared requests without stdout, permits source switching, and exposes supplied runtime metrics" do
     screen = shared_screen
     screen.update(SharedEvents::Telemetry.new(JSON.parse(%({"v":1,"requests":{"recent":[{"at":"12:00:00","method":"GET","path":"/shared-request","status":500,"ms":2.5}]},"runtime":{"heap_bytes":1048576,"free_bytes":1024}}))))
-    screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '7'))
+    screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '4'))
     text = shared_text(screen)
     text.should contain "Logs · azu/dev requests"
     text.should contain "ERROR HTTP GET /shared-request 500 2.5ms"
@@ -108,14 +108,14 @@ describe AzuCLI::DevServer::SharedTelemetry do
       end
       shared_text(screen).should contain "azu/dev v1"
       shared_text(screen).should contain "heap"
-      screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '7'))
+      screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '4'))
       shared_text(screen).should contain "POST /login"
-      screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '5'))
+      screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, 's'))
       text = shared_text(screen)
       text.should contain "product_repository.cr:41"
       text.should contain "Latency histogram"
       text.should contain "N+1"
-      screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, 'e'))
+      screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '2'))
       screen.update(SharedUI::Key.new(SharedUI::KeyCode::Tab))
       text = shared_text(screen)
       text.should contain "shared telemetry integration failure"

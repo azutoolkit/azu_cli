@@ -42,12 +42,15 @@ def resize(width, height):
 try:
     resize(136, 40)
     collect(0.8)
-    os.write(master, b"h")
+    os.write(master, b"?")
     collect(0.2)
     assert b"Keyboard hints" in output, "keyboard hints did not open"
     os.write(master, b"\x1b")
     collect(0.2)
-    os.write(master, b"7t")
+    os.write(master, b"\x1b[1;3C")  # Alt-Right: Overview -> Errors
+    collect(0.2)
+    assert b"Errors" in output, "next section navigation failed"
+    os.write(master, b"4t")
     collect(0.2)
     assert b"azu/dev" in output, "shared request source did not open"
     os.write(master, b"t")

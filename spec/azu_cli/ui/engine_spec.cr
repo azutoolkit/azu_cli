@@ -166,6 +166,25 @@ describe AzuCLI::UI::InlineRenderer do
 end
 
 describe AzuCLI::UI::Widgets do
+  it "fills zero-based bars from the bottom and retains peaks when downsampling" do
+    TUI::Widgets.filled_bars([0.0, 0.5, 1.0], 5, TUI::Glyphs::UNICODE, 2).should eq ["    █", "  █ █"]
+    TUI::Widgets.filled_bars([1.0, 8.0], 3, TUI::Glyphs::UNICODE, 1).should eq ["▁ █"]
+    TUI::Widgets.filled_bars([0.0, 8.0, 0.0, 4.0], 3, TUI::Glyphs::UNICODE, 1).should eq ["█ ▄"]
+    TUI::Widgets.filled_bars([1.0, 1.0], 3, TUI::Glyphs::UNICODE, 2).should eq ["█ █", "█ █"]
+  end
+
+  it "keeps bar charts bounded and handles missing, zero and invalid samples" do
+    TUI::Widgets.filled_bars([0.0, Float64::NAN, Float64::INFINITY, -1.0], 5, TUI::Glyphs::UNICODE).should eq ["     ", "     ", "     "]
+    TUI::Widgets.filled_bars([] of Float64, 3, TUI::Glyphs::UNICODE).should eq ["   ", "   ", "   "]
+    TUI::Widgets.filled_bars([1.0], 0, TUI::Glyphs::UNICODE).should be_empty
+    TUI::Widgets.filled_bars([0.5, 1.0], 3, TUI::Glyphs::ASCII, 1).should eq ["+ #"]
+    (1..35).each do |width|
+      rows = TUI::Widgets.filled_bars([1.0, 3.0, 2.0], width, TUI::Glyphs::UNICODE)
+      rows.size.should eq 3
+      rows.each { |row| row.size.should eq width }
+    end
+  end
+
   it "scales sparklines, fills meters and formats durations" do
     TUI::Widgets.sparkline([0.0, 7.0, 3.5], 10, TUI::Glyphs::UNICODE).should eq "▁█▅"
     TUI::Widgets.sparkline([1.0, 2.0, 3.0], 2, TUI::Glyphs::UNICODE).should eq "▁█"
@@ -191,5 +210,11 @@ describe "AzuCLI::UI::Terminal.open_input" do
 
   it "falls back to /dev/tty when neither stdin nor stdout is a terminal" do
     TUI::Terminal.terminal_path.should eq "/dev/tty" unless STDIN.tty? || STDOUT.tty?
+  end
+end
+
+describe AzuCLI::UI::Input do
+  it "distinguishes Alt section navigation from plain pane arrows" do
+    TUI::Input.parse("\e[1;3D\e[1;3C\e[D\e[C").map(&.code).should eq [TUI::KeyCode::AltLeft, TUI::KeyCode::AltRight, TUI::KeyCode::Left, TUI::KeyCode::Right]
   end
 end

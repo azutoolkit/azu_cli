@@ -153,6 +153,8 @@ module AzuCLI
           elsif scroll_key?(event)
             return scroll_key(event)
           end
+        when .log?
+          return scroll_key(event) if scroll_key?(event)
         when .errors?
           errors_tab.key(event)
         else
@@ -187,6 +189,50 @@ module AzuCLI
           else
             log_card(frame, rest, "Build / application output", full: true) unless rest.empty?
           end
+        end
+      end
+
+      def reset_command_scroll : Nil
+        @detail_scroll = 0
+      end
+
+      # Dedicated Develop destinations reuse the serialized control runner and its
+      # bounded output. Rendering never starts a process.
+      def command_output_key(id : String, event : Key) : UI::Action
+        if event.code.enter? || event.char?('r')
+          @commands.find(&.id.==(id)).try { |command| run(command) }
+        elsif event.code.up? || event.char?('k')
+          @detail_scroll += 1
+        elsif event.code.down? || event.char?('j')
+          @detail_scroll = Math.max(0, @detail_scroll - 1)
+        elsif event.code.page_up?
+          @detail_scroll += @page
+        elsif event.code.page_down?
+          @detail_scroll = Math.max(0, @detail_scroll - @page)
+        elsif event.code.home?
+          @detail_scroll = Int32::MAX // 2
+        elsif event.code.end?
+          @detail_scroll = 0
+        end
+        UI::Action::Redraw
+      end
+
+      def command_output_view(frame : Frame, area : Rect, id : String) : Nil
+        if command = @commands.find(&.id.==(id))
+          command_detail(frame, area, command)
+        else
+          inner = frame.card(area, id.capitalize)
+          frame.text(inner.x, inner.y, "Command not configured for this workspace", Token::Muted, max: inner.w)
+        end
+      end
+
+      def serve_view(frame : Frame, area : Rect) : Nil
+        top, rest = area.split_top(Math.min(7, area.h))
+        app_card(frame, top)
+        if rest.h > 2
+          frame.text(rest.x, rest.y, "Enter starts or rebuilds/restarts this development server", Token::Blue, max: rest.w)
+          _, output = rest.split_top(1)
+          log_card(frame, output, "Server output", full: true)
         end
       end
 
@@ -965,8 +1011,7 @@ module AzuCLI
         end
       end
 
-      private def command_detail(frame : Frame, rect : Rect) : Nil
-        command = @commands[@selected]
+      private def command_detail(frame : Frame, rect : Rect, command : Control::Command = @commands[@selected]) : Nil
         run = runs[command.id]?
         # The rows above the output, to know how many of its lines fit before drawing the card
         header = 1 + (@confirming ? 3 : 0) + (status(command.id).running? ? 1 : 0) + 1

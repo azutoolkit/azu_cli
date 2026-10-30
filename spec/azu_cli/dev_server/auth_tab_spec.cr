@@ -47,7 +47,7 @@ describe AzuCLI::DevServer::AuthTab do
       screen.update(AuthEvents::Telemetry.new(JSON.parse(store.snapshot)))
       screen.update(AuthUI::Key.new(AuthUI::KeyCode::Home))
       auth_frame(screen).should contain "Outcome: rejected"
-      screen.update(AuthUI::Key.new(AuthUI::KeyCode::Char, '5'))
+      screen.update(AuthUI::Key.new(AuthUI::KeyCode::Char, 's'))
       auth_frame(screen).should contain "retained_sql"
 
       screen.update(AuthEvents::AppStarted.new(123_i64))

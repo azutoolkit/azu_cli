@@ -10,7 +10,7 @@ alias MissionUI = AzuCLI::UI
 alias MissionDev = AzuCLI::DevServer
 
 classic = MissionDev::Hud.new("blog", "4000", "development", "illustrative telemetry",
-  commands: [] of MissionDev::Control::Command)
+  commands: MissionDev::Control.catalog(jobs: false))
 program : MissionUI::Program? = nil
 control : MissionDev::Control::Runner? = nil
 if binary = ENV["AZU_PREVIEW_COMMAND_BINARY"]?
@@ -19,6 +19,8 @@ end
 screen = MissionDev::MissionControl.new(classic, "blog", sample_data: true,
   on_command: ->(command : MissionDev::Control::Command) { control.try(&.enqueue(command)) || false })
 screen.update(MissionDev::Events::AppStarted.new(53628_i64))
+screen.update(MissionDev::Events::ControlFinished.new("doctor", 0, "9 ok, 0 warnings, 0 failures", 0.12))
+screen.update(MissionDev::Events::ControlFinished.new("routes", 0, "GET /posts Posts::Index\nPOST /posts Posts::Create\n2 routes", 0.3))
 [144.0, 240.0, 390.0, 512.0, 640.0, 760.0, 820.0, 950.0, 1080.0, 1150.0, 1200.0].each do |rate|
   screen.update(MissionDev::Events::Telemetry.new(JSON.parse({v: 1, requests: {rps: rate}}.to_json)))
 end
@@ -75,7 +77,7 @@ if ARGV.includes?("--interactive")
 else
   directory = ENV["AZU_PREVIEW_DIR"]? || "/tmp/azu-cli-previews/mission-control"
   Dir.mkdir_p(directory)
-  [{"overview", '1', 200, 60}, {"auth", '6', 156, 46}, {"sql", '5', 156, 46}, {"logs", '7', 156, 46}, {"tracing", 'T', 156, 46}, {"cache", 'C', 156, 46}, {"mailers", 'M', 156, 46}, {"compact", '1', 80, 24}].each do |(name, tab, width, height)|
+  [{"overview", '1', 200, 60}, {"auth", '6', 156, 46}, {"sql", 's', 156, 46}, {"logs", '4', 156, 46}, {"tracing", '3', 156, 46}, {"cache", '8', 156, 46}, {"mailers", 'm', 156, 46}, {"generators", 'g', 156, 46}, {"serve", 'S', 156, 46}, {"doctor", 'D', 156, 46}, {"compact", '1', 80, 24}].each do |(name, tab, width, height)|
     screen.update(MissionUI::Key.new(MissionUI::KeyCode::Char, tab))
     styles = MissionUI::StyleTable.new(MissionUI::Theme.new(MissionUI::ColorDepth::TrueColor), MissionUI::Token::Backplate)
     frame = MissionUI::Frame.new(width, height, styles)

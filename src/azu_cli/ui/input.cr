@@ -28,6 +28,8 @@ module AzuCLI
       CtrlP
       # Alt-Enter (ESC, then CR): a new line in an editor where Enter runs
       AltEnter
+      AltLeft
+      AltRight
       Paste
     end
 
@@ -101,6 +103,8 @@ module AzuCLI
             break if 0x40 <= byte <= 0x7E
           end
           body = rest.byte_slice(2, index - 2)
+          return {index, Key.new(KeyCode::AltLeft)} if body == "1;3D"
+          return {index, Key.new(KeyCode::AltRight)} if body == "1;3C"
           body = body.sub(/\A1;\d+/, "") if body.size > 1 && body.starts_with?("1;") # modifiers: treat as the plain key
           return {index, CSI[body]?.try { |code| Key.new(code) }}
         end

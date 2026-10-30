@@ -29,18 +29,32 @@ Rich mode uses the terminal's alternate screen and restores it on exit. `--ui ri
 
 | Key | Action |
 | --- | --- |
-| Ctrl-P | Search views and commands |
-| `h`, Esc | Open or close contextual help |
+| Ctrl-P | Search views and commands in sidebar order |
+| Alt-Left / Alt-Right | Previous / next sidebar section |
+| `?` or `h`, Esc | Open or close contextual help |
 | `b` | Collapse or expand the sidebar |
-| `[` / `]` | Change Overview pages or Database subviews |
+| `[` / `]` | Change Overview pages, Database or JoobQ subviews |
 | Tab / Shift-Tab | Change card or inspector focus |
 | arrows, `j` / `k` | Select a card or list item |
 | Enter | Inspect the selection |
 | `/`, Esc | Filter, then clear the filter |
 | PageUp / PageDown | Scroll the focused list or details |
-| `g`, `:` | Compose a generator or command |
-| `c` | Open the local console |
+| `g`, `:` | Open Generators / compose a command |
+| Backtick | Open the local console |
 | `q` | Quit; disconnect in production monitoring |
+
+Direct navigation follows the sidebar and stays stable when features are disabled:
+
+| Key | Screen | Key | Screen |
+| --- | --- | --- | --- |
+| `1` | Overview | `6` | Sessions |
+| `2` | Errors | `7` | Database |
+| `3` | Tracing | `8` | Cache |
+| `4` | Logs | `9` | JoobQ |
+| `5` | Profiler | `0` | Queues & Activity |
+| `c` | Components | `m` | Mailers |
+
+Use `[` / `]` for Overview pages, Database subviews, or embedded JoobQ views. Standalone `azu joobq` also retains `1` / `2` / `3` for its own views. The console opens with the backtick key; Build (`d`), Commands (`x`) and Configuration (`v`) also remain in Ctrl-P. `?` opens help rather than Commands. These replace the previous scattered numeric and uppercase shortcuts.
 
 Text-entry views keep letters as input. Ctrl-P remains available from the console. At widths below 104 columns, use the palette instead of the sidebar. Overview pages keep the header and footer fixed; long details scroll inside their viewport.
 
@@ -51,9 +65,9 @@ Text-entry views keep letters as input. Ctrl-P remains available from the consol
 | Observe | Overview health/cards; Errors and exception details; Tracing distributions/endpoints; highlighted Logs; Profiler spans and GC trend |
 | Data & Access | Sessions lifecycle and backend; Database summary, SQL/pool, schema, migrations; Cache operations |
 | Jobs | JoobQ workers/workflows/DLQ; Queues & Activity counters |
-| Develop | Components lifecycle; Mailers delivery outcomes and static previews |
+| Develop | Commands, Console, Build, Config, Generators, Serve, Routes, Doctor, Components, Mailers |
 
-Build, console, commands, configuration, and routes remain available through Ctrl-P. SQL is a Database subview; the `5` shortcut still opens its inspector.
+Develop contains the local tools in this order: Commands (`x`), Console (backtick), Build (`d`), Config (`v`), Generators (`g`), Serve (`S`), Routes (`a`), Doctor (`D`), then Components (`c`) and Mailers (`m`). They are also searchable through Ctrl-P. Enter in Generators opens the reviewed command editor. Serve shows and restarts the existing development server; it does not spawn a second server. Enter in Routes or Doctor refreshes their command output through the existing runner. Local execution tools are hidden in production monitoring. SQL is a Database subview; the `s` shortcut opens its inspector.
 
 ## Realistic output
 
@@ -78,7 +92,7 @@ Page 1/2 · [ / ] page · Tab select · Enter inspect
 {% endhint %}
 
 {% hint style="warning" %}
-**Counts have scope.** Cookie sessions cannot report an active-session inventory. Redis connectivity does not prove workers are running. Memory graphs show GC heap samples; the RSS number is separate.
+**Counts have scope.** Cookie sessions cannot report an active-session inventory. Redis connectivity does not prove workers are running. Overview graphs use filled bars with a zero baseline, scaled to the visible peak. When samples must be grouped, each bar retains the highest value in its group. Memory graphs show GC heap samples; the RSS number is separate. ASCII terminals use `#` and `+` bars.
 {% endhint %}
 
 {% hint style="success" %}

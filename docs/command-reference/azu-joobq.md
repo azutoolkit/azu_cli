@@ -30,7 +30,8 @@ azu joobq --boot src/dashboard_boot.cr
 | Option/key | Effect |
 | --- | --- |
 | `--boot PATH` | Configure the application's stores and job classes; default `src/initializers/joobq.cr` |
-| `1`, `2`, `3` | Select queues, workflows or dead letters |
+| `1`, `2`, `3` | Select queues, workflows or dead letters in standalone `azu joobq` |
+| `[` / `]` | Previous / next JoobQ view; use these inside `azu dev`, where numbers select sidebar sections |
 | Tab / left / right | Switch list and detail panes |
 | Up / down, PgUp / PgDn, Home / End | Navigate within the focused viewport |
 | `r`, then `y` | Replay the selected dead letter; any other key cancels |
