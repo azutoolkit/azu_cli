@@ -1,5 +1,5 @@
                     │                                                                                                             PREVIEW · SAMPLE DATA
-   ▲ AZU            │ storefront / Observe / Overview  |  ● running  pid 48231 :4000                                                               01:41:12
+   ▲ AZU            │ storefront / Observe / Overview  |  ● running  pid 48231 :4000                                                               02:11:53
                     │ ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
    storefront       │ ╭─ Requests ───────────────────╮ ╭─ JoobQ ──────────────────────╮ ╭─ CQL pool ───────────────────╮ ╭─ Auth ─────────────────────────╮
    development      │ │ 1284 req/s                   │ │ 10 processing                │ │ 6 / 20 in use                │ │ 2 recent events                │

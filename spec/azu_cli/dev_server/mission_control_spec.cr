@@ -224,7 +224,7 @@ describe MCUI::Highlight do
     source = "SELECT name FROM users WHERE label = 'it''s fine' AND id = $1 -- note"
     tokens = MCUI::Highlight.sql(source)
     tokens.map(&.text).join.should eq source
-    tokens.find(&.text.==("SELECT")).not_nil!.style.fg.should eq MCUI::Token::Purple
+    tokens.find(&.text.==("SELECT")).not_nil!.style.fg.should eq MCUI::Token::Pink
     tokens.find(&.text.==("'it''s fine'")).not_nil!.style.fg.should eq MCUI::Token::Green
     tokens.find(&.text.==("$1")).not_nil!.style.fg.should eq MCUI::Token::Amber
   end

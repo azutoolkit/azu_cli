@@ -382,7 +382,7 @@ module AzuCLI::DevServer
       source = selected.details.first? || selected.label
       formatted = String.build do |io|
         Highlight.sql(source).each do |seg|
-          io << '\n' if seg.style.fg == Token::Purple && {"FROM", "WHERE", "ORDER", "GROUP", "LIMIT", "JOIN", "LEFT", "INNER", "HAVING", "RETURNING", "AND"}.includes?(seg.text.upcase)
+          io << '\n' if {"FROM", "WHERE", "ORDER", "GROUP", "LIMIT", "JOIN", "LEFT", "INNER", "HAVING", "RETURNING", "AND"}.includes?(seg.text.upcase)
           io << seg.text
         end
       end

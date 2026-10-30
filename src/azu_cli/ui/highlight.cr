@@ -37,14 +37,14 @@ module AzuCLI::UI
             index += 1
           end
           word = chars[start...index].join
-          color = SQL_WORDS.includes?(word.upcase) ? Token::Purple : Token::Cyan
-          color = Token::Amber if {"TRUE", "FALSE", "NULL"}.includes?(word.upcase)
+          color = SQL_WORDS.includes?(word.upcase) ? Token::Pink : Token::Blue
+          color = Token::Purple if {"TRUE", "FALSE", "NULL"}.includes?(word.upcase)
         elsif char.ascii_number? || char == '$' || char == '?'
           index += 1
           while (next_char = chars[index]?) && (next_char.ascii_number? || next_char == '.')
             index += 1
           end
-          color = Token::Amber
+          color = char == '$' || char == '?' ? Token::Amber : Token::Purple
         else
           index += 1
         end

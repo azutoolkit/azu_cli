@@ -1,5 +1,5 @@
                     │                                                                                                             PREVIEW · SAMPLE DATA
-   ▲ AZU            │ storefront / Data & Access / Auth  |  ● running  pid 48231 :4000                                                             01:41:12
+   ▲ AZU            │ storefront / Data & Access / Auth  |  ● running  pid 48231 :4000                                                             02:11:53
                     │ ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
    storefront       │ ╭─ Auth · application events · connected ─────── 2 ─╮ ╭─ Details · Tab switches pane ───────────────────────────────────────────────╮
    development      │ │ 14:32:08 sign-in accepted                         │ │ Event: sign-in                                                              │

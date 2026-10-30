@@ -51,11 +51,14 @@ separate read-only connection and metrics allowlist, not the development socket.
 
 ## Visual direction
 
-The reference screen uses an Azu-inspired cyan/violet palette on near-black
-`#080F14`: silver `#E6EDF3`, cyan `#00D7EF`, violet `#BA83FF`, mint `#00DFB2`,
-and muted blue `#91AAC6`. Thin steel-blue borders (`#3D6077`) and dark cyan
-selection bands (`#082C3E`) separate panes without large filled backgrounds.
-SQL keywords are violet, identifiers cyan, strings mint and literals amber.
+The palette follows the cover artwork linked from the
+[Azu documentation](https://azutopia.gitbook.io/azu): charcoal `#0B0E14`, silver
+`#E6EDF3`, cyan `#22D3EE`, violet `#A78BFA`, blue `#60A5FA`, mint `#34D399`,
+pink `#F472B6`, and muted gray `#8B949E`. Borders use the cover's quiet slate
+`#2A313C`; selection bands use its dark cyan tint `#0E2932`.
+The wordmark and charts retain the cyan-to-violet gradient. SQL keywords are
+pink, identifiers blue, strings mint and numeric/boolean literals violet;
+bind placeholders and warnings remain amber. Errors retain semantic coral.
 Logs distinguish timestamps, severity, status, sources, timings and trace IDs.
 The full-height brand rail sits beside a breadcrumb/status header. Four compact
 metric cards lead into live logs and selected SQL, with a queue table below;

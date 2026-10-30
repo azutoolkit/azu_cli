@@ -56,19 +56,19 @@ module AzuCLI
       # Azu documentation cover palette: https://azutopia.gitbook.io/azu
       # {true color, 256-color index, 16-color SGR foreground code}
       PALETTE = {
-        Token::Backplate => {0x080F14, 233, 39},
+        Token::Backplate => {0x0B0E14, 233, 39},
         Token::Text      => {0xE6EDF3, 255, 37},
-        Token::Muted     => {0x91AAC6, 246, 90},
+        Token::Muted     => {0x8B949E, 246, 90},
         Token::Faint     => {0x2A313C, 236, 90},
-        Token::Cyan      => {0x00D7EF, 44, 36},
-        Token::Purple    => {0xBA83FF, 141, 35},
-        Token::Green     => {0x00DFB2, 42, 32},
+        Token::Cyan      => {0x22D3EE, 44, 36},
+        Token::Purple    => {0xA78BFA, 141, 35},
+        Token::Green     => {0x34D399, 42, 32},
         Token::Amber     => {0xFBBF24, 214, 33},
         Token::Red       => {0xF87171, 203, 31},
         Token::Blue      => {0x60A5FA, 75, 34},
         Token::Pink      => {0xF472B6, 211, 35},
-        Token::Border    => {0x3D6077, 60, 90},
-        Token::Selection => {0x082C3E, 24, 44},
+        Token::Border    => {0x2A313C, 236, 90},
+        Token::Selection => {0x0E2932, 23, 44},
       }
 
       GRADIENT_STEPS = 16

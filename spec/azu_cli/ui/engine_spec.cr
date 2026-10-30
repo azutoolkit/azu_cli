@@ -48,7 +48,7 @@ end
 describe AzuCLI::UI::Theme do
   it "writes the escape code of each depth and nothing without color" do
     style = TUI::Style.new(TUI::Token::Cyan, attrs: TUI::Attr::Bold)
-    TUI::Theme.new(TUI::ColorDepth::TrueColor).sgr(style).should eq "\e[0;1;38;2;0;215;239m"
+    TUI::Theme.new(TUI::ColorDepth::TrueColor).sgr(style).should eq "\e[0;1;38;2;34;211;238m"
     TUI::Theme.new(TUI::ColorDepth::Ansi256).sgr(style).should eq "\e[0;1;38;5;44m"
     TUI::Theme.new(TUI::ColorDepth::Basic16).sgr(style).should eq "\e[0;1;36m"
     TUI::Theme.new(TUI::ColorDepth::None).sgr(style).should eq ""

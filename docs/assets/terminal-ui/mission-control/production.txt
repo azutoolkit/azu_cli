@@ -1,5 +1,5 @@
                     │ PRODUCTION · READ ONLY · commands, console and rebuild disabled                                             PREVIEW · SAMPLE DATA
-   ▲ AZU            │ production / Observe / Overview  |  ● READ ONLY                                                                              01:41:12
+   ▲ AZU            │ production / Observe / Overview  |  ● READ ONLY                                                                              02:11:53
                     │ ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
    production       │ ╭─ Requests ───────────────────╮ ╭─ JoobQ ──────────────────────╮ ╭─ CQL pool ───────────────────╮ ╭─ Auth ─────────────────────────╮
    PRODUCTION / READ│ │ 42 req/s                     │ │ -- processing                │ │ 3 / 20 in use                │ │ not exported                   │

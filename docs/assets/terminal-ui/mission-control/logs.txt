@@ -1,5 +1,5 @@
                     │                                                                                                             PREVIEW · SAMPLE DATA
-   ▲ AZU            │ storefront / Observe / Logs  |  ● running  pid 48231 :4000                                                                   01:41:12
+   ▲ AZU            │ storefront / Observe / Logs  |  ● running  pid 48231 :4000                                                                   02:11:53
                     │ ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
    storefront       │ ╭─ Logs · application output · connected ────── 18 ─╮ ╭─ Details · Tab switches pane ───────────────────────────────────────────────╮
    development      │ │ ›14:32:09.487 INFO  HTTP   GET /products/1     …  │ │  14:32:09.487 INFO  HTTP   GET /products/1       200 4.4ms req_8f44         │
