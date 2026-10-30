@@ -56,19 +56,29 @@ module AzuCLI
 
     def self.copy_project(from : String, to : String) : Nil
       Dir.mkdir_p(to, 0o700) # the copy holds the project's .env: no one else may read it
+      copy_entries(from, to)
+      # The compiler finds the shards through lib/: link it so the shadow can be type-checked.
+      shards = File.join(from, "lib")
+      File.symlink(File.realpath(shards), File.join(to, "lib")) if Dir.exists?(shards)
+    end
+
+    private def self.copy_entries(from : String, to : String) : Nil
       Dir.each_child(from) do |name|
-        next if SKIP.includes?(name) || name.ends_with?(".db") || name.ends_with?(".sqlite3")
+        next if SKIP.includes?(name) || storage_file?(name)
         source = File.join(from, name)
         next if File.symlink?(source)
         if File.directory?(source)
-          FileUtils.cp_r(source, File.join(to, name))
+          destination = File.join(to, name)
+          Dir.mkdir_p(destination)
+          copy_entries(source, destination)
         else
           File.copy(source, File.join(to, name))
         end
       end
-      # The compiler finds the shards through lib/: link it so the shadow can be type-checked.
-      shards = File.join(from, "lib")
-      File.symlink(File.realpath(shards), File.join(to, "lib")) if Dir.exists?(shards)
+    end
+
+    private def self.storage_file?(name : String) : Bool
+      name.matches?(/\.(?:db|sqlite|sqlite3)(?:-wal|-shm|-journal)?\z/i)
     end
 
     def self.compare(shadow : String, project : String) : Array(Entry)
@@ -76,7 +86,7 @@ module AzuCLI
       Dir.glob(File.join(shadow, "**", "*"), match: File::MatchOptions::DotFiles).sort.each do |path|
         next unless File.file?(path)
         relative = Path[path].relative_to(shadow).to_s
-        next if relative.split('/').first.in?(SKIP)
+        next if relative.split('/').any? { |part| SKIP.includes?(part) } || storage_file?(File.basename(path))
         theirs = File.join(project, relative)
         if File.symlink?(theirs)
           Logger.warn("#{relative} is a symlink; generated changes were skipped. Configure it manually.")

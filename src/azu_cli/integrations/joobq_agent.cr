@@ -19,7 +19,7 @@ module AzuJoobQDashboard
       store.redis.ping if store.responds_to?(:redis)
       now = Time.instant
       elapsed = @sampled.try { |at| (now - at).total_seconds }
-      queues = ::JoobQ.config.queue_configs.keys.first(100).map do |name|
+      queues = (::JoobQ.queues.keys + ::JoobQ.config.queue_configs.keys).uniq.first(100).map do |name|
         if store.responds_to?(:get_queue_metrics)
           metrics = store.get_queue_metrics(name)
           processed = metrics.processed_count
@@ -49,8 +49,17 @@ module AzuJoobQDashboard
         retries = JSON.parse(store.get_retrying_jobs_paginated(1, 100).map { |json| JSON.parse(json) }.to_json)
       end
       JSON.parse({v: 1, queues: queues, workers: workers, workflows: workflows, dlq: redact(dlq),
-                  retries: redact(retries), replay_supported: replay_supported,
+                  retries: redact(retries), workflows_available: workflows_available?, replay_supported: replay_supported,
                   history: "Runtime workflow store; no PostgreSQL History Store configured"}.to_json)
+    end
+
+    def workflows_available? : Bool
+      {% if @top_level.has_constant?("JoobQPro") %}
+        {% if JoobQPro.has_constant?("Workflows") %}
+          return !::JoobQPro::Workflows::Runtime.store?.nil?
+        {% end %}
+      {% end %}
+      false
     end
 
     def workflows : JSON::Any

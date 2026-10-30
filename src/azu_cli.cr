@@ -31,7 +31,7 @@ module AzuCLI
   VERSION = {{ read_file("#{__DIR__}/../shard.yml").lines.find(&.starts_with?("version:")).split(":")[1].strip }}
 
   # Commands that run outside a project (or print only), so the working directory's `.env` is none of their business.
-  COMMANDS_WITHOUT_DOT_ENV = %w[new init help version completion connect --help -h --version -v]
+  COMMANDS_WITHOUT_DOT_ENV = %w[new init help version completion connect mcp --help -h --version -v]
 
   # The environment a command runs in, for choosing `.env.<env>`: `test` for the test command, otherwise the
   # command's own `--env` / `-e` flag (a flag beats the shell), otherwise nil (CRYSTAL_ENV, then development).

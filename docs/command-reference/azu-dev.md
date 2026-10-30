@@ -237,3 +237,7 @@ demo_app(dev)> titles(5)
 
 </details>
 
+
+## Shared MCP telemetry
+
+Use `azu dev --snapshot /absolute/private/path/store/snapshot.json` to atomically export the same application snapshots for the native MCP server. The directory must be private (`0700`); files are written with `0600`. This also works with `--ui plain`. See [azu mcp](azu-mcp.md).
