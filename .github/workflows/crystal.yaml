@@ -10,6 +10,10 @@ permissions:
   contents: write # push branches, push tags, create release
   pull-requests: write # open / update PR
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: build (Crystal ${{ matrix.crystal }})
@@ -173,8 +177,19 @@ jobs:
           crystal build src/azu_cli.cr -o bin/azu --no-debug
       - name: Generate, migrate and exercise jobs against owned Redis
         run: python3 scripts/check_jobs_commands.py "$PWD/bin/azu"
-  release:
+  release-tests:
+    name: Release lifecycle
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify matching manifests, atomic tags and retry recovery
+        run: python3 .github/scripts/test_release.py
+
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs:
       - build
       - generated-app
@@ -182,51 +197,25 @@ jobs:
       - joobq-adapter
       - jobs-commands
       - spark-browser
-    # Releases and version bumps are for master only, never for pull requests.
-    if: ${{ success() && github.event_name == 'push' }}
+      - release-tests
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/master' &&
+      !startsWith(github.event.head_commit.message, 'chore: bump version')
+    permissions:
+      contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Compute Release Version
-        id: semver
-        uses: paulhatch/semantic-version@v4.0.2
-        with:
-          tag_prefix: "v"
-          major_pattern: "(MAJOR)"
-          minor_pattern: "(MINOR)"
-          # A string to determine the format of the version output
-          format: "${major}.${minor}.${patch}"
-          # If this is set to true, *every* commit will be treated as a new version.
-          bump_each_commit: false
-
-      - name: Configure git identity
-        run: |
-          git config user.name "eliasjpr"
-          git config user.email "eliasjpr@gmail.com"
-
-      - name: Bump Shard Version
-        id: bump-shard
-        uses: fjogeleit/yaml-update-action@master
-        with:
-          valueFile: shard.yml
-          propertyPath: version
-          value: ${{steps.semver.outputs.version}}
-          commitChange: true
-          targetBranch: master
-          masterBranchName: master
-          createPR: false
-          branch: master
-          message: Set shard version ${{ steps.semver.outputs.version }}
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@latest
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+      - name: Commit matching shard version and atomically push master and tag
+        id: prepare
+        run: python3 .github/scripts/release.py
+      - name: Publish GitHub release with generated notes
+        if: steps.prepare.outputs.tag != ''
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{steps.semver.outputs.version_tag}}
-          release_name: Release v${{steps.semver.outputs.version}}
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.prepare.outputs.tag }}
+          RELEASE_LATEST: ${{ steps.prepare.outputs.latest }}
+        run: python3 .github/scripts/release.py --publish "$RELEASE_TAG" --latest "$RELEASE_LATEST"
