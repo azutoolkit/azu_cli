@@ -8,6 +8,8 @@ description: Generate an Azu::Validator skeleton for a record, with a valid? met
 
 ## Overview & visual demo
 
+Generate a custom validator for rules that do not fit the built-in checks. Keep validation errors specific so callers can fix the submitted value.
+
 <figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing: the written files with line counts"><figcaption><p>After Enter, <code>azu g</code> lists the file it wrote and its line count.</p></figcaption></figure>
 
 ```mermaid

@@ -14,6 +14,8 @@ ship a small, non-root image.
 
 ## Overview & visual demo
 
+Build a release executable and package the assets and configuration it needs. Development dashboards are diagnostics, not a substitute for deployment health checks, backups, or production observability.
+
 <figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor with nine passing checks, including secrets, port and docker"><figcaption><p>Before you ship: <code>azu doctor</code>. It checks the secrets aren't weak or hard-coded, <code>.env</code> is git-ignored, Docker is installed and the port is free.</p></figcaption></figure>
 
 ```mermaid

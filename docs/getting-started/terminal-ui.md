@@ -1,103 +1,86 @@
 ---
-description: The wizard, cards, dashboard and live preview, and how to switch every one of them to plain text or JSON.
+description: Navigate Azu's development dashboard, inspect live data, and keep your terminal under control.
 ---
 
 # Terminal UI
 
-Every azu command that draws something has two other forms: plain lines and JSON. The rich form needs a color terminal; pipes, CI and `NO_COLOR` get the plain one automatically.
-
 ## Overview & visual demo
 
-{% tabs %}
-{% tab title="Wizard" %}
-<figure><img src="../assets/terminal-ui/02-new-wizard-extras.png" alt="The extras step of the azu new wizard"><figcaption><p>Step 9 of 9: Space toggles Docker, GitHub Actions, Git and the example code. The right side keeps your answers.</p></figcaption></figure>
-{% endtab %}
+`azu dev` combines Azu's browser dashboard metrics with local development tools. Overview uses five aligned metric cards per row when space allows, followed by side-by-side latest logs and SQL queries. Tab focuses either feed, `j/k` or PgUp/PgDn scrolls it, and Enter opens its full inspector. Narrow terminals reduce columns; shorter terminals give the feeds a separate `[` / `]` page. Its header identifies the application, section, process state, PID, and port. The sidebar groups observation, data, jobs, and development features.
 
-{% tab title="Spinner and progress" %}
-<figure><img src="../assets/terminal-ui/04-new-progress.png" alt="A progress card with a spinner on the shards step"><figcaption><p>Done steps show ✔ and their time; the running step shows a spinner, a live timer and the last output line.</p></figcaption></figure>
-{% endtab %}
-
-{% tab title="Dashboard" %}
-<figure><img src="../assets/terminal-ui/07-dev-dashboard.png" alt="The azu dev dashboard"><figcaption><p>Full-screen dashboard with five panels, switched by the number keys.</p></figcaption></figure>
-{% endtab %}
-
-{% tab title="Preview" %}
-<figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="The azu generate file browser with a diff"><figcaption><p>A file browser on the left, a diff on the right, a type-check result under them.</p></figcaption></figure>
-{% endtab %}
-{% endtabs %}
+<figure><img src="../assets/terminal-ui/mission-control/overview-theme-preview.png" alt="Azu Overview with a fixed sidebar and a paged metric grid"><figcaption><p>Real renderer, sample data. The grid adapts to your terminal.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
-  C["Command"] --> R["UI::Reporter"]
-  R --> RICH["rich: cards, live frames"]
-  R --> PLAIN["plain: lines"]
-  R --> JSON["json: NDJSON events"]
-  T["--ui flag, AZU_UI, terminal, CI"] --> R
+  App[Running application] --> Snapshot[Private telemetry socket]
+  Snapshot --> Overview[Overview cards]
+  Overview --> Detail[Scrollable inspectors]
+  Palette[Ctrl-P palette] --> Detail
 ```
 
 ## Quickstart & command syntax
 
 ```bash
-azu doctor --ui plain
-AZU_UI=json azu new blog --yes     # NDJSON events, for an editor or CI
-NO_COLOR=1 azu routes              # glyphs stay, color goes
+azu dev
+azu dev --ui plain
 ```
 
-How the mode is chosen:
+Rich mode uses the terminal's alternate screen and restores it on exit. `--ui rich` and `--ui mission` select the same workspace. Plain mode is useful for pipes, logs, and restricted terminals.
 
-| Setting                   | Effect                                                              |
-| ------------------------- | ------------------------------------------------------------------- |
-| `--ui rich\|plain\|json`  | Per command                                                         |
-| `AZU_UI=...`              | The same, for the session                                           |
-| (neither)                 | `rich` on a terminal with color, outside CI; otherwise `plain`      |
-| `NO_COLOR`                | Drops the color, keeps the glyphs. Wins over everything             |
-| `FORCE_COLOR`             | Keeps color on a pipe                                               |
+| Key | Action |
+| --- | --- |
+| Ctrl-P | Search views and commands |
+| `h`, Esc | Open or close contextual help |
+| `b` | Collapse or expand the sidebar |
+| `[` / `]` | Change Overview pages or Database subviews |
+| Tab / Shift-Tab | Change card or inspector focus |
+| arrows, `j` / `k` | Select a card or list item |
+| Enter | Inspect the selection |
+| `/`, Esc | Filter, then clear the filter |
+| PageUp / PageDown | Scroll the focused list or details |
+| `g`, `:` | Compose a generator or command |
+| `c` | Open the local console |
+| `q` | Quit; disconnect in production monitoring |
 
-Keys:
+Text-entry views keep letters as input. Ctrl-P remains available from the console. At widths below 104 columns, use the palette instead of the sidebar. Overview pages keep the header and footer fixed; long details scroll inside their viewport.
 
-| Screen                         | Command                          | Keys                                                                                  |
-| ------------------------------ | -------------------------------- | ------------------------------------------------------------------------------------- |
-| Wizard, review, progress       | `azu new`                        | arrows or `j`/`k` move, Space toggles, Enter continues, Shift-Tab back, Esc cancels   |
-| Dashboard                      | `azu dev`                        | `1`-`5` panels, `r` rebuild, `l` log, `c` clear log, `q` quit                         |
-| File browser and diff          | `azu generate`                   | Up/Down file, Enter writes, Esc cancels                                               |
-| Cards (not interactive)        | `doctor`, `routes`, `version`, `db:*` | none                                                                             |
+### Find the right screen
+
+| Group | Views and purpose |
+| --- | --- |
+| Observe | Overview health/cards; Errors and exception details; Tracing distributions/endpoints; highlighted Logs; Profiler spans and GC trend |
+| Data & Access | Sessions lifecycle and backend; Database summary, SQL/pool, schema, migrations; Cache operations |
+| Jobs | JoobQ workers/workflows/DLQ; Queues & Activity counters |
+| Develop | Components lifecycle; Mailers delivery outcomes and static previews |
+
+Build, console, commands, configuration, and routes remain available through Ctrl-P. SQL is a Database subview; the `5` shortcut still opens its inspector.
 
 ## Realistic output
 
-<figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor card with nine checks"><figcaption><p><code>azu doctor</code> as a card: ✔ ok, ▲ warning, ✖ failure. The border turns amber or red when something is off.</p></figcaption></figure>
-
-<figure><img src="../assets/terminal-ui/09-dev-build-failed.png" alt="azu dev showing a failed build"><figcaption><p>A failed build covers the dashboard with the error location. The previous build keeps serving; Esc goes back, <code>r</code> retries.</p></figcaption></figure>
-
-<figure><img src="../assets/terminal-ui/13-undo.png" alt="azu undo listing deleted and restored files"><figcaption><p><code>azu undo</code>: every created file deleted, <code>src/db/schema.cr</code> restored.</p></figcaption></figure>
-
-The same `doctor` result in plain mode:
-
-{% code title="terminal: azu doctor --ui plain" %}
 ```text
-ok    crystal        Crystal 1.22.1 (the project needs 1.22.1 or newer)
-warn  database       SQLite file ./db/blog_development.db does not exist yet
-                     hint: run 'azu db:setup'
+System health
+100 · All systems nominal
+Health of recorded traffic
 
-8 ok, 1 warnings, 0 failures
+Uptime          Memory (RSS)     Latency           Active routes
+4m 44s          28.7 MB          0.15 ms p50       15
+Since ...       GC heap 5.8 MB   16.7 ms p99       9 GET / 3 POST / ...
+
+Page 1/2 · [ / ] page · Tab select · Enter inspect
 ```
-{% endcode %}
 
-*A warning prints its hint on the next line. Exit code stays 0; a failed check exits 1.*
+*Illustrative values. The health score describes recorded traffic, not a deployment readiness certification.*
 
 ## Do's and don'ts
 
 {% hint style="info" %}
-**Pro tip:** `--yes` and pipes never need a terminal, so scripts can call any command safely.
-{% endhint %}
-
-{% hint style="success" %}
-Prefer `--ui plain` or `--format json` in scripts. They keep stdout for data and are stable across terminals.
+**Read the state.** Disabled features are hidden. Enabled features with no samples show an empty state. Missing adapters show unavailable. A stale feed keeps its last sample marked stale.
 {% endhint %}
 
 {% hint style="warning" %}
-Inline screens keep your terminal background. Only the full-screen dashboard paints one.
+**Counts have scope.** Cookie sessions cannot report an active-session inventory. Redis connectivity does not prove workers are running. Memory graphs show GC heap samples; the RSS number is separate.
 {% endhint %}
 
-{% hint style="danger" %}
-Don't parse the rich output. It uses box characters and colors that change between terminals. Use `--ui json` or `--format json`.
+{% hint style="success" %}
+**Inspect safely.** JoobQ replay requires confirmation. Sessions and Mailers are inspection views: they do not revoke sessions or send messages. Production connections retain their read-only restrictions.
 {% endhint %}

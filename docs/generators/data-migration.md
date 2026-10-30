@@ -8,6 +8,8 @@ description: Generate a data migration that changes records rather than the sche
 
 ## Overview & visual demo
 
+Generate a data migration for a deliberate, reviewable transformation of stored records. Keep its operational cost and rollback behavior explicit before applying it to shared data.
+
 <figure><img src="../assets/terminal-ui/13-undo.png" alt="azu undo removing generated files and restoring a changed file"><figcaption><p>A data migration is one new file. <code>azu undo</code> removes it again, as long as you have not edited it since.</p></figcaption></figure>
 
 ```mermaid

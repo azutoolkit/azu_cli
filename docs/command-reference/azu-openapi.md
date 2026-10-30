@@ -8,7 +8,7 @@ description: Generate Crystal code from an OpenAPI 3.1 document with openapi:gen
 
 ## Overview & visual demo
 
-Use `generate` to start an API from a spec, and `export` to check that the code still matches it. Export compiles and loads your app, so it takes as long as a build.
+Export an API description from the application's declared endpoints and request types. Review the generated document before using it for client generation or publishing it to API consumers.
 
 <figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate preview listing new files and a diff of the schema file"><figcaption><p>Not an OpenAPI command's output. This is the preview <code>azu g</code> shows before it writes. <code>openapi:generate</code> writes its files without a preview.</p></figcaption></figure>
 

@@ -26,3 +26,7 @@ Session.configure do |config|
   config.timeout = 8.hours
   config.store = Session::CookieStore(UserSession).new
 end
+
+{% if @top_level.has_constant?("Azu") && Azu.has_constant?("Dev") && Azu::Dev.has_constant?("IntegrationEvents") %}
+  Azu::Dev::IntegrationEvents.sessions("cookie")
+{% end %}

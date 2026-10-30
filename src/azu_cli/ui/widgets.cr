@@ -3,6 +3,30 @@ module AzuCLI
     # Small drawing helpers shared by the screens and reporters.
     module Widgets
       # Values scaled to the sparkline glyphs, the last `width` values.
+      # Two terminal rows represent eight vertical pixels per point pair.
+      def self.braille_sparkline(values : Array(Float64), width : Int32, glyphs : Glyphs) : Array(String)
+        return ["", sparkline(values, width, glyphs)] if glyphs == Glyphs::ASCII || values.empty? || width < 1
+        low, high = values.min, values.max
+        span = Math.max(high - low, 0.000001)
+        dots = { {1, 2, 4, 64}, {8, 16, 32, 128} }
+        pixels = Array.new(width * 2) do |x|
+          value = values[Math.min(values.size - 1, x * values.size // (width * 2))]
+          7 - (((value - low) / span) * 7).round.to_i.clamp(0, 7)
+        end
+        Array.new(2) do |row|
+          String.build do |io|
+            width.times do |x|
+              bits = 0
+              2.times do |side|
+                y = pixels[x * 2 + side]
+                bits |= dots[side][y % 4] if y // 4 == row
+              end
+              io << (0x2800 + bits).chr
+            end
+          end
+        end
+      end
+
       def self.sparkline(values : Array(Float64), width : Int32, glyphs : Glyphs) : String
         shown = values.last(width)
         return "" if shown.empty?

@@ -2,14 +2,14 @@ require "../../spec_helper"
 require "teeplate"
 
 describe AzuCLI::Generate::Seed do
-  it "renders environment seeds with the correct models dependency" do
+  it "renders seeds for the runner that already loads schema and models" do
     dir = File.join(Dir.tempdir, "azu-seed-#{Random::Secure.hex(8)}")
     Dir.mkdir_p(dir)
     begin
       generator = AzuCLI::Generate::Seed.new("Audit", "test")
       generator.render(dir)
       source = File.read(File.join(dir, "test", generator.filename))
-      source.should contain %(require "../../../models/**")
+      source.should_not contain %(require "../../../models/**")
     ensure
       FileUtils.rm_rf(dir)
     end

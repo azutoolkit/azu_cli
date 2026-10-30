@@ -1,3 +1,5 @@
+require "../../services/auth_telemetry"
+
 module <%= app_module %>
   struct Sessions::CreateEndpoint
     include Azu::Endpoint(Sessions::CreateRequest, Azu::Response::Empty)
@@ -9,13 +11,18 @@ module <%= app_module %>
       email = create_request.email.strip.downcase
       throttle_login!(email)
       unless user = authenticate(email, create_request.password)
+        AzuAuthTelemetry.record("sign-in", "rejected")
         Session.session.flash["error"] = "Invalid email or password"
         return redirect to: "/login", status: 303
       end
 
       Session.session.current_session.user_id = user.id
       Session.session.regenerate_id # a new session id, so a planted one is worthless (session fixation)
+      AzuAuthTelemetry.record("sign-in", "accepted")
       redirect to: "/account", status: 303
+    rescue ex : Azu::Response::RateLimitError
+      AzuAuthTelemetry.record("sign-in", "throttled")
+      raise ex
     end
   end
 end

@@ -10,6 +10,8 @@ For live database CRUD with typed Spark events, paging and updates between open 
 
 ## Overview & visual demo
 
+Generate a complete CRUD starting point with models, migrations, endpoints, and UI wiring. Add `--spark` for live CRUD; review the generated files before applying the migration.
+
 <figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate scaffold preview listing 28 new files and one changed schema file, with the schema diff"><figcaption><p><code>azu g scaffold comment</code> on a terminal: the file list, the <code>schema.cr</code> diff, and the count to write. Nothing is written until you press Enter.</p></figcaption></figure>
 
 ```mermaid

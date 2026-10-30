@@ -15,7 +15,9 @@ dependencies:
     github: azutoolkit/joobq
     version: 0.4.2
 YAML
-if [ "${JOOBQ_REF:-0.4.2}" != 0.4.2 ]; then
+if [ "${JOOBQ_REF:-0.4.2}" = 0.5.1 ]; then
+  sed -i "s/version: 0.4.2/version: 0.5.1/" shard.yml
+elif [ "${JOOBQ_REF:-0.4.2}" != 0.4.2 ]; then
   sed -i "s/version: 0.4.2/commit: $JOOBQ_REF/" shard.yml
 fi
 shards install
@@ -53,3 +55,20 @@ else:
  assert len(rows[0]['data']['queues'])==1
  print('Released JoobQ adapter: queue snapshot and explicit unsupported replay checks passed')
 PY
+
+# Compile the CLI operator without any application job types. This catches
+# NoReturn inference failures hidden by concrete jobs in the normal fixture.
+if [ "${JOOBQ_REF:-}" = "0.5.1" ]; then
+  cp "$ROOT/src/azu_cli/integrations/jobs_operator.cr" empty_operator.cr
+  crystal build empty_operator.cr -o empty_operator --error-trace
+  python3 - <<'PY_CHECK'
+import json, subprocess
+request = '{"all_queues":true}'
+status = subprocess.run(['./empty_operator', 'status'], input=request, text=True, capture_output=True, timeout=15, check=True)
+rows = [json.loads(line.removeprefix('AZU_JOBS:')) for line in status.stdout.splitlines() if line.startswith('AZU_JOBS:')]
+assert len(rows) == 1 and rows[0]['queues'] == [], status.stdout
+worker = subprocess.run(['./empty_operator', 'worker'], input=request, text=True, capture_output=True, timeout=15)
+assert worker.returncode == 2 and 'No queues configured' in worker.stderr, worker
+print('Empty operator compiles; status works and worker reports an actionable error')
+PY_CHECK
+fi

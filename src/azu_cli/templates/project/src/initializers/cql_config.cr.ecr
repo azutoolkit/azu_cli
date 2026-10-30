@@ -1,7 +1,7 @@
 <%- if database_adapter == "pg" -%>
 require "pg"
 <%- elsif database_adapter == "mysql" -%>
-require "mysql"
+require "cql/mysql"
 <%- elsif database_adapter == "sqlite3" -%>
 require "sqlite3"
 <%- end -%>

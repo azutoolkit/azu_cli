@@ -1,179 +1,170 @@
 ---
-description: Run JoobQ workers and inspect, retry, clear or browse the background job queues in Redis with the jobs:* commands.
+description: Run JoobQ workers and inspect or manage queues using the application's native JoobQ APIs.
 ---
 
 # Background jobs commands
 
-The `jobs:*` commands drive a JoobQ project: they start the worker process and read or change the queues kept in Redis. The jobs themselves, and the queues they go to, are defined in your project's code; these commands only operate on them.
+Generated applications target Azu `~> 1.0.4`, CQL `~> 1.0.1` and JoobQ `~> 0.5.1`.
+The jobs commands compile a temporary adapter against **your application's JoobQ**.
+This preserves its queue types, DLQ replay rules and Redis configuration. It takes
+longer than a direct Redis lookup; use `azu dev` for continuous queue metrics.
+These commands manage the Queue/Worker API, not the separate Delivery ledger.
 
-## Overview & visual demo
+## Overview
 
-Start `jobs:worker` next to the app, check `jobs:status` when a queue grows, and use `jobs:retry` and `jobs:clear` on failed work. The commands connect to Redis with `REDIS_URL`, which defaults to `redis://localhost:6379`.
+Run workers and inspect JoobQ queues using the application's own configuration. Status and dry runs help you review the target; destructive queue operations require their documented confirmation flags.
 
-<figure><img src="../assets/terminal-ui/07-dev-dashboard.png" alt="azu dev dashboard with a Workers JoobQ panel reporting Redis unreachable at redis://localhost:6379"><figcaption><p>The Workers panel of <code>azu dev</code> shows what JoobQ sees. Here Redis is unreachable at the default URL, so the queues cannot be read.</p></figcaption></figure>
+<figure><img src="../assets/terminal-ui/mission-control/overview-theme-preview.png" alt="Azu workspace showing illustrative queue activity"><figcaption><p>The workspace queue panel; preview values are illustrative.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
-  A["azu jobs:worker"] -->|"REDIS_URL, JOOBQ_QUEUES, JOOBQ_WORKERS"| B["crystal run src/worker.cr -- --worker"]
-  B --> C["JoobQ.forge runs the queues of src/initializers/joobq.cr"]
-  C --> D["Redis joobq:* keys"]
-  E["jobs:status, jobs:retry, jobs:clear"] --> D
-  F["jobs:ui"] -->|"needs JoobQUI"| D
+  CLI[azu jobs commands] --> Adapter[Compile application adapter]
+  Adapter --> API[JoobQ operator APIs]
+  API --> Redis[Application Redis]
+  Worker[jobs worker] --> Redis
 ```
 
-## Quickstart & command syntax
+{% hint style="info" %}
+Use `azu dev` for a continuously refreshed dashboard. Operator commands compile
+against the project's installed shard so mutations use the same job semantics.
+{% endhint %}
 
-```bash
-azu jobs:worker
-azu jobs:status
-azu jobs:retry --all
-azu jobs:clear --failed --force
-azu jobs:ui --port 5000
+## Quickstart
+
+```sh
+azu generate joobq --queue default --workers 3
+azu jobs:status --json
+azu jobs:worker --queues default --workers 4
 ```
 
-Before you start, the project needs JoobQ (`azu generate joobq`, or the default of `azu new`), a running Redis, and `REDIS_URL` if the default is not your Redis. The generated `src/worker.cr` is the entry point the worker runs.
+`generate joobq` writes environment-specific YAML, a registered `ExampleJob`, an
+initializer and a standalone worker. Existing files require `--force`. With
+`--no-example`, configuration has no queues until you register a real job; it does
+not emit references to nonexistent `YourJob`, `TestJob` or `MailerJob` classes.
+The generated initializer preserves the complete `REDIS_URL`, including its
+Redis database and TLS scheme. Credentials belong in the environment, not the
+`--redis` generator option, which writes the URL to source control.
 
-### azu jobs:worker
+For an existing application, update the dependencies in `shard.yml` and run
+`shards update`. The empty-worker compilation and typed `queue ...` discovery
+fixes from [JoobQ PR #21](https://github.com/azutoolkit/joobq/pull/21) are released
+in JoobQ 0.5.1. Upgrade before using an empty worker or the typed `queue` DSL.
+Generated jobs register classes with `QueueFactory.register_job_type` and populate
+`queue_configs` before running the worker. See the
+[local HUD setup](azu-dev.md#display-local-joobq-jobs).
 
-```bash
-azu jobs:worker
-azu jobs:worker --verbose
+## Shared options
+
+| Option | Behavior |
+| --- | --- |
+| `--boot FILE` | App boot file; defaults to `src/initializers/joobq.cr`. It must configure JoobQ without starting workers or an HTTP server. Use `--boot src/<app>.cr` when jobs need models/services from the full application. |
+| `--redis URL` | Redis connection override. Prefer environment variables for secrets. Otherwise preserve the app's `REDIS_URL` or `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASS`. `JOOBQ_REDIS_URL` remains a CLI fallback. |
+| `--env NAME` | Select `CRYSTAL_ENV` and `JOOBQ_ENV`. |
+| `--queue NAME`, `-q NAME` | Select a configured queue; default `JOOBQ_QUEUE` or `default`. Worker uses `--queues` instead. |
+| `--json` | Emit JSON results for inspection and management commands. |
+| `--verbose`, `-v` | Include Crystal's compilation error trace. |
+| `--help` | Show flags without compiling or connecting. |
+
+Unknown flags, missing values and invalid numeric ranges fail with exit code 2.
+Compilation, connection and worker failures return a nonzero exit status. Worker
+output is inherited so full pipes cannot stall a busy process. The adapter is
+removed when the command exits; connection URLs and job payloads are not printed.
+
+## Workers
+
+```sh
+azu jobs:worker --queues mailers,reports --workers 6 --release --shutdown-timeout 30
 ```
 
-| Option            | Short | Meaning                                                                 | Default   |
-| ----------------- | ----- | ----------------------------------------------------------------------- | --------- |
-| `--workers N`     | `-w`  | Passed to the worker as `JOOBQ_WORKERS`. One process is started either way | `1`    |
-| `--queues LIST`   | `-q`  | Passed to the worker as `JOOBQ_QUEUES` (comma-separated). See the warning below | `default` |
-| `--daemon`        | `-d`  | Sets a flag that is printed. The worker still runs in the foreground    | off       |
-| `--verbose`       | `-v`  | Show the worker's own output instead of hiding it                       | off       |
+One process runs the selected queues. Without `--queues`, all configured queues
+run; without `--workers`, their configured concurrency is preserved. `--workers`
+sets local concurrency per selected queue (1–1000); it does not persist a cluster
+resize. Existing distributed concurrency overrides may subsequently take effect.
+`--release` builds an optimized executable. `--shutdown-timeout` sets the drain
+budget in seconds (1–3600, default 25). Ctrl-C/SIGTERM reaches JoobQ's shutdown
+handler, and the CLI waits for its result.
 
-It runs `crystal run src/worker.cr -- --worker` with the Redis URL in `REDIS_URL`, and waits for it. The generated initializer turns `REDIS_URL` into the host, port and password that JoobQ's store reads. The generated worker runs the queues configured in `src/initializers/joobq.cr`. Stop it with Ctrl+C.
+The management API is disabled unless `--api` is specified. That flag requires
+JoobQ's management tokens, for example `JOOBQ_API_READER_TOKEN`. The HUD does not
+need this API. `--daemon` is rejected explicitly: run the foreground command
+under a service supervisor. These commands boot through `--boot`, not custom
+code in `src/worker.cr`; run that entry point directly when you need its custom
+startup behavior.
 
-### azu jobs:status
+## Inspection
 
-```bash
-azu jobs:status
+```sh
+azu jobs:status --json
+azu jobs:status --queue mailers
+azu jobs:dlq --queue mailers --limit 50 --offset 0 --json
 ```
 
-No options. It prints the Redis URL and the default queue, then one row per queue: pending jobs, jobs being processed, and failed jobs, with a `Total` row. The counts come from the `joobq:queue:*`, `joobq:processing:*` and `joobq:failed:*` keys. With no queues in Redis it prints `No queues found`. If Redis cannot be reached it exits with `1`.
+Status lists configured queues (or the selected queue), waiting/processing counts,
+cumulative completions, current DLQ counts, pause state and worker-registry data.
+It does not scan arbitrary Redis keys. DLQ output is paginated, bounded to 1000
+entries, and includes IDs, queue names, timestamps and redrive eligibility rather
+than raw arguments or exception payloads. Worker heartbeats can be stale until
+JoobQ expires them. Status uses JoobQ's DLQ count API, which may rebuild an older
+missing count index.
 
-### azu jobs:retry
+## Mutations
 
-```bash
-azu jobs:retry
-azu jobs:retry --all
-azu jobs:retry --limit 10 --queue critical
+```sh
+azu jobs:retry --queue mailers --limit 10 --dry-run
+azu jobs:retry --queue mailers --limit 10 --force
+azu jobs:clear --queue mailers --dry-run
+azu jobs:clear --queue mailers --force
+azu jobs:clear --all --failed --force
+azu jobs:pause --queue mailers --force
+azu jobs:resume --queue mailers --force
 ```
 
-| Option          | Short | Meaning                                                                | Default   |
-| --------------- | ----- | ---------------------------------------------------------------------- | --------- |
-| `--all`         |       | Retry every failed job of the queue                                    | off       |
-| `--limit N`     | `-l`  | Retry at most `N` failed jobs. Wins over `--all`                       | `1`       |
-| `--queue NAME`  | `-q`  | The queue whose failed jobs are retried                                | `default` |
-| `--verbose`     | `-v`  | Accepted; it changes nothing                                           | off       |
+Mutations prompt on an interactive terminal. In automation, explicitly supply
+`--force`; `--dry-run` previews without changing jobs or pause state; native DLQ counts may
+reconcile an older count index as described above. The HUD's Commands tab asks for
+confirmation and supplies that flag itself.
 
-A retried job is moved from the queue's failed list back onto its pending list, with its stored data unchanged.
+Retry uses `DeadLetterQueue.redrive`, preserving atomic ownership and count-index
+updates. The default limit is 1. `--all` retries the selected queue's DLQ only and
+refuses more than 1000 entries; use repeated bounded batches for larger queues.
+Missing, unredrivable or concurrently changed entries are reported and produce a
+nonzero result. A preview is a point-in-time view; the actual retry rereads the
+current queue. Replayed jobs may execute external effects again, so handlers still
+need idempotency.
 
-### azu jobs:clear
+Clear removes **waiting jobs only**. `--failed` purges DLQ entries instead;
+`--all` applies to all configured queues. Active processing lists, delayed jobs,
+completion counters and unrelated Redis keys remain intact. Pause/resume changes
+claiming state through JoobQ's shared store; running jobs continue.
 
-```bash
-azu jobs:clear
-azu jobs:clear --queue mailers
-azu jobs:clear --failed
-azu jobs:clear --all --force
+## JoobQUI web application
+
+```sh
+azu jobs:ui --path /path/to/joobqui --host 127.0.0.1 --port 5000
 ```
 
-| Option          | Short | Meaning                                                                 | Default   |
-| --------------- | ----- | ----------------------------------------------------------------------- | --------- |
-| `--queue NAME`  | `-q`  | The queue to clear. Deletes its pending and processing jobs             | `default` |
-| `--all`         |       | Delete the pending jobs of every queue                                  | off       |
-| `--failed`      |       | Delete the failed jobs of every queue. `--queue` is ignored             | off       |
-| `--force`       | `-f`  | Do not ask first                                                        | off       |
-
-Without `--force` it asks `Are you sure you want to clear queue '<name>'? [y/N]:` (or the same question for all queues or all failed jobs). The answer must start with `y`.
-
-### azu jobs:ui
-
-```bash
-azu jobs:ui
-azu jobs:ui --port 5000 --host 0.0.0.0
-```
-
-| Option         | Short | Meaning                                              | Default     |
-| -------------- | ----- | ---------------------------------------------------- | ----------- |
-| `--port PORT`  | `-p`  | The port of the UI                                   | `4000`      |
-| `--host HOST`  | `-h`  | The host of the UI. Here `-h` is the host, not help  | `localhost` |
-| `--verbose`    | `-v`  | Show the UI process's own output                     | off         |
-
-The web interface is JoobQUI, a separate shard. The command looks for it in `lib/joobqui` or `../joobqui`, and runs `lib/joobqui/src/joobqui.cr` with `REDIS_URL`, `JOOBQUI_PORT` and `JOOBQUI_HOST` set. Without it, the command prints a warning with the `shard.yml` lines to add, starts nothing, and exits `0`.
-
-<details>
-
-<summary>Environment variables read by the jobs:* commands</summary>
-
-| Variable          | Used for                                                       | Default                    |
-| ----------------- | -------------------------------------------------------------- | -------------------------- |
-| `REDIS_URL`       | The Redis connection of every command                          | `redis://localhost:6379`   |
-| `JOOBQ_REDIS_URL` | Used when `REDIS_URL` is not set                               | the default above          |
-| `JOOBQ_QUEUE`     | The default queue of the commands that take `--queue`          | `default`                  |
-
-`JOOBQ_QUEUES` and `JOOBQ_WORKERS` are set by `jobs:worker` for the process it starts. The CLI does not read them, and the generated project does not either.
-
-</details>
+The checkout must have dependencies installed and its database, sessions and
+secrets configured. The command builds and runs **`src/app.cr`**, from the JoobQUI
+root so assets/configuration resolve correctly; its startup performs JoobQUI's
+normal boot checks and migrations. Missing dependencies, build errors and server
+failures are reported. For the terminal dashboard, use `azu joobq` instead.
 
 ## Realistic output
 
-{% code title="terminal: azu jobs:status (the header, then one row per queue)" %}
-```text
-Queue                |    Pending |   Processing |     Failed
-================================================================================
-<queue>              |  <pending> | <processing> |   <failed>
-...
-================================================================================
-Total                |  <pending> | <processing> |   <failed>
+`azu jobs:status --json` on an idle, configured queue can return:
+
+```json
+{"queues":[{"name":"default","pending":0,"processing":0,"completed":3,"dlq":0,"paused":false}],"workers":[]}
 ```
-{% endcode %}
-
-*The column layout is exact. The numbers depend on Redis, so they are shown as placeholders. The log lines above the table carry a timestamp in plain mode.*
-
-{% code title="terminal: azu jobs:clear (without --force)" %}
-```text
-Are you sure you want to clear queue 'default'? [y/N]: 
-```
-{% endcode %}
-
-*The question waits on the same line. Anything that does not start with `y` cancels.*
-
-{% code title="terminal: azu jobs:ui (JoobQUI not installed)" %}
-```text
-WARNING: JoobQUI not found in dependencies
-```
-{% endcode %}
-
-*The warning is followed by the `shard.yml` lines to add. The command then exits `0` without starting a server.*
 
 ## Do's and don'ts
 
-{% hint style="info" %}
-**Pro tip:** while workers run, `watch -n 2 azu jobs:status` in a spare pane shows the queues drain, or stall.
-{% endhint %}
-
-{% hint style="success" %}
-In production, run `azu jobs:worker` under a process manager such as systemd, Foreman or a container's restart policy. The command runs in the foreground and does not restart a worker that exits.
-{% endhint %}
+- Use the same Redis database for the application, workers and dashboard.
+- Preview destructive changes with `--dry-run` before supplying `--force`.
+- Keep boot files free of server startup calls and use a supervisor for workers.
+- Do not infer worker liveness from a Redis connection or replay non-idempotent effects blindly.
 
 {% hint style="warning" %}
-`--workers` and `--queues` do not change the generated worker. It runs one process, and its queues come from `src/initializers/joobq.cr`. Set the worker count and queues there, or run more processes yourself.
-{% endhint %}
-
-{% hint style="warning" %}
-`jobs:worker` reports success when the worker exits, whatever the worker's exit code was. Look at the worker's logs or your process manager's status when a deploy looks wrong.
-{% endhint %}
-
-{% hint style="danger" %}
-`jobs:clear --failed` ignores `--queue`: `azu jobs:clear --queue mailers --failed` clears the failed jobs of every queue. `jobs:clear --all` leaves the failed and processing lists alone, so check each one you care about.
-{% endhint %}
-
-{% hint style="danger" %}
-`jobs:status` prints `REDIS_URL` in full, password included. Redact it before you paste the output into a ticket.
+Clear and DLQ purge delete work. They preserve active processing lists, but deleted
+waiting jobs cannot be recovered by the CLI. Prefer pause when stopping intake.
 {% endhint %}

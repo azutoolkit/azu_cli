@@ -6,7 +6,7 @@ description: List every route of the app with its method, path, endpoint, reques
 
 ## Overview & visual demo
 
-`azu routes` compiles your project, loads it without starting the server, and prints Azu's route table together with the `Azu::Endpoint(Request, Response)` types it finds. Use it after `azu g scaffold` to check that the routes and their response types are what you meant.
+List the routes registered by your application. Use the output to check methods, paths, and endpoint wiring after generation; route inspection also remains available through the development palette.
 
 <figure><img src="../assets/terminal-ui/15-routes.png" alt="The azu routes card: nine routes with their verbs colored, and the shared namespace under the table"><figcaption><p>The card on a color terminal: verbs are colored, and the namespace every endpoint shares is named under the table instead of repeated on each row.</p></figcaption></figure>
 

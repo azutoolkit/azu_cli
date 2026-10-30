@@ -9,7 +9,29 @@ module <%= app_module %>
 <% end -%>
 <% if fields? -%>
 <% fields.each do |field| -%>
+<% if {"json", "uuid", "date"}.includes?(field.kind) -%>
+    @[URI::Params::Field(converter: <%= field.name.camelcase %>FormValue)]
+<% end -%>
     getter <%= field.name %> : <%= type_of(field) %><%= default_of(field) %>
+<% end -%>
+<% fields.select { |field| {"json", "uuid", "date"}.includes?(field.kind) }.each do |field| -%>
+
+    # URI form decoding is separate from the typed JSON request contract.
+    module <%= field.name.camelcase %>FormValue
+      def self.from_www_form(params : URI::Params, name : String)
+        return unless value = params[name]?
+<% if field.nilable? || update? -%>
+        return if value.empty?
+<% end -%>
+<% if field.kind == "json" -%>
+        JSON.parse(value)
+<% elsif field.kind == "uuid" -%>
+        UUID.new(value)
+<% else -%>
+        value.size == 10 ? Time.parse(value, "%F", Time::Location::UTC) : Time.parse_rfc3339(value)
+<% end -%>
+      end
+    end
 <% end -%>
 <% unless validated_fields.empty? -%>
 

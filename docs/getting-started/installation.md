@@ -8,8 +8,7 @@ Azu CLI is one binary, built from source with Crystal. There is no Homebrew form
 
 ## Overview & visual demo
 
-Install Crystal, build the CLI from source, check it with `azu version`. That's it. SQLite is the default database, so
-you don't need a server unless you pick PostgreSQL or MySQL.
+Install Crystal and Azu CLI, then verify both versions before creating a project. The CLI and generated applications require Crystal 1.22.1 or newer.
 
 <figure><img src="../assets/terminal-ui/18-version.png" alt="azu version card"><figcaption><p>Done: <code>azu version</code> on a color terminal, with the Azu, CQL and JoobQ versions of the project you're in.</p></figcaption></figure>
 

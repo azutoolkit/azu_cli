@@ -47,6 +47,7 @@ module AzuCLI
         puts "Development Commands:"
         puts "  joobq                  Manage queues, workflows and dead letters in a terminal dashboard"
         puts "  dev                    Run the app, rebuilding and restarting it when the code changes"
+        puts "  connect                Monitor production over verified SSH (read-only local HUD)"
         puts "  serve                  Compile and run the app with a --production build (alias: s)"
         puts "  routes                 List the routes: method, path, endpoint, request/response, helpers"
         puts "  config                 Show the configuration of the application (secrets masked)"
@@ -60,6 +61,9 @@ module AzuCLI
         puts "  jobs:clear             Clear job queues"
         puts "  jobs:retry             Retry failed jobs"
         puts "  jobs:ui                Start JoobQUI web interface"
+        puts "  jobs:dlq               List dead-letter job IDs"
+        puts "  jobs:pause             Pause queue claims"
+        puts "  jobs:resume            Resume queue claims"
         puts
         puts "Session Commands:"
         puts "  session:setup          Setup session management"
@@ -104,6 +108,8 @@ module AzuCLI
           show_db_help
         when "dev"
           Dev.new.show_help
+        when "connect"
+          Connect.new.show_help
         when "routes"
           Routes.new.show_help
         when "config"
@@ -257,16 +263,20 @@ module AzuCLI
         puts "Background job management with JoobQ."
         puts
         puts "Commands and options:"
-        puts "  jobs:worker              --workers N, --queues LIST, --daemon, --verbose"
-        puts "  jobs:status              Show queue status and statistics"
-        puts "  jobs:clear               --queue NAME, --all, --failed, --force"
-        puts "  jobs:retry               --queue NAME, --all, --limit N, --verbose"
-        puts "  jobs:ui                  --port PORT, --host HOST, --verbose"
+        puts "  jobs:worker              --workers N, --queues LIST, --release, --api, --shutdown-timeout N"
+        puts "  jobs:status              --queue NAME, --json"
+        puts "  jobs:dlq                 --queue NAME, --limit N, --offset N, --json"
+        puts "  jobs:pause               --queue NAME, --dry-run, --force"
+        puts "  jobs:resume              --queue NAME, --dry-run, --force"
+        puts "  Common: --boot FILE, --redis URL, --env NAME, --help"
+        puts "  jobs:clear               --queue NAME, --all, --failed, --dry-run, --force"
+        puts "  jobs:retry               --queue NAME, --all, --limit N, --dry-run, --force"
+        puts "  jobs:ui                  --path DIR, --port PORT, --host HOST"
         puts
         puts "Examples:"
         puts "  azu jobs:worker --workers 4"
         puts "  azu jobs:clear --failed"
-        puts "  azu jobs:retry --all"
+        puts "  azu jobs:retry --all --dry-run"
       end
 
       private def show_session_help

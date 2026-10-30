@@ -39,6 +39,9 @@ module AzuCLI
       getter sql_tab = SQLTab.new
       getter tab = Tab::Overview
       getter state = State::Starting
+      getter port : String
+      getter environment : String
+      getter pid : Int64?
       getter rebuilds = 0
       getter crashes = 0
       getter restarts = 0
@@ -49,7 +52,6 @@ module AzuCLI
       @last_build_seconds : Float64?
       @build_history = [] of Float64
       @changed = [] of String
-      @pid : Int64?
       @app_started : Time::Instant?
       @session_started = Time.instant
       @rss : Int64?
@@ -125,6 +127,67 @@ module AzuCLI
 
       def commands : Array(Control::Command)
         @commands
+      end
+
+      # Stateful build/console/command components embedded in the workspace shell.
+      # These entrypoints never draw or navigate the retired full-screen tab bar.
+      def open_panel(panel : Tab) : Nil
+        @confirming = nil
+        @tab = panel
+        @console_focus = true if panel.console?
+      end
+
+      def panel_key(panel : Tab, event : Key) : UI::Action
+        @tab = panel
+        return confirm(event) if @confirming
+        case panel
+        when .console?
+          return console_key(event) if console_focus?
+          return interpreter_request if event.char?('i') || event.code.ctrl_o?
+          @console_focus = true if event.code.enter?
+        when .commands?
+          return commands_key(event) if !@commands.empty? && commands_key?(event)
+        when .config?
+          if event.code.enter? || event.char?('u')
+            @commands.find(&.id.==("config")).try { |command| run(command) }
+          elsif scroll_key?(event)
+            return scroll_key(event)
+          end
+        when .errors?
+          errors_tab.key(event)
+        else
+          @on_rebuild.call if event.char?('r')
+        end
+        UI::Action::Redraw
+      end
+
+      def panel_view(frame : Frame, area : Rect, panel : Tab) : Nil
+        case panel
+        when .console? then console_panel(frame, area)
+        when .commands?
+          if @commands.empty?
+            inner = frame.card(area, "Commands")
+            frame.text(inner.x, inner.y, "No commands configured", max: inner.w)
+          else
+            commands_panel(frame, area)
+          end
+        when .config? then config_panel(frame, area)
+        when .errors? then errors_tab.draw(frame, area)
+        else
+          top, rest = area.split_top(Math.min(5, area.h))
+          if top.w >= 70
+            left, right = top.columns(2, 1)
+            build_card(frame, left)
+            app_card(frame, right)
+          else
+            build_card(frame, top)
+          end
+          if state.failed?
+            draw_error(frame, rest) unless rest.empty?
+          else
+            log_card(frame, rest, "Build / application output", full: true) unless rest.empty?
+          end
+        end
       end
 
       def status(id : String) : Control::Status

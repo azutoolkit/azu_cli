@@ -8,6 +8,8 @@ description: Generate a complete JSON API resource, with models, a migration, fi
 
 ## Overview & visual demo
 
+Generate an API resource with explicit request, endpoint, and response boundaries. Review the generated serialization and validation before exposing the resource to clients.
+
 <figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing: the written files with line counts and the azu undo reminder"><figcaption><p>After Enter, <code>azu g</code> lists every file it wrote with its line count. <code>azu undo</code> reverts them.</p></figcaption></figure>
 
 ```mermaid

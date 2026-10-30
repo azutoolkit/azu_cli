@@ -8,7 +8,7 @@ description: Run the spec suite with crystal spec under the test environment, wi
 
 ## Overview & visual demo
 
-Use it for the whole suite before a commit, or `--watch` while you work on one area. Its output is plain Logger lines and whatever `crystal spec` prints, so the terminal shows no card.
+Run project tests through the CLI with the supported filters and options. Keep fast feedback local and use the same test commands in CI so failures are reproducible.
 
 <figure><img src="../assets/terminal-ui/04-new-progress.png" alt="The progress card azu new draws, with a spinner on the Shards step"><figcaption><p>Not <code>azu test</code>'s output. This is the progress card <code>azu new</code> draws. <code>azu test</code> prints plain lines and the <code>crystal spec</code> output.</p></figcaption></figure>
 

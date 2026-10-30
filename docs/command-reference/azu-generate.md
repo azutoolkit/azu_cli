@@ -6,7 +6,7 @@ description: Generate models, endpoints, requests, pages, services, migrations a
 
 ## Overview & visual demo
 
-`azu generate` (alias `azu g`) renders templates into your project in the Azu contract style. On a terminal it runs in a scratch copy first, lists every file it would create or change with its diff, type-checks the result, and writes only when you press Enter. Every write keeps an undo record, so `azu undo` can revert it (the details are in the preview section below).
+Generate a focused application feature, review the files, then edit the result as ordinary Crystal and templates. `azu g` is the short form; running it without a type opens the generator picker.
 
 <figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="The azu generate preview for a scaffold: 28 new files and 1 changed, with the diff of src/db/schema.cr"><figcaption><p><code>azu g scaffold comment</code>: 28 new files and 1 changed. The right pane is the diff of <code>src/db/schema.cr</code>, and the footer says the project type-checks with these files.</p></figcaption></figure>
 

@@ -6,12 +6,7 @@ require "./<%=project%>"
 Log.info { "Starting JoobQ workers for queues: #{JoobQ.queues.keys.join(", ")}" }
 Log.info { "Default queue: #{JoobQ.config.default_queue}, retries: #{JoobQ.config.retries}" }
 
-{Signal::INT, Signal::TERM}.each do |signal|
-  signal.trap do
-    Log.info { "Stopping JoobQ workers" }
-    exit
-  end
-end
+# JoobQ.forge installs signal handlers and drains jobs before exiting.
 
 # Starts the queues and blocks
 JoobQ.forge

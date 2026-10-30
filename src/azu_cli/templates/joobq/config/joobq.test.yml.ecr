@@ -3,21 +3,21 @@
 
 joobq:
   settings:
-    default_queue: "test"
+    default_queue: "<%= @default_queue %>"
     retries: 1  # Minimal retries in tests
     timeout: "5 seconds"  # Short timeout for tests
     timezone: "UTC"
     worker_batch_size: 10
 
   # Queue configurations
+<% if @create_example_job -%>
   queues:
-    test:
-      job_class: "TestJob"
+    <%= @default_queue %>:
+      job_class: "<%= @example_job_name %>"
       workers: 1
-
-    <%= @default_queue || "default" %>:
-      job_class: "<%= @create_example_job ? (@example_job_name || "ExampleJob") : "YourJob" %>"<%= @create_example_job ? "" : "  # replace with the job class that runs in this queue" %>
-      workers: 1
+<% else -%>
+  queues: {} # Register job types and configure queues before starting workers.
+<% end -%>
 
   # Minimal middleware for tests
   middlewares:

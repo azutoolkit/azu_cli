@@ -101,6 +101,18 @@ For real browser acceptance, install Python Playwright (`python3 -m pip install 
 
 ### Terminal diagnostics and generator validation
 
+`azu dev` opens the workspace HUD (`--ui rich` and `--ui mission` select the same
+interface). Build, errors, console, configuration and commands share its navigation.
+Press **g** to compose a generator
+or **:** to enter an Azu command, review its arguments, then confirm execution
+without leaving the dashboard. See [commands inside the HUD](docs/command-reference/azu-dev.md).
+
+`azu connect --ssh azu-production --snapshot /run/azu/monitor.json` opens a
+read-only local HUD backed by verified SSH. Provision a restricted monitoring key
+and sanitized snapshot publisher first; the [production connection guide](docs/command-reference/azu-connect.md)
+covers setup, host-key verification, rotation and transport limits. Production
+mode has no generator, migration or console capability.
+
 `azu joobq` provides queue, workflow-step and dead-letter views with bounded master/detail panes and confirmed atomic replay. `azu dev` adds an Errors tab and expands SQL with live queries, pool metrics and latency buckets. See [JoobQ dashboard](docs/command-reference/azu-joobq.md) and [dev telemetry requirements](docs/command-reference/azu-dev.md); expanded app telemetry requires the companion Azu producer changes, and PostgreSQL History Store support awaits a supported API.
 
 Run `scripts/check_generators.sh web` and `scripts/check_generators.sh api` to compile every generator family together and exercise lazy-compiled message, job, validator and component paths. Release CI requires these checks, the generated-app end-to-end matrix, and `scripts/check_joobq_adapter.sh` against published JoobQ 0.4.2 and the pinned revision with atomic DLQ support.

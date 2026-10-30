@@ -68,7 +68,7 @@ module AzuCLI
         when "time", "datetime"
           "Time"
         when "date"
-          "Date"
+          "Time"
         when "user", "model"
           "User"
         when "array"

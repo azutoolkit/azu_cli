@@ -8,6 +8,8 @@ description: Generate Azu::Request contracts per action, with the validations fo
 
 ## Overview & visual demo
 
+Generate a typed request boundary for incoming data. Add validation where input enters the application so services and persistence code receive the expected values.
+
 <figure><img src="../assets/terminal-ui/11-generate-preview.png" alt="azu generate preview listing the request files for comments: create_request, destroy_request, edit_request, index_request, new_request, show_request and update_request"><figcaption><p>The scaffold's preview lists one request file per action. A single <code>azu g request</code> writes just the one you name.</p></figcaption></figure>
 
 ```mermaid

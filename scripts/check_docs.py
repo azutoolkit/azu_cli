@@ -111,6 +111,13 @@ def check(path, commands, summary_pages):
     if rel not in summary_pages and rel != "SUMMARY.md" and rel != "README.md":
         errs.append("page is not in SUMMARY.md")
 
+    # Retired screen names are misleading after dashboard parity.
+    for obsolete in ("Auth tab", "**Auth** tab", "Overview combines request/job/pool/auth", "Tab cycles its three panes"):
+        if obsolete in text:
+            errs.append(f"stale dashboard wording: {obsolete}")
+    if re.search(r'(?:src=\"|\]\()[^\"\)]*assets/[^\"\)]*\.(?:ansi|txt|html)(?:\"|\))', body):
+        errs.append("legacy documentation artifact link; use a PNG or Markdown page")
+
     # --- documented commands exist --------------------------------------
     for block in re.findall(r"^```(?:bash|sh|shell|text)?\n(.*?)^```", text, flags=re.S | re.M):
         for line in block.splitlines():
@@ -134,6 +141,12 @@ def main():
             print(os.path.relpath(f, ROOT))
             for e in errs:
                 print("   -", e)
+    corpus = "\n".join(open(os.path.join(DOCS, page)).read() for page in summary_pages if os.path.isfile(os.path.join(DOCS, page)))
+    # Every primary command must be discoverable in the published navigation.
+    for command in sorted(commands - {"g", "s", "server", "t", "help", "version"}):
+        if not re.search(r"\bazu\s+" + re.escape(command) + r"(?![a-z0-9:_-])", corpus):
+            print(f"No published example or reference for azu {command}")
+            failed += 1
     for p in summary_pages:
         if not os.path.exists(os.path.join(DOCS, p)):
             print(f"SUMMARY.md links to missing {p}")

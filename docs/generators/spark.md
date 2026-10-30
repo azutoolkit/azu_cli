@@ -6,7 +6,7 @@ description: Generate typed Spark components and database-backed live CRUD with 
 
 ## Overview & visual demo
 
-`azu generate spark` creates a stateful `Azu::Spark::Component` with typed events. `azu generate scaffold --spark` creates a complete database-backed CRUD interface: list, create, edit, validation, confirmed deletion and updates between open tabs. Both use the generated app's daisyUI theme and Azu's locally served Spark client.
+Generate stateful Spark components or a database-backed live CRUD scaffold. The generated pages use Azu's live component protocol and register their navigation entries where the application supports it.
 
 <figure><img src="../assets/generated-ui/spark-products.png" alt="Generated Spark products screen with a live table, paging controls and a create/edit form"><figcaption><p>A real generated SQLite application exercised in Chromium.</p></figcaption></figure>
 
@@ -23,7 +23,7 @@ flowchart LR
 
 ## Quickstart & command syntax
 
-Run inside a generated **web** project. The browser acceptance fixture uses Azu **0.10.5**, CQL **0.0.604** and Crystal **1.22.1**. Existing projects need the typed Spark API (`state`, `event`, `mountable`); update their Azu dependency before using these generators if that API is absent:
+Run inside a generated **web** project. New projects target Azu **1.0.4+** and CQL **1.0.1+**, with Crystal **1.22.1** or later. The linked browser screenshots were captured with Azu 0.10.5 and CQL 0.0.604; their saved validation metadata records those versions. Existing projects need the typed Spark API (`state`, `event`, `mountable`); update their Azu dependency before using these generators if that API is absent:
 
 ```sh
 azu generate spark Counter count:int32 title:string enabled:bool --page

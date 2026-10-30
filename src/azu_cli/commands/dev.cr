@@ -4,6 +4,8 @@ require "../dev_server/watcher"
 require "../dev_server/runner"
 require "../dev_server/telemetry"
 require "../dev_server/hud"
+require "../dev_server/mission_control"
+require "../joobq/controller"
 
 module AzuCLI
   module Commands
@@ -64,8 +66,40 @@ module AzuCLI
 
         terminal = UI::Terminal.detect
         columns, rows = terminal.size
-        wanted = mode == "rich" ? terminal.tty? : UI::Reporter.rich?(terminal)
+        wanted = {"rich", "mission"}.includes?(mode) ? terminal.tty? : UI::Reporter.rich?(terminal)
         wanted && STDIN.tty? && terminal.interactive? && columns >= 60 && rows >= 16
+      end
+
+      @jobs_controller : AzuCLI::JoobQDashboard::Controller?
+      @jobs_opening = false
+
+      private def open_jobs : Nil
+        return if @jobs_opening || @jobs_controller
+        @jobs_opening = true
+        spawn do
+          begin
+            boot = "src/initializers/joobq.cr"
+            raise "No JoobQ initializer; run azu generate joobq" unless File.file?(boot)
+            emit(AzuCLI::JoobQDashboard::Notice.new("Compiling application JoobQ adapter"))
+            File.open(File::NULL, "w") do |output|
+              AzuCLI::JoobQDashboard::ProcessSource.open(boot, output: output) do |source|
+                unless @stopping
+                  controller = AzuCLI::JoobQDashboard::Controller.new(source, ->(event : UI::Message) { emit(event) })
+                  @jobs_controller = controller
+                  controller.start
+                  until @stopping
+                    sleep 250.milliseconds
+                  end
+                  controller.stop
+                end
+              end
+            end
+          rescue ex
+            emit(AzuCLI::JoobQDashboard::Notice.new("Unavailable: #{ex.message}; use azu joobq for compiler diagnostics")) unless @stopping
+          ensure
+            @jobs_opening = false
+          end
+        end
       end
 
       private def run_dashboard(target : String) : Result
@@ -76,7 +110,7 @@ module AzuCLI
         app_file = "./src/#{Utils.project_name}.cr"
         evaluator = AzuCLI::DevServer::Console::Evaluator.new(->(message : UI::Message) { emit(message) }, app_file,
           on_busy: ->(busy : Bool) { control.paused = busy; nil })
-        screen = AzuCLI::DevServer::Hud.new(target, (@port || ENV["PORT"]? || DEFAULT_PORT).to_s, @environment || ENV["CRYSTAL_ENV"]? || "development",
+        workspace = AzuCLI::DevServer::Hud.new(target, (@port || ENV["PORT"]? || DEFAULT_PORT).to_s, @environment || ENV["CRYSTAL_ENV"]? || "development",
           "watching src, config · poll #{@interval.total_milliseconds.to_i} ms", on_rebuild: -> { @rebuild_requested = true; nil }, branch: git_branch,
           on_control: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command); nil },
           history: AzuCLI::DevServer::Console::History.for_project,
@@ -84,10 +118,15 @@ module AzuCLI
           on_prewarm: -> { evaluator.prewarm; nil },
           on_cancel_eval: -> { evaluator.cancel; nil },
           on_interpreter: ->(prelude : Array(String)) { run_interpreter(app_file, prelude); nil })
+        screen = AzuCLI::DevServer::MissionControl.new(workspace, target, terminal.reduced_motion?,
+          on_jobs: -> { open_jobs },
+          on_replay: ->(id : String) { @jobs_controller.try(&.replay(id)); nil },
+          on_command: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command) })
         program = UI::Program.new(screen, terminal, UI::FullScreenRenderer.new(terminal.output))
         @hud = program
         @child.try do |child|
           child.env["AZU_TELEMETRY_SOCKET"] = telemetry.path
+          child.env["AZU_APP_NAME"] = target
           child.on_output = ->(line : String, error : Bool) { program.send(Events::LogLine.new(line, error)); nil }
         end
         telemetry.start { |data| program.send(Events::Telemetry.new(data)) }
@@ -102,11 +141,15 @@ module AzuCLI
         spawn serve(target)
         spawn sample_memory(program)
         sample_jobs(program)
-        program.run
-        control.stop
-        stop
-        telemetry.stop
-        stdout.puts screen.summary
+        begin
+          program.run
+        ensure
+          @jobs_controller.try(&.stop)
+          control.stop
+          stop
+          telemetry.stop
+        end
+        stdout.puts workspace.summary
         success
       end
 
@@ -178,7 +221,7 @@ module AzuCLI
         @interval = interval.milliseconds
         if has_option?("ui")
           mode = get_option("ui")
-          return "--ui must be rich or plain" unless {"rich", "plain"}.includes?(mode)
+          return "--ui must be rich, mission or plain" unless {"rich", "mission", "plain"}.includes?(mode)
           @ui_mode = mode
         end
         @host = get_option("host") if has_option?("host")
@@ -225,6 +268,7 @@ module AzuCLI
       # Ends a build in progress and the app, and keeps a build that is finishing from starting a new app.
       def stop : Nil
         @stopping = true
+        @control.try(&.stop)
         @builder.try(&.cancel)
         @lock.synchronize { @child.try(&.stop) }
       end
@@ -357,11 +401,13 @@ module AzuCLI
             --env NAME         CRYSTAL_ENV for the app (default: your environment or .env, else development)
             --debounce MS      Quiet time before a change is acted on (default #{DEFAULT_DEBOUNCE_MS})
             --interval MS      Polling interval (default #{DEFAULT_INTERVAL_MS})
-            --ui MODE          rich: the dashboard (the default on a terminal of at least 60x16), plain: lines
+            --ui MODE          rich: workspace HUD (default), mission: alias for rich, plain: lines
             --help             Show this help
 
           Exit codes: 0 stopped by Ctrl-C or SIGTERM, 1 not an Azu project, 2 invalid usage.
           'azu serve' is the older command that builds with --production and also watches templates.
+          Mission HUD: g generates code, : composes a local command, Enter reviews, y executes.
+          Use 'azu connect --help' for a read-only production HUD over verified SSH.
         HELP
         stdout.puts
         stdout.puts "Examples:"

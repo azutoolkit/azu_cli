@@ -8,6 +8,8 @@ description: What each azu generate type writes, how the files of one resource f
 
 ## Overview & visual demo
 
+Generators create focused, editable building blocks for an Azu application. Start with a scaffold for a complete feature, or choose individual generators when you want tighter control over the structure.
+
 <figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing the generator types, with model selected and the example post title:string body:text"><figcaption><p><code>azu g</code> with no arguments opens this menu. Pick a generator, then give it a name and attributes. On a terminal you see the files before anything is written.</p></figcaption></figure>
 
 ```mermaid

@@ -4,6 +4,18 @@ description: Run your app in development, rebuilding and restarting it on every 
 
 # azu dev
 
+## Workspace HUD
+
+The workspace mirrors Azu's browser dashboard with a health banner and paged cards for uptime, memory, latency, routes, traffic, errors, cache, database, components, and runtime. Optional features are hidden when explicitly disabled; missing telemetry remains labeled unavailable.
+
+Use Ctrl-P to navigate the four sidebar groups. Errors lives under **Observe**; **Sessions** replaces Auth; **Database** contains SQL, pool, schema, and migration subviews. **Jobs** holds JoobQ management and Queues & Activity. Components and Mailers live under **Develop**. Build, console, configuration, routes, and command composition remain available through the palette.
+
+Press `[` / `]` to change Overview pages or Database subviews, Tab to move focus, Enter to inspect, and `h` for contextual help. The sidebar collapses below 104 columns. Dense lists and stack traces scroll inside their panes. See [Terminal UI](../getting-started/terminal-ui.md) for the complete key map.
+
+The full card grid needs the additive shared dashboard snapshot in Azu. Older v1 applications retain existing request, SQL, and error feeds. For SQL, load `azu/cql`, attach the schema with `Azu::CQL.attach { AppDB }`, and run application queries. A missing query is different from a zero-duration query; Esc clears any active filter.
+
+Generated authentication reports verified sign-in/out/up outcomes. Cookie sessions have no active-session inventory. Generated mailers register static previews and delivery outcomes without exporting real recipients or bodies. See [integration architecture](../architecture/mission-control.md).
+
 ## Overview & visual demo
 
 `azu dev` builds the app with `shards build` (a debug build, not a release), runs it, and keeps it current: source and config changes rebuild and restart it, a failed build keeps the previous app running, and template changes need no build at all. On a terminal it draws a dashboard with the build, the app, the CLI's own commands (doctor, routes, db:status, tests, ...) re-run as you work, a console that runs Crystal with your app loaded, requests, SQL, jobs and the log. The concise version is [azu dev](../command-reference/azu-dev.md).
@@ -39,7 +51,7 @@ azu dev --port 3000 --env test --ui plain
 | `--env NAME` | `CRYSTAL_ENV` for the app | your environment or `.env`, else `development` |
 | `--debounce MS` | Quiet time before a change is acted on | `300` |
 | `--interval MS` | How often the files are polled | `250` |
-| `--ui MODE` | `rich` (the dashboard) or `plain` (lines) | the dashboard on a terminal of at least 60x16 |
+| `--ui MODE` | `rich` or `mission` (same workspace HUD), or `plain` (lines) | the workspace HUD on a terminal of at least 60x16 |
 | `--help` | Show the help | |
 
 What a change does:
@@ -153,7 +165,7 @@ The Config panel shows the last run of `azu config`, which the Commands panel re
 
 <summary>Requests, SQL and errors come from the app</summary>
 
-`azu dev` listens on a Unix socket (mode 0600) and passes its path to the app in `AZU_TELEMETRY_SOCKET`. An app that requires `azu/dev` and runs in development writes a JSON snapshot per second. Requests are recorded only with `PERFORMANCE_MONITORING=true`, which `.env.development` sets in a generated project. Projects generated now pin azu 0.10.1 or newer, which has the telemetry. The expanded SQL stream and Errors tab require the companion Azu telemetry changes (`codex/dev-hud-telemetry`) until included in a published Azu release. Older producers retain slow-query display and show a waiting notice for errors. Load `azu/cql` and attach the application schema through `Azu::CQL` to capture native async-engine query telemetry and pool snapshots. Exception reports come from the existing server rescuer instrumentation. Problem details are normalized from the captured report, not a copy of arbitrary application problem extensions. SQL parameters are not transmitted. The socket reader bounds messages to 1 MiB and rejects incompatible object shapes.
+`azu dev` listens on a Unix socket (mode 0600) and passes its path to the app in `AZU_TELEMETRY_SOCKET`. An app that requires `azu/dev` and runs in development writes a JSON snapshot per second. Requests are recorded only with `PERFORMANCE_MONITORING=true`, which `.env.development` sets in a generated project. The CLI is contract-tested against Azu master `505fff4` (v1.0.4), whose shared exporter includes recent SQL, latency histograms, errors and runtime metrics. Older producers retain slow-query display and show a waiting notice for errors. Load `azu/cql` and attach the application schema through `Azu::CQL` to capture native async-engine query telemetry and pool snapshots. Exception reports come from the existing server rescuer instrumentation. Problem details are normalized from the captured report, not a copy of arbitrary application problem extensions. SQL parameters are not transmitted. The socket reader bounds messages to 1 MiB and rejects incompatible object shapes. Auth, schema and migration history are optional application adapters; current Azu master does not export them. No web dashboard endpoint is scraped or exposed by this integration.
 
 </details>
 

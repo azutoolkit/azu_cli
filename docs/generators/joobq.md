@@ -8,6 +8,8 @@ description: Set up JoobQ background jobs in an existing project, and generate j
 
 ## Overview & visual demo
 
+Generate JoobQ configuration, an example job, and a worker entry point. Run workers separately from the web process and inspect their queues through the Jobs section or `azu jobs:status`.
+
 <figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing job as a JoobQ job and joobq as JoobQ setup"><figcaption><p><code>azu g</code> lists <code>joobq</code> as JoobQ setup and <code>job</code> as a JoobQ job. <code>joobq</code> takes no name.</p></figcaption></figure>
 
 ```mermaid

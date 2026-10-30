@@ -8,6 +8,8 @@ description: Generate the page response of a read action with its Jinja template
 
 ## Overview & visual demo
 
+Generate a server-rendered page and its template. Compose reusable UI elements and keep styling consistent with the generated application's daisyUI setup.
+
 <figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing, listing the comment page classes and the Jinja templates under public/templates with their line counts"><figcaption><p>The scaffold writes the page classes and their Jinja templates together. <code>azu g page</code> writes the pair for the one action you name.</p></figcaption></figure>
 
 ```mermaid

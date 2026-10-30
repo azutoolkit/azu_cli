@@ -66,15 +66,15 @@ describe AzuCLI::DevServer::Control do
 
   it "lists the jobs commands only in a JoobQ project" do
     Control.catalog("bash", jobs: false).map(&.id).select(&.starts_with?("jobs:")).should be_empty
-    Control.catalog("bash", jobs: true).map(&.id).select(&.starts_with?("jobs:")).should eq ["jobs:status", "jobs:retry", "jobs:clear"]
+    Control.catalog("bash", jobs: true).map(&.id).select(&.starts_with?("jobs:")).should eq ["jobs:status", "jobs:retry", "jobs:clear", "jobs:dlq", "jobs:pause", "jobs:resume"]
   end
 
   it "asks before every command that changes something, and runs it without a prompt of its own" do
     catalog = Control.catalog("bash", jobs: true)
-    changing = %w[db:migrate db:rollback db:seed db:data:migrate db:create db:setup db:schema:load db:reset db:drop jobs:retry jobs:clear session:clear]
+    changing = %w[db:migrate db:rollback db:seed db:data:migrate db:create db:setup db:schema:load db:reset db:drop jobs:retry jobs:clear jobs:pause jobs:resume session:clear]
     catalog.select(&.confirm).map(&.id).sort.should eq changing.sort
     # these ask "are you sure?" on their own: the panel has no terminal to answer, its y is the answer
-    %w[db:rollback db:reset db:drop jobs:clear session:clear].each { |id| catalog.find!(&.id.==(id)).args.should contain "--force" }
+    %w[db:rollback db:reset db:drop jobs:clear jobs:retry jobs:pause jobs:resume session:clear].each { |id| catalog.find!(&.id.==(id)).args.should contain "--force" }
     # verify would roll back and re-apply the newest migration without it
     catalog.find!(&.id.==("db:migrations:verify")).args.should eq ["db:migrations:verify", "--no-rollback"]
     catalog.find!(&.id.==("db:drop")).effect.should eq "the database"

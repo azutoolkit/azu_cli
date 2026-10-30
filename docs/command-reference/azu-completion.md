@@ -8,7 +8,7 @@ description: Print a bash, zsh or fish completion script for azu, with its comma
 
 ## Overview & visual demo
 
-Tab completion saves typing the 40-odd command names and the generator types. The script is static: it lists the commands and generators of the build that printed it.
+Enable completion for your shell to discover commands and spend less time typing. Generate the completion script for the shell you actually use, then load it from its startup configuration.
 
 <figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing the generators"><figcaption><p>Not <code>azu completion</code>'s output. This is the generator menu <code>azu g</code> shows. Completion offers the same generator names on Tab.</p></figcaption></figure>
 

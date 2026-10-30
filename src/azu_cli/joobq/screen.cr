@@ -127,10 +127,14 @@ module AzuCLI::JoobQDashboard
     end
 
     def view(frame : UI::Frame) : Nil
-      frame.gradient(1, 0, "azu joobq · Queues / Workflows / DLQ")
-      frame.text(1, 1, "[1] Queues & Workers  [2] Workflows  [3] DLQ & Retries", UI::Token::Cyan, max: Math.max(0, frame.width - 2))
-      body = UI::Rect.new(0, 2, frame.width, Math.max(0, frame.height - 5))
-      if frame.height >= 18
+      draw(frame, UI::Rect.new(0, 0, frame.width, frame.height))
+    end
+
+    def draw(frame : UI::Frame, area : UI::Rect) : Nil
+      header, body = area.split_top(2)
+      frame.text(header.x, header.y, "[1] Queues & Workers  [2] Workflows  [3] DLQ & Retries", UI::Token::Blue, max: header.w)
+      body, footer = body.split_top(Math.max(0, body.h - 3))
+      if body.h >= 14
         metrics, body = body.split_top(4)
         values = [{"Queues · #{@queue_count}", "#{@pending.to_i64} pending"},
                   {"Workers · #{@worker_count || "unavailable"}", "#{@processing.to_i64} processing"},
@@ -138,15 +142,14 @@ module AzuCLI::JoobQDashboard
         metrics.columns(3, 1).each_with_index do |card, index|
           title, value = values[index]
           inner = frame.card(card, title)
-          frame.text(inner.x, inner.y, value, UI::Token::Cyan, max: inner.w) unless inner.empty?
+          frame.text(inner.x, inner.y, value, UI::Token::Blue, max: inner.w) unless inner.empty?
         end
       end
-      empty = tab.workflows? ? "No active workflows · check runtime/history adapter" : "No entries"
-      inspector.draw(frame, body, tab.to_s, empty)
+      inspector.draw(frame, body, tab.to_s, tab.workflows? ? "No active workflows · check runtime/history adapter" : "No entries")
       stale = @last_snapshot.try { |at| Time.instant - at > 5.seconds } != false
       note = confirming.try { |id| "Replay #{id}? y confirms; any other key cancels" } || @notice
-      frame.text(1, frame.height - 3, "#{stale ? "STALE · " : ""}#{note}", UI::Token::Amber, max: Math.max(0, frame.width - 2))
-      frame.text(1, frame.height - 2, "1–3 tabs · Tab pane · ↑↓ select · PgUp/PgDn scroll · r replay · q quit", UI::Token::Muted, max: Math.max(0, frame.width - 2))
+      frame.text(footer.x, footer.y, "#{stale ? "STALE · " : ""}#{note}", UI::Token::Muted, max: footer.w)
+      frame.text(footer.x, footer.y + 1, "1/2/3 views · Tab details · j/k select · r replay DLQ · Ctrl-P navigate", UI::Token::Blue, max: footer.w) if footer.h > 1
     end
   end
 end

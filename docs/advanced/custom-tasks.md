@@ -8,6 +8,8 @@ Projects made with `azu new` (example code on, the default) include a small task
 
 ## Overview & visual demo
 
+Keep repeatable project work in named tasks. Use the supported task interface for scripts your team runs often, and inspect the command before executing it in a trusted checkout.
+
 <figure><img src="../assets/terminal-ui/04-new-progress.png" alt="azu new writing a project, with the tasks target included"><figcaption><p>Part of what <code>azu new</code> writes: <code>src/tasks.cr</code> and a <code>tasks</code> target in <code>shard.yml</code>.</p></figcaption></figure>
 
 ```mermaid

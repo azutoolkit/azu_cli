@@ -8,6 +8,8 @@ Your app is configured by environment variables, loaded from `.env` files. There
 
 ## Overview & visual demo
 
+Configure the CLI separately from the application it runs. This guide explains the supported configuration files, environment values, and command overrides so a local setup stays predictable.
+
 <figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor checking the database, env, secrets and port"><figcaption><p><code>azu doctor</code> reads the same environment your app does: the database URL, every variable <code>.env.example</code> lists, the secrets and the port. <a href="../command-reference/azu-config.md"><code>azu config</code></a> prints what the app ends up using.</p></figcaption></figure>
 
 ```mermaid

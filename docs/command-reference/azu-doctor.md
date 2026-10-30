@@ -8,7 +8,7 @@ description: Check Crystal, shards, dependencies, the database, the environment,
 
 ## Overview & visual demo
 
-Run it first when a project will not boot, or before you deploy. Warnings are advice and exit `0`; a failure exits `1`, which makes it usable as a CI gate.
+Run `azu doctor` when a project will not build or start. It checks the local setup and reports actionable findings without modifying your application.
 
 <figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor card with nine green checks and the summary 9 ok, 0 warn, 0 fail"><figcaption><p><code>azu doctor</code> on a color terminal: one mark per check, the hint under any warning, and the counts in the corner.</p></figcaption></figure>
 

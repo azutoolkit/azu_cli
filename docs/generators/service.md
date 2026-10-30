@@ -8,6 +8,8 @@ description: Generate service classes for create, update and destroy, which save
 
 ## Overview & visual demo
 
+Generate a service for application behavior that spans an endpoint or model. Keep dependencies explicit so the service remains straightforward to test and reuse.
+
 <figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing, listing the comment services create_service, destroy_service and update_service with their line counts"><figcaption><p>After Enter, the service files are listed with their line counts. Each action is its own file.</p></figcaption></figure>
 
 ```mermaid

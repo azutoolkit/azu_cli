@@ -8,6 +8,8 @@ description: Generate sign up, sign in, sign out and a protected account page fo
 
 ## Overview & visual demo
 
+Generate authentication endpoints, forms, and supporting services. The generated session and telemetry hooks report verified lifecycle outcomes to Sessions when the installed Azu version supports them.
+
 <figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing auth as session authentication and joobq as JoobQ setup"><figcaption><p><code>azu g</code> lists <code>auth</code> as session authentication. The command takes no name.</p></figcaption></figure>
 
 ```mermaid

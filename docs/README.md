@@ -1,112 +1,105 @@
 ---
-description: Scaffold, run and ship Azu apps from your terminal.
+description: Build, inspect, and improve Azu applications from one terminal workspace.
 ---
 
 # Azu CLI
 
-Azu CLI is the command line for the [Azu Toolkit](https://github.com/azutoolkit/azu). It creates projects, generates the
-code you would have written anyway, rebuilds your app when you save, and tells you what's wrong with your setup.
+Azu CLI takes you from an empty directory to a running Crystal application, then keeps the tools you need close by: generators, migrations, live diagnostics, background jobs, and a console.
 
-<img width="1990" alt="azu-cli-gitbook-cover" src="https://github.com/user-attachments/assets/3545183a-e86a-431a-9ed9-c2ac5eef3532" />
+## Overview & visual demo
 
+The development dashboard shares its metrics with Azu's browser dashboard. Start with health and traffic, then follow a slow request into SQL, an exception, or a background job. Missing telemetry stays visible as unavailable; an empty counter is never presented as proof that a service is healthy.
 
-## Overview
-
-{% tabs %}
-{% tab title="azu new" %}
-<figure><img src="assets/terminal-ui/05-new-done.png" alt="azu new blog finishing: flight plan, progress card and next steps"><figcaption><p>A reviewed plan, a live progress card, and the commands to run next. 63 files, git, shards and a type-check in 18 seconds.</p></figcaption></figure>
-{% endtab %}
-
-{% tab title="azu dev" %}
-<figure><img src="assets/terminal-ui/07-dev-dashboard.png" alt="azu dev dashboard with build, app, requests, SQL, jobs and log panels"><figcaption><p>Build time, memory, request rate and percentiles, SQL timings and the live log, in one screen.</p></figcaption></figure>
-{% endtab %}
-
-{% tab title="azu generate" %}
-<figure><img src="assets/terminal-ui/11-generate-preview.png" alt="azu generate preview with a file list and a diff of src/db/schema.cr"><figcaption><p>See every file and diff before anything is written. Enter writes, Esc doesn't.</p></figcaption></figure>
-{% endtab %}
-{% endtabs %}
+<figure><img src="assets/terminal-ui/mission-control/overview-theme-preview.png" alt="Azu terminal Overview with health, uptime, memory, latency, routes, and subsystem cards"><figcaption><p>The actual Crystal renderer, using clearly labeled sample data.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
-  new["azu new"] --> db["azu db:setup"]
-  db --> dev["azu dev"]
-  dev --> gen["azu generate"]
-  gen --> dev
-  dev --> routes["azu routes"]
-  gen --> undo["azu undo"]
+  Create[Create an app] --> Generate[Generate features]
+  Generate --> Migrate[Apply migrations]
+  Migrate --> Develop[Run azu dev]
+  Develop --> Inspect[Inspect requests and data]
+  Inspect --> Generate
 ```
 
 ## Quickstart & command syntax
 
+{% tabs %}
+{% tab title="New application" %}
 ```bash
-azu new blog && cd blog     # a wizard on a terminal, defaults with --yes
-azu db:setup                # SQLite, no server needed
-azu dev                     # build, run, rebuild on save
+azu new blog --type web --db sqlite
+cd blog
+azu generate scaffold Post title:string body:text
+azu db:setup
+azu dev
 ```
-
-In a second terminal:
-
+Use `--yes` with `azu new` to accept defaults in a noninteractive workflow.
+{% endtab %}
+{% tab title="Existing application" %}
 ```bash
-azu g scaffold post title:string body:text
+azu doctor
 azu db:migrate
+azu dev
 ```
+Load `azu/dev` for shared dashboard telemetry. Applications using CQL should also load `azu/cql` and attach their schema.
+{% endtab %}
+{% tab title="Live components" %}
+```bash
+azu generate scaffold Product name:string price_cents:int32 active:bool --spark
+azu db:migrate
+azu dev
+```
+The Spark scaffold provides database-backed live CRUD. See the [Spark guide](generators/spark.md) for configuration and generated files.
+{% endtab %}
+{% endtabs %}
 
-| You want to...                   | Run                                              | Guide                                                              |
-| -------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
-| Start a project                  | `azu new <name>`                                 | [azu new](command-reference/azu-new.md)                            |
-| Develop with rebuild on save     | `azu dev`                                        | [azu dev](command-reference/azu-dev.md)                            |
-| Generate models, endpoints, CRUD | `azu generate <type> <name> [fields]`            | [azu generate](command-reference/azu-generate.md)                  |
-| See every route                  | `azu routes`                                     | [azu routes](command-reference/azu-routes.md)                      |
-| Ship a build                     | `shards build --production`, `azu new --docker`  | [Production builds](command-reference/building-for-production.md)  |
-| Check your environment           | `azu doctor`                                     | [azu doctor](command-reference/azu-doctor.md)                                   |
+| Task | Command | Guide |
+| --- | --- | --- |
+| Create an application | `azu new blog` | [New projects](command-reference/azu-new.md) |
+| Generate a feature | `azu generate` | [Generators](generators/README.md) |
+| Run and inspect | `azu dev` | [Development workspace](command-reference/azu-dev.md) |
+| Apply schema changes | `azu db:migrate` | [Database commands](command-reference/azu-db.md) |
+| Run background workers | `azu jobs:worker` | [Job commands](command-reference/azu-jobs.md) |
+| Inspect a remote deployment | `azu connect` | [Read-only SSH monitoring](command-reference/azu-connect.md) |
 
 ## Realistic output
 
-{% code title="terminal" %}
+{% code title="Development workspace navigation" %}
 ```text
-$ azu doctor --ui plain
-ok    crystal        Crystal 1.22.1 (the project needs 1.22.1 or newer)
-ok    shards         Shards 0.20.0
-ok    dependencies   installed and in sync with shard.lock
-ok    database       SQLite file ./db/blog_development.db is writable
-...
+blog / Observe / Overview  |  ● running  pid 53628 :4000
 
-9 ok, 0 warnings, 0 failures
+Observe          Overview · Errors · Tracing · Logs · Profiler
+Data & Access    Sessions · Database · Cache
+Jobs             JoobQ · Queues & Activity
+Develop          Components · Mailers
+
+Ctrl-P navigate   [ / ] page   Tab focus   Enter inspect   h help
 ```
 {% endcode %}
 
-*Every rich screen has a plain twin, so this is what CI and pipes see.*
+*Example identity and process values; your workspace displays the running application.*
 
 ## Do's and don'ts
 
 {% hint style="info" %}
-**Pro tip:** `azu g` is short for `azu generate`, and `azu g` with no arguments opens a menu.
+**Stay in the terminal.** Ctrl-P opens navigation and commands. Use `g` to compose a generator and review the command before running it. Console, build output, and configuration remain in the palette.
 {% endhint %}
 
 {% hint style="success" %}
-Run `azu doctor` first when something feels off. It checks Crystal, shards, the database, secrets and the port, and
-changes nothing.
+**Start small.** SQLite and the generated UI make a useful first prototype. Add Redis, background jobs, and other integrations when the application needs them.
 {% endhint %}
 
 {% hint style="warning" %}
-Requires Crystal **1.22.1 or newer**, for the CLI and for the projects it generates.
+**Telemetry depends on your Azu version.** Existing v1 apps retain SQL, request, and error inspectors. The full card grid requires Azu's additive dashboard snapshot support; unavailable fields remain labeled until it is installed.
 {% endhint %}
 
 {% hint style="danger" %}
-Don't run the CLI in a checkout you don't trust. It loads the project's `.env*` files and compiles and runs the
-project's own code.
+**Run project commands only in trusted checkouts.** Generators, the console, and application adapters compile or execute project code. Production SSH monitoring remains read-only and does not expose these actions.
 {% endhint %}
-
-## Where next
-
-{% content-ref url="getting-started/installation.md" %}
-[installation.md](getting-started/installation.md)
-{% endcontent-ref %}
 
 {% content-ref url="getting-started/quickstart.md" %}
 [quickstart.md](getting-started/quickstart.md)
 {% endcontent-ref %}
 
-{% content-ref url="command-reference/README.md" %}
-[README.md](command-reference/README.md)
+{% content-ref url="getting-started/terminal-ui.md" %}
+[terminal-ui.md](getting-started/terminal-ui.md)
 {% endcontent-ref %}

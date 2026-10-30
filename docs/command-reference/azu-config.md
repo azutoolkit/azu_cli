@@ -6,7 +6,7 @@ description: Show the effective configuration of your app (server, TLS, template
 
 ## Overview & visual demo
 
-`azu config` shows what your application is actually configured with. It compiles the project, loads it without starting the server, and prints the settings Azu holds once your initializers and `.env` files have been applied: the server, TLS, templates, database, limits, uploads, WebSocket, i18n and asset settings. Use it when a value isn't what you expected, or to attach to a bug report. Nothing secret is printed.
+Inspect the configuration your project uses before changing it. The command reference below distinguishes displayed settings from options that affect a running development process.
 
 <figure><img src="../assets/terminal-ui/14-doctor.png" alt="azu doctor, a sibling command that checks the same environment and prints a card"><figcaption><p>No screenshot of <code>azu config</code> yet; this is its sibling <code>azu doctor</code>, which checks the same environment. On a color terminal <code>azu config</code> draws a card the same way, with a heading per section.</p></figcaption></figure>
 

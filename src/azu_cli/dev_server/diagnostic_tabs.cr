@@ -59,56 +59,80 @@ module AzuCLI::DevServer
     getter inspector = UI::Inspector.new
     @data : JSON::Any?
 
+    # SchemaAdapter forwards crystal-db's 0 = unlimited capacity. Native engine
+    # pools use a positive bound; zero is not an exhausted zero-slot pool.
+    def self.pool_capacity(pool : JSON::Any?) : String
+      maximum = DiagnosticData.field(pool, "max").try(&.as_i64?)
+      return "—" unless maximum && maximum >= 0
+      maximum == 0 ? "unlimited" : maximum.to_s
+    end
+
     def update(snapshot : JSON::Any) : Nil
       @data = DiagnosticData.field(snapshot, "sql")
-      rows = DiagnosticData.rows(@data, "recent", 200)
-      rows = DiagnosticData.rows(@data, "slowest", 200) if rows.empty?
+      inspector.replace(self.class.items(@data))
+    end
+
+    # Both HUDs consume the same producer contract: older Azu versions export
+    # slowest samples, newer versions also export recent queries and origins.
+    def self.items(data : JSON::Any?) : Array(UI::Inspector::Item)
+      rows = DiagnosticData.rows(data, "recent", 200)
+      rows = DiagnosticData.rows(data, "slowest", 200) if rows.empty?
       items = rows.compact_map do |row|
         next unless row.as_h?
-        sql = DiagnosticData.text(row, "sql")
+        sql = DiagnosticData.text(row, "sql")[0, 4096]
         origin = DiagnosticData.text(row, "caller", DiagnosticData.text(row, "model", DiagnosticData.text(row, "endpoint")))
         UI::Inspector::Item.new(DiagnosticData.text(row, "id", sql),
           "#{DiagnosticData.text(row, "at", "")} #{DiagnosticData.text(row, "ms")} ms #{origin} #{sql}",
           [sql, "", "Duration: #{DiagnosticData.text(row, "ms")} ms", "Origin: #{origin}",
            "Pool wait: #{DiagnosticData.text(row, "pool_wait_ms")} ms", "Endpoint: #{DiagnosticData.text(row, "endpoint")}"])
       end
-      alerts = DiagnosticData.rows(@data, "n_plus_one", 30)
+      alerts = DiagnosticData.rows(data, "n_plus_one", 30)
       alerts.each_with_index do |alert, index|
-        sql = DiagnosticData.text(alert, "sql")
+        sql = DiagnosticData.text(alert, "sql")[0, 4096]
         items << UI::Inspector::Item.new("n+1:#{index}:#{sql}", "N+1 ×#{DiagnosticData.text(alert, "count")} #{sql}",
           ["N+1 ×#{DiagnosticData.text(alert, "count")}", sql, DiagnosticData.text(alert, "caller"), DiagnosticData.text(alert, "endpoint"), DiagnosticData.text(alert, "suggestion")])
       end
-      inspector.replace(items)
+      items
+    end
+
+    def self.feed_label(data : JSON::Any?) : String
+      DiagnosticData.rows(data, "recent", 1).empty? && !DiagnosticData.rows(data, "slowest", 1).empty? ? "slowest sample" : "recent queries"
     end
 
     def key(key : UI::Key) : Bool
       inspector.key(key)
     end
 
-    def draw(frame : UI::Frame, rect : UI::Rect) : Nil
-      return if rect.empty?
+    def self.draw_metrics(frame : UI::Frame, rect : UI::Rect, data : JSON::Any?) : UI::Rect
       metrics, body = rect.split_top(Math.min(5, Math.max(0, rect.h - 6)))
       unless metrics.empty?
         left, right = metrics.columns(2, 1)
-        pool = DiagnosticData.field(@data, "pool")
+        pool = DiagnosticData.field(data, "pool")
         inner = frame.card(left, "SQL · Pool")
         unless inner.empty?
-          frame.text(inner.x, inner.y, "#{DiagnosticData.text(@data, "total")} queries · avg #{DiagnosticData.text(@data, "avg_ms")} ms", UI::Token::Cyan, max: inner.w)
+          frame.text(inner.x, inner.y, "#{DiagnosticData.text(data, "total")} queries · avg #{DiagnosticData.text(data, "avg_ms")} ms", UI::Token::Cyan, max: inner.w)
           if inner.h > 1
-            frame.text(inner.x, inner.y + 1, "checkouts #{DiagnosticData.text(pool, "in_flight")}/#{DiagnosticData.text(pool, "max")} · idle #{DiagnosticData.text(pool, "idle")}", UI::Token::Muted, max: inner.w)
+            frame.text(inner.x, inner.y + 1, "checkouts #{DiagnosticData.text(pool, "in_flight")}/#{pool_capacity(pool)} · idle #{DiagnosticData.text(pool, "idle")}", UI::Token::Muted, max: inner.w)
           end
-          alerts = DiagnosticData.rows(@data, "n_plus_one", 100)
-          frame.text(inner.x, inner.y + 2, "N+1 warnings: #{alerts.size} · slow #{DiagnosticData.text(@data, "slow")}", UI::Token::Amber, max: inner.w) if inner.h > 2
+          alerts = DiagnosticData.rows(data, "n_plus_one", 100)
+          frame.text(inner.x, inner.y + 2, "N+1 warnings: #{alerts.size} · slow #{DiagnosticData.text(data, "slow")}", UI::Token::Amber, max: inner.w) if inner.h > 2
         end
         inner = frame.card(right, "Latency histogram · ms")
-        buckets = DiagnosticData.rows(@data, "histogram", 10)
+        buckets = DiagnosticData.rows(data, "histogram", 10)
         lines = buckets.map { |bucket| "#{DiagnosticData.text(bucket, "label")} #{"█" * DiagnosticData.number(bucket, "bar").to_i.clamp(0, 12)} #{DiagnosticData.text(bucket, "count")}" }
+        lines << "Not supplied by this exporter" if lines.empty?
         # Three compact rows preserve every bucket in a short metrics card.
         lines.each_slice(2).with_index do |pair, index|
           break if index >= inner.h
           frame.text(inner.x, inner.y + index, pair.join("  "), UI::Token::Cyan, max: inner.w)
         end
       end
+      body
+    end
+
+    def draw(frame : UI::Frame, rect : UI::Rect) : Nil
+      return if rect.empty?
+      body = self.class.draw_metrics(frame, rect, @data)
       inspector.draw(frame, body, "Live queries · N+1", @data ? "No captured queries" : "Waiting for azu/cql telemetry")
     end
   end

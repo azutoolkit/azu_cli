@@ -8,10 +8,10 @@ module AzuCLI
 
       # All available commands for completion
       COMMANDS = %w[
-        new init generate g undo serve server s dev joobq routes config console doctor test t help version
+        new init generate g undo serve server s dev connect joobq routes config console doctor test t help version
         db:create db:drop db:migrate db:rollback db:seed db:reset db:status db:setup
         db:schema:load db:data:migrate db:migrations:verify db:validate
-        jobs:worker jobs:status jobs:clear jobs:retry jobs:ui
+        jobs:worker jobs:status jobs:clear jobs:retry jobs:ui jobs:pause jobs:resume jobs:dlq
         session:setup session:clear
         openapi:generate openapi:export
         completion
@@ -231,6 +231,7 @@ module AzuCLI
         when "serve", "server", "s" then "Start development server"
         when "joobq"                then "Manage JoobQ queues, workflows and dead letters"
         when "dev"                  then "Run the app, rebuild and restart on changes"
+        when "connect"              then "Monitor production over verified SSH (read-only)"
         when "routes"               then "List the routes"
         when "config"               then "Show the configuration of the application"
         when "console"              then "Open the Crystal interpreter with the app loaded"
@@ -251,6 +252,9 @@ module AzuCLI
         when "jobs:clear"           then "Clear jobs"
         when "jobs:retry"           then "Retry failed jobs"
         when "jobs:ui"              then "Start jobs UI"
+        when "jobs:dlq"             then "List dead-letter jobs"
+        when "jobs:pause"           then "Pause a queue"
+        when "jobs:resume"          then "Resume a queue"
         when "session:setup"        then "Setup sessions"
         when "session:clear"        then "Clear sessions"
         when "openapi:generate"     then "Generate from OpenAPI"

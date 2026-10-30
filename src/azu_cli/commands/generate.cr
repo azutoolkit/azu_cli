@@ -30,8 +30,9 @@ module AzuCLI
 
       def execute : Result
         @all_args = without_ui_flags(@all_args)
+        preview_args = @all_args.dup
         parse_arguments
-        if result = preview_flow
+        if result = preview_flow(preview_args)
           return result
         end
 
@@ -165,6 +166,11 @@ module AzuCLI
           parser.banner = "Usage: azu generate <type> <name> [attributes] [options]"
 
           parser.on("--force", "Overwrite existing files") { @force = true }
+          parser.on("--redis URL", "JoobQ Redis URL without credentials") { |v| @options["redis"] = v }
+          parser.on("--queue NAME", "JoobQ queue name") { |v| @options["queue"] = v }
+          parser.on("--workers N", "JoobQ workers per queue") { |v| @options["workers"] = v }
+          parser.on("--no-example", "Skip the JoobQ example job and queue") { @options["no-example"] = "true" }
+
           parser.on("--spark", "Generate a database-backed live CRUD scaffold") { @spark = true }
           parser.on("--page", "Include a runnable demo page for a Spark component") { @demo_page = true }
           parser.on("--api-only", "Generate API-only components") { @api_only = true }
@@ -427,10 +433,16 @@ module AzuCLI
           return usage_error(message)
         end
         create_example = !@options.has_key?("no-example")
+        workers = (@options["workers"]? || "3").to_i?
+        return usage_error("--workers must be between 1 and 1000") unless workers && 1 <= workers <= 1000
+        queue = @options["queue"]? || "default"
+        return usage_error("--queue must contain letters, numbers, underscores or hyphens") unless queue.matches?(/\A[a-zA-Z0-9_-]+\z/)
 
         generator = Generators::JoobQ.new(
           project_name: project_name,
           redis_url: redis_url,
+          default_queue: queue,
+          workers: workers,
           create_example_job: create_example
         )
 
@@ -454,7 +466,7 @@ module AzuCLI
         Logger.info("   dependencies:")
         Logger.info("     joobq:")
         Logger.info("       github: azutoolkit/joobq")
-        Logger.info("       version: ~> 0.4.2")
+        Logger.info("       version: ~> 0.5.1")
         Logger.info("     redis:")
         Logger.info("       github: stefanwille/crystal-redis")
         Logger.info("")
