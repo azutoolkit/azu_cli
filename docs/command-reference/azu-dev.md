@@ -52,6 +52,76 @@ in Overview or Logs to switch between application output and shared requests;
 the pane labels its source. These retained samples are not a complete access log.
 Auth's separate adapter cannot overwrite the main request/SQL/error snapshot.
 
+### Display local JoobQ jobs
+
+The Overview queue table and Jobs tab (`3`) poll Redis every two seconds. They do
+not connect to the worker's management HTTP API on port 8080 and do not need its
+API token. **Redis connected** confirms a successful metrics read, not worker
+liveness. Both the app and worker must use the same Redis database as `azu dev`.
+Set `REDIS_URL` in the project environment (or `REDIS_HOST`, `REDIS_PORT` and
+`REDIS_PASS`). Custom YAML Redis settings are not imported by the HUD; set the
+matching environment variables explicitly.
+
+Queue names come from the first existing local file in this order:
+`config/joobq.<environment>.yml`, `joobq.yml`, `config/joobq.yml`,
+`config/jobs.yml`. Environment selection uses `JOOBQ_ENV`, then `RACK_ENV`, then
+`CRYSTAL_ENV`, defaulting to `development`. Restart `azu dev` after changing queue
+configuration. A `config/jobs.yml` entry is a HUD manifest; it does not by itself
+register a runnable job in the worker.
+
+If the worker reports **Memoized 0 queues**, register the concrete class and the
+factory queue before calling `JoobQ.queues` or `JoobQ.forge`. For example, after
+requiring `joobq` and `../jobs/**` in `src/initializers/joobq.cr`:
+
+```crystal
+JoobQ::QueueFactory.register_job_type(HelloWorldJob)
+
+JoobQ.configure do |config|
+  config.default_queue = "default"
+  config.stats_enabled = true
+  config.rest_api_enabled = false # optional: the HUD reads Redis directly
+  config.queue_configs["default"] = {
+    job_class_name: "HelloWorldJob",
+    workers: 2,
+    throttle: nil,
+  }
+end
+```
+
+For this code-configured queue, the HUD manifest is:
+
+```yaml
+# config/jobs.yml
+joobq:
+  queues:
+    default:
+      job_class: HelloWorldJob
+      workers: 2
+```
+
+Start the app with `azu dev` and the worker in another terminal with
+`crystal run src/worker.cr`. Confirm the worker logs `default` in its queue list.
+For a job with `email_address : String` and `subject : String`, enqueue from the
+application console:
+
+```crystal
+HelloWorldJob.enqueue(email_address: "demo@example.com", subject: "HUD test")
+```
+
+Alternatively, create `src/enqueue_hello.cr` with `require "./blog"` (replace
+`blog` with your application filename), followed by that enqueue call, and run
+`crystal run src/enqueue_hello.cr` from the project root.
+
+Waiting reads the list named exactly after the queue (for example `default`);
+processing reads `joobq:processing:<queue>`. Completed is the cumulative successful
+completion counter in `joobq:stats:completed`, so jobs faster than the polling
+interval still leave visible evidence. DLQ reads the current per-queue index in
+`joobq:dead_letter:counts`; it is not the count of retry attempts. These counters
+describe the legacy `JoobQ::Queue`/`Worker` API, not the separate Delivery ledger.
+Older JoobQ versions without those counters need upgrading; historical DLQ data
+without the index must be reconciled by JoobQ's DLQ tools. The HUD is read-only
+and does not rebuild it. Remote snapshots lacking completions show `--`.
+
 ### Run commands inside the HUD
 
 In `azu dev`, press **g** to compose a generator command or **:**

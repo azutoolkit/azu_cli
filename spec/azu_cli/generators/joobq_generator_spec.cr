@@ -135,8 +135,8 @@ describe AzuCLI::Generate::JoobQ do
           content = File.read(initializer_file)
           content.should contain("require \"joobq\"")
           content.should contain("JoobQ.configure")
-          content.should contain(%(URI.parse(ENV["REDIS_URL"]? || "redis://localhost:6379")))
-          content.should contain(%(ENV["REDIS_HOST"] ||= redis.host))
+          content.should contain(%(ENV["REDIS_URL"] = "redis://localhost:6379"))
+          content.should contain(%(unless ENV["REDIS_URL"]? || ENV["REDIS_HOST"]?))
           content.should contain("JoobQ::QueueFactory.register_job_type(ExampleJob)")
         end
       end
@@ -153,7 +153,7 @@ describe AzuCLI::Generate::JoobQ do
           initializer_file = "src/initializers/joobq.cr"
           content = File.read(initializer_file)
 
-          content.should contain(%(ENV["REDIS_URL"]? || "redis://custom:6379"))
+          content.should contain(%(ENV["REDIS_URL"] = "redis://custom:6379"))
         end
       end
 
@@ -275,10 +275,10 @@ describe AzuCLI::Generate::JoobQ do
             config = File.read("config/joobq.#{environment}.yml")
             config.should_not contain("ExampleJob")
 
-            # the YAML parses and the default queue it names is one of its queues
+            # No phantom job classes are emitted when the example is disabled.
             settings = YAML.parse(config)["joobq"]
-            default_queue = settings["settings"]["default_queue"].as_s
-            settings["queues"].as_h.has_key?(default_queue).should be_true
+            settings["settings"]["default_queue"].as_s.should eq("default")
+            settings["queues"].as_h.should be_empty
           end
         end
       end
@@ -411,7 +411,7 @@ describe AzuCLI::Generate::JoobQ do
           test_config_file = "config/joobq.test.yml"
           content = File.read(test_config_file)
 
-          content.should contain(%(default_queue: "test"))
+          content.should contain(%(default_queue: "default"))
           content.should contain(%(    default:\n      job_class: "ExampleJob"\n      workers: 1\n))
           content.should contain("rest_api: false")
         end
@@ -463,7 +463,7 @@ describe AzuCLI::Generate::JoobQ do
           generator.render(".")
 
           # the URL is the fallback of the initializer and what the worker prints
-          File.read("src/initializers/joobq.cr").should contain(%(ENV["REDIS_URL"]? || "redis://custom-host:6380"))
+          File.read("src/initializers/joobq.cr").should contain(%(ENV["REDIS_URL"] = "redis://custom-host:6380"))
         end
       end
 

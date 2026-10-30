@@ -1,10 +1,8 @@
-# JoobQ's Redis store reads REDIS_HOST, REDIS_PORT and REDIS_PASS (they also override the YAML's redis section).
-# REDIS_URL (`azu jobs:worker` sets it) supplies the ones that are not set; this runs before JoobQ builds a store, so
-# enqueue, delay and the workers share one Redis.
-redis = URI.parse(ENV["REDIS_URL"]? || <%= @redis_url.inspect %>)
-ENV["REDIS_HOST"] ||= redis.host || "localhost"
-redis.port.try { |port| ENV["REDIS_PORT"] ||= port.to_s }
-redis.password.try { |password| ENV["REDIS_PASS"] ||= password }
+# JoobQ reads REDIS_URL directly, preserving its database, credentials and TLS.
+# Environment configuration wins over the generated development default.
+unless ENV["REDIS_URL"]? || ENV["REDIS_HOST"]?
+  ENV["REDIS_URL"] = <%= @redis_url.inspect %>
+end
 
 require "joobq"
 require "../jobs/**"
@@ -15,7 +13,7 @@ JoobQ::QueueFactory.register_job_type(<%= @example_job_name %>)
 <% end -%>
 # JoobQ::QueueFactory.register_job_type(EmailJob)
 
-environment = ENV["CRYSTAL_ENV"]? || "development"
+environment = ENV["JOOBQ_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
 config_file = "config/joobq.#{environment}.yml"
 
 if File.exists?(config_file)
@@ -29,7 +27,7 @@ else
     config.timeout = 30.seconds
     config.time_location = "UTC"
     config.worker_batch_size = 50
-    config.rest_api_enabled = true
+    config.rest_api_enabled = false
   end
 <% if @create_example_job -%>
   # JoobQ.forge starts the queues listed in queue_configs

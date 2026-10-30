@@ -119,9 +119,12 @@ module AzuCLI::DevServer
         @jobs = event
         @jobs_received = @now
         replace(Tab::Jobs, event.queues.first(200).map do |queue|
-          Inspector::Item.new(queue.name, "#{queue.name}  wait #{queue.pending}  processing #{queue.processing}  failed #{queue.failed}",
-            ["Queue: #{queue.name}", "Pending: #{queue.pending}", "Processing: #{queue.processing}", "Failed: #{queue.failed}",
-             "", "Processing is not a process-wide fiber count.", "Use azu joobq for worker/DAG/DLQ inspection and confirmed replay."])
+          Inspector::Item.new(queue.name, "#{queue.name}  wait #{queue.pending}  processing #{queue.processing}  failed #{queue.failed}  completed #{queue.completed || "--"}",
+            ["Queue: #{queue.name}", "Pending: #{queue.pending}", "Processing: #{queue.processing}", "Failed (DLQ): #{queue.failed}",
+             "Completed (cumulative): #{queue.completed || "not supplied"}",
+             "", "Redis connectivity does not confirm a worker is running.", "Processing is not a process-wide fiber count.",
+             "If the worker logs 0 queues, register the job class and queue_configs.",
+             "Use azu joobq for worker/DAG/DLQ inspection and confirmed replay."])
         end)
       when Events::LogLine
         @log_sequence += 1

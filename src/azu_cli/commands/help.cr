@@ -61,6 +61,8 @@ module AzuCLI
         puts "  jobs:clear             Clear job queues"
         puts "  jobs:retry             Retry failed jobs"
         puts "  jobs:ui                Start JoobQUI web interface"
+        puts "  jobs:dlq               List dead-letter job IDs"
+        puts "  jobs:pause / resume    Control queue claims"
         puts
         puts "Session Commands:"
         puts "  session:setup          Setup session management"
@@ -260,16 +262,19 @@ module AzuCLI
         puts "Background job management with JoobQ."
         puts
         puts "Commands and options:"
-        puts "  jobs:worker              --workers N, --queues LIST, --daemon, --verbose"
-        puts "  jobs:status              Show queue status and statistics"
-        puts "  jobs:clear               --queue NAME, --all, --failed, --force"
-        puts "  jobs:retry               --queue NAME, --all, --limit N, --verbose"
-        puts "  jobs:ui                  --port PORT, --host HOST, --verbose"
+        puts "  jobs:worker              --workers N, --queues LIST, --release, --api, --shutdown-timeout N"
+        puts "  jobs:status              --queue NAME, --json"
+        puts "  jobs:dlq                 --queue NAME, --limit N, --offset N, --json"
+        puts "  jobs:pause / resume      --queue NAME, --dry-run, --force"
+        puts "  Common: --boot FILE, --redis URL, --env NAME, --help"
+        puts "  jobs:clear               --queue NAME, --all, --failed, --dry-run, --force"
+        puts "  jobs:retry               --queue NAME, --all, --limit N, --dry-run, --force"
+        puts "  jobs:ui                  --path DIR, --port PORT, --host HOST"
         puts
         puts "Examples:"
         puts "  azu jobs:worker --workers 4"
         puts "  azu jobs:clear --failed"
-        puts "  azu jobs:retry --all"
+        puts "  azu jobs:retry --all --dry-run"
       end
 
       private def show_session_help

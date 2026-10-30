@@ -66,6 +66,9 @@ module AzuCLI
       register_command("jobs:clear", Commands::Jobs::Clear)
       register_command("jobs:retry", Commands::Jobs::Retry)
       register_command("jobs:ui", Commands::Jobs::UI)
+      register_command("jobs:pause", Commands::Jobs::Pause)
+      register_command("jobs:resume", Commands::Jobs::Resume)
+      register_command("jobs:dlq", Commands::Jobs::DLQ)
 
       # Session commands
       register_command("session:setup", Commands::Session::Setup)

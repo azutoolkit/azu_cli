@@ -7,12 +7,7 @@ require "./jobs/**"
 
 Log.info { "Starting JoobQ workers for queues: #{JoobQ.queues.keys.join(", ")}" }
 
-{Signal::INT, Signal::TERM}.each do |signal|
-  signal.trap do
-    Log.info { "Stopping JoobQ workers" }
-    exit
-  end
-end
+# JoobQ.forge installs signal handlers and drains jobs before exiting.
 
 # Starts the queues and blocks
 JoobQ.forge

@@ -76,8 +76,11 @@ module AzuCLI
         ]
         if jobs
           commands << Command.new("jobs:status", "Jobs", ["jobs:status"], check: true)
-          commands << Command.new("jobs:retry", "Jobs", ["jobs:retry", "--all"], confirm: true)
+          commands << Command.new("jobs:retry", "Jobs", ["jobs:retry", "--all", "--force"], confirm: true)
           commands << Command.new("jobs:clear", "Jobs", ["jobs:clear", "--failed", "--force"], confirm: true)
+          commands << Command.new("jobs:dlq", "Jobs", ["jobs:dlq"])
+          commands << Command.new("jobs:pause", "Jobs", ["jobs:pause", "--force"], confirm: true)
+          commands << Command.new("jobs:resume", "Jobs", ["jobs:resume", "--force"], confirm: true)
         end
         commands + [
           Command.new("session:clear", "Sessions", ["session:clear", "--force"], confirm: true),

@@ -11,25 +11,14 @@ joobq:
 
   # Queue configurations
   # Define job queues with their specific job classes and worker counts
+<% if @create_example_job -%>
   queues:
-    <%= @default_queue || "default" %>:
-      job_class: "<%= @create_example_job ? (@example_job_name || "ExampleJob") : "YourJob" %>"<%= @create_example_job ? "" : "  # replace with the job class that runs in this queue" %>
-      workers: <%= (@workers || 3) * 2 %>  # More workers in production
-
-    # Email queue
-    email:
-      job_class: "EmailJob"
-      workers: 5
-
-    # Mailer queue
-    mailers:
-      job_class: "MailerJob"
-      workers: 3
-
-    # High priority queue
-    critical:
-      job_class: "CriticalJob"
-      workers: 5
+    <%= @default_queue %>:
+      job_class: "<%= @example_job_name %>"
+      workers: <%= Math.min(@workers * 2, 1000) %>  # More workers in production
+<% else -%>
+  queues: {} # Register job types and configure queues before starting workers.
+<% end -%>
 
   # Middleware configuration
   middlewares:
@@ -54,9 +43,9 @@ joobq:
   # Redis connection configuration
   # Use environment variables for sensitive data
   redis:
-    host: "${REDIS_HOST:localhost}"
-    port: ${REDIS_PORT:6379}
-    password: "${REDIS_PASSWORD:}"
+    host: "localhost"
+    port: 6379
+    password: "" # Set REDIS_PASS or REDIS_URL in the environment
     pool_size: 500    # Larger pool for production
     pool_timeout: 5.0
 

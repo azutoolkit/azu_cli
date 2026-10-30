@@ -28,10 +28,10 @@ module AzuCLI
       # Why --redis cannot be written into the initializer, if it cannot: the file is committed, so no password
       def self.redis_url_error(url : String) : String?
         uri = URI.parse(url)
-        return "Invalid Redis URL '#{url}'. Use redis://host:port." unless uri.scheme == "redis" && uri.host.presence
+        return "Invalid Redis URL. Use redis://host:port or rediss://host:port." unless {"redis", "rediss"}.includes?(uri.scheme) && uri.host.presence
         "The Redis URL holds a password; it would be written into src/initializers/joobq.cr. Set REDIS_URL in the environment (or .env) instead." if uri.password || uri.user
       rescue URI::Error
-        "Invalid Redis URL '#{url}'. Use redis://host:port."
+        "Invalid Redis URL. Use redis://host:port or rediss://host:port."
       end
 
       # Teeplate renders these: the example job only when asked for

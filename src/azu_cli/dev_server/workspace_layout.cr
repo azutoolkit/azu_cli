@@ -265,7 +265,14 @@ module AzuCLI::DevServer
                 "No samples received"
               end
       at = tab.jobs? ? @jobs_received : (tab.auth? && @auth.available? ? @auth.received : @received)
-      @inspectors[tab].draw(frame, content, "#{title} · #{freshness(at)}", empty, highlighter(tab))
+      empty = @jobs.try(&.error) || "No queue samples; configure config/joobq.development.yml or config/jobs.yml" if tab.jobs?
+      @inspectors[tab].draw(frame, content, "#{title} · #{tab.jobs? ? jobs_status : freshness(at)}", empty, highlighter(tab))
+    end
+
+    private def jobs_status : String
+      return "unavailable" if @jobs.try(&.error)
+      status = freshness(@jobs_received)
+      status == "connected" && !@read_only ? "Redis connected" : status
     end
 
     private def highlighter(section : Tab) : Proc(String, Array(Seg))?
@@ -343,7 +350,7 @@ module AzuCLI::DevServer
         elsif index == 1 && active && waiting && active + waiting > 0
           gauge(frame, Rect.new(inner.x, inner.bottom - 1, inner.w, 1), active.to_f / (active + waiting))
         else
-          frame.text(inner.x, inner.bottom - 1, index == 3 ? "#{@auth.available? ? freshness(@auth.received) : "adapter needed"}" : "#{freshness(index == 1 ? @jobs_received : @received)}", Token::Muted, max: inner.w)
+          frame.text(inner.x, inner.bottom - 1, index == 3 ? "#{@auth.available? ? freshness(@auth.received) : "adapter needed"}" : (index == 1 ? jobs_status : freshness(@received)), Token::Muted, max: inner.w)
         end
       end
     end
@@ -411,14 +418,14 @@ module AzuCLI::DevServer
     end
 
     private def draw_queues(frame : Frame, rect : Rect) : Nil
-      inner = frame.card(rect, "Queues & activity", @overview_focus == 2 ? "focus" : freshness(@jobs_received), border: Token::Border)
+      inner = frame.card(rect, "Queues & activity", @overview_focus == 2 ? "focus" : jobs_status, border: Token::Border)
       return if inner.empty?
       if @jobs.nil? || @jobs.try(&.error)
         frame.text(inner.x, inner.y, "Queue telemetry unavailable · configure the JoobQ sampler", Token::Muted, max: inner.w)
         return
       end
-      widths = {Math.min(16, Math.max(10, inner.w // 4)), 10, 12, 8}
-      headings = "#{Width.pad("QUEUE", widths[0])}#{Width.pad("WAITING", widths[1])}#{Width.pad("PROCESSING", widths[2])}FAILED"
+      widths = {Math.min(16, Math.max(10, inner.w // 4)), 10, 12, 8, 12}
+      headings = "#{Width.pad("QUEUE", widths[0])}#{Width.pad("WAITING", widths[1])}#{Width.pad("PROCESSING", widths[2])}#{Width.pad("DLQ", widths[3])}COMPLETED"
       frame.text(inner.x, inner.y, headings, Token::Muted, max: inner.w)
       chart_x = inner.x + widths.sum
       chart_width = inner.right - chart_x
@@ -431,7 +438,7 @@ module AzuCLI::DevServer
       lines = inspector.items.map do |item|
         queue = queues.find { |sample| sample.name == item.id }
         next item.label unless queue
-        "#{Width.pad(queue.name, widths[0])}#{Width.pad(queue.pending.to_s, widths[1])}#{Width.pad(queue.processing.to_s, widths[2])}#{queue.failed}"
+        "#{Width.pad(queue.name, widths[0])}#{Width.pad(queue.pending.to_s, widths[1])}#{Width.pad(queue.processing.to_s, widths[2])}#{Width.pad(queue.failed.to_s, widths[3])}#{queue.completed || "--"}"
       end
       area = Rect.new(inner.x, inner.y + 2, inner.w, Math.max(0, inner.h - 2))
       @overview_queues.configure(lines.size, area.h)

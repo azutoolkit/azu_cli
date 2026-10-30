@@ -1,12 +1,4 @@
-# JoobQ's Redis store reads REDIS_HOST, REDIS_PORT and REDIS_PASS. REDIS_URL (`azu jobs:worker` sets it) supplies the
-# ones that are not set; this runs before JoobQ builds a store, so enqueue, delay and the workers share one Redis.
-if redis_url = ENV["REDIS_URL"]?
-  redis = URI.parse(redis_url)
-  ENV["REDIS_HOST"] ||= redis.host || "localhost"
-  redis.port.try { |port| ENV["REDIS_PORT"] ||= port.to_s }
-  redis.password.try { |password| ENV["REDIS_PASS"] ||= password }
-end
-
+# JoobQ reads REDIS_URL (including its database and TLS) or REDIS_HOST/PORT/PASS.
 require "joobq"
 # Every job in src/jobs (`azu generate job SendEmail to:string` creates one there)
 require "../jobs/**"
@@ -18,8 +10,8 @@ JoobQ.configure do |config|
   config.timeout = 30.seconds
   config.expires = 1.day
 
-  # Enable the REST API for development only (Azu reads CRYSTAL_ENV, not AZU_ENV)
-  config.rest_api_enabled = ENV["CRYSTAL_ENV"]? != "production"
+  # Opt in with `azu jobs:worker --api` and management tokens.
+  config.rest_api_enabled = false
 
   # Enable statistics tracking
   config.stats_enabled = true

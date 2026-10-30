@@ -153,6 +153,25 @@ jobs:
           REDIS_HOST: redis
           REDIS_PORT: "6379"
         run: scripts/check_joobq_adapter.sh
+  jobs-commands:
+    name: Generated Azu v1 jobs commands
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: crystallang/crystal:1.22.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install integration dependencies
+        run: |
+          apt-get update
+          apt-get install -y python3 redis-server redis-tools libreadline-dev libevent-dev libssl-dev libxml2-dev libyaml-dev libgmp-dev libsqlite3-dev
+      - name: Build CLI
+        run: |
+          shards install
+          mkdir -p bin
+          crystal build src/azu_cli.cr -o bin/azu --no-debug
+      - name: Generate, migrate and exercise jobs against owned Redis
+        run: python3 scripts/check_jobs_commands.py "$PWD/bin/azu"
   release:
     runs-on: ubuntu-latest
     needs:
@@ -160,6 +179,7 @@ jobs:
       - generated-app
       - generators
       - joobq-adapter
+      - jobs-commands
       - spark-browser
     # Releases and version bumps are for master only, never for pull requests.
     if: ${{ success() && github.event_name == 'push' }}

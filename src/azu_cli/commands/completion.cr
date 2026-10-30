@@ -11,7 +11,7 @@ module AzuCLI
         new init generate g undo serve server s dev connect joobq routes config console doctor test t help version
         db:create db:drop db:migrate db:rollback db:seed db:reset db:status db:setup
         db:schema:load db:data:migrate db:migrations:verify db:validate
-        jobs:worker jobs:status jobs:clear jobs:retry jobs:ui
+        jobs:worker jobs:status jobs:clear jobs:retry jobs:ui jobs:pause jobs:resume jobs:dlq
         session:setup session:clear
         openapi:generate openapi:export
         completion
@@ -252,6 +252,9 @@ module AzuCLI
         when "jobs:clear"           then "Clear jobs"
         when "jobs:retry"           then "Retry failed jobs"
         when "jobs:ui"              then "Start jobs UI"
+        when "jobs:dlq"             then "List dead-letter jobs"
+        when "jobs:pause"           then "Pause a queue"
+        when "jobs:resume"          then "Resume a queue"
         when "session:setup"        then "Setup sessions"
         when "session:clear"        then "Clear sessions"
         when "openapi:generate"     then "Generate from OpenAPI"

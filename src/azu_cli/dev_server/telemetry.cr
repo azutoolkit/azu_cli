@@ -78,7 +78,7 @@ module AzuCLI
         end
       end
 
-      record Queue, name : String, pending : Int64, processing : Int64, failed : Int64
+      record Queue, name : String, pending : Int64, processing : Int64, failed : Int64, completed : Int64? = nil
 
       struct JobsSample < UI::Message
         getter queues : Array(Queue)
@@ -271,10 +271,13 @@ module AzuCLI
       end
     end
 
-    # Queue sizes of a JoobQ project (config/jobs.yml), read from Redis with the keys `azu jobs:status` uses.
+    # Read-only metrics for JoobQ's legacy Queue/Worker API. Redis connectivity
+    # does not establish worker liveness. Delivery has a separate ledger.
     class JobsSampler
-      def self.queues(config : String = "config/jobs.yml") : Array(String)
-        return [] of String unless File.exists?(config)
+      def self.queues(config : String? = nil) : Array(String)
+        environment = ENV["JOOBQ_ENV"]? || ENV["RACK_ENV"]? || ENV["CRYSTAL_ENV"]? || "development"
+        config ||= ["config/joobq.#{environment}.yml", "joobq.yml", "config/joobq.yml", "config/jobs.yml"].find { |path| File.exists?(path) }
+        return [] of String unless config && File.exists?(config)
 
         yaml = YAML.parse(File.read(config))
         yaml["joobq"]?.try(&.["queues"]?).try(&.as_h?).try(&.keys.map(&.as_s)) || [] of String
@@ -282,25 +285,32 @@ module AzuCLI
         [] of String
       end
 
-      def initialize(@queues : Array(String), @url : String = ENV["REDIS_URL"]? || "redis://localhost:6379")
+      def initialize(@queues : Array(String), @url : String? = ENV["REDIS_URL"]?)
       end
 
       def sample : Events::JobsSample
-        redis = Redis.new(url: @url)
+        redis = Redis.new(url: @url, host: ENV["REDIS_HOST"]? || "localhost",
+          port: (ENV["REDIS_PORT"]? || "6379").to_i, password: ENV["REDIS_PASS"]?,
+          connect_timeout: 1.second, command_timeout: 1.second)
         counts = redis.pipelined do |pipeline|
           @queues.each do |queue|
-            pipeline.llen("joobq:queue:#{queue}")
+            pipeline.llen(queue)
             pipeline.llen("joobq:processing:#{queue}")
-            pipeline.llen("joobq:failed:#{queue}")
+            pipeline.hget("joobq:dead_letter:counts", queue)
+            pipeline.hget("joobq:stats:completed", queue)
           end
         end
-        redis.close
         queues = @queues.each_with_index.map do |(name, index)|
-          Events::Queue.new(name, counts[index * 3].as(Int64), counts[index * 3 + 1].as(Int64), counts[index * 3 + 2].as(Int64))
+          Events::Queue.new(name, counts[index * 4].as(Int64), counts[index * 4 + 1].as(Int64),
+            counts[index * 4 + 2].as(String?).try(&.to_i64) || 0_i64,
+            counts[index * 4 + 3].as(String?).try(&.to_i64) || 0_i64)
         end.to_a
         Events::JobsSample.new(queues)
       rescue ex
-        Events::JobsSample.new([] of Events::Queue, "Redis unreachable at #{@url.sub(/\/\/[^@]*@/, "//")}")
+        # Do not expose connection credentials or raw exception payloads in the UI.
+        Events::JobsSample.new([] of Events::Queue, "JoobQ metrics unavailable; check Redis connection and key types")
+      ensure
+        redis.try(&.close)
       end
     end
   end
