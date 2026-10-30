@@ -83,7 +83,7 @@ describe "production HUD boundary" do
       on_control: ->(command : AzuCLI::DevServer::Control::Command) { called << command.id; nil })
     screen = AzuCLI::DevServer::MissionControl.new(classic, "prod", read_only: true,
       on_command: ->(_command : AzuCLI::DevServer::Control::Command) { called << "command"; true })
-    "c?erg:dv".each_char { |char| screen.update(RemoteUI::Key.new(RemoteUI::KeyCode::Char, char)) }
+    "`2xrg:dv".each_char { |char| screen.update(RemoteUI::Key.new(RemoteUI::KeyCode::Char, char)) }
     screen.update(RemoteUI::Tick.new(Time.instant))
     screen.handoff.should be_nil
     called.should be_empty

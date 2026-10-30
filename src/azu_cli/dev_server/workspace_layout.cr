@@ -26,9 +26,7 @@ module AzuCLI::DevServer
     end
 
     private def navigation_tabs : Array(Tab)
-      [Tab::Dashboard, Tab::Errors, Tab::Tracing, Tab::Logs, Tab::Profiler,
-       Tab::Auth, Tab::Database, Tab::Cache, Tab::JoobQ, Tab::Jobs,
-       Tab::Components, Tab::Mailers].select do |section|
+      NAVIGATION.select do |section|
         name = section_name(section).downcase
         tabs.includes?(section) && @dashboard.enabled?(name)
       end
@@ -70,7 +68,7 @@ module AzuCLI::DevServer
         draw_queues(frame, queues)
         draw_inspector(frame, details)
       elsif tab.joob_q?
-        @joobq.draw(frame, content)
+        @joobq.draw(frame, content, embedded: true)
       elsif tab.dashboard?
         dashboard(frame, content)
       else
@@ -101,7 +99,7 @@ module AzuCLI::DevServer
           previous_group = group
         end
         selection = labels.size if section == tab
-        label = section.jobs? ? "Queues & Activity" : Width.pad("#{nav_icon(section, frame)} #{section_name(section)}", rail.w - 7) + "[#{shortcut(section)}]"
+        label = Width.pad("#{nav_icon(section, frame)} #{section.jobs? ? "Queues" : section_name(section)}", rail.w - 7) + "[#{shortcut(section)}]"
         labels << label
       end
       area = Rect.new(rail.x + 1, 7, rail.w - 2, Math.max(0, rail.h - 12))
@@ -156,21 +154,23 @@ module AzuCLI::DevServer
       y = frame.height - 2
       frame.hline(1, y, frame.width - 2, frame.style(Token::Border))
       label = if @help_open
-                "↑/↓ scroll · PgUp/PgDn page · Esc/h close · Ctrl-P navigate"
+                "↑/↓ scroll · PgUp/PgDn page · Esc/? close · Ctrl-P navigate"
               elsif searching?
                 "/ #{query}▏  Enter apply · Esc clear"
               elsif menu_open?
                 "↑/↓ choose · Enter open · Esc close"
               elsif @read_only
-                "h help · Ctrl-P menu · q disconnect · Tab pane · j/k select · / filter"
+                "Ctrl-P navigate · ? help · Tab pane · ↑/↓ select · / filter · q disconnect"
               elsif tab.console?
                 "Ctrl-P menu · Enter run · Alt-Enter newline · Ctrl-O interpreter · Esc back"
               elsif tab.commands?
                 "Ctrl-P menu · ↑/↓ select · Enter run · y confirm · PgUp/PgDn output · q quit"
               elsif !query.empty?
                 "filter: #{query} · Esc clear · Ctrl-P navigate · q quit"
+              elsif frame.width < 110
+                "Ctrl-P menu · ? help · Tab pane · Enter open · q quit"
               else
-                "h help · Ctrl-P menu · q quit · #{context_hint}"
+                "Ctrl-P navigate · ? help · #{context_hint} · q quit"
               end
       reserve = frame.width >= 136 ? 25 : 0
       frame.text(2, y + 1, label, Token::Cyan, max: frame.width - 4 - reserve)
@@ -187,15 +187,17 @@ module AzuCLI::DevServer
       when .commands?
         "j/k select · Enter run/review · PgUp/PgDn output"
       when .dashboard?
-        "[ / ] page · Tab focus · Enter inspect · j/k scroll"
+        "Tab focus · ↑/↓ select/scroll · Enter open · [ ] page"
       when .logs?
-        "j/k select · Tab details · f follow · t source · / filter"
+        "Tab pane · ↑/↓ select · Enter inspect · / filter · f follow · t source"
+      when .joob_q?
+        "[ ] view · Tab pane · ↑/↓ select · r replay"
       when .build?
         "r rebuild · PgUp/PgDn scroll"
       when .config?
         "Enter refresh · PgUp/PgDn scroll"
       else
-        "Tab details · j/k select · PgUp/PgDn scroll · / filter"
+        "Tab pane · ↑/↓ select · Enter inspect · / filter · PgUp/PgDn scroll"
       end
     end
 
@@ -207,16 +209,18 @@ module AzuCLI::DevServer
       inner = frame.card(box, "Keyboard hints · #{section_name(tab)}", border: Token::Cyan)
       lines = ["THIS VIEW", context_hint, "", "NAVIGATION",
                "Ctrl-P       Search views, commands and keyboard hints",
-               "h / Esc      Open hints / close hints or clear filter",
+               "? or h       Keyboard help",
+               "Esc          Close overlay / clear filter",
+               "Alt-Left/Right Previous / next sidebar section",
                "b            Collapse or expand navigation",
                "q / Ctrl-C   Quit (Ctrl-C cancels inside Console)",
                "", "VIEWS"]
       navigation_tabs.each { |section| lines << "#{shortcut(section).to_s.ljust(13)}#{section_name(section)}" }
       lines.concat(["", "LISTS AND OVERVIEW", "j/k or ↑/↓   Select a row", "Tab          Switch pane", "PgUp/PgDn    Scroll the focused list or detail pane",
                     "Home/End     First/last row", "/            Filter data; Enter applies; Esc clears",
-                    "f            Follow newest logs", "t            Toggle app output / azu/dev requests", "[ / ]        Overview pages / Database subviews", "Enter        Open the focused Overview card or feed"])
+                    "f            Follow newest logs", "t            Toggle app output / azu/dev requests", "[ / ]        Overview pages / Database or JoobQ subviews", "s / u / i    SQL / Schema / Migrations", "Enter        Open the focused Overview card or feed"])
       unless @read_only
-        lines.concat(["", "LOCAL COMMANDS", ":            Compose an azu command", "g            Compose a generator", "Enter, y/n   Review, then confirm/cancel a command",
+        lines.concat(["", "LOCAL TOOLS", "`            Console", "d / x / v    Build / Commands / Configuration", "", "LOCAL COMMANDS", ":            Compose an azu command", "g            Compose a generator", "Enter, y/n   Review, then confirm/cancel a command",
                       "r            Rebuild application", "", "CONSOLE", "Enter        Evaluate", "Alt-Enter    Insert newline", "Ctrl-O       Interpreter", "Esc          Back; Ctrl-P opens hints/menu", "Letters are input while editing Console or search."])
       end
       @help_viewport.draw(frame, inner, Viewport.wrap(lines, Math.max(1, inner.w - 1)))

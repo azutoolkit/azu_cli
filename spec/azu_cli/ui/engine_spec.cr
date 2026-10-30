@@ -212,3 +212,9 @@ describe "AzuCLI::UI::Terminal.open_input" do
     TUI::Terminal.terminal_path.should eq "/dev/tty" unless STDIN.tty? || STDOUT.tty?
   end
 end
+
+describe AzuCLI::UI::Input do
+  it "distinguishes Alt section navigation from plain pane arrows" do
+    TUI::Input.parse("\e[1;3D\e[1;3C\e[D\e[C").map(&.code).should eq [TUI::KeyCode::AltLeft, TUI::KeyCode::AltRight, TUI::KeyCode::Left, TUI::KeyCode::Right]
+  end
+end

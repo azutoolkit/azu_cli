@@ -56,6 +56,8 @@ module AzuCLI::JoobQDashboard
             @notice = "Replay requested for #{id}; waiting for store acknowledgement"
             @on_replay.call(id)
           end
+        elsif event.char?('[') || event.char?(']')
+          @tab = Tab.from_value((tab.value + (event.char?(']') ? 1 : -1)) % Tab.values.size)
         elsif event.char?('1') || event.char?('2') || event.char?('3')
           @tab = Tab.from_value(event.char.not_nil!.to_i - 1)
         elsif tab.dlq? && event.char?('r') && !busy?
@@ -130,9 +132,9 @@ module AzuCLI::JoobQDashboard
       draw(frame, UI::Rect.new(0, 0, frame.width, frame.height))
     end
 
-    def draw(frame : UI::Frame, area : UI::Rect) : Nil
+    def draw(frame : UI::Frame, area : UI::Rect, embedded : Bool = false) : Nil
       header, body = area.split_top(2)
-      frame.text(header.x, header.y, "[1] Queues & Workers  [2] Workflows  [3] DLQ & Retries", UI::Token::Blue, max: header.w)
+      frame.text(header.x, header.y, (embedded ? "[ / ] #{tab} · Queues | Workflows | DLQ" : "[1] Queues & Workers  [2] Workflows  [3] DLQ & Retries"), UI::Token::Blue, max: header.w)
       body, footer = body.split_top(Math.max(0, body.h - 3))
       if body.h >= 14
         metrics, body = body.split_top(4)
@@ -149,7 +151,7 @@ module AzuCLI::JoobQDashboard
       stale = @last_snapshot.try { |at| Time.instant - at > 5.seconds } != false
       note = confirming.try { |id| "Replay #{id}? y confirms; any other key cancels" } || @notice
       frame.text(footer.x, footer.y, "#{stale ? "STALE · " : ""}#{note}", UI::Token::Muted, max: footer.w)
-      frame.text(footer.x, footer.y + 1, "1/2/3 views · Tab details · j/k select · r replay DLQ · Ctrl-P navigate", UI::Token::Blue, max: footer.w) if footer.h > 1
+      frame.text(footer.x, footer.y + 1, "#{embedded ? "[ ]" : "1/2/3"} views · Tab details · ↑/↓ select · r replay DLQ#{embedded ? " · Ctrl-P navigate" : " · q quit"}", UI::Token::Blue, max: footer.w) if footer.h > 1
     end
   end
 end

@@ -75,7 +75,7 @@ if ARGV.includes?("--interactive")
 else
   directory = ENV["AZU_PREVIEW_DIR"]? || "/tmp/azu-cli-previews/mission-control"
   Dir.mkdir_p(directory)
-  [{"overview", '1', 200, 60}, {"auth", '6', 156, 46}, {"sql", '5', 156, 46}, {"logs", '7', 156, 46}, {"tracing", 'T', 156, 46}, {"cache", 'C', 156, 46}, {"mailers", 'M', 156, 46}, {"compact", '1', 80, 24}].each do |(name, tab, width, height)|
+  [{"overview", '1', 200, 60}, {"auth", '6', 156, 46}, {"sql", 's', 156, 46}, {"logs", '4', 156, 46}, {"tracing", '3', 156, 46}, {"cache", '8', 156, 46}, {"mailers", 'm', 156, 46}, {"compact", '1', 80, 24}].each do |(name, tab, width, height)|
     screen.update(MissionUI::Key.new(MissionUI::KeyCode::Char, tab))
     styles = MissionUI::StyleTable.new(MissionUI::Theme.new(MissionUI::ColorDepth::TrueColor), MissionUI::Token::Backplate)
     frame = MissionUI::Frame.new(width, height, styles)

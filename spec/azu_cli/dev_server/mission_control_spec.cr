@@ -15,6 +15,45 @@ private def mission_frame(screen, width = 136, height = 40)
 end
 
 describe MC do
+  it "uses unique shortcuts in sidebar order and cycles sections without stealing search text" do
+    screen = mission
+    MC::SHORTCUTS.values.uniq.size.should eq MC::SHORTCUTS.size
+    expected = {MC::Tab::Dashboard, MC::Tab::Errors, MC::Tab::Tracing, MC::Tab::Logs,
+                MC::Tab::Profiler, MC::Tab::Auth, MC::Tab::Database, MC::Tab::Cache,
+                MC::Tab::JoobQ, MC::Tab::Jobs, MC::Tab::Components, MC::Tab::Mailers}
+    "1234567890cm".each_char.with_index do |char, index|
+      screen.update(MCUI::Key.new(MCUI::KeyCode::Char, char))
+      screen.tab.should eq expected[index]
+    end
+    screen.update(MCUI::Key.new(MCUI::KeyCode::AltRight))
+    screen.tab.should eq MC::Tab::Dashboard
+    screen.update(MCUI::Key.new(MCUI::KeyCode::AltLeft))
+    screen.tab.should eq MC::Tab::Mailers
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '/'))
+    "123?cm".each_char { |char| screen.update(MCUI::Key.new(MCUI::KeyCode::Char, char)) }
+    screen.query.should eq "123?cm"
+    screen.tab.should eq MC::Tab::Mailers
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Esc))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'n'))
+    screen.tab.should eq MC::Tab::SQL
+    screen.query.should eq "N+1"
+  end
+
+  it "keeps embedded job navigation separate from global numbers and makes help dismissible" do
+    screen = mission
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '9'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, ']'))
+    mission_frame(screen).to_text.should contain "[ / ] Workflows"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '?'))
+    mission_frame(screen).to_text.should contain "Keyboard hints"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Esc))
+    mission_frame(screen).to_text.should_not contain "Keyboard hints"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, ']'))
+    mission_frame(screen).to_text.should contain "[ / ] DLQ"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '1'))
+    screen.tab.should eq MC::Tab::Dashboard
+  end
+
   it "renders the web dashboard hierarchy and opens a focused card" do
     screen = mission
     screen.update(MCE::Telemetry.new(JSON.parse(File.read("spec/fixtures/telemetry/azu-dashboard-v1.json"))))
@@ -94,7 +133,7 @@ describe MC do
     screen = mission
     screen.update(MCE::LogLine.new("\e[2JINFO " + "long log " * 100))
     [{48, 14}, {80, 24}, {104, 32}, {156, 46}].each do |(width, height)|
-      {'1', '5', '6', 'm'}.each do |tab|
+      {'1', 's', '6', 'i'}.each do |tab|
         screen.update(MCUI::Key.new(MCUI::KeyCode::Char, tab))
         2.times do
           text = mission_frame(screen, width, height).to_text
@@ -110,10 +149,10 @@ describe MC do
   it "keeps console input and all development panels inside the new workspace" do
     workspace = AzuCLI::DevServer::Hud.new("store", "4000", "development", "watching src")
     screen = MC.new(workspace, "store", true)
-    {'d', 'e', '?', 'c', 'v'}.each do |shortcut|
+    {'d', '2', 'x', '`', 'v'}.each do |shortcut|
       screen.update(MCUI::Key.new(MCUI::KeyCode::CtrlP))
       # Select through the palette so console text cannot intercept navigation.
-      label = {'d' => "Build", 'e' => "Errors", '?' => "Commands", 'c' => "Console", 'v' => "Config"}[shortcut]
+      label = {'d' => "Build", '2' => "Errors", 'x' => "Commands", '`' => "Console", 'v' => "Config"}[shortcut]
       label.each_char { |char| screen.update(MCUI::Key.new(MCUI::KeyCode::Char, char)) }
       screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
       screen.tab.to_s.should eq label
@@ -123,7 +162,7 @@ describe MC do
       text.should_not contain "[1] Overview"
       text.should_not contain "Esc mission control"
     end
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'c'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '`'))
     "1 + 2".each_char { |char| screen.update(MCUI::Key.new(MCUI::KeyCode::Char, char)) }
     workspace.editor.text.should eq "1 + 2"
     screen.update(MCUI::Key.new(MCUI::KeyCode::CtrlP))
@@ -135,10 +174,10 @@ describe MC do
 
   it "continues to ingest telemetry while console is visible" do
     screen = mission
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'c'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '`'))
     screen.update(MCE::Telemetry.new(JSON.parse(%({"v":1,"sql":{"slowest":[{"sql":"SELECT arrived_in_console","ms":1.0}]}}))))
     screen.update(MCUI::Key.new(MCUI::KeyCode::Esc))
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '5'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 's'))
     mission_frame(screen).to_text.should contain "arrived_in_console"
   end
 
@@ -147,7 +186,7 @@ describe MC do
     workspace = AzuCLI::DevServer::Hud.new("store", "4000", "development", "", commands: [AzuCLI::DevServer::Control::Command.new("db:migrate", "Database", ["db:migrate"], confirm: true)],
       on_control: ->(command : AzuCLI::DevServer::Control::Command) { requested << command.id; nil })
     screen = MC.new(workspace, "store")
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '?'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'x'))
     screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
     workspace.confirming.should_not be_nil
     screen.update(MCUI::Key.new(MCUI::KeyCode::CtrlP))
@@ -178,7 +217,7 @@ describe MC do
       end
       screen.update(MCE::Telemetry.new(data))
       mission_frame(screen).to_text.should contain "Dashboard telemetry unavailable"
-      screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '5'))
+      screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 's'))
       text = mission_frame(screen).to_text
       text.should contain "SELECT name FROM products"
       text.should contain "slowest sample"
@@ -194,7 +233,7 @@ describe MC do
       "recent":[{"id":7,"sql":"SELECT current_name FROM products","ms":1.2,"caller":"product.cr:8"}],
       "slowest":[{"sql":"SELECT obsolete_name FROM products","ms":9}],
       "n_plus_one":[{"sql":"SELECT related FROM products","count":5,"suggestion":"Preload products"}]}}))))
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '5'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 's'))
     text = mission_frame(screen).to_text
     text.should contain "SELECT current_name"
     text.should contain "product.cr:8"
@@ -221,7 +260,7 @@ describe MC do
   it "keeps Unicode and control bytes inside a bounded frame at every breakpoint" do
     screen = mission
     screen.update(MCE::LogLine.new("\e[2J14:32:08 INFO GET /products 200 4.8ms 漢字"))
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '7'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '4'))
     [{20, 8}, {48, 14}, {80, 24}, {104, 32}, {136, 40}].each do |(width, height)|
       frame = mission_frame(screen, width, height)
       text = frame.to_text
@@ -234,10 +273,10 @@ describe MC do
   it "caps log retention and restores the mission shell after opening console" do
     screen = mission
     220.times { |i| screen.update(MCE::LogLine.new("INFO request-#{i}")) }
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '7'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '4'))
     text = mission_frame(screen).to_text
     text.should contain "request-219"
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'c'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '`'))
     screen.update(MCUI::Key.new(MCUI::KeyCode::Esc))
     screen.tab.should eq MC::Tab::Logs
     mission_frame(screen).to_text.should contain "request-219"
@@ -247,7 +286,7 @@ describe MC do
     screen = mission
     screen.update(MCE::Telemetry.new(JSON.parse(%({"requests":null,"sql":false,"auth":null,"database":1}))))
     mission_frame(screen).to_text.should contain "Dashboard telemetry unavailable"
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '4'))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Char, 'u'))
     mission_frame(screen).to_text.should contain "No adapter data"
   end
 

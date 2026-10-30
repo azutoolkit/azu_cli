@@ -86,11 +86,11 @@ describe AzuCLI::DevServer::JobsSampler do
       AzuCLI::DevServer::Events::Queue.new("default", 0_i64, 0_i64, 0_i64, 42_i64),
     ]))
     frame = AzuCLI::UI::Frame.new(156, 46, AzuCLI::UI::StyleTable.new(AzuCLI::UI::Theme.new(AzuCLI::UI::ColorDepth::TrueColor)))
-    screen.update(AzuCLI::UI::Key.new(AzuCLI::UI::KeyCode::Char, '3'))
+    screen.update(AzuCLI::UI::Key.new(AzuCLI::UI::KeyCode::Char, '0'))
     screen.view(frame)
     frame.to_text.should contain("Redis connected")
     frame.to_text.should contain("COMPLETED")
-    screen.update(AzuCLI::UI::Key.new(AzuCLI::UI::KeyCode::Char, '3'))
+    screen.update(AzuCLI::UI::Key.new(AzuCLI::UI::KeyCode::Char, '0'))
     screen.view(frame)
     frame.to_text.should contain("Completed (cumulative): 42")
     screen.update(AzuCLI::DevServer::Events::JobsSample.new([] of AzuCLI::DevServer::Events::Queue, "metrics unavailable"))
