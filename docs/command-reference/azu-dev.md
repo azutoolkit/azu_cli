@@ -41,6 +41,17 @@ selects rows, **Enter** opens the focused inspector, and **f** resumes log follo
 The rail includes **Schema** (`4`) and read-only **Migrations** (`m`); migration
 history requires an application adapter.
 
+Each rail and menu entry displays its shortcut. Press **h** for scrollable,
+context-specific keyboard hints; **Esc** closes them. In Console, letters remain
+input: use **Ctrl-P**, search “Keyboard hints”, and press Enter. Search input also
+keeps typed letters. The footer prioritizes the current view's controls.
+
+The header shows GC heap/free memory supplied by `Azu::Dev::Telemetry`. The log
+pane uses its recent request samples when stdout/stderr is absent. Press **t**
+in Overview or Logs to switch between application output and shared requests;
+the pane labels its source. These retained samples are not a complete access log.
+Auth's separate adapter cannot overwrite the main request/SQL/error snapshot.
+
 ### Run commands inside the HUD
 
 In `azu dev`, press **g** to compose a generator command or **:**
@@ -223,7 +234,7 @@ The Config panel shows the last run of `azu config`, which the Commands panel re
 
 <summary>Requests, SQL and errors come from the app</summary>
 
-`azu dev` listens on a Unix socket (mode 0600) and passes its path to the app in `AZU_TELEMETRY_SOCKET`. An app that requires `azu/dev` and runs in development writes a JSON snapshot per second. Requests are recorded only with `PERFORMANCE_MONITORING=true`, which `.env.development` sets in a generated project. Projects generated now pin azu 0.10.1 or newer, which has the telemetry. The expanded SQL stream and Errors tab require the companion Azu telemetry changes (`codex/dev-hud-telemetry`) until included in a published Azu release. Older producers retain slow-query display and show a waiting notice for errors. Load `azu/cql` and attach the application schema through `Azu::CQL` to capture native async-engine query telemetry and pool snapshots. Exception reports come from the existing server rescuer instrumentation. Problem details are normalized from the captured report, not a copy of arbitrary application problem extensions. SQL parameters are not transmitted. The socket reader bounds messages to 1 MiB and rejects incompatible object shapes.
+`azu dev` listens on a Unix socket (mode 0600) and passes its path to the app in `AZU_TELEMETRY_SOCKET`. An app that requires `azu/dev` and runs in development writes a JSON snapshot per second. Requests are recorded only with `PERFORMANCE_MONITORING=true`, which `.env.development` sets in a generated project. The CLI is contract-tested against Azu master `505fff4` (v1.0.4), whose shared exporter includes recent SQL, latency histograms, errors and runtime metrics. Older producers retain slow-query display and show a waiting notice for errors. Load `azu/cql` and attach the application schema through `Azu::CQL` to capture native async-engine query telemetry and pool snapshots. Exception reports come from the existing server rescuer instrumentation. Problem details are normalized from the captured report, not a copy of arbitrary application problem extensions. SQL parameters are not transmitted. The socket reader bounds messages to 1 MiB and rejects incompatible object shapes. Auth, schema and migration history are optional application adapters; current Azu master does not export them. No web dashboard endpoint is scraped or exposed by this integration.
 
 </details>
 

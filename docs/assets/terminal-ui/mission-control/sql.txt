@@ -1,28 +1,28 @@
                     │                                                                                                             PREVIEW · SAMPLE DATA
-   ▲ AZU            │ storefront / Observe / SQL  |  ● running  pid 48231 :4000                                                                    01:13:07
+   ▲ AZU            │ storefront / Observe / SQL  |  ● running  pid 48231 :4000                                                                    01:41:12
                     │ ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
    storefront       │ ╭─ SQL · Pool ───────────────────────────────────────────────────╮ ╭─ Latency histogram · ms ───────────────────────────────────────╮
    development      │ │ 2 queries · avg 1.55 ms                                        │ │ 0–1 ████████████ 1  1–5 ████████████ 1                         │
                     │ │ checkouts 6/20 · idle 14                                       │ │                                                                │
    ──────────────── │ │ N+1 warnings: 1 · slow 0                                       │ │                                                                │
   OBSERVE           │ ╰────────────────────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────────────────────╯
-  ▌  Overview       │ ╭─ SQL · recent queries · connected ──────────── 3 ─╮ ╭─ Details · Tab switches pane ───────────────────────────────────────────────╮
-  ▷  Server         │ │ › 2.3 ms product_repository.cr:41 SELECT p.id, p  │ │  SELECT p.id, p.name FROM products AS p WHERE p.active = TRUE AND p.catego  │
-  ▷  Jobs        1  │ │   0.8 ms cart_repository.cr:28 SELECT * FROM ca…  │ │  ry_id = $1 ORDER BY p.created_at DESC LIMIT 20                             │
- ▌▤  SQL         3  │ │  N+1 ×12 SELECT * FROM carts WHERE id = $1        │ │                                                                             │
-  ▧  Logs           │ │                                                   │ │  Duration: 2.3 ms                                                           │
+  ▌ Overview   [1]  │ ╭─ SQL · recent queries · connected ──────────── 3 ─╮ ╭─ Details · Tab switches pane ───────────────────────────────────────────────╮
+  ▷ Server     [2]  │ │ › 2.3 ms product_repository.cr:41 SELECT p.id, p  │ │  SELECT p.id, p.name FROM products AS p WHERE p.active = TRUE AND p.catego  │
+  ▷ Jobs       [3]  │ │   0.8 ms cart_repository.cr:28 SELECT * FROM ca…  │ │  ry_id = $1 ORDER BY p.created_at DESC LIMIT 20                             │
+ ▌▤ SQL        [5]  │ │  N+1 ×12 SELECT * FROM carts WHERE id = $1        │ │                                                                             │
+  ▧ Logs       [7]  │ │                                                   │ │  Duration: 2.3 ms                                                           │
   ────────────────  │ │                                                   │ │  Origin: product_repository.cr:41                                           │
   DATA & ACCESS     │ │                                                   │ │  Pool wait: 0.1 ms                                                          │
-  ▣  Schema         │ │                                                   │ │  Endpoint: —                                                                │
-  ≈  Migrations     │ │                                                   │ │                                                                             │
-  ◇  Auth           │ │                                                   │ │                                                                             │
+  ▣ Schema     [4]  │ │                                                   │ │  Endpoint: —                                                                │
+  ≈ Migrations [m]  │ │                                                   │ │                                                                             │
+  ◇ Auth       [6]  │ │                                                   │ │                                                                             │
   ────────────────  │ │                                                   │ │                                                                             │
   DEVELOP           │ │                                                   │ │                                                                             │
-  >_  Console       │ │                                                   │ │                                                                             │
-  ≡  Commands       │ │                                                   │ │                                                                             │
-  ·  Build          │ │                                                   │ │                                                                             │
-  ▧  Errors         │ │                                                   │ │                                                                             │
-  ·  Config         │ │                                                   │ │                                                                             │
+  >_ Console   [c]  │ │                                                   │ │                                                                             │
+  ≡ Commands   [?]  │ │                                                   │ │                                                                             │
+  · Build      [d]  │ │                                                   │ │                                                                             │
+  ▧ Errors     [e]  │ │                                                   │ │                                                                             │
+  · Config     [v]  │ │                                                   │ │                                                                             │
                     │ │                                                   │ │                                                                             │
                     │ │                                                   │ │                                                                             │
                     │ │                                                   │ │                                                                             │
@@ -43,4 +43,4 @@
    b       collapse │ │                                                   │ │                                                                             │
                     │ ╰───────────────────────────────────────────────────╯ ╰─────────────────────────────────────────────────────────────────────────────╯
  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  [Ctrl-P] navigate  [/] filter  [Tab] pane  [j/k] select  [c] console  [g] generate  [q] quit                                     telemetry · connected
+  h help · Ctrl-P menu · q quit · Tab details · j/k select · PgUp/PgDn scroll · / filter                                           telemetry · connected

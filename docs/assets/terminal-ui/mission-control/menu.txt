@@ -1,28 +1,28 @@
                     │                                                                                                             PREVIEW · SAMPLE DATA
-   ▲ AZU            │ storefront / Observe / Overview  |  ● running  pid 48231 :4000                                                               01:13:07
+   ▲ AZU            │ storefront / Observe / Overview  |  ● running  pid 48231 :4000                                                               01:41:12
                     │ ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
    storefront       │ ╭─ Requests ───────────────────╮ ╭─ JoobQ ──────────────────────╮ ╭─ CQL pool ───────────────────╮ ╭─ Auth ─────────────────────────╮
    development      │ │ 1284 req/s                   │ │ 10 processing                │ │ 6 / 20 in use                │ │ 2 recent events                │
                     │ │ p95 8.4ms                    │ │ 31 waiting                   │ │ idle 14                      │ │ application events             │
    ──────────────── │ │                              │ │                              │ │                              │ │                                │
   OBSERVE           │ │ ▁▁▂▂▃▃▃▃▄▄▅▅▅▅▆▆▇▇▇▇▇▇██     │ │ ████████████████████████████ │ │ ████████████████████████████ │ │ connected                      │
- ▌▌  Overview       │ ╰──────────────────────────────╯ ╰──────────────────────────────╯ ╰──────────────────────────────╯ ╰────────────────────────────────╯
-  ▷  Server         │ ╭─ Live logs · following ─────────────────────────────────────────────── focus ─╮ ╭─ SQL · selected query ──────────────────────────╮
-  ▷  Jobs        1  │ │  14:32:07.993 INFO  Azu    starting server                  pid=48231         │ │  01  SELECT p.id, p.name                        │
-  ▤  SQL         3  │ │  14:32:08.041 INFO  HTTP   GET /                 200 6.3ms req_8f2a           │ │  02  FROM products AS p                         │
-  ▧  Logs           │ │  14:32:08.104 INFO  HTTP   GET /products         200 4.8ms req_8f31           │ │  03  WHERE p.active = TRUE                      │
+ ▌▌ Overview   [1]  │ ╰──────────────────────────────╯ ╰──────────────────────────────╯ ╰──────────────────────────────╯ ╰────────────────────────────────╯
+  ▷ Server     [2]  │ ╭─ Live logs · following ─────────────────────────────────────────────── focus ─╮ ╭─ SQL · selected query ──────────────────────────╮
+  ▷ Jobs       [3]  │ │  14:32:07.993 INFO  Azu    starting server                  pid=48231         │ │  01  SELECT p.id, p.name                        │
+  ▤ SQL        [5]  │ │  14:32:08.041 INFO  HTTP   GET /                 200 6.3ms req_8f2a           │ │  02  FROM products AS p                         │
+  ▧ Logs       [7]  │ │  14:32:08.104 INFO  HTTP   GET /products         200 4.8ms req_8f31           │ │  03  WHERE p.active = TRUE                      │
   ────────────────  │ │  14:32:08.106 DEBUG CQL query.complete 2.3ms req_8f31                         │ │  04  AND p.category_id = $1                     │
   DATA & ACCESS     │ │  14:32:08.110 INFO  JoobQ mailer.completed 8.1ms                              │ │  05  ORDER BY p.created_at DESC                 │
-  ▣  Schema         │ │  14:32:08.203 WARN  CQL N+1 detected 12 queries                               │ │  06  LIMIT 20                                   │
-  ≈  Migrations     │ │  14:32:08.318 ERROR JoobQ  mailer.failed         retry 2/5 job_4a1d           │ │ ─────────────────────────────────────────────── │
-  ◇  Auth           │ │                 SMTP::Error: connection timeout                               │ │ Duration: 2.3 ms                                │
+  ▣ Schema     [4]  │ │  14:32:08.203 WARN  CQL N+1 detected 12 queries                               │ │  06  LIMIT 20                                   │
+  ≈ Migrations [m]  │ │  14:32:08.318 ERROR JoobQ  mailer.failed         retry 2/5 job_4a1d           │ │ ─────────────────────────────────────────────── │
+  ◇ Auth       [6]  │ │                 SMTP::Error: connection timeout                               │ │ Duration: 2.3 ms                                │
   ────────────────  │ │                   app/jobs/welcome_mail.cr:28                                 │ │ Origin: product_repository.cr:41                │
   DEVELOP           │ │  14:32:08.421 INFO  HTTP   POST /checkout        200 18.1ms req_8f41          │ │ Pool wait: 0.1 ms                               │
-  >_  Console       │ │  14:32:08.448 DEBUG DB     transaction commit             3.7ms               │ │ N+1 · 1 pattern · 5 opens SQL                   │
-  ≡  Commands       │ │  14:32:08.512 INFO  HTTP   GET /orders           200 5.9ms req_8f42           │ │ ─────────────────────────────────────────────── │
-  ·  Build          │ │  14:32:08.639 INFO  CQL    cache.hit                      0.4ms               │ │ Recent queries · 3 samples                      │
-  ▧  Errors         │ │  14:32:08.771 INFO  JoobQ  job.started                    mailer job_4a1e     │ │ › 2.3 ms product_repository.cr:41 SELECT p.id,  │
-  ·  Config         │ │  14:32:08.904 WARN  Auth   rate limit approaching         85/100              │ │   0.8 ms cart_repository.cr:28 SELECT * FROM …  │
+  >_ Console   [c]  │ │  14:32:08.448 DEBUG DB     transaction commit             3.7ms               │ │ N+1 · 1 pattern · 5 opens SQL                   │
+  ≡ Commands   [?]  │ │  14:32:08.512 INFO  HTTP   GET /orders           200 5.9ms req_8f42           │ │ ─────────────────────────────────────────────── │
+  · Build      [d]  │ │  14:32:08.639 INFO  CQL    cache.hit                      0.4ms               │ │ Recent queries · 3 samples                      │
+  ▧ Errors     [e]  │ │  14:32:08.771 INFO  JoobQ  job.started                    mailer job_4a1e     │ │ › 2.3 ms product_repository.cr:41 SELECT p.id,  │
+  · Config     [v]  │ │  14:32:08.904 WARN  Auth   rate limit approaching         85/100              │ │   0.8 ms cart_repository.cr:28 SELECT * FROM …  │
                     │ │  14:32:09.112 INFO  HTTP   GET /customers/42     200 3.9ms req_8f43           │ │  N+1 ×12 SELECT * FROM carts WHERE id = $1      │
                     │ │  14:32:09.331 DEBUG CQL    query.complete                 1.1ms               │ │                                                 │
                     │ │ ›14:32:09.487 INFO  HTTP   GET /products/1       200 4.4ms req_8f44           │ │                                                 │
@@ -31,9 +31,9 @@
                     │ │                                                                           ╭─ Navigate ──────────────────────────────────────────╮ │
                     │ │                                                                           │ > sql▏                                              │ │
                     │ │                                                                           │ ─────────────────────────────────────────────────── │ │
-                    │ │                                                                           │ › Open SQL inspector                                │ │
-                    │ ╰───────────────────────────────────────────────────────────────────────────│   Inspect N+1 SQL queries                           │─╯
-                    │ ╭─ Queues & activity ───────────────────────────────────────────────────────│   Open SQL schema explorer                          │─╮
+                    │ │                                                                           │ › Open SQL inspector                          [5]   │ │
+                    │ ╰───────────────────────────────────────────────────────────────────────────│   Inspect N+1 SQL queries                     [n]   │─╯
+                    │ ╭─ Queues & activity ───────────────────────────────────────────────────────│   Open SQL schema explorer                    [4]   │─╮
                     │ │ QUEUE           WAITING   PROCESSING  FAILED  Share of waiting jobs       │                                                     │ │
                     │ │ ──────────────────────────────────────────────────────────────────────────│                                                     │ │
                     │ │ default         24        8           0       ████████████████████████████│                                                     │ │

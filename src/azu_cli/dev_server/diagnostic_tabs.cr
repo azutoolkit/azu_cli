@@ -59,6 +59,14 @@ module AzuCLI::DevServer
     getter inspector = UI::Inspector.new
     @data : JSON::Any?
 
+    # SchemaAdapter forwards crystal-db's 0 = unlimited capacity. Native engine
+    # pools use a positive bound; zero is not an exhausted zero-slot pool.
+    def self.pool_capacity(pool : JSON::Any?) : String
+      maximum = DiagnosticData.field(pool, "max").try(&.as_i64?)
+      return "—" unless maximum && maximum >= 0
+      maximum == 0 ? "unlimited" : maximum.to_s
+    end
+
     def update(snapshot : JSON::Any) : Nil
       @data = DiagnosticData.field(snapshot, "sql")
       inspector.replace(self.class.items(@data))
@@ -104,7 +112,7 @@ module AzuCLI::DevServer
         unless inner.empty?
           frame.text(inner.x, inner.y, "#{DiagnosticData.text(data, "total")} queries · avg #{DiagnosticData.text(data, "avg_ms")} ms", UI::Token::Cyan, max: inner.w)
           if inner.h > 1
-            frame.text(inner.x, inner.y + 1, "checkouts #{DiagnosticData.text(pool, "in_flight")}/#{DiagnosticData.text(pool, "max")} · idle #{DiagnosticData.text(pool, "idle")}", UI::Token::Muted, max: inner.w)
+            frame.text(inner.x, inner.y + 1, "checkouts #{DiagnosticData.text(pool, "in_flight")}/#{pool_capacity(pool)} · idle #{DiagnosticData.text(pool, "idle")}", UI::Token::Muted, max: inner.w)
           end
           alerts = DiagnosticData.rows(data, "n_plus_one", 100)
           frame.text(inner.x, inner.y + 2, "N+1 warnings: #{alerts.size} · slow #{DiagnosticData.text(data, "slow")}", UI::Token::Amber, max: inner.w) if inner.h > 2

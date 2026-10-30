@@ -42,6 +42,16 @@ def resize(width, height):
 try:
     resize(136, 40)
     collect(0.8)
+    os.write(master, b"h")
+    collect(0.2)
+    assert b"Keyboard hints" in output, "keyboard hints did not open"
+    os.write(master, b"\x1b")
+    collect(0.2)
+    os.write(master, b"t")
+    collect(0.2)
+    assert b"azu/dev" in output, "shared request source did not open"
+    os.write(master, b"t")
+    collect(0.2)
     os.write(master, b"\x10")  # Ctrl-P
     collect(0.2)
     assert b"Navigate" in output, "palette did not open"
@@ -67,7 +77,7 @@ try:
     for sequence in (b"\x1b[?1049h", b"\x1b[?1049l", b"\x1b[?25h", b"\x1b[?2004l"):
         assert sequence in output, f"missing terminal lifecycle sequence: {sequence!r}"
     assert b"Unhandled exception" not in output
-    print("PTY passed: palette, SQL, logs, filtering, resize, quit and terminal restoration")
+    print("PTY passed: keyboard hints, shared request source, palette, SQL, logs, filtering, resize, quit and terminal restoration")
 finally:
     try:
         os.kill(pid, signal.SIGTERM)

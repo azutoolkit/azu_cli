@@ -82,6 +82,12 @@ else
     File.write("#{directory}/#{name}.ansi", frame.ansi_lines.join("\r\n"))
   end
   screen.update(MissionUI::Key.new(MissionUI::KeyCode::Char, '1'))
+  screen.update(MissionUI::Key.new(MissionUI::KeyCode::Char, 'h'))
+  hints = MissionUI::Frame.new(156, 46, MissionUI::StyleTable.new(MissionUI::Theme.new(MissionUI::ColorDepth::TrueColor), MissionUI::Token::Backplate))
+  screen.view(hints)
+  File.write("#{directory}/hints.txt", hints.to_text)
+  File.write("#{directory}/hints.ansi", hints.ansi_lines.join("\r\n"))
+  screen.update(MissionUI::Key.new(MissionUI::KeyCode::Esc))
   screen.update(MissionUI::Key.new(MissionUI::KeyCode::CtrlP))
   "sql".each_char { |char| screen.update(MissionUI::Key.new(MissionUI::KeyCode::Char, char)) }
   frame = MissionUI::Frame.new(156, 46, MissionUI::StyleTable.new(MissionUI::Theme.new(MissionUI::ColorDepth::TrueColor), MissionUI::Token::Backplate))

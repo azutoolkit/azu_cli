@@ -30,7 +30,7 @@ function ansiHtml(input) {
 (async () => {
   const browser = await chromium.launch({headless:true,args:['--no-sandbox']});
   const page = await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
-  for (const name of ['overview', 'sql', 'auth', 'menu', 'production', 'compact']) {
+  for (const name of ['overview', 'sql', 'auth', 'menu', 'production', 'compact', 'hints']) {
     const html = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Azu ${name} — actual terminal frame, sample data</title><style>body{margin:0;background:#080f14;color:#e6edf3;padding:12px;width:max-content}pre{font:16px/20px 'DejaVu Sans Mono',monospace;margin:0;white-space:pre}</style><pre>${ansiHtml(fs.readFileSync(path.join(dir,name+'.ansi'),'utf8'))}</pre></html>`;
     const output = path.join(dir, name+'-theme-preview.html');
     fs.writeFileSync(output,html);

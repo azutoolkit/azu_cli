@@ -101,6 +101,7 @@ module AzuCLI::DevServer
       end
       draw_footer(frame)
       draw_menu(frame) if menu_open?
+      draw_help(frame) if @help_open
       @composer.view(frame) if @composer.active?
     end
 
@@ -121,9 +122,7 @@ module AzuCLI::DevServer
           previous_group = group
         end
         selection = labels.size if section == tab
-        label = "#{nav_icon(section, frame)}  #{section_name(section)}"
-        count = section.sql? ? @rows[Tab::SQL].size : (section.jobs? ? @jobs.try { |sample| sample.error ? 0_i64 : sample.queues.sum(&.failed) } || 0_i64 : 0_i64)
-        label = Width.pad(label, Math.max(0, rail.w - 4 - count.to_s.size)) + count.to_s if count > 0
+        label = Width.pad("#{nav_icon(section, frame)} #{section_name(section)}", rail.w - 7) + "[#{shortcut(section)}]"
         labels << label
       end
       area = Rect.new(rail.x + 1, 7, rail.w - 2, Math.max(0, rail.h - 12))
@@ -160,6 +159,9 @@ module AzuCLI::DevServer
       end
       reserve = header.w >= 100 ? 25 : 0
       frame.text(header.x, header.y, @notice, Token::Muted, max: header.w - reserve) if @read_only
+      if @received && !@read_only && !@sample_data
+        frame.text(header.x, header.y, SharedTelemetry.runtime_label(@snapshot), Token::Muted, max: header.w - reserve)
+      end
       frame.line(header.x, header.y + 1, segments, header.w - reserve)
       if reserve > 0
         label = @sample_data ? "PREVIEW · SAMPLE DATA" : (@read_only ? "PRODUCTION · READ ONLY" : "LOCAL DEVELOPMENT")
@@ -174,12 +176,14 @@ module AzuCLI::DevServer
     private def draw_footer(frame : Frame) : Nil
       y = frame.height - 2
       frame.hline(1, y, frame.width - 2, frame.style(Token::Border))
-      label = if searching?
+      label = if @help_open
+                "↑/↓ scroll · PgUp/PgDn page · Esc/h close · Ctrl-P navigate"
+              elsif searching?
                 "/ #{query}▏  Enter apply · Esc clear"
               elsif menu_open?
                 "↑/↓ choose · Enter open · Esc close"
               elsif @read_only
-                @notice
+                "h help · Ctrl-P menu · q disconnect · Tab pane · j/k select · / filter"
               elsif tab.console?
                 "Ctrl-P menu · Enter run · Alt-Enter newline · Ctrl-O interpreter · Esc back"
               elsif tab.commands?
@@ -187,7 +191,7 @@ module AzuCLI::DevServer
               elsif !query.empty?
                 "filter: #{query} · Esc clear · Ctrl-P navigate · q quit"
               else
-                "[Ctrl-P] navigate  [/] filter  [Tab] pane  [j/k] select  [c] console  [g] generate  [q] quit"
+                "h help · Ctrl-P menu · q quit · #{context_hint}"
               end
       reserve = frame.width >= 136 ? 25 : 0
       frame.text(2, y + 1, label, Token::Cyan, max: frame.width - 4 - reserve)
@@ -196,11 +200,55 @@ module AzuCLI::DevServer
       end
     end
 
+    private def context_hint : String
+      return "y confirm · n cancel" if tab.commands? && @workspace.confirming
+      case tab
+      when .console?
+        "Enter evaluate · Alt-Enter newline · Ctrl-O interpreter · Esc back"
+      when .commands?
+        "j/k select · Enter run/review · PgUp/PgDn output"
+      when .dashboard?
+        "Tab pane · Enter inspect · j/k select · f follow · t source"
+      when .logs?
+        "j/k select · Tab details · f follow · t source · / filter"
+      when .build?
+        "r rebuild · PgUp/PgDn scroll"
+      when .config?
+        "Enter refresh · PgUp/PgDn scroll"
+      else
+        "Tab details · j/k select · PgUp/PgDn scroll · / filter"
+      end
+    end
+
+    private def draw_help(frame : Frame) : Nil
+      width = Math.min(76, frame.width - 4)
+      height = Math.min(32, frame.height - 4)
+      box = Rect.new((frame.width - width) // 2, (frame.height - height) // 2, width, height)
+      frame.fill(box, style: frame.style(bg: Token::Backplate))
+      inner = frame.card(box, "Keyboard hints · #{section_name(tab)}", border: Token::Cyan)
+      lines = ["THIS VIEW", context_hint, "", "NAVIGATION",
+               "Ctrl-P       Search views, commands and keyboard hints",
+               "h / Esc      Open hints / close hints or clear filter",
+               "b            Collapse or expand navigation",
+               "q / Ctrl-C   Quit (Ctrl-C cancels inside Console)",
+               "", "VIEWS"]
+      navigation_tabs.each { |section| lines << "#{shortcut(section).to_s.ljust(13)}#{section_name(section)}" }
+      lines.concat(["", "LISTS AND OVERVIEW", "j/k or ↑/↓   Select a row", "Tab          Switch pane", "PgUp/PgDn    Scroll a page (SQL text in Overview)",
+                    "Home/End     First/last row", "/            Filter data; Enter applies; Esc clears",
+                    "f            Follow newest logs", "t            Toggle app output / azu/dev requests", "Enter        Open the focused Overview inspector"])
+      unless @read_only
+        lines.concat(["", "LOCAL COMMANDS", ":            Compose an azu command", "g            Compose a generator", "Enter, y/n   Review, then confirm/cancel a command",
+                      "r            Rebuild application", "", "CONSOLE", "Enter        Evaluate", "Alt-Enter    Insert newline", "Ctrl-O       Interpreter", "Esc          Back; Ctrl-P opens hints/menu", "Letters are input while editing Console or search."])
+      end
+      @help_viewport.draw(frame, inner, Viewport.wrap(lines, Math.max(1, inner.w - 1)))
+    end
+
     private def draw_inspector(frame : Frame, content : Rect) : Nil
       content = SQLTab.draw_metrics(frame, content, field(@snapshot, "sql")) if tab.sql?
       title = case tab
               when .sql?  then "SQL · #{SQLTab.feed_label(field(@snapshot, "sql"))}"
               when .auth? then @read_only ? "Auth · not exported" : "Auth · #{@auth.label}"
+              when .logs? then using_shared_logs? ? "Logs · azu/dev requests" : "Logs · application output"
               else             section_name(tab)
               end
       empty = if !query.empty? && !@rows[tab].empty?
@@ -236,7 +284,9 @@ module AzuCLI::DevServer
       frame.text(inner.x, inner.y, "> #{@menu_query}▏", Token::Cyan, max: inner.w)
       frame.hline(inner.x, inner.y + 1, inner.w, frame.style(Token::Border))
       list = Rect.new(inner.x, inner.y + 2, inner.w, Math.max(0, inner.h - 4))
-      labels = menu_items.map_with_index { |item, index| "#{index == @menu_selected ? '›' : ' '} #{item[0]}" }
+      labels = menu_items.map_with_index do |item, index|
+        Width.pad("#{index == @menu_selected ? '›' : ' '} #{item[0]}", Math.max(0, list.w - 5)) + "[#{item[1]}]"
+      end
       @menu_viewport.configure(labels.size, list.h)
       @menu_viewport.reveal(@menu_selected)
       @menu_viewport.draw(frame, list, labels, @menu_selected)
@@ -276,7 +326,7 @@ module AzuCLI::DevServer
                 area.columns(4, 1)
               end
       titles = {"Requests", "JoobQ", "CQL pool", "Auth"}
-      values = {"#{text(requests, "rps")} req/s", "#{active || "--"} processing", "#{text(pool, "in_flight")} / #{text(pool, "max")} in use",
+      values = {"#{text(requests, "rps")} req/s", "#{active || "--"} processing", "#{text(pool, "in_flight")} / #{SQLTab.pool_capacity(pool)} in use",
                 @read_only ? "not exported" : "#{@rows[Tab::Auth].size} recent events"}
       notes = {"p95 #{text(requests, "p95_ms")}ms", "#{waiting || "--"} waiting", "idle #{text(pool, "idle")}",
                @read_only ? "read only" : (@auth.available? ? "application events" : "HTTP only")}
@@ -305,11 +355,12 @@ module AzuCLI::DevServer
     end
 
     private def draw_live_logs(frame : Frame, rect : Rect) : Nil
-      title = "Live logs · #{@follow_logs ? "following" : "paused"}"
+      title = "Live logs · #{using_shared_logs? ? "azu/dev" : (@follow_logs ? "following" : "paused")}"
       inner = frame.card(rect, title, @overview_focus == 0 ? "focus" : nil, border: Token::Border)
       inspector = @inspectors[Tab::Logs]
       if inspector.items.empty?
-        frame.text(inner.x, inner.y, query.empty? ? "Waiting for application logs" : "No matching logs · Esc clears filter", Token::Muted, max: inner.w)
+        empty = query.empty? ? (using_shared_logs? ? "No request samples · require azu/dev + PERFORMANCE_MONITORING=true" : "Waiting for application logs") : "No matching logs · Esc clears filter"
+        frame.text(inner.x, inner.y, empty, Token::Muted, max: inner.w)
         return
       end
       lines = inspector.items.reverse.map(&.label)

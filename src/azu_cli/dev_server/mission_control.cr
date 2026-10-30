@@ -1,6 +1,7 @@
 require "./hud"
 require "./command_composer"
 require "./auth_tab"
+require "./shared_telemetry"
 
 module AzuCLI::DevServer
   # The dev workspace shell. Build, console and command components share this
@@ -34,6 +35,11 @@ module AzuCLI::DevServer
     @sidebar = true
     @log_sequence = 0
     @follow_logs = true
+    @shared_logs = false
+    @output_logs = [] of Inspector::Item
+    @request_logs = [] of Inspector::Item
+    @help_open = false
+    @help_viewport = Viewport.new
     SQL_COLOR = ->(line : String) { Highlight.sql(line) }
     LOG_COLOR = ->(line : String) { Highlight.log(line) }
     @previous_tab = Tab::Dashboard
@@ -95,6 +101,8 @@ module AzuCLI::DevServer
       case event
       when Events::AppStarted
         @auth.reset
+        @output_logs.clear
+        @request_logs.clear
         @request_history.clear
         @snapshot = nil
         @received = nil
@@ -119,7 +127,8 @@ module AzuCLI::DevServer
         @log_sequence += 1
         line = event.line[0, 2048]
         item = Inspector::Item.new(@log_sequence.to_s, line, [line])
-        replace(Tab::Logs, ([item] + @rows[Tab::Logs]).first(200))
+        @output_logs = ([item] + @output_logs).first(200)
+        refresh_logs
         @inspectors[Tab::Logs].key(Key.new(KeyCode::Home)) if @follow_logs
       when Tick
         second = (@now - Widgets::EPOCH).total_seconds.to_i64
@@ -135,6 +144,20 @@ module AzuCLI::DevServer
         return Action::Quit
       end
       return @composer.update(key) if @composer.active?
+      if @help_open
+        return Action::Quit if key.char?('q')
+        if key.code.esc? || key.char?('h')
+          @help_open = false
+        elsif key.code.ctrl_p?
+          @help_open = false
+          @menu_open = true
+          @menu_query = ""
+          @menu_selected = 0
+        else
+          @help_viewport.key(key)
+        end
+        return Action::Redraw
+      end
       if key.code.ctrl_p?
         @menu_open = !menu_open?
         @menu_query = ""
@@ -166,7 +189,13 @@ module AzuCLI::DevServer
         return Action::Redraw
       end
       return Action::Quit if key.char?('q')
-      if @read_only && (key.char?('c') || key.char?('e') || key.char?('?') || key.char?('r') || key.char?(':') || key.char?('g') || key.char?('d') || key.char?('v'))
+      if key.char?('h')
+        @help_open = true
+        @help_viewport.reset
+      elsif (tab.logs? || tab.dashboard?) && key.char?('t')
+        @shared_logs = !using_shared_logs?
+        refresh_logs
+      elsif @read_only && (key.char?('c') || key.char?('e') || key.char?('?') || key.char?('r') || key.char?(':') || key.char?('g') || key.char?('d') || key.char?('v'))
         @notice = read_only_notice
       elsif key.char?(':') || key.char?('g')
         @composer.open(key.char?('g'))
@@ -203,6 +232,7 @@ module AzuCLI::DevServer
         {label, shortcut(item)}
       end
       entries.insert(4, {"Inspect N+1 SQL queries", 'n'})
+      entries << {"Keyboard hints", 'h'}
       unless @read_only
         entries.concat([{"Run azu command", ':'}, {"Generate code", 'g'}])
       end
@@ -223,7 +253,10 @@ module AzuCLI::DevServer
       when .enter?
         if chosen = menu_items[@menu_selected]?
           @menu_open = false
-          if chosen[1] == 'n'
+          if chosen[1] == 'h'
+            @help_open = true
+            @help_viewport.reset
+          elsif chosen[1] == 'n'
             select_tab(Tab::SQL)
             @query = "N+1"
             filter
@@ -280,6 +313,15 @@ module AzuCLI::DevServer
       @inspectors[tab].replace(rows.select { |row| self.class.matches?(row.label, query) })
     end
 
+    private def using_shared_logs? : Bool
+      @shared_logs || @output_logs.empty?
+    end
+
+    private def refresh_logs : Nil
+      replace(Tab::Logs, using_shared_logs? ? @request_logs : @output_logs)
+      @inspectors[Tab::Logs].key(Key.new(KeyCode::Home)) if @follow_logs
+    end
+
     private def filter : Nil
       @rows.each { |tab, rows| @inspectors[tab].replace(rows.select { |row| self.class.matches?(row.label, query) }) }
     end
@@ -306,6 +348,8 @@ module AzuCLI::DevServer
 
     private def ingest : Nil
       requests = field(@snapshot, "requests")
+      @request_logs = SharedTelemetry.request_logs(@snapshot)
+      refresh_logs
       replace(Tab::Server, DiagnosticData.rows(requests, "recent", 200).map do |row|
         label = "#{text(row, "method")} #{text(row, "path")}  #{text(row, "status")}  #{text(row, "ms")}ms"
         Inspector::Item.new(text(row, "at") + label, label,

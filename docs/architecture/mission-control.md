@@ -67,7 +67,7 @@ Color is supplementary: severity names, status codes and a selection marker rema
 visible with `NO_COLOR`.
 
 Navigation groups are Observe, Data & Access, and Develop. The workspace has
-thirteen sections, a collapsible scrollable rail, breadcrumbs, and a searchable
+thirteen sections, a collapsible scrollable rail with shortcut labels, breadcrumbs, and a searchable
 Ctrl-P palette. Build, Errors, Commands, Console and Config reuse stateful
 components inside the workspace; they do not switch to a separate dashboard.
 The navigation viewport keeps the active section visible in short terminals.
@@ -124,10 +124,15 @@ node scripts/render_mission_control_preview.js
 | Adapter fibers | Read application telemetry or agent snapshots; emit messages, never mutate the screen or write stdout. |
 
 The reducer handles `Key`, `Resize`, `Tick`, and typed application messages.
+Press `h` for scrollable context-specific keyboard hints; Esc closes them. In Console
+or search, letters remain input; the Ctrl-P palette also offers Keyboard hints.
 Ctrl-P opens a navigation palette; its query is separate from `/` filtering.
 Enter changes section; Esc closes the palette or returns from the console.
 `j/k`, arrows, PageUp/PageDown and Tab reuse the viewport manager. `l` opens logs;
 logs follow new records until navigation pauses them, and `f` resumes following.
+`t` toggles application output and shared `azu/dev` request samples. Without
+stdout/stderr, the live log pane uses shared requests automatically; these are
+retained samples, not a complete access log. The header shows exported GC metrics.
 In Overview, Tab cycles logs, SQL and queues; Enter opens the focused inspector.
 PageUp/PageDown scroll long SQL and j/k selects recent queries. The Schema view
 accepts `database.tables`; Migrations (`m`) accepts optional `database.migrations`
@@ -177,6 +182,45 @@ resumes snapshots on return. Never share one terminal between the renderer and a
 child process that writes arbitrary output.
 
 ## Ecosystem integration contracts
+
+The CLI consumes `Azu::Dev::Telemetry` v1 over `AZU_TELEMETRY_SOCKET`, sharing the
+framework's `Azu::Dev.metrics`, QueryStore and ErrorStore with the web dashboard.
+`Dev.metrics` returns the current configuration's performance monitor metrics,
+or nil when monitoring is disabled. It is an in-process accessor: the CLI reads
+its request metrics through the framework's telemetry socket, not a second
+PerformanceMetrics instance. Cache/component metrics are available on this
+accessor but are not exported by the current v1 socket snapshot; SQL and errors
+come from QueryStore and ErrorStore, and authentication needs explicit hooks.
+Its transport and UI are tested against a real snapshot from Azu master
+`505fff47272bc1d96edda6ede6f91061ea7e441a` (v1.0.4). The exporter probe and fixture
+provenance live in `scripts/export_azu_dev_telemetry.cr` and
+`spec/fixtures/telemetry/README.md`. Old `sql.slowest` producers remain supported.
+The current exporter supplies requests, SQL, errors and runtime only; it does not
+supply Auth, schema or migration history. Those remain explicit adapter contracts.
+
+### CQL bridge
+
+`require "azu/cql"` supplies the integration; the CLI does not add a competing SQL
+subscriber or profiler. `Azu::CQL.configure`, `schema` and `attach` install the
+named, synchronous Instrumentor subscriber. Query and transaction events retain
+the issuing fiber's RequestContext and call site in QueryStore. `SchemaAdapter`
+provides the attached schema's pool stats for both crystal-db and the native
+PostgreSQL engine. The generated initializer already calls `Azu::CQL.attach { AppDB }`
+(with the application's actual schema constant).
+
+The route is `CQL::Telemetry -> Azu::CQL::Instrumentor -> Azu::QueryStore ->
+Azu::Dev::Telemetry -> azu dev`. `Dev.metrics` is the separate request/cache/component
+metrics accessor. The socket exports normalized SQL, timing, caller/model,
+endpoint, pool wait, pool counts, histograms and N+1 warnings. It does not export
+the full transaction history, query plans, table definitions or migration history
+available through other APIs. Bound SQL values never enter this socket snapshot.
+
+`scripts/export_azu_cql_telemetry.cr` validates the actual bridge with Azu v1.0.4
+and CQL v1.0.1 using a disposable SQLite database: real queries, request correlation,
+transaction capture, pool statistics, N+1 and parameter redaction. This does not
+constitute a PostgreSQL load test. A crystal-db pool with `max: 0` is displayed as
+**unlimited**, rather than a pool with zero capacity.
+
 
 | Source | Available now | Additional work |
 | --- | --- | --- |

@@ -21,4 +21,4 @@
  │ ›14:32:09.487 INFO  HTTP   GET /products/1       200 4.4ms req_8f44      █ │
  ╰────────────────────────────────────────────────────────────────────────────╯
  ──────────────────────────────────────────────────────────────────────────────
-  [Ctrl-P] navigate  [/] filter  [Tab] pane  [j/k] select  [c] console  [g] ge
+  h help · Ctrl-P menu · q quit · Tab pane · Enter inspect · j/k select · f fo
