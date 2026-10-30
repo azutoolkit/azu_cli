@@ -133,7 +133,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ref: ["0.4.2", "b38961d62ef1d70237a6f701b9af8ff34c9dbe8b"]
+        # The final ref is JoobQ PR #21: empty worker + typed queue discovery.
+        ref: ["0.4.2", "b38961d62ef1d70237a6f701b9af8ff34c9dbe8b", "500f990f1f1013c25399a337aec0dc418084e512"]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
