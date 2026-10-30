@@ -52,6 +52,7 @@ module AzuCLI
         puts "  routes                 List the routes: method, path, endpoint, request/response, helpers"
         puts "  config                 Show the configuration of the application (secrets masked)"
         puts "  console                Open Crystal's interpreter with the app loaded (needs `crystal i`)"
+        puts "  mcp                    Configure or run the native Azu Toolkit MCP server"
         puts "  doctor                 Check Crystal, shards, database, env, secrets and port"
         puts "  test                   Run application tests (alias: t)"
         puts
@@ -116,6 +117,8 @@ module AzuCLI
           Config.new.show_help
         when "console"
           Console.new.show_help
+        when "mcp"
+          MCP.new.tap { |command| command.parse_args(["--help"]); command.execute }
         when "doctor"
           Doctor.new.show_help
         when "serve", "s"

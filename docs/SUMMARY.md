@@ -18,6 +18,7 @@
 * [azu generate](command-reference/azu-generate.md)
 * [azu dev](command-reference/azu-dev.md)
 * [azu connect](command-reference/azu-connect.md)
+* [azu mcp](command-reference/azu-mcp.md)
 * [azu joobq](command-reference/azu-joobq.md)
 * [azu serve](command-reference/azu-serve.md)
 * [azu routes](command-reference/azu-routes.md)

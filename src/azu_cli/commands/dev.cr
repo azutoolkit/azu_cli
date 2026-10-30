@@ -3,6 +3,7 @@ require "../dev_server/changes"
 require "../dev_server/watcher"
 require "../dev_server/runner"
 require "../dev_server/telemetry"
+require "../dev_server/snapshot_export"
 require "../dev_server/hud"
 require "../dev_server/mission_control"
 require "../joobq/controller"
@@ -11,7 +12,7 @@ module AzuCLI
   module Commands
     # Runs the app and keeps it current: rebuilds (non-release) when sources change and restarts the app.
     class Dev < Base
-      OPTIONS             = ["port", "host", "env", "debounce", "interval", "ui"]
+      OPTIONS             = ["port", "host", "env", "debounce", "interval", "ui", "snapshot"]
       DEFAULT_PORT        = AzuCLI::Config::Ports::DEV_SERVER
       DEFAULT_DEBOUNCE_MS = 300
       DEFAULT_INTERVAL_MS = 250
@@ -52,11 +53,23 @@ module AzuCLI
 
         target = Utils.binary_name
         attach_child(target)
+        if has_option?("snapshot")
+          exporter = AzuCLI::DevServer::SnapshotExport.new(get_option("snapshot"))
+          receiver = AzuCLI::DevServer::TelemetryServer.new
+          @telemetry = receiver
+          @child.try { |child| child.env["AZU_TELEMETRY_SOCKET"] = receiver.path }
+          receiver.start do |data|
+            exporter.write(data)
+            emit(Events::Telemetry.new(data))
+          end
+        end
         return run_dashboard(target) if dashboard?
 
         trap_termination
         announce(target)
         serve(target)
+      ensure
+        @telemetry.try(&.stop)
       end
 
       # The dashboard runs when a person is watching: a terminal on both ends, big enough, not CI, not --ui plain.
@@ -69,6 +82,8 @@ module AzuCLI
         wanted = {"rich", "mission"}.includes?(mode) ? terminal.tty? : UI::Reporter.rich?(terminal)
         wanted && STDIN.tty? && terminal.interactive? && columns >= 60 && rows >= 16
       end
+
+      @telemetry : AzuCLI::DevServer::TelemetryServer?
 
       @jobs_controller : AzuCLI::JoobQDashboard::Controller?
       @jobs_opening = false
@@ -104,7 +119,7 @@ module AzuCLI
 
       private def run_dashboard(target : String) : Result
         terminal = UI::Terminal.detect
-        telemetry = AzuCLI::DevServer::TelemetryServer.new
+        telemetry = @telemetry || AzuCLI::DevServer::TelemetryServer.new
         control = AzuCLI::DevServer::Control::Runner.new(->(message : UI::Message) { emit(message) })
         @control = control
         app_file = "./src/#{Utils.project_name}.cr"
@@ -129,7 +144,7 @@ module AzuCLI
           child.env["AZU_APP_NAME"] = target
           child.on_output = ->(line : String, error : Bool) { program.send(Events::LogLine.new(line, error)); nil }
         end
-        telemetry.start { |data| program.send(Events::Telemetry.new(data)) }
+        telemetry.start { |data| program.send(Events::Telemetry.new(data)) } unless @telemetry
         Process.on_terminate do |_reason|
           terminal.restore(full_screen: true)
           stop
@@ -402,6 +417,7 @@ module AzuCLI
             --debounce MS      Quiet time before a change is acted on (default #{DEFAULT_DEBOUNCE_MS})
             --interval MS      Polling interval (default #{DEFAULT_INTERVAL_MS})
             --ui MODE          rich: workspace HUD (default), mission: alias for rich, plain: lines
+            --snapshot PATH    Export telemetry atomically in a private directory for MCP
             --help             Show this help
 
           Exit codes: 0 stopped by Ctrl-C or SIGTERM, 1 not an Azu project, 2 invalid usage.

@@ -57,6 +57,7 @@ module AzuCLI
       register_command("console", Commands::Console)
       register_command("config", Commands::Config)
       register_command("doctor", Commands::Doctor)
+      register_command("mcp", Commands::MCP)
 
       register_command("joobq", Commands::JoobQ)
 

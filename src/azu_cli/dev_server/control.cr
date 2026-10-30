@@ -49,7 +49,7 @@ module AzuCLI
 
       # The registered commands the panel leaves out (aliases aside): they need names, files or choices typed with
       # them, or they keep running or own the terminal.
-      LEFT_OUT = {"new", "init", "help", "generate", "undo", "session:setup", "openapi:generate",
+      LEFT_OUT = {"new", "init", "help", "mcp", "generate", "undo", "session:setup", "openapi:generate",
                   "serve", "dev", "connect", "console", "joobq", "jobs:worker", "jobs:ui"}
 
       # Every other command: they run to an end without a terminal. Commands that would ask "are you sure?" get
