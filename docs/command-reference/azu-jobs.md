@@ -12,6 +12,8 @@ These commands manage the Queue/Worker API, not the separate Delivery ledger.
 
 ## Overview
 
+Run workers and inspect JoobQ queues using the application's own configuration. Status and dry runs help you review the target; destructive queue operations require their documented confirmation flags.
+
 <figure><img src="../assets/terminal-ui/mission-control/overview-theme-preview.png" alt="Azu workspace showing illustrative queue activity"><figcaption><p>The workspace queue panel; preview values are illustrative.</p></figcaption></figure>
 
 ```mermaid

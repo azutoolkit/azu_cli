@@ -25,7 +25,7 @@ module AzuCLI
       getter app_dir : String
 
       def auth_telemetry_source : String
-        {{ read_file("#{__DIR__}/../integrations/auth_telemetry.cr") }}
+        {{ read_file("#{__DIR__}/../integrations/auth_telemetry.cr") }}.rstrip
       end
 
       # Why authentication cannot be generated into `root`, if it cannot: something it would write

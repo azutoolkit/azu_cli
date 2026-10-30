@@ -6,7 +6,7 @@ description: Compile and run the app with azu serve, restarting it when source o
 
 ## Overview & visual demo
 
-`azu serve` (aliases `server` and `s`) compiles the app with `shards build --production`, runs the first target of `shard.yml` from `./bin/`, and restarts it when a file under `src/`, `config/` or `public/templates/` changes. It is the older of the two run commands. For day-to-day development, [azu dev](azu-dev.md) rebuilds on more kinds of change and draws the dashboard, so prefer it.
+Run the application with the serve command's supported reload behavior. For the interactive dashboard, source rebuilds, and integrated inspectors, use `azu dev`.
 
 <figure><img src="../assets/terminal-ui/06-dev-building.png" alt="The azu dev card while the first build runs"><figcaption><p>The build card of <code>azu dev</code>. <code>azu serve</code> does the same build and prints it as plain lines, shown under Realistic output.</p></figcaption></figure>
 

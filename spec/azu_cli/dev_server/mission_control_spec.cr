@@ -15,24 +15,15 @@ private def mission_frame(screen, width = 136, height = 40)
 end
 
 describe MC do
-  it "renders the reference overview and navigates its log, SQL and queue panes" do
+  it "renders the web dashboard hierarchy and opens a focused card" do
     screen = mission
-    screen.update(MCE::LogLine.new("14:32:08 INFO GET /products 200 4.8ms"))
-    screen.update(MCE::Telemetry.new(JSON.parse(%({"v":1,"requests":{"rps":12},"sql":{"recent":[
-      {"id":"q1","sql":"SELECT 'FROM safe literal' AS value FROM products","ms":2.3},
-      {"id":"q2","sql":"SELECT second_query FROM products","ms":1.1}]}}))))
-    screen.update(MCE::JobsSample.new([MCE::Queue.new("default", 24_i64, 8_i64, 0_i64)]))
-    text = mission_frame(screen, 156, 46).to_text
-    ["Overview", "Live logs", "SQL · selected query", "CQL pool", "Queues & activity", "Share of waiting jobs", "FROM safe literal"].each do |label|
-      text.should contain label
-    end
-    text.should_not contain "SAMPLE DATA"
-    text.should_not contain "sessions"
+    screen.update(MCE::Telemetry.new(JSON.parse(File.read("spec/fixtures/telemetry/azu-dashboard-v1.json"))))
+    text = mission_frame(screen, 200, 60).to_text
+    ["Overview", "System health", "All systems nominal", "Uptime", "Memory (RSS)", "Latency", "Active routes", "Traffic", "Errors", "Cache", "Database", "Components", "Runtime"].each { |label| text.should contain label }
     screen.update(MCUI::Key.new(MCUI::KeyCode::Tab))
-    screen.update(MCUI::Key.new(MCUI::KeyCode::Down))
-    mission_frame(screen, 156, 46).to_text.should contain "SELECT second_query"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Tab))
     screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
-    screen.tab.should eq MC::Tab::SQL
+    screen.tab.should eq MC::Tab::Tracing
   end
 
   it "offers a bottom-right launcher for SQL, N+1 and schema without a second screen" do
@@ -81,7 +72,7 @@ describe MC do
       screen.tab.to_s.should eq label
       text = mission_frame(screen).to_text
       text.should contain "OBSERVE"
-      text.should contain "store / Develop / #{label}"
+      text.should contain "store / #{label == "Errors" ? "Observe" : "Develop"} / #{label}"
       text.should_not contain "[1] Overview"
       text.should_not contain "Esc mission control"
     end
@@ -139,7 +130,7 @@ describe MC do
         fail "SQL snapshot did not reach the HUD"
       end
       screen.update(MCE::Telemetry.new(data))
-      mission_frame(screen).to_text.should contain "SELECT name"
+      mission_frame(screen).to_text.should contain "Dashboard telemetry unavailable"
       screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '5'))
       text = mission_frame(screen).to_text
       text.should contain "SELECT name FROM products"
@@ -208,7 +199,7 @@ describe MC do
   it "degrades missing or malformed optional telemetry without inventing metrics" do
     screen = mission
     screen.update(MCE::Telemetry.new(JSON.parse(%({"requests":null,"sql":false,"auth":null,"database":1}))))
-    mission_frame(screen).to_text.should contain "HTTP only"
+    mission_frame(screen).to_text.should contain "Dashboard telemetry unavailable"
     screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '4'))
     mission_frame(screen).to_text.should contain "No adapter data"
   end

@@ -6,7 +6,7 @@ description: Prepare an existing Crystal project for the Azu CLI by creating the
 
 ## Overview & visual demo
 
-`azu init` turns an existing Crystal project, one with a `shard.yml` in the current directory, into one the Azu CLI can work in. It creates the directories the generators write to. It writes no application code and does not touch `shard.yml`. To start a project from scratch, use [azu new](azu-new.md).
+Add Azu CLI configuration to an existing project. Review the generated setup before using development commands, especially when the application already has custom boot or migration behavior.
 
 <figure><img src="../assets/terminal-ui/04-new-progress.png" alt="The azu new progress card, with a spinner on the step that is running"><figcaption><p>The progress card of <code>azu new</code>. <code>azu init</code> has no card: it prints the plain lines shown under Realistic output.</p></figcaption></figure>
 

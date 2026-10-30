@@ -8,6 +8,8 @@ description: Generate Azu endpoints for CRUD actions, web (pages and 303 redirec
 
 ## Overview & visual demo
 
+Generate an endpoint with a clear HTTP boundary. Add its validation and application behavior, then inspect the registered route and generated navigation where applicable.
+
 <figure><img src="../assets/terminal-ui/15-routes.png" alt="azu routes listing the Posts endpoints with their request and response types, such as Posts::IndexEndpoint, Posts::IndexRequest and Posts::IndexPage"><figcaption><p><code>azu routes</code> after generating the Posts endpoints. Each row names the endpoint, its request and its response: the three types the generator refers to.</p></figcaption></figure>
 
 ```mermaid

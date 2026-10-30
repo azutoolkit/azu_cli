@@ -8,7 +8,7 @@ The `db:*` commands manage the database of a CQL project: create it, run and rol
 
 ## Overview & visual demo
 
-Run `db:migrate` after you add a migration, `db:status` to see what is pending, and `db:rollback` to undo a step. Destructive commands ask first; `--force` skips the question, so use it on purpose.
+Create, migrate, inspect, and maintain the application database through CQL. Review migration changes before applying them, and use the command-specific options below for the intended environment.
 
 <figure><img src="../assets/terminal-ui/17-db-migrate.png" alt="azu db:migrate card: validating migrations, then applied CreatePosts in 23.4s, with a warning about JoobQ configuration"><figcaption><p><code>azu db:migrate</code> on a color terminal: the card names the database, the migration it applied and the time. A warning from the app prints below the card.</p></figcaption></figure>
 

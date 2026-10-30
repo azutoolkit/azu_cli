@@ -2,6 +2,8 @@ require "./hud"
 require "./command_composer"
 require "./auth_tab"
 require "./shared_telemetry"
+require "./dashboard_state"
+require "../joobq/screen"
 
 module AzuCLI::DevServer
   # The dev workspace shell. Build, console and command components share this
@@ -23,6 +25,14 @@ module AzuCLI::DevServer
       Console
       Config
       Migrations
+      Tracing
+      Profiler
+      Database
+      Cache
+      JoobQ
+      Components
+      Mailers
+      Runtime
     end
 
     getter tab = Tab::Dashboard
@@ -55,13 +65,18 @@ module AzuCLI::DevServer
     @now = Time.instant
     @composer : CommandComposer
     @auth = AuthTab.new
+    @dashboard = DashboardState.new
+    @joobq : JoobQDashboard::Screen
 
     def initialize(@workspace : Hud, @project : String, @reduced_motion : Bool = false,
                    @clock : Proc(Time::Instant) = -> { Time.instant },
                    @read_only : Bool = false,
                    @sample_data : Bool = false,
+                   @on_jobs : Proc(Nil) = -> { },
+                   on_replay : Proc(String, Nil) = ->(_id : String) { },
                    on_command : Proc(Control::Command, Bool) = ->(_command : Control::Command) { false })
       @composer = CommandComposer.new(on_command)
+      @joobq = JoobQDashboard::Screen.new(on_replay)
       @notice = read_only_notice if @read_only
       Tab.each do |tab|
         @rows[tab] = [] of Inspector::Item
@@ -86,6 +101,7 @@ module AzuCLI::DevServer
 
     def update(event : Event) : Action
       @now = @clock.call
+      @joobq.update(event) if event.is_a?(JoobQDashboard::Snapshot) || event.is_a?(JoobQDashboard::Notice)
       @composer.update(event) unless event.is_a?(Key)
       return key(event) if event.is_a?(Key)
       # Independent auth publishers must not replace the main app snapshot or
@@ -101,15 +117,16 @@ module AzuCLI::DevServer
       case event
       when Events::AppStarted
         @auth.reset
+        @dashboard.reset
         @output_logs.clear
         @request_logs.clear
-        @request_history.clear
         @snapshot = nil
         @received = nil
         ingest
       when Events::Telemetry
-        @snapshot = event.data
         @received = @now
+        return Action::Continue unless @dashboard.update(event.data)
+        @snapshot = event.data
         ingest
       when Events::RemoteStatus
         @notice = "#{read_only_notice} · #{event.message}"
@@ -149,6 +166,9 @@ module AzuCLI::DevServer
       return @composer.update(key) if @composer.active?
       if @help_open
         return Action::Quit if key.char?('q')
+        if tab.joob_q? && !key.char?('h')
+          return @joobq.update(key)
+        end
         if key.code.esc? || key.char?('h')
           @help_open = false
         elsif key.code.ctrl_p?
@@ -207,6 +227,9 @@ module AzuCLI::DevServer
       elsif key.code.esc?
         @query = ""
         filter
+      elsif database_view? && (key.char?('[') || key.char?(']'))
+        index = DATABASE_VIEWS.index(tab) || 0
+        select_tab(DATABASE_VIEWS[(index + (key.char?(']') ? 1 : -1)) % DATABASE_VIEWS.size])
       elsif key.char?('b')
         @sidebar = !@sidebar
       elsif key.char?('l')
@@ -230,11 +253,11 @@ module AzuCLI::DevServer
     end
 
     private def menu_items : Array({String, Char})
-      entries = navigation_tabs.map do |item|
+      entries = tabs.reject { |item| item.sql? || item.db? }.map do |item|
         label = item.db? ? "Open SQL schema explorer" : "Open #{section_name(item)}#{item.sql? ? " inspector" : ""}"
         {label, shortcut(item)}
       end
-      entries.insert(4, {"Inspect N+1 SQL queries", 'n'})
+      entries = [{"Open SQL inspector", '5'}, {"Inspect N+1 SQL queries", 'n'}, {"Open SQL schema explorer", '4'}] + entries
       entries << {"Keyboard hints", 'h'}
       unless @read_only
         entries.concat([{"Run azu command", ':'}, {"Generate code", 'g'}])
@@ -276,7 +299,7 @@ module AzuCLI::DevServer
     end
 
     private def tabs : Array(Tab)
-      @read_only ? Tab.values.first(7) : Tab.values
+      @read_only ? Tab.values.reject { |t| t.build? || t.commands? || t.console? || t.config? || t.errors? } : Tab.values
     end
 
     private def shortcut(section : Tab) : Char
@@ -287,6 +310,14 @@ module AzuCLI::DevServer
       when .console?    then 'c'
       when .config?     then 'v'
       when .migrations? then 'm'
+      when .tracing?    then 'T'
+      when .profiler?   then 'p'
+      when .database?   then 'D'
+      when .cache?      then 'C'
+      when .joob_q?     then 'J'
+      when .components? then 'S'
+      when .mailers?    then 'M'
+      when .runtime?    then 'R'
       else                   ('1'.ord + section.value).chr
       end
     end
@@ -303,6 +334,7 @@ module AzuCLI::DevServer
 
     private def select_tab(section : Tab) : Nil
       return unless tabs.includes?(section)
+      @on_jobs.call if section.joob_q? && !@read_only
       @previous_tab = tab if tab != section
       @tab = section
       @query = ""
@@ -350,6 +382,10 @@ module AzuCLI::DevServer
     end
 
     private def ingest : Nil
+      {Tab::Tracing => "tracing", Tab::Profiler => "profiler", Tab::Database => "database",
+       Tab::Cache => "cache", Tab::Components => "components", Tab::Mailers => "mailers", Tab::Runtime => "process"}.each do |section, name|
+        replace(section, @dashboard.items(name))
+      end
       requests = field(@snapshot, "requests")
       @request_logs = SharedTelemetry.request_logs(@snapshot)
       refresh_logs
@@ -372,13 +408,8 @@ module AzuCLI::DevServer
         label = "#{version} #{text(row, "name")} #{text(row, "status")}"
         Inspector::Item.new(version, label, [label, "Applied at: #{text(row, "applied_at")}", "Read-only history from the application adapter."])
       end)
-      sample = field(requests, "rps")
-      if sample && (rate = sample.as_f? || sample.as_i64?.try(&.to_f)) && rate.finite? && rate >= 0
-        @request_history << rate
-        @request_history.shift if @request_history.size > 60
-      end
       @snapshot.try { |snapshot| @auth.update(snapshot, @now) } unless @read_only
-      replace(Tab::Auth, @read_only ? [] of Inspector::Item : @auth.items(requests))
+      replace(Tab::Auth, @read_only ? [] of Inspector::Item : @dashboard.items("sessions") + @auth.items(requests))
     end
 
     private def freshness(at : Time::Instant?) : String

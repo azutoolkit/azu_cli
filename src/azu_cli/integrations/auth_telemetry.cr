@@ -58,6 +58,9 @@ module AzuAuthTelemetry
 
   def self.record(event : String, outcome : String) : Nil
     STORE.record(event, outcome) if PATH
+    {% if @top_level.has_constant?("Azu") && Azu.has_constant?("Dev") && Azu::Dev.has_constant?("IntegrationEvents") %}
+      Azu::Dev::IntegrationEvents.session(event, outcome)
+    {% end %}
   end
 
   def self.report(path : String) : Nil

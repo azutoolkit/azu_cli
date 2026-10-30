@@ -91,7 +91,7 @@ describe AzuCLI::DevServer::AuthTab do
     now += 6.seconds
     screen.update(AuthEvents::Telemetry.new(JSON.parse(%({"v":1,"requests":{"recent":[]}}))))
     screen.update(AuthUI::Key.new(AuthUI::KeyCode::Char, '6'))
-    auth_frame(screen).should contain "application events · stale"
+    auth_frame(screen).should contain "stale · Sessions"
   end
 end
 

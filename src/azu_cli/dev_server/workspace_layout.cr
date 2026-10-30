@@ -2,33 +2,36 @@ module AzuCLI::DevServer
   # Reference-inspired shell. Every pane paints into the shared frame; none owns
   # terminal IO. Small terminals retain the same routes and keyboard controls.
   class MissionControl
-    @request_history = [] of Float64
     @overview_focus = 0
-    @overview_logs = Viewport.new
-    @overview_sql = Viewport.new
-    @overview_queries = Viewport.new
     @overview_queues = Viewport.new
 
     private def section_name(section : Tab) : String
       case section
       when .dashboard? then "Overview"
       when .db?        then "Schema"
+      when .auth?      then "Sessions"
+      when .jobs?      then "Queues & Activity"
+      when .server?    then "Routes"
       else                  section.to_s
       end
     end
 
     private def section_group(section : Tab) : String
       case section
-      when .db?, .migrations?, .auth?                         then "Data & Access"
-      when .console?, .commands?, .build?, .errors?, .config? then "Develop"
-      else                                                         "Observe"
+      when .db?, .migrations?, .auth?, .sql?, .database?, .cache?            then "Data & Access"
+      when .jobs?, .joob_q?                                                  then "Jobs"
+      when .console?, .commands?, .build?, .config?, .components?, .mailers? then "Develop"
+      else                                                                        "Observe"
       end
     end
 
     private def navigation_tabs : Array(Tab)
-      [Tab::Dashboard, Tab::Server, Tab::Jobs, Tab::SQL, Tab::Logs,
-       Tab::DB, Tab::Migrations, Tab::Auth, Tab::Console, Tab::Commands,
-       Tab::Build, Tab::Errors, Tab::Config].select { |section| tabs.includes?(section) }
+      [Tab::Dashboard, Tab::Errors, Tab::Tracing, Tab::Logs, Tab::Profiler,
+       Tab::Auth, Tab::Database, Tab::Cache, Tab::JoobQ, Tab::Jobs,
+       Tab::Components, Tab::Mailers].select do |section|
+        name = section_name(section).downcase
+        tabs.includes?(section) && @dashboard.enabled?(name)
+      end
     end
 
     private def nav_icon(section : Tab, frame : Frame) : String
@@ -47,38 +50,6 @@ module AzuCLI::DevServer
       end
     end
 
-    private def overview_key(key : Key) : Nil
-      if key.code.tab? || key.code.back_tab?
-        @overview_focus = (@overview_focus + (key.code.back_tab? ? 2 : 1)) % 3
-        return
-      end
-      section = {Tab::Logs, Tab::SQL, Tab::Jobs}[@overview_focus]
-      if key.code.enter?
-        select_tab(section)
-        return
-      end
-      if section.sql? && (key.code.page_up? || key.code.page_down?)
-        @overview_sql.key(key)
-      else
-        if section.logs?
-          @follow_logs = false
-          # Log storage is newest-first; the overview reads chronologically.
-          code = case key.code
-                 when .down?      then KeyCode::Up
-                 when .up?        then KeyCode::Down
-                 when .page_down? then KeyCode::PageUp
-                 when .page_up?   then KeyCode::PageDown
-                 when .home?      then KeyCode::End
-                 when .end?       then KeyCode::Home
-                 else                  key.char?('j') ? KeyCode::Up : (key.char?('k') ? KeyCode::Down : key.code)
-                 end
-          key = Key.new(code)
-        end
-        @overview_sql.reset if section.sql?
-        @inspectors[section].key(key)
-      end
-    end
-
     def view(frame : Frame) : Nil
       frame.fill(frame.area, style: frame.style(Token::Text, bg: Token::Backplate))
       if frame.width < 48 || frame.height < 14
@@ -94,9 +65,17 @@ module AzuCLI::DevServer
       draw_header(frame, header)
       if active = panel
         @workspace.panel_view(frame, content, active)
+      elsif tab.jobs? && content.h >= 20
+        queues, details = content.split_top(10)
+        draw_queues(frame, queues)
+        draw_inspector(frame, details)
+      elsif tab.joob_q?
+        @joobq.draw(frame, content)
       elsif tab.dashboard?
         dashboard(frame, content)
       else
+        content = draw_database_nav(frame, content) if database_view?
+        content = draw_section_metrics(frame, content)
         draw_inspector(frame, content)
       end
       draw_footer(frame)
@@ -122,7 +101,7 @@ module AzuCLI::DevServer
           previous_group = group
         end
         selection = labels.size if section == tab
-        label = Width.pad("#{nav_icon(section, frame)} #{section_name(section)}", rail.w - 7) + "[#{shortcut(section)}]"
+        label = section.jobs? ? "Queues & Activity" : Width.pad("#{nav_icon(section, frame)} #{section_name(section)}", rail.w - 7) + "[#{shortcut(section)}]"
         labels << label
       end
       area = Rect.new(rail.x + 1, 7, rail.w - 2, Math.max(0, rail.h - 12))
@@ -130,7 +109,7 @@ module AzuCLI::DevServer
       @nav_viewport.reveal(selection)
       @nav_viewport.draw(frame, area, labels, selection)
       labels.skip(@nav_viewport.offset).first(area.h).each_with_index do |label, row|
-        if {"OBSERVE", "DATA & ACCESS", "DEVELOP"}.includes?(label)
+        if {"OBSERVE", "DATA & ACCESS", "JOBS", "DEVELOP"}.includes?(label)
           frame.text(area.x, area.y + row, label, Token::Muted, max: area.w - 1)
         elsif label.empty?
           frame.hline(area.x, area.y + row, area.w - 2, frame.style(Token::Border))
@@ -158,11 +137,11 @@ module AzuCLI::DevServer
         segments << Seg[" :#{@workspace.port}", Token::Cyan]
       end
       reserve = header.w >= 100 ? 25 : 0
-      frame.text(header.x, header.y, @notice, Token::Muted, max: header.w - reserve) if @read_only
+      frame.text(header.x, header.y + 1, @notice, Token::Muted, max: header.w - reserve) if @read_only
       if @received && !@read_only && !@sample_data
-        frame.text(header.x, header.y, SharedTelemetry.runtime_label(@snapshot), Token::Muted, max: header.w - reserve)
+        frame.text(header.x, header.y + 1, SharedTelemetry.runtime_label(@snapshot), Token::Muted, max: header.w - reserve)
       end
-      frame.line(header.x, header.y + 1, segments, header.w - reserve)
+      frame.line(header.x, header.y, segments, header.w - reserve)
       if reserve > 0
         label = @sample_data ? "PREVIEW · SAMPLE DATA" : (@read_only ? "PRODUCTION · READ ONLY" : "LOCAL DEVELOPMENT")
         frame.text(header.right - reserve, header.y, label, Token::Muted, max: reserve)
@@ -208,7 +187,7 @@ module AzuCLI::DevServer
       when .commands?
         "j/k select · Enter run/review · PgUp/PgDn output"
       when .dashboard?
-        "Tab pane · Enter inspect · j/k select · f follow · t source"
+        "[ / ] page · Tab card · Enter inspect · j/k select"
       when .logs?
         "j/k select · Tab details · f follow · t source · / filter"
       when .build?
@@ -233,9 +212,9 @@ module AzuCLI::DevServer
                "q / Ctrl-C   Quit (Ctrl-C cancels inside Console)",
                "", "VIEWS"]
       navigation_tabs.each { |section| lines << "#{shortcut(section).to_s.ljust(13)}#{section_name(section)}" }
-      lines.concat(["", "LISTS AND OVERVIEW", "j/k or ↑/↓   Select a row", "Tab          Switch pane", "PgUp/PgDn    Scroll a page (SQL text in Overview)",
+      lines.concat(["", "LISTS AND OVERVIEW", "j/k or ↑/↓   Select a row", "Tab          Switch pane", "PgUp/PgDn    Scroll the focused list or detail pane",
                     "Home/End     First/last row", "/            Filter data; Enter applies; Esc clears",
-                    "f            Follow newest logs", "t            Toggle app output / azu/dev requests", "Enter        Open the focused Overview inspector"])
+                    "f            Follow newest logs", "t            Toggle app output / azu/dev requests", "[ / ]        Overview pages / Database subviews", "Enter        Open the focused Overview card"])
       unless @read_only
         lines.concat(["", "LOCAL COMMANDS", ":            Compose an azu command", "g            Compose a generator", "Enter, y/n   Review, then confirm/cancel a command",
                       "r            Rebuild application", "", "CONSOLE", "Enter        Evaluate", "Alt-Enter    Insert newline", "Ctrl-O       Interpreter", "Esc          Back; Ctrl-P opens hints/menu", "Letters are input while editing Console or search."])
@@ -247,7 +226,7 @@ module AzuCLI::DevServer
       content = SQLTab.draw_metrics(frame, content, field(@snapshot, "sql")) if tab.sql?
       title = case tab
               when .sql?  then "SQL · #{SQLTab.feed_label(field(@snapshot, "sql"))}"
-              when .auth? then @read_only ? "Auth · not exported" : "Auth · #{@auth.label}"
+              when .auth? then @read_only ? "Sessions · not exported" : "Sessions · #{@dashboard.section("sessions") ? @dashboard.status("sessions") : @auth.label}"
               when .logs? then using_shared_logs? ? "Logs · azu/dev requests" : "Logs · application output"
               else             section_name(tab)
               end
@@ -265,8 +244,13 @@ module AzuCLI::DevServer
                 "No samples received"
               end
       at = tab.jobs? ? @jobs_received : (tab.auth? && @auth.available? ? @auth.received : @received)
+      if {Tab::Tracing, Tab::Profiler, Tab::Cache, Tab::Components, Tab::Mailers, Tab::Runtime}.includes?(tab)
+        name = tab.runtime? ? "process" : section_name(tab).downcase
+        title += " · #{@dashboard.status(name)}"
+        empty = "#{@dashboard.status(name)} · #{@dashboard.section(name) ? "No samples recorded" : "Application adapter not supplied"}"
+      end
       empty = @jobs.try(&.error) || "No queue samples; configure config/joobq.development.yml or config/jobs.yml" if tab.jobs?
-      @inspectors[tab].draw(frame, content, "#{title} · #{tab.jobs? ? jobs_status : freshness(at)}", empty, highlighter(tab))
+      @inspectors[tab].draw(frame, content, "#{tab.jobs? ? jobs_status : freshness(at)} · #{title}", empty, highlighter(tab))
     end
 
     private def jobs_status : String
@@ -300,121 +284,10 @@ module AzuCLI::DevServer
       frame.text(inner.x, inner.bottom - 1, "↑/↓ choose · Enter open · Esc close", Token::Muted, max: inner.w)
     end
 
-    private def dashboard(frame : Frame, area : Rect) : Nil
-      metrics, body = area.split_top(area.w < 88 ? 8 : 6)
-      draw_metrics(frame, metrics)
-      queue_height = body.h >= 18 ? Math.min(9, body.h // 3) : 0
-      main, queues = body.split_top(body.h - queue_height)
-      if main.w >= 88
-        logs, sql = main.split_left(main.w * 61 // 100, 1)
-        draw_live_logs(frame, logs)
-        draw_sql_preview(frame, sql)
-      elsif @overview_focus == 1
-        draw_sql_preview(frame, main)
-      elsif @overview_focus == 2
-        draw_queues(frame, main)
-      else
-        draw_live_logs(frame, main)
-      end
-      draw_queues(frame, queues) if queue_height > 0
-    end
-
-    private def draw_metrics(frame : Frame, area : Rect) : Nil
-      requests = field(@snapshot, "requests")
-      pool = field(field(@snapshot, "sql"), "pool")
-      jobs = @jobs
-      available_jobs = jobs.try { |sample| sample.error ? nil : sample.queues }
-      active = available_jobs.try(&.sum(&.processing))
-      waiting = available_jobs.try(&.sum(&.pending))
-      cards = if area.w < 88
-                top, bottom = area.split_top(4)
-                top.columns(2, 1) + bottom.columns(2, 1)
-              else
-                area.columns(4, 1)
-              end
-      titles = {"Requests", "JoobQ", "CQL pool", "Auth"}
-      values = {"#{text(requests, "rps")} req/s", "#{active || "--"} processing", "#{text(pool, "in_flight")} / #{SQLTab.pool_capacity(pool)} in use",
-                @read_only ? "not exported" : "#{@rows[Tab::Auth].size} recent events"}
-      notes = {"p95 #{text(requests, "p95_ms")}ms", "#{waiting || "--"} waiting", "idle #{text(pool, "idle")}",
-               @read_only ? "read only" : (@auth.available? ? "application events" : "HTTP only")}
-      cards.each_with_index do |rect, index|
-        inner = frame.card(rect, titles[index], border: Token::Border)
-        frame.text(inner.x, inner.y, values[index], Token::Cyan, max: inner.w)
-        frame.text(inner.x, inner.y + 1, notes[index], Token::Muted, max: inner.w) if inner.h >= 2
-        next if inner.h < 3
-        if index == 0 && !@request_history.empty?
-          chart = Widgets.sparkline(@request_history, inner.w // 2, frame.glyphs).chars.map { |char| "#{char}#{char}" }.join
-          frame.gradient(inner.x, inner.bottom - 1, chart)
-        elsif index == 2 && DiagnosticData.number(pool, "max") > 0
-          gauge(frame, Rect.new(inner.x, inner.bottom - 1, inner.w, 1), DiagnosticData.number(pool, "in_flight") / DiagnosticData.number(pool, "max"))
-        elsif index == 1 && active && waiting && active + waiting > 0
-          gauge(frame, Rect.new(inner.x, inner.bottom - 1, inner.w, 1), active.to_f / (active + waiting))
-        else
-          frame.text(inner.x, inner.bottom - 1, index == 3 ? "#{@auth.available? ? freshness(@auth.received) : "adapter needed"}" : (index == 1 ? jobs_status : freshness(@received)), Token::Muted, max: inner.w)
-        end
-      end
-    end
-
     private def gauge(frame : Frame, area : Rect, fraction : Float64) : Nil
       full, empty = Widgets.meter(fraction, Math.max(0, area.w), frame.glyphs.spark.last, frame.glyphs.spark.last)
       frame.gradient(area.x, area.y, full)
       frame.text(area.x + full.size, area.y, empty, Token::Faint, max: empty.size)
-    end
-
-    private def draw_live_logs(frame : Frame, rect : Rect) : Nil
-      title = "Live logs · #{using_shared_logs? ? "azu/dev" : (@follow_logs ? "following" : "paused")}"
-      inner = frame.card(rect, title, @overview_focus == 0 ? "focus" : nil, border: Token::Border)
-      inspector = @inspectors[Tab::Logs]
-      if inspector.items.empty?
-        empty = query.empty? ? (using_shared_logs? ? "No request samples · require azu/dev + PERFORMANCE_MONITORING=true" : "Waiting for application logs") : "No matching logs · Esc clears filter"
-        frame.text(inner.x, inner.y, empty, Token::Muted, max: inner.w)
-        return
-      end
-      lines = inspector.items.reverse.map(&.label)
-      inspector.list.configure(lines.size, inner.h)
-      selected = lines.size - 1 - inspector.selected
-      @overview_logs.configure(lines.size, inner.h)
-      @overview_logs.reveal(selected)
-      @overview_logs.draw(frame, inner, lines, @overview_focus == 0 ? selected : nil, LOG_COLOR)
-    end
-
-    private def draw_sql_preview(frame : Frame, rect : Rect) : Nil
-      inner = frame.card(rect, "SQL · selected query", @overview_focus == 1 ? "focus" : nil, border: Token::Border)
-      inspector = @inspectors[Tab::SQL]
-      unless selected = inspector.selected_item
-        frame.text(inner.x, inner.y, "No SQL samples received", Token::Muted, max: inner.w)
-        return
-      end
-      # Lexical formatting only: quoted SQL literals are indivisible tokens.
-      source = selected.details.first? || selected.label
-      formatted = String.build do |io|
-        Highlight.sql(source).each do |seg|
-          io << '\n' if {"FROM", "WHERE", "ORDER", "GROUP", "LIMIT", "JOIN", "LEFT", "INNER", "HAVING", "RETURNING", "AND"}.includes?(seg.text.upcase)
-          io << seg.text
-        end
-      end
-      lines = Viewport.wrap(formatted.lines.map(&.strip), Math.max(1, inner.w - 6))
-      code_height = Math.min(lines.size, Math.max(1, inner.h - 10))
-      code, details = inner.split_top(code_height)
-      numbered = lines.map_with_index { |line, i| "#{(i + 1).to_s.rjust(2, '0')}  #{line}" }
-      @overview_sql.draw(frame, code, numbered, highlight: ->(line : String) { [Seg[line[0, 4], Token::Muted]] + Highlight.sql(line[4..]) })
-      return if details.h < 3
-      frame.hline(details.x, details.y, details.w, frame.style(Token::Border))
-      # Duration, caller and pool wait come from the selected query's actual row.
-      metadata = selected.details.reject { |line| line.empty? || line == source }
-      frame.text(details.x, details.y + 1, metadata.first? || "Origin: not supplied", Token::Cyan, max: details.w)
-      frame.text(details.x, details.y + 2, metadata[1]? || "", Token::Muted, max: details.w)
-      return if details.h < 8
-      frame.text(details.x, details.y + 3, metadata[2]? || "", Token::Cyan, max: details.w)
-      alerts = DiagnosticData.rows(field(@snapshot, "sql"), "n_plus_one", 30)
-      frame.text(details.x, details.y + 4, alerts.empty? ? "No N+1 warnings reported" : "N+1 · #{alerts.size} #{alerts.size == 1 ? "pattern" : "patterns"} · 5 opens SQL", alerts.empty? ? Token::Muted : Token::Amber, max: details.w)
-      frame.hline(details.x, details.y + 5, details.w, frame.style(Token::Border))
-      frame.text(details.x, details.y + 6, "#{SQLTab.feed_label(field(@snapshot, "sql")).capitalize} · #{inspector.items.size} samples", Token::Purple, max: details.w)
-      list = Rect.new(details.x, details.y + 7, details.w, details.h - 7)
-      inspector.list.configure(inspector.items.size, list.h)
-      @overview_queries.configure(inspector.items.size, list.h)
-      @overview_queries.reveal(inspector.selected)
-      @overview_queries.draw(frame, list, inspector.items.map(&.label), inspector.selected, SQL_COLOR)
     end
 
     private def draw_queues(frame : Frame, rect : Rect) : Nil
@@ -456,3 +329,8 @@ module AzuCLI::DevServer
     end
   end
 end
+
+require "./overview"
+require "./database_navigation"
+
+require "./section_panels"

@@ -8,6 +8,8 @@ description: Generate an HTTP::Handler skeleton for authentication, authorizatio
 
 ## Overview & visual demo
 
+Generate middleware for behavior that belongs around HTTP requests. Keep its ordering explicit, and let application endpoints retain ownership of business logic.
+
 <figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu, with middleware listed as an HTTP handler"><figcaption><p><code>azu g</code> lists <code>middleware</code> as an HTTP handler. Pick it, then give it a name and a type.</p></figcaption></figure>
 
 ```mermaid

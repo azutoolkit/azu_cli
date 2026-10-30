@@ -10,6 +10,8 @@ For stateful events, live rendering and database-backed CRUD, use the [Spark gen
 
 ## Overview & visual demo
 
+Generate a reusable server-rendered component. For stateful browser interactions and live updates, use the Spark generator described in the dedicated live-components guide.
+
 <figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate after writing: each file with its line count and a reminder that azu undo reverts them"><figcaption><p>After Enter, <code>azu g</code> lists each file it wrote with its line count. <code>azu undo</code> reverts them.</p></figcaption></figure>
 
 ```mermaid

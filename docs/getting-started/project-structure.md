@@ -8,6 +8,8 @@ Every generator writes to a predictable place with a predictable name, so you ca
 
 ## Overview & visual demo
 
+Use the generated directory structure to find each application concern quickly. Endpoints handle HTTP, services hold application behavior, models persist data, and templates or components render the UI.
+
 <figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate listing the files a scaffold wrote, grouped by directory"><figcaption><p>A scaffold's files, as they land in the tree: templates, migration, schema change, endpoints, model, pages, requests and services.</p></figcaption></figure>
 
 ```mermaid

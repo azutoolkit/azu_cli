@@ -8,7 +8,7 @@ description: Set up typed session storage with azu session:setup (cookie, Redis 
 
 ## Overview & visual demo
 
-Pick the backend once: cookie sessions for most apps, Redis when several instances must share sessions, memory only for development. The setup refuses to overwrite an existing initializer unless you pass `--force`, and it never touches the files that authentication owns.
+Set up sessions using the supported cookie, Redis, or memory backend. Backend choice determines persistence and management capabilities; cookie sessions cannot expose an active-session inventory.
 
 <figure><img src="../assets/terminal-ui/12-generate-written.png" alt="azu generate's list of written files, with one changed file marked with a tilde"><figcaption><p>Not <code>session:setup</code>'s output. This is the file list <code>azu g</code> prints after it writes, with a changed file marked <code>~</code>. <code>session:setup</code> prints plain lines and the next steps.</p></figcaption></figure>
 

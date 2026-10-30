@@ -8,6 +8,8 @@ description: Generate an Azu::Channel, a WebSocket endpoint whose clients all re
 
 ## Overview & visual demo
 
+Generate a WebSocket channel and its application wiring. Use the generated message handlers as the starting point for your own protocol, validation, and authorization.
+
 <figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The azu generate menu listing channel as a WebSocket channel"><figcaption><p><code>azu g</code> lists <code>channel</code> as a WebSocket channel. The command takes a name and nothing else.</p></figcaption></figure>
 
 ```mermaid

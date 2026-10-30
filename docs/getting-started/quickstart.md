@@ -8,7 +8,7 @@ Create a web project, start the dev server and scaffold a CRUD resource while it
 
 ## Overview & visual demo
 
-<figure><img src="../assets/terminal-ui/05-new-done.png" alt="azu new blog finished, with the next steps card"><figcaption><p>Where you'll be after step 1: the project exists, its secrets are written, and the card tells you what to run next.</p></figcaption></figure>
+Create a small SQLite-backed application, add a feature, apply its migration, and run it locally. You can add Redis and other integrations after the first request works.
 
 ```mermaid
 sequenceDiagram

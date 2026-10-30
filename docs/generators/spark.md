@@ -6,7 +6,7 @@ description: Generate typed Spark components and database-backed live CRUD with 
 
 ## Overview & visual demo
 
-`azu generate spark` creates a stateful `Azu::Spark::Component` with typed events. `azu generate scaffold --spark` creates a complete database-backed CRUD interface: list, create, edit, validation, confirmed deletion and updates between open tabs. Both use the generated app's daisyUI theme and Azu's locally served Spark client.
+Generate stateful Spark components or a database-backed live CRUD scaffold. The generated pages use Azu's live component protocol and register their navigation entries where the application supports it.
 
 <figure><img src="../assets/generated-ui/spark-products.png" alt="Generated Spark products screen with a live table, paging controls and a create/edit form"><figcaption><p>A real generated SQLite application exercised in Chromium.</p></figcaption></figure>
 

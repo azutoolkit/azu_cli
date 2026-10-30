@@ -11,7 +11,7 @@ alias UI = AzuCLI::UI
 alias Dev = AzuCLI::DevServer
 alias Jobs = AzuCLI::JoobQDashboard
 
-OUTPUT = "docs/assets/terminal-ui/new-screens"
+OUTPUT = ENV["AZU_PREVIEW_DIR"]? || "/tmp/azu-cli-previews/new-screens"
 Dir.mkdir_p(OUTPUT)
 
 def press(screen, char : Char)

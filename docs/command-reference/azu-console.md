@@ -6,7 +6,7 @@ description: Open Crystal's interpreter with your app loaded, to run code agains
 
 ## Overview & visual demo
 
-`azu console` loads the app in Crystal's interpreter (`crystal i`) without starting its server, and leaves you at a prompt with the app loaded. It is the interpreter, not a Rails-style console: it needs a Crystal built with the interpreter, which the official Docker images are not, and nothing reloads while it runs. There is no concise twin for this page.
+Evaluate Crystal against your project in a local console. Use it to investigate application behavior; evaluated code has the same privileges and database access as the application.
 
 <figure><img src="../assets/terminal-ui/14-doctor.png" alt="The azu doctor card for a project, with the crystal and shards versions and the database check"><figcaption><p><code>azu doctor</code> on a project. It reports the Crystal toolchain that <code>azu console</code> runs on. The console also needs the interpreter, which doctor's version line does not show.</p></figcaption></figure>
 

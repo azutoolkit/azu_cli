@@ -5,11 +5,13 @@ Requires Pillow, pyte and DejaVu Sans Mono. No UI content is synthesized here.
 from pathlib import Path
 from html import escape
 import zipfile
+import os
 import pyte
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / 'docs/assets/terminal-ui/new-screens'
+OUT = Path(os.environ.get('AZU_PREVIEW_DIR', '/tmp/azu-cli-previews/new-screens'))
+IMAGES = ROOT / 'docs/assets/terminal-ui/new-screens'
 COLS, ROWS = 136, 40
 CW, CH, PAD, TOP = 11, 22, 24, 58
 BG, FG = '#0b0e14', '#c9d1d9'
@@ -54,7 +56,7 @@ for name, title in SCREENS:
             draw.text((left, top+17), cell.data, font=font, fill=fg, anchor='ls')
             if cell.underscore:
                 draw.line((left,top+20,left+CW-1,top+20),fill=fg)
-    img.save(OUT / f'{name}.png')
+    img.save(IMAGES / f'{name}.png')
 
 # A local, responsive gallery plus original-resolution PNGs in one download.
 html = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -66,7 +68,7 @@ html += '<p><a href="terminal-screens.zip">Download all PNGs</a></p></html>'
 (OUT / 'index.html').write_text(html)
 with zipfile.ZipFile(OUT / 'terminal-screens.zip', 'w', compression=zipfile.ZIP_DEFLATED) as archive:
     for name,_ in SCREENS:
-        archive.write(OUT / f'{name}.png', f'{name}.png')
+        archive.write(IMAGES / f'{name}.png', f'{name}.png')
     archive.write(OUT / 'index.html','index.html')
 for path in OUT.iterdir():
     if path.is_file():

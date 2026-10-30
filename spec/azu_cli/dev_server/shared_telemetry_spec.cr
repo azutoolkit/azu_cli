@@ -16,7 +16,7 @@ end
 describe "workspace keyboard hints" do
   it "shows shortcut labels and a scrollable help panel without stealing text input" do
     screen = shared_screen
-    shared_text(screen).should contain "[5]"
+    shared_text(screen).should contain "[D]"
     shared_text(screen).should contain "h help"
     screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, 'h'))
     shared_text(screen).should contain "Keyboard hints"
@@ -72,8 +72,9 @@ describe AzuCLI::DevServer::SharedTelemetry do
   it "uses shared requests without stdout, permits source switching, and exposes supplied runtime metrics" do
     screen = shared_screen
     screen.update(SharedEvents::Telemetry.new(JSON.parse(%({"v":1,"requests":{"recent":[{"at":"12:00:00","method":"GET","path":"/shared-request","status":500,"ms":2.5}]},"runtime":{"heap_bytes":1048576,"free_bytes":1024}}))))
+    screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '7'))
     text = shared_text(screen)
-    text.should contain "Live logs · azu/dev"
+    text.should contain "Logs · azu/dev requests"
     text.should contain "ERROR HTTP GET /shared-request 500 2.5ms"
     text.should contain "heap 1.0 MB"
     screen.update(SharedEvents::LogLine.new("INFO application-output"))
@@ -107,6 +108,7 @@ describe AzuCLI::DevServer::SharedTelemetry do
       end
       shared_text(screen).should contain "azu/dev v1"
       shared_text(screen).should contain "heap"
+      screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '7'))
       shared_text(screen).should contain "POST /login"
       screen.update(SharedUI::Key.new(SharedUI::KeyCode::Char, '5'))
       text = shared_text(screen)

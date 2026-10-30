@@ -12,7 +12,7 @@ describe AzuCLI::Generate::Auth do
     in_generated_project do
       render.call(".")
       helper = File.read("src/services/auth_telemetry.cr")
-      helper.strip.should eq AzuCLI::Generate::Auth.new.auth_telemetry_source.strip
+      helper.should eq AzuCLI::Generate::Auth.new.auth_telemetry_source + "\n"
       login = File.read("src/endpoints/sessions/create_endpoint.cr")
       login.should contain(%(require "../../services/auth_telemetry"))
       login.should contain(%(AzuAuthTelemetry.record("sign-in", "rejected")))

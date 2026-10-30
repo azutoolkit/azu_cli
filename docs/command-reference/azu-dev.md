@@ -6,154 +6,15 @@ description: Run your app in development, rebuilding and restarting it on every 
 
 ## Workspace HUD
 
-`azu dev` opens the full-height workspace rail, bottom-right Ctrl-P palette,
-SQL/log syntax highlighting and responsive list/detail panes. Press `b` to collapse
-the rail, `/` to filter, `c` for the existing console, and Esc to return from it.
-`--ui rich` and `--ui mission` are aliases for this same interface; the old
-dashboard is no longer selectable. Build (`d`), Errors (`e`), Commands (`?`),
-Console (`c`) and Config (`v`) stay inside the workspace. Ctrl-P navigates even
-while the console is accepting input; Esc returns from the console. Generated
-authentication includes the Auth adapter; existing apps need the integration below
-for verified outcomes. Schema views require an application adapter;
-see the [architecture and integration plan](../architecture/mission-control.md).
+The workspace mirrors Azu's browser dashboard with a health banner and paged cards for uptime, memory, latency, routes, traffic, errors, cache, database, components, and runtime. Optional features are hidden when explicitly disabled; missing telemetry remains labeled unavailable.
 
-The SQL tab accepts both `sql.recent` and the `sql.slowest` snapshots emitted by
-older Azu v1 exporters. The latter is labeled **slowest sample** and shows the
-available sample rather than a complete query stream. If no SQL samples arrive,
-verify that the application loads `azu/cql`, attaches its schema with
-`Azu::CQL.attach`, and executes queries while development telemetry is enabled.
-An active search can hide rows; **Esc** clears the filter.
+Use Ctrl-P to navigate the four sidebar groups. Errors lives under **Observe**; **Sessions** replaces Auth; **Database** contains SQL, pool, schema, and migration subviews. **Jobs** holds JoobQ management and Queues & Activity. Components and Mailers live under **Develop**. Build, console, configuration, routes, and command composition remain available through the palette.
 
-The **Auth** tab (`6`) shows explicit sign-in, sign-out and sign-up outcomes in
-apps created with the updated `azu generate auth`. Older apps show observed
-POST/DELETE requests to common authentication routes, labeled **outcome unknown**.
-A 303 redirect cannot distinguish successful authentication from a rejected form.
-For verified outcomes in an existing app, follow
-[Auth integration](../architecture/mission-control.md#auth-integration).
-When there is no producer, the tab explains how to enable it; a connected producer
-with no events shows “No authentication events yet.” `azu connect` does not export
-authentication events.
+Press `[` / `]` to change Overview pages or Database subviews, Tab to move focus, Enter to inspect, and `h` for contextual help. The sidebar collapses below 104 columns. Dense lists and stack traces scroll inside their panes. See [Terminal UI](../getting-started/terminal-ui.md) for the complete key map.
 
-The Overview combines request/job/pool/auth cards, chronological highlighted logs,
-a selected SQL preview and a queue table. **Tab** cycles its three panes; **j/k**
-selects rows, **Enter** opens the focused inspector, and **f** resumes log following.
-**PageUp/PageDown** scroll long SQL. Short terminals show one main pane at a time.
-The rail includes **Schema** (`4`) and read-only **Migrations** (`m`); migration
-history requires an application adapter.
+The full card grid needs the additive shared dashboard snapshot in Azu. Older v1 applications retain existing request, SQL, and error feeds. For SQL, load `azu/cql`, attach the schema with `Azu::CQL.attach { AppDB }`, and run application queries. A missing query is different from a zero-duration query; Esc clears any active filter.
 
-Each rail and menu entry displays its shortcut. Press **h** for scrollable,
-context-specific keyboard hints; **Esc** closes them. In Console, letters remain
-input: use **Ctrl-P**, search “Keyboard hints”, and press Enter. Search input also
-keeps typed letters. The footer prioritizes the current view's controls.
-
-The header shows GC heap/free memory supplied by `Azu::Dev::Telemetry`. The log
-pane uses its recent request samples when stdout/stderr is absent. Press **t**
-in Overview or Logs to switch between application output and shared requests;
-the pane labels its source. These retained samples are not a complete access log.
-Auth's separate adapter cannot overwrite the main request/SQL/error snapshot.
-
-### Display local JoobQ jobs
-
-The Overview queue table and Jobs tab (`3`) poll Redis every two seconds. They do
-not connect to the worker's management HTTP API on port 8080 and do not need its
-API token. **Redis connected** confirms a successful metrics read, not worker
-liveness. Both the app and worker must use the same Redis database as `azu dev`.
-Set `REDIS_URL` in the project environment (or `REDIS_HOST`, `REDIS_PORT` and
-`REDIS_PASS`). Custom YAML Redis settings are not imported by the HUD; set the
-matching environment variables explicitly.
-
-Queue names come from the first existing local file in this order:
-`config/joobq.<environment>.yml`, `joobq.yml`, `config/joobq.yml`,
-`config/jobs.yml`. Environment selection uses `JOOBQ_ENV`, then `RACK_ENV`, then
-`CRYSTAL_ENV`, defaulting to `development`. Restart `azu dev` after changing queue
-configuration. A `config/jobs.yml` entry is a HUD manifest; it does not by itself
-register a runnable job in the worker.
-
-If the worker reports **Memoized 0 queues**, register the concrete class and the
-factory queue before calling `JoobQ.queues` or `JoobQ.forge`. For example, after
-requiring `joobq` and `../jobs/**` in `src/initializers/joobq.cr`:
-
-```crystal
-JoobQ::QueueFactory.register_job_type(HelloWorldJob)
-
-JoobQ.configure do |config|
-  config.default_queue = "default"
-  config.stats_enabled = true
-  config.rest_api_enabled = false # optional: the HUD reads Redis directly
-  config.queue_configs["default"] = {
-    job_class_name: "HelloWorldJob",
-    workers: 2,
-    throttle: nil,
-  }
-end
-```
-
-For this code-configured queue, the HUD manifest is:
-
-```yaml
-# config/jobs.yml
-joobq:
-  queues:
-    default:
-      job_class: HelloWorldJob
-      workers: 2
-```
-
-Start the app with `azu dev` and the worker in another terminal with
-`crystal run src/worker.cr`. Confirm the worker logs `default` in its queue list.
-For a job with `email_address : String` and `subject : String`, enqueue from the
-application console:
-
-```crystal
-HelloWorldJob.enqueue(email_address: "demo@example.com", subject: "HUD test")
-```
-
-Alternatively, create `src/enqueue_hello.cr` with `require "./blog"` (replace
-`blog` with your application filename), followed by that enqueue call, and run
-`crystal run src/enqueue_hello.cr` from the project root.
-
-Waiting reads the list named exactly after the queue (for example `default`);
-processing reads `joobq:processing:<queue>`. Completed is the cumulative successful
-completion counter in `joobq:stats:completed`, so jobs faster than the polling
-interval still leave visible evidence. DLQ reads the current per-queue index in
-`joobq:dead_letter:counts`; it is not the count of retry attempts. These counters
-describe the legacy `JoobQ::Queue`/`Worker` API, not the separate Delivery ledger.
-Older JoobQ versions without those counters need upgrading; historical DLQ data
-without the index must be reconciled by JoobQ's DLQ tools. The HUD is read-only
-and does not rebuild it. Remote snapshots lacking completions show `--`.
-
-### Run commands inside the HUD
-
-In `azu dev`, press **g** to compose a generator command or **:**
-to enter a supported Azu command. For example:
-
-```text
-generate scaffold Product name:string price_cents:int32 active:bool --spark
-```
-
-Press **Enter** to review the exact arguments and working directory, then **y**
-to run, **n** to edit, or **Esc** to cancel. Results and exit status appear in
-the same panel; PageUp/PageDown scroll output. Esc closes the panel; `:` reopens
-it while a command runs. Closing the panel does not cancel its process.
-
-Commands execute locally, using the dev session's environment and configured
-services. A local database command can still affect a remote database if your
-project's connection string points there. The review step identifies the local
-directory; it does not prove your service URLs point to development.
-
-Generators accept normal arguments, including `--spark`. Other commands use the
-exact arguments listed in **? Commands** (for example `version`, `test`,
-`db:status`, or `db:rollback --force`). This is an argv composer, not a shell:
-pipes, redirects, command substitution and nested terminal commands are rejected.
-Runs are serialized with existing checks, pause during builds/console compilation,
-and capture at most 512 KiB of output while draining the remainder. The panel
-retains the last 500 lines of that captured prefix. Commands are not persisted in
-history, and generator conflicts retain their usual behavior; `--force` is never
-silently added to a generator command. Quit requests termination of the active
-local process tree; applications that trap SIGTERM may still require operator cleanup.
-
-For production use [azu connect](azu-connect.md), which has no command runner,
-console, local app boot or rebuild capability.
+Generated authentication reports verified sign-in/out/up outcomes. Cookie sessions have no active-session inventory. Generated mailers register static previews and delivery outcomes without exporting real recipients or bodies. See [integration architecture](../architecture/mission-control.md).
 
 ## Overview & visual demo
 

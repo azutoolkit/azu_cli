@@ -9,16 +9,16 @@ require "../src/azu_cli/dev_server/mission_control"
 alias MissionUI = AzuCLI::UI
 alias MissionDev = AzuCLI::DevServer
 
-classic = MissionDev::Hud.new("storefront", "4000", "development", "illustrative telemetry",
+classic = MissionDev::Hud.new("blog", "4000", "development", "illustrative telemetry",
   commands: [] of MissionDev::Control::Command)
 program : MissionUI::Program? = nil
 control : MissionDev::Control::Runner? = nil
 if binary = ENV["AZU_PREVIEW_COMMAND_BINARY"]?
   control = MissionDev::Control::Runner.new(->(event : MissionUI::Message) { program.try(&.send(event)); nil }, executable: binary)
 end
-screen = MissionDev::MissionControl.new(classic, "storefront", sample_data: true,
+screen = MissionDev::MissionControl.new(classic, "blog", sample_data: true,
   on_command: ->(command : MissionDev::Control::Command) { control.try(&.enqueue(command)) || false })
-screen.update(MissionDev::Events::AppStarted.new(48231_i64))
+screen.update(MissionDev::Events::AppStarted.new(53628_i64))
 [144.0, 240.0, 390.0, 512.0, 640.0, 760.0, 820.0, 950.0, 1080.0, 1150.0, 1200.0].each do |rate|
   screen.update(MissionDev::Events::Telemetry.new(JSON.parse({v: 1, requests: {rps: rate}}.to_json)))
 end
@@ -39,7 +39,7 @@ screen.update(MissionDev::Events::JobsSample.new([
   MissionDev::Events::Queue.new("reports", 0_i64, 0_i64, 0_i64),
 ]))
 [
-  "14:32:07.993 INFO  Azu    starting server                  pid=48231",
+  "14:32:07.993 INFO  Azu    starting server                  pid=53628",
   "14:32:08.041 INFO  HTTP   GET /                 200 6.3ms req_8f2a",
   "14:32:08.104 INFO  HTTP   GET /products         200 4.8ms req_8f31",
   "14:32:08.106 DEBUG CQL query.complete 2.3ms req_8f31",
@@ -59,6 +59,8 @@ screen.update(MissionDev::Events::JobsSample.new([
   "14:32:09.487 INFO  HTTP   GET /products/1       200 4.4ms req_8f44",
 ].each { |line| screen.update(MissionDev::Events::LogLine.new(line)) }
 
+screen.update(MissionDev::Events::Telemetry.new(JSON.parse(File.read("spec/fixtures/telemetry/azu-dashboard-v1.json"))))
+
 if ARGV.includes?("--interactive")
   terminal = MissionUI::Terminal.detect
   abort "Interactive preview needs a terminal" unless terminal.interactive?
@@ -71,9 +73,9 @@ if ARGV.includes?("--interactive")
     control.try(&.stop)
   end
 else
-  directory = "docs/assets/terminal-ui/mission-control"
+  directory = ENV["AZU_PREVIEW_DIR"]? || "/tmp/azu-cli-previews/mission-control"
   Dir.mkdir_p(directory)
-  [{"overview", '1', 156, 46}, {"auth", '6', 156, 46}, {"sql", '5', 156, 46}, {"logs", '7', 156, 46}, {"compact", '1', 80, 24}].each do |(name, tab, width, height)|
+  [{"overview", '1', 200, 60}, {"auth", '6', 156, 46}, {"sql", '5', 156, 46}, {"logs", '7', 156, 46}, {"tracing", 'T', 156, 46}, {"cache", 'C', 156, 46}, {"mailers", 'M', 156, 46}, {"compact", '1', 80, 24}].each do |(name, tab, width, height)|
     screen.update(MissionUI::Key.new(MissionUI::KeyCode::Char, tab))
     styles = MissionUI::StyleTable.new(MissionUI::Theme.new(MissionUI::ColorDepth::TrueColor), MissionUI::Token::Backplate)
     frame = MissionUI::Frame.new(width, height, styles)

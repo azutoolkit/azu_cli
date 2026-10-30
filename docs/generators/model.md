@@ -8,6 +8,8 @@ description: Generate CQL ActiveRecord models and their create-table migrations 
 
 ## Overview & visual demo
 
+Generate a CQL-backed model and its schema-facing structure. Choose supported field types deliberately and keep validations, relationships, and persistence rules in the appropriate application layer.
+
 <figure><img src="../assets/terminal-ui/17-db-migrate.png" alt="azu db:migrate applying the CreatePosts migration to the development database"><figcaption><p>After <code>azu g model post</code>, <code>azu db:migrate</code> applies the migration it wrote. Here the <code>CreatePosts</code> migration is applied.</p></figcaption></figure>
 
 ```mermaid

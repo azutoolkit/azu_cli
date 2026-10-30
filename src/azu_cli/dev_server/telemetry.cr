@@ -245,7 +245,7 @@ module AzuCLI
         if stream = root["stream"]?
           return false unless stream.as_s? == "auth" && root["auth"]?.try(&.as_h?)
         end
-        %w(requests sql runtime auth).each do |key|
+        %w(requests sql runtime auth dashboard database).each do |key|
           value = root[key]?
           next if value.nil? || value.raw.nil?
           fields = value.as_h?

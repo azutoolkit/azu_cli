@@ -8,6 +8,8 @@ description: Generate a CQL migration from its name, so create, add, remove, ind
 
 ## Overview & visual demo
 
+Generate a schema migration for CQL. Review the forward and reverse changes, apply them with `azu db:migrate`, and verify the resulting application behavior.
+
 <figure><img src="../assets/terminal-ui/17-db-migrate.png" alt="azu db:migrate applying the CreatePosts migration"><figcaption><p><code>azu db:migrate</code> runs every migration that is not applied yet. The generator only writes the file.</p></figcaption></figure>
 
 ```mermaid

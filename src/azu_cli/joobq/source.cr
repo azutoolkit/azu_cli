@@ -23,12 +23,12 @@ module AzuCLI::JoobQDashboard
       "#{PROTOCOL}\nrequire #{("./" + relative).inspect}\n#{AGENT}"
     end
 
-    def self.open(boot : String, & : ProcessSource -> T) : T forall T
+    def self.open(boot : String, output : IO = STDERR, & : ProcessSource -> T) : T forall T
       ScratchFile.with(".azu_joobq_", script(boot)) do |path|
         binary = path + ".bin"
         begin
           # Compilation precedes the alternate-screen session; errors remain readable.
-          compiler = ScratchFile.watch(Process.new("crystal", ["build", path, "-o", binary], output: STDERR, error: STDERR))
+          compiler = ScratchFile.watch(Process.new("crystal", ["build", path, "-o", binary], output: output, error: output))
           status = compiler.wait
           raise "Could not compile the project's JoobQ adapter" unless status.success?
           source = new(binary)

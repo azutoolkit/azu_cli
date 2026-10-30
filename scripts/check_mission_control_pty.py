@@ -47,7 +47,7 @@ try:
     assert b"Keyboard hints" in output, "keyboard hints did not open"
     os.write(master, b"\x1b")
     collect(0.2)
-    os.write(master, b"t")
+    os.write(master, b"7t")
     collect(0.2)
     assert b"azu/dev" in output, "shared request source did not open"
     os.write(master, b"t")

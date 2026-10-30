@@ -6,7 +6,7 @@ description: Generate a Carbon message factory and an optional JoobQ delivery jo
 
 ## Overview & visual demo
 
-`azu g mailer` generates a factory under `src/mailers/` and, by default, a delivery job. The factory composes concrete Carbon messages; Carbon's adapter handles transport; the JoobQ job handles background delivery. Email bodies are starter content to replace with your application's templates.
+Generate a Carbon message factory and optional JoobQ delivery job. The factory builds messages, Carbon handles transport, and the optional development hooks expose static previews and delivery outcomes in Mailers.
 
 <figure><img src="../assets/terminal-ui/10-generate-menu.png" alt="The generator picker includes the mailer generator"><figcaption><p>Select mailer or use the command directly.</p></figcaption></figure>
 

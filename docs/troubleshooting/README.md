@@ -8,6 +8,8 @@ Most azu errors name what to fix: a file and line, a variable, or a hint under t
 
 ## Overview & visual demo
 
+Start with `azu doctor`, then use the build output and the relevant dashboard inspector to narrow down the problem. Missing telemetry, an idle integration, and a failed application are different states.
+
 <figure><img src="../assets/terminal-ui/09-dev-build-failed.png" alt="azu dev showing a failed build while the previous build keeps running"><figcaption><p>A failed build: the file and line, the compiler's message, and the keys. The app keeps serving until a build passes.</p></figcaption></figure>
 
 ```mermaid

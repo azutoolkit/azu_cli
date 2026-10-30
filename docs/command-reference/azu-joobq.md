@@ -6,7 +6,7 @@ description: Inspect JoobQ queues, workflow steps, retries and dead letters from
 
 ## Overview & visual demo
 
-`azu joobq` opens a standalone dark terminal dashboard. Three tabs share a master/detail viewport: Queues & Workers, Workflows, and DLQ & Retries. The renderer updates changed cells in synchronized frames; data arrives through the UI event channel.
+Inspect workers, workflow executions, and dead letters through JoobQ's application adapter. The same components appear under Jobs → JoobQ in `azu dev`; replay requires explicit confirmation.
 
 <figure><img src="../assets/terminal-ui/joobq-queues.png" alt="JoobQ queues dashboard captured from a live Redis validation session"><figcaption><p>A live queue snapshot in the terminal; list and detail panes share the bounded screen.</p></figcaption></figure>
 

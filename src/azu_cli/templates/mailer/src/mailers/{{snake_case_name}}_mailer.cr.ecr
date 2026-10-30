@@ -17,6 +17,18 @@ require "carbon"
 # A factory composes messages; Carbon owns delivery through its configured adapter.
 class <%=camel_case_name%>Mailer
   abstract class Delivery < Carbon::Email
+    def deliver
+      result = super
+      {% if @top_level.has_constant?("Azu") && Azu.has_constant?("Dev") && Azu::Dev.has_constant?("IntegrationEvents") %}
+        Azu::Dev::IntegrationEvents.delivery("<%=camel_case_name%>Mailer", "delivered")
+      {% end %}
+      result
+    rescue ex
+      {% if @top_level.has_constant?("Azu") && Azu.has_constant?("Dev") && Azu::Dev.has_constant?("IntegrationEvents") %}
+        Azu::Dev::IntegrationEvents.delivery("<%=camel_case_name%>Mailer", "failed")
+      {% end %}
+      raise ex
+    end
   end
 
   class Message < Delivery
@@ -84,3 +96,7 @@ end
 # Configure Carbon adapter based on environment
 <%=adapter_config%>
 
+{% if @top_level.has_constant?("Azu") && Azu.has_constant?("Dev") && Azu::Dev.has_constant?("IntegrationEvents") %}
+  # Static sample; never includes real recipients or message content.
+  Azu::Dev::IntegrationEvents.mailer("<%=camel_case_name%>Mailer", "Text version of <%=snake_case_name%>/<%=template_names.first%>")
+{% end %}

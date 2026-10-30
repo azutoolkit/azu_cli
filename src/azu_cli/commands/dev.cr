@@ -5,6 +5,7 @@ require "../dev_server/runner"
 require "../dev_server/telemetry"
 require "../dev_server/hud"
 require "../dev_server/mission_control"
+require "../joobq/controller"
 
 module AzuCLI
   module Commands
@@ -69,6 +70,38 @@ module AzuCLI
         wanted && STDIN.tty? && terminal.interactive? && columns >= 60 && rows >= 16
       end
 
+      @jobs_controller : AzuCLI::JoobQDashboard::Controller?
+      @jobs_opening = false
+
+      private def open_jobs : Nil
+        return if @jobs_opening || @jobs_controller
+        @jobs_opening = true
+        spawn do
+          begin
+            boot = "src/initializers/joobq.cr"
+            raise "No JoobQ initializer; run azu generate joobq" unless File.file?(boot)
+            emit(AzuCLI::JoobQDashboard::Notice.new("Compiling application JoobQ adapter"))
+            File.open(File::NULL, "w") do |output|
+              AzuCLI::JoobQDashboard::ProcessSource.open(boot, output: output) do |source|
+                unless @stopping
+                  controller = AzuCLI::JoobQDashboard::Controller.new(source, ->(event : UI::Message) { emit(event) })
+                  @jobs_controller = controller
+                  controller.start
+                  until @stopping
+                    sleep 250.milliseconds
+                  end
+                  controller.stop
+                end
+              end
+            end
+          rescue ex
+            emit(AzuCLI::JoobQDashboard::Notice.new("Unavailable: #{ex.message}; use azu joobq for compiler diagnostics")) unless @stopping
+          ensure
+            @jobs_opening = false
+          end
+        end
+      end
+
       private def run_dashboard(target : String) : Result
         terminal = UI::Terminal.detect
         telemetry = AzuCLI::DevServer::TelemetryServer.new
@@ -86,11 +119,14 @@ module AzuCLI
           on_cancel_eval: -> { evaluator.cancel; nil },
           on_interpreter: ->(prelude : Array(String)) { run_interpreter(app_file, prelude); nil })
         screen = AzuCLI::DevServer::MissionControl.new(workspace, target, terminal.reduced_motion?,
+          on_jobs: -> { open_jobs },
+          on_replay: ->(id : String) { @jobs_controller.try(&.replay(id)); nil },
           on_command: ->(command : AzuCLI::DevServer::Control::Command) { control.enqueue(command) })
         program = UI::Program.new(screen, terminal, UI::FullScreenRenderer.new(terminal.output))
         @hud = program
         @child.try do |child|
           child.env["AZU_TELEMETRY_SOCKET"] = telemetry.path
+          child.env["AZU_APP_NAME"] = target
           child.on_output = ->(line : String, error : Bool) { program.send(Events::LogLine.new(line, error)); nil }
         end
         telemetry.start { |data| program.send(Events::Telemetry.new(data)) }
@@ -108,6 +144,7 @@ module AzuCLI
         begin
           program.run
         ensure
+          @jobs_controller.try(&.stop)
           control.stop
           stop
           telemetry.stop

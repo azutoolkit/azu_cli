@@ -6,8 +6,7 @@ description: Monitor production from a local read-only HUD using verified SSH an
 
 ## Overview
 
-The terminal stays on your machine; only an authenticated snapshot read runs on
-the server. No production application code is loaded into a local console.
+Inspect a deployment from your machine through verified SSH and a bounded snapshot file. This view is read-only: local generators, the console, session mutations, mail delivery, and job replay stay unavailable.
 
 {% hint style="info" %}
 Provision the restricted SSH identity and publisher described below before

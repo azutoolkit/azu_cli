@@ -6,7 +6,7 @@ description: Index of every Azu CLI command with a link to its page, the global 
 
 ## Overview & visual demo
 
-Azu CLI is one binary, `azu`, with a command per task: create a project, generate code, run the app, manage the database and the background jobs. This index lists every registered command and the page that covers it.
+Find the command for the job, then open its reference for arguments, defaults, and examples. In the development workspace, Ctrl-P also opens command composition without leaving the terminal.
 
 <figure><img src="../assets/terminal-ui/05-new-done.png" alt="The card azu new prints when a project is ready, with the next steps"><figcaption><p>The end of <code>azu new blog</code>: the next steps the CLI prints, which are the commands this index covers.</p></figcaption></figure>
 

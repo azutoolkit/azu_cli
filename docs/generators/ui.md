@@ -6,7 +6,7 @@ description: Build and customize generated daisyUI pages with automatic applicat
 
 ## Overview
 
-New web projects use **daisyUI 5.7.50 and Tailwind CSS 4.3.3**. The welcome page, scaffold pages, authentication and account page share a responsive layout with a desktop sidebar, mobile menu, light/dark themes and keyboard focus indicators. Forms use daisyUI inputs, checkboxes and buttons; collections have empty states and scrollable tables; account pages use an avatar placeholder. Destructive scaffold actions show a confirmation dialog when JavaScript is available.
+Generated web applications use daisyUI components with Tailwind CSS. Edit ordinary Jinja templates and shared navigation, then rebuild styles with the project's documented frontend command.
 
 {% hint style="info" %}
 Compiled styles ship with each new app. Node is needed only to rebuild or customize CSS.
