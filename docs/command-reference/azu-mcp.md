@@ -70,3 +70,5 @@ Production changes require a named target and separate terminal approval. Migrat
 {% endhint %}
 
 The `bridge` subcommand is a versioned internal JSON interface used by the native server. It is not a substitute for the MCP authorization policy, nor a sandbox against arbitrary code running as your OS account.
+
+The snapshot exporter merges authentication frames with the latest application snapshot and clears cached auth data when the app process changes. If an export fails, the HUD keeps receiving telemetry and MCP eventually reports the previous snapshot as stale. Generator previews reject traversal arguments and symlinks in copied project files before launching a generator.

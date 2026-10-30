@@ -44,6 +44,11 @@ module AzuCLI
     def self.generate_plan(args : Array(String), project = Dir.current, executable = Process.executable_path || "azu") : JSON::Any
       raise "Generator type required" unless Commands::Generate::GENERATOR_TYPES.includes?(args.first?)
       raise "Preview control flags are managed by MCP" if args.any? { |arg| %w(--yes --check --dry-run --help --ui).includes?(arg) || arg.starts_with?("--ui=") }
+      args.each do |argument|
+        value = argument.starts_with?("--") ? argument.split('=', 2).last : argument
+        raise "Generator paths must stay inside the project" if Path[value].absolute? || value.split('/').includes?("..")
+      end
+      validate_shadow_tree(project)
       built = GeneratePlan.build(args, project, executable)
       raise built if built.is_a?(String)
       begin
@@ -59,6 +64,24 @@ module AzuCLI
         value
       ensure
         built.cleanup
+      end
+    end
+
+    # cp_r can preserve nested symlinks. Reject them before a generator runs in
+    # the shadow, otherwise a preview could write through to the real project.
+    private def self.validate_shadow_tree(root : String) : Nil
+      directories = [root]
+      visited = 0
+      until directories.empty?
+        directory = directories.pop
+        Dir.each_child(directory) do |name|
+          next if directory == root && (GeneratePlan::SKIP.includes?(name) || name.ends_with?(".db") || name.ends_with?(".sqlite3"))
+          path = File.join(directory, name)
+          raise "Generator preview refuses symlinks in copied project files: #{Path[path].relative_to(root)}" if File.symlink?(path)
+          visited += 1
+          raise "Generator preview exceeds 20,000 project entries" if visited > 20_000
+          directories << path if File.directory?(path)
+        end
       end
     end
 
