@@ -72,12 +72,15 @@ module AzuCLI::UI
       content_width = Math.max(0, area.w - 1)
       lines.skip(offset).first(height).each_with_index do |line, row|
         active = selected == offset + row
+        frame.fill(Rect.new(area.x, area.y + row, content_width, 1), style: frame.style(bg: Token::Selection)) if active
         if painter = highlight
           frame.text(area.x, area.y + row, active ? "›" : " ", Token::Cyan, max: content_width)
-          frame.line(area.x + 1, area.y + row, painter.call(line), Math.max(0, content_width - 1))
+          segments = painter.call(line)
+          segments = segments.map { |seg| Seg.new(seg.text, seg.style.copy_with(bg: Token::Selection)) } if active
+          frame.line(area.x + 1, area.y + row, segments, Math.max(0, content_width - 1))
         else
-          frame.text(area.x, area.y + row, line, active ? Token::Cyan : Token::Text,
-            active ? Attr::Bold : Attr::None, max: content_width)
+          style = frame.style(active ? Token::Cyan : Token::Text, active ? Attr::Bold : Attr::None, bg: active ? Token::Selection : nil)
+          frame.text(area.x, area.y + row, line, style, max: content_width)
         end
       end
       return if total <= height || height == 0

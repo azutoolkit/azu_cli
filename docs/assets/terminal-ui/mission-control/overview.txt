@@ -1,40 +1,46 @@
- ╭─ ▲ AZU / storefront · SAMPLE DATA / Dashboard ─────────────────────────────────────────────────────────────────────────── running ─╮
- │ d build · c console · e errors · ? commands · v config                                                                             │
- ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
- ╭─ Workspace ────╮ ╭─ Requests/s ─────────────╮ ╭─ P95 ms ─────────────────╮ ╭─ Processing ─────────────╮ ╭─ DB pool ────────────────╮
- │ OBSERVE        │ │ 1284                     │ │ 8.4                      │ │ 10                       │ │ 6/20                     │
- │ ▌ Dashboard 1  │ │                          │ │                          │ │                          │ │                          │
- │   Server    2  │ ╰──────────────────────────╯ ╰──────────────────────────╯ ╰──────────────────────────╯ ╰──────────────────────────╯
- │   Jobs      3  │ ╭─ Server ────────────────────────────────── connected ─╮ ╭─ Jobs ──────────────────────────────────── connected ─╮
- │                │ │  GET /products  200  4.8ms                            │ │ default  wait 24  processing 8  failed 0              │
- │ DATA & ACCESS  │ │  POST /checkout  200  18.1ms                          │ │ mailers  wait 7  processing 2  failed 1               │
- │   DB        4  │ │                                                       │ │ reports  wait 0  processing 0  failed 0               │
- │   SQL       5  │ │                                                       │ │                                                       │
- │   Auth      6  │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │ DEVELOP        │ │                                                       │ │                                                       │
- │   Logs      7  │ │                                                       │ │                                                       │
- │   Build     d  │ │                                                       │ │                                                       │
- │   Errors    e  │ │                                                       │ │                                                       │
- │   Commands  ?  │ │                                                       │ │                                                       │
- │   Console   c  │ │                                                       │ │                                                       │
- │   Config    v  │ │                                                       │ │                                                       │
- │                │ ╰───────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────╯
- │                │ ╭─ SQL ───────────────────────────────────── connected ─╮ ╭─ Auth ──────────────────────────────────── connected ─╮
- │                │ │   2.3 ms product_repository.cr:41 SELECT p.id, p.na…  │ │ 14:32:08 sign-in accepted                             │
- │                │ │   0.8 ms cart_repository.cr:28 SELECT * FROM carts …  │ │ 14:31:42 rate-limit applied                           │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- │                │ │                                                       │ │                                                       │
- ╰────────────────╯ ╰───────────────────────────────────────────────────────╯ ╰───────────────────────────────────────────────────────╯
- d build · c console · e errors · ? commands · v config · telemetry connected
- Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit
+                    │                                                                                                             PREVIEW · SAMPLE DATA
+   ▲ AZU            │ storefront / Observe / Overview  |  ● running  pid 48231 :4000                                                               01:13:07
+                    │ ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   storefront       │ ╭─ Requests ───────────────────╮ ╭─ JoobQ ──────────────────────╮ ╭─ CQL pool ───────────────────╮ ╭─ Auth ─────────────────────────╮
+   development      │ │ 1284 req/s                   │ │ 10 processing                │ │ 6 / 20 in use                │ │ 2 recent events                │
+                    │ │ p95 8.4ms                    │ │ 31 waiting                   │ │ idle 14                      │ │ application events             │
+   ──────────────── │ │                              │ │                              │ │                              │ │                                │
+  OBSERVE           │ │ ▁▁▂▂▃▃▃▃▄▄▅▅▅▅▆▆▇▇▇▇▇▇██     │ │ ████████████████████████████ │ │ ████████████████████████████ │ │ connected                      │
+ ▌▌  Overview       │ ╰──────────────────────────────╯ ╰──────────────────────────────╯ ╰──────────────────────────────╯ ╰────────────────────────────────╯
+  ▷  Server         │ ╭─ Live logs · following ─────────────────────────────────────────────── focus ─╮ ╭─ SQL · selected query ──────────────────────────╮
+  ▷  Jobs        1  │ │  14:32:07.993 INFO  Azu    starting server                  pid=48231         │ │  01  SELECT p.id, p.name                        │
+  ▤  SQL         3  │ │  14:32:08.041 INFO  HTTP   GET /                 200 6.3ms req_8f2a           │ │  02  FROM products AS p                         │
+  ▧  Logs           │ │  14:32:08.104 INFO  HTTP   GET /products         200 4.8ms req_8f31           │ │  03  WHERE p.active = TRUE                      │
+  ────────────────  │ │  14:32:08.106 DEBUG CQL query.complete 2.3ms req_8f31                         │ │  04  AND p.category_id = $1                     │
+  DATA & ACCESS     │ │  14:32:08.110 INFO  JoobQ mailer.completed 8.1ms                              │ │  05  ORDER BY p.created_at DESC                 │
+  ▣  Schema         │ │  14:32:08.203 WARN  CQL N+1 detected 12 queries                               │ │  06  LIMIT 20                                   │
+  ≈  Migrations     │ │  14:32:08.318 ERROR JoobQ  mailer.failed         retry 2/5 job_4a1d           │ │ ─────────────────────────────────────────────── │
+  ◇  Auth           │ │                 SMTP::Error: connection timeout                               │ │ Duration: 2.3 ms                                │
+  ────────────────  │ │                   app/jobs/welcome_mail.cr:28                                 │ │ Origin: product_repository.cr:41                │
+  DEVELOP           │ │  14:32:08.421 INFO  HTTP   POST /checkout        200 18.1ms req_8f41          │ │ Pool wait: 0.1 ms                               │
+  >_  Console       │ │  14:32:08.448 DEBUG DB     transaction commit             3.7ms               │ │ N+1 · 1 pattern · 5 opens SQL                   │
+  ≡  Commands       │ │  14:32:08.512 INFO  HTTP   GET /orders           200 5.9ms req_8f42           │ │ ─────────────────────────────────────────────── │
+  ·  Build          │ │  14:32:08.639 INFO  CQL    cache.hit                      0.4ms               │ │ Recent queries · 3 samples                      │
+  ▧  Errors         │ │  14:32:08.771 INFO  JoobQ  job.started                    mailer job_4a1e     │ │ › 2.3 ms product_repository.cr:41 SELECT p.id,  │
+  ·  Config         │ │  14:32:08.904 WARN  Auth   rate limit approaching         85/100              │ │   0.8 ms cart_repository.cr:28 SELECT * FROM …  │
+                    │ │  14:32:09.112 INFO  HTTP   GET /customers/42     200 3.9ms req_8f43           │ │  N+1 ×12 SELECT * FROM carts WHERE id = $1      │
+                    │ │  14:32:09.331 DEBUG CQL    query.complete                 1.1ms               │ │                                                 │
+                    │ │ ›14:32:09.487 INFO  HTTP   GET /products/1       200 4.4ms req_8f44           │ │                                                 │
+                    │ │                                                                               │ │                                                 │
+                    │ │                                                                               │ │                                                 │
+                    │ │                                                                               │ │                                                 │
+                    │ │                                                                               │ │                                                 │
+                    │ │                                                                               │ │                                                 │
+                    │ │                                                                               │ │                                                 │
+                    │ ╰───────────────────────────────────────────────────────────────────────────────╯ ╰─────────────────────────────────────────────────╯
+                    │ ╭─ Queues & activity ─────────────────────────────────────────────────────────────────────────────────────────────────── connected ─╮
+                    │ │ QUEUE           WAITING   PROCESSING  FAILED  Share of waiting jobs                                                               │
+                    │ │ ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+                    │ │ default         24        8           0       █████████████████████████████████████████████████████████████████████████████████   │
+                    │ │ mailers         7         2           1       █████████████████████████████████████████████████████████████████████████████████   │
+   ──────────────── │ │ reports         0         0           0       █████████████████████████████████████████████████████████████████████████████████   │
+   Ctrl-P  Navigate │ │                                                                                                                                   │
+   b       collapse │ │                                                                                                                                   │
+                    │ ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  [Ctrl-P] navigate  [/] filter  [Tab] pane  [j/k] select  [c] console  [g] generate  [q] quit                                     telemetry · connected

@@ -15,6 +15,60 @@ private def mission_frame(screen, width = 136, height = 40)
 end
 
 describe MC do
+  it "renders the reference overview and navigates its log, SQL and queue panes" do
+    screen = mission
+    screen.update(MCE::LogLine.new("14:32:08 INFO GET /products 200 4.8ms"))
+    screen.update(MCE::Telemetry.new(JSON.parse(%({"v":1,"requests":{"rps":12},"sql":{"recent":[
+      {"id":"q1","sql":"SELECT 'FROM safe literal' AS value FROM products","ms":2.3},
+      {"id":"q2","sql":"SELECT second_query FROM products","ms":1.1}]}}))))
+    screen.update(MCE::JobsSample.new([MCE::Queue.new("default", 24_i64, 8_i64, 0_i64)]))
+    text = mission_frame(screen, 156, 46).to_text
+    ["Overview", "Live logs", "SQL · selected query", "CQL pool", "Queues & activity", "Share of waiting jobs", "FROM safe literal"].each do |label|
+      text.should contain label
+    end
+    text.should_not contain "SAMPLE DATA"
+    text.should_not contain "sessions"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Tab))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Down))
+    mission_frame(screen, 156, 46).to_text.should contain "SELECT second_query"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    screen.tab.should eq MC::Tab::SQL
+  end
+
+  it "offers a bottom-right launcher for SQL, N+1 and schema without a second screen" do
+    screen = mission
+    screen.update(MCUI::Key.new(MCUI::KeyCode::CtrlP))
+    "sql".each_char { |char| screen.update(MCUI::Key.new(MCUI::KeyCode::Char, char)) }
+    frame = mission_frame(screen, 156, 46)
+    rows = frame.to_text.lines
+    row = rows.index { |line| line.includes?("Navigate") && line.includes?("╭") }.not_nil!
+    row.should be > 23
+    rows[row].index("Navigate").not_nil!.should be > 78
+    frame.to_text.should contain "Inspect N+1 SQL queries"
+    frame.to_text.should contain "Open SQL schema explorer"
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Down))
+    screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
+    screen.tab.should eq MC::Tab::SQL
+    screen.query.should eq "N+1"
+  end
+
+  it "keeps the overview, launcher and every section bounded at small and large sizes" do
+    screen = mission
+    screen.update(MCE::LogLine.new("\e[2JINFO " + "long log " * 100))
+    [{48, 14}, {80, 24}, {104, 32}, {156, 46}].each do |(width, height)|
+      {'1', '5', '6', 'm'}.each do |tab|
+        screen.update(MCUI::Key.new(MCUI::KeyCode::Char, tab))
+        2.times do
+          text = mission_frame(screen, width, height).to_text
+          text.should_not contain '\e'
+          text.lines.size.should eq height
+          text.lines.each { |line| line.size.should be <= width }
+          screen.update(MCUI::Key.new(MCUI::KeyCode::CtrlP))
+        end
+      end
+    end
+  end
+
   it "keeps console input and all development panels inside the new workspace" do
     workspace = AzuCLI::DevServer::Hud.new("store", "4000", "development", "watching src")
     screen = MC.new(workspace, "store", true)
@@ -26,8 +80,8 @@ describe MC do
       screen.update(MCUI::Key.new(MCUI::KeyCode::Enter))
       screen.tab.to_s.should eq label
       text = mission_frame(screen).to_text
-      text.should contain "Workspace"
-      text.should contain "AZU / store / #{label}"
+      text.should contain "OBSERVE"
+      text.should contain "store / Develop / #{label}"
       text.should_not contain "[1] Overview"
       text.should_not contain "Esc mission control"
     end
@@ -85,7 +139,7 @@ describe MC do
         fail "SQL snapshot did not reach the HUD"
       end
       screen.update(MCE::Telemetry.new(data))
-      mission_frame(screen).to_text.should contain "SELECT name FROM products"
+      mission_frame(screen).to_text.should contain "SELECT name"
       screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '5'))
       text = mission_frame(screen).to_text
       text.should contain "SELECT name FROM products"
@@ -154,7 +208,7 @@ describe MC do
   it "degrades missing or malformed optional telemetry without inventing metrics" do
     screen = mission
     screen.update(MCE::Telemetry.new(JSON.parse(%({"requests":null,"sql":false,"auth":null,"database":1}))))
-    mission_frame(screen).to_text.should contain "adapter needed"
+    mission_frame(screen).to_text.should contain "HTTP only"
     screen.update(MCUI::Key.new(MCUI::KeyCode::Char, '4'))
     mission_frame(screen).to_text.should contain "No adapter data"
   end
@@ -170,7 +224,7 @@ describe MCUI::Highlight do
     source = "SELECT name FROM users WHERE label = 'it''s fine' AND id = $1 -- note"
     tokens = MCUI::Highlight.sql(source)
     tokens.map(&.text).join.should eq source
-    tokens.find(&.text.==("SELECT")).not_nil!.style.fg.should eq MCUI::Token::Pink
+    tokens.find(&.text.==("SELECT")).not_nil!.style.fg.should eq MCUI::Token::Purple
     tokens.find(&.text.==("'it''s fine'")).not_nil!.style.fg.should eq MCUI::Token::Green
     tokens.find(&.text.==("$1")).not_nil!.style.fg.should eq MCUI::Token::Amber
   end

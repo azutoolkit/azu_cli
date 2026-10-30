@@ -1,3 +1,5 @@
+require "../../services/auth_telemetry"
+
 module <%= app_module %>
   struct Sessions::DestroyEndpoint
     include Azu::Endpoint(Sessions::DestroyRequest, Azu::Response::Empty)
@@ -6,6 +8,7 @@ module <%= app_module %>
 
     def call : Azu::Response::Empty
       Session.session.delete
+      AzuAuthTelemetry.record("sign-out", "accepted")
       redirect to: "/login", status: 303
     end
   end

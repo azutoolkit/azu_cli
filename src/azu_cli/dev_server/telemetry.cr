@@ -242,7 +242,10 @@ module AzuCLI
       def self.valid_snapshot?(snapshot : JSON::Any) : Bool
         root = snapshot.as_h?
         return false unless root && root["v"]?.try(&.as_i?) == 1
-        %w(requests sql runtime).each do |key|
+        if stream = root["stream"]?
+          return false unless stream.as_s? == "auth" && root["auth"]?.try(&.as_h?)
+        end
+        %w(requests sql runtime auth).each do |key|
           value = root[key]?
           next if value.nil? || value.raw.nil?
           fields = value.as_h?

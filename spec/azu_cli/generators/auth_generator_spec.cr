@@ -8,6 +8,22 @@ describe AzuCLI::Generate::Auth do
     AzuCLI::Generate::Auth.new.render(File.expand_path(dir), force: true, interactive: false)
   end
 
+  it "emits privacy-safe auth outcomes after session operations and preserves the standalone adapter" do
+    in_generated_project do
+      render.call(".")
+      helper = File.read("src/services/auth_telemetry.cr")
+      helper.strip.should eq AzuCLI::Generate::Auth.new.auth_telemetry_source.strip
+      login = File.read("src/endpoints/sessions/create_endpoint.cr")
+      login.should contain(%(require "../../services/auth_telemetry"))
+      login.should contain(%(AzuAuthTelemetry.record("sign-in", "rejected")))
+      login.should contain(%(AzuAuthTelemetry.record("sign-in", "throttled")))
+      login.index("Session.session.regenerate_id").not_nil!.should be < login.index(%(AzuAuthTelemetry.record("sign-in", "accepted"))).not_nil!
+      logout = File.read("src/endpoints/sessions/destroy_endpoint.cr")
+      logout.index("Session.session.delete").not_nil!.should be < logout.index(%(AzuAuthTelemetry.record("sign-out", "accepted"))).not_nil!
+      AzuCLI::Generate::Auth.conflict.not_nil!.should contain "src/services/auth_telemetry.cr"
+    end
+  end
+
   it "generates the account endpoints, pages, requests and templates in the project module" do
     in_generated_project do
       render.call(".")

@@ -1,5 +1,6 @@
 require "./hud"
 require "./command_composer"
+require "./auth_tab"
 
 module AzuCLI::DevServer
   # The dev workspace shell. Build, console and command components share this
@@ -20,6 +21,7 @@ module AzuCLI::DevServer
       Commands
       Console
       Config
+      Migrations
     end
 
     getter tab = Tab::Dashboard
@@ -46,10 +48,12 @@ module AzuCLI::DevServer
     @notice = "d build · c console · e errors · ? commands · v config"
     @now = Time.instant
     @composer : CommandComposer
+    @auth = AuthTab.new
 
     def initialize(@workspace : Hud, @project : String, @reduced_motion : Bool = false,
                    @clock : Proc(Time::Instant) = -> { Time.instant },
                    @read_only : Bool = false,
+                   @sample_data : Bool = false,
                    on_command : Proc(Control::Command, Bool) = ->(_command : Control::Command) { false })
       @composer = CommandComposer.new(on_command)
       @notice = read_only_notice if @read_only
@@ -78,8 +82,23 @@ module AzuCLI::DevServer
       @now = @clock.call
       @composer.update(event) unless event.is_a?(Key)
       return key(event) if event.is_a?(Key)
+      # Independent auth publishers must not replace the main app snapshot or
+      # clear SQL/errors in the embedded workspace on every auth heartbeat.
+      if event.is_a?(Events::Telemetry) && field(event.data, "stream").try(&.as_s?) == "auth"
+        unless @read_only
+          @auth.update(event.data, @now)
+          replace(Tab::Auth, @auth.items(field(@snapshot, "requests")))
+        end
+        return Action::Redraw
+      end
       @workspace.update(event) unless @read_only
       case event
+      when Events::AppStarted
+        @auth.reset
+        @request_history.clear
+        @snapshot = nil
+        @received = nil
+        ingest
       when Events::Telemetry
         @snapshot = event.data
         @received = @now
@@ -160,13 +179,15 @@ module AzuCLI::DevServer
         @sidebar = !@sidebar
       elsif key.char?('l')
         select_tab(Tab::Logs)
-      elsif tab.logs? && key.char?('f')
+      elsif (tab.logs? || (tab.dashboard? && @overview_focus == 0)) && key.char?('f')
         @follow_logs = true
-        @inspectors[tab].key(Key.new(KeyCode::Home))
+        @inspectors[Tab::Logs].key(Key.new(KeyCode::Home))
       elsif chosen = tabs.find { |item| key.char?(shortcut(item)) }
         select_tab(chosen)
       elsif key.char?('r')
         @workspace.panel_key(Hud::Tab::Overview, key)
+      elsif tab.dashboard?
+        overview_key(key)
       elsif active = panel
         return @workspace.panel_key(active, key)
       else
@@ -177,7 +198,11 @@ module AzuCLI::DevServer
     end
 
     private def menu_items : Array({String, Char})
-      entries = tabs.map { |item| {"Open #{item}", shortcut(item)} }
+      entries = navigation_tabs.map do |item|
+        label = item.db? ? "Open SQL schema explorer" : "Open #{section_name(item)}#{item.sql? ? " inspector" : ""}"
+        {label, shortcut(item)}
+      end
+      entries.insert(4, {"Inspect N+1 SQL queries", 'n'})
       unless @read_only
         entries.concat([{"Run azu command", ':'}, {"Generate code", 'g'}])
       end
@@ -198,7 +223,11 @@ module AzuCLI::DevServer
       when .enter?
         if chosen = menu_items[@menu_selected]?
           @menu_open = false
-          if section = tabs.find { |item| shortcut(item) == chosen[1] }
+          if chosen[1] == 'n'
+            select_tab(Tab::SQL)
+            @query = "N+1"
+            filter
+          elsif section = tabs.find { |item| shortcut(item) == chosen[1] }
             select_tab(section)
           elsif !@read_only
             @composer.open(chosen[1] == 'g')
@@ -216,12 +245,13 @@ module AzuCLI::DevServer
 
     private def shortcut(section : Tab) : Char
       case section
-      when .build?    then 'd'
-      when .errors?   then 'e'
-      when .commands? then '?'
-      when .console?  then 'c'
-      when .config?   then 'v'
-      else                 ('1'.ord + section.value).chr
+      when .build?      then 'd'
+      when .errors?     then 'e'
+      when .commands?   then '?'
+      when .console?    then 'c'
+      when .config?     then 'v'
+      when .migrations? then 'm'
+      else                   ('1'.ord + section.value).chr
       end
     end
 
@@ -290,11 +320,18 @@ module AzuCLI::DevServer
         columns = DiagnosticData.rows(row, "columns", 100).map { |column| "#{text(column, "name")} : #{text(column, "type")}" }
         Inspector::Item.new(name, name, [name, "Schema version: #{text(database, "migration_version")}"] + columns)
       end)
-      auth = field(@snapshot, "auth")
-      replace(Tab::Auth, DiagnosticData.rows(auth, "recent", 200).map do |row|
-        label = "#{text(row, "at")} #{text(row, "event")} #{text(row, "outcome")}"
-        Inspector::Item.new(text(row, "id"), label, [label, "Only allowlisted, redacted security events are displayed."])
+      replace(Tab::Migrations, DiagnosticData.rows(database, "migrations", 200).map do |row|
+        version = text(row, "version")
+        label = "#{version} #{text(row, "name")} #{text(row, "status")}"
+        Inspector::Item.new(version, label, [label, "Applied at: #{text(row, "applied_at")}", "Read-only history from the application adapter."])
       end)
+      sample = field(requests, "rps")
+      if sample && (rate = sample.as_f? || sample.as_i64?.try(&.to_f)) && rate.finite? && rate >= 0
+        @request_history << rate
+        @request_history.shift if @request_history.size > 60
+      end
+      @snapshot.try { |snapshot| @auth.update(snapshot, @now) } unless @read_only
+      replace(Tab::Auth, @read_only ? [] of Inspector::Item : @auth.items(requests))
     end
 
     private def freshness(at : Time::Instant?) : String
@@ -305,110 +342,7 @@ module AzuCLI::DevServer
     private def read_only_notice : String
       "PRODUCTION · READ ONLY · commands, console and rebuild disabled"
     end
-
-    def view(frame : Frame) : Nil
-      if frame.width < 48 || frame.height < 14
-        frame.text(0, 0, "azu dev · enlarge to 48x14 or use --ui plain", Token::Amber, max: frame.width)
-        return
-      end
-      header, rest = frame.area.inset(1, 0).split_top(3)
-      inner = frame.card(header, "▲ AZU / #{@project} / #{tab}", @read_only ? "READ ONLY" : @workspace.state.to_s.downcase)
-      frame.gradient(header.x + 3, header.y, frame.glyphs.brand, Attr::Bold)
-      spinner = @workspace.animating? ? Widgets.spinner(frame.glyphs, @now, @reduced_motion) + " " : ""
-      frame.text(inner.x, inner.y, spinner + @notice, Token::Muted, max: inner.w)
-      content = Rect.new(rest.x, rest.y, rest.w, rest.h - 2)
-      if frame.width >= 104 && @sidebar
-        sidebar, content = content.split_left(18, 1)
-        nav = frame.card(sidebar, "Workspace")
-        labels = [] of String
-        selected = 0
-        tabs.each do |item|
-          if nav.h >= 17 && (item.dashboard? || item.db? || item.logs?)
-            group = item.dashboard? ? "OBSERVE" : item.db? ? "DATA & ACCESS" : "DEVELOP"
-            labels << "" unless item.dashboard?
-            labels << group
-          end
-          selected = labels.size if item == tab
-          labels << "#{item == tab ? '▌' : ' '} #{Width.pad(item.to_s, Math.max(0, nav.w - 5))} #{shortcut(item)}"
-        end
-        @nav_viewport.configure(labels.size, nav.h)
-        @nav_viewport.reveal(selected)
-        @nav_viewport.draw(frame, nav, labels, selected)
-      else
-        nav, content = content.split_top(2)
-        frame.text(nav.x, nav.y, "#{tab}  /  Ctrl-P navigate", Token::Cyan, max: nav.w)
-      end
-      if active = panel
-        @workspace.panel_view(frame, content, active)
-      elsif tab.dashboard?
-        dashboard(frame, content)
-      else
-        content = SQLTab.draw_metrics(frame, content, field(@snapshot, "sql")) if tab.sql?
-        title = tab.sql? ? "SQL · #{SQLTab.feed_label(field(@snapshot, "sql"))}" : tab.to_s
-        empty = if !query.empty? && !@rows[tab].empty?
-                  "No matching samples · Esc clears the filter"
-                elsif tab.sql?
-                  "No SQL samples · check azu/cql schema attachment"
-                else
-                  tab.db? || tab.auth? ? "No adapter data · see integration contract" : "No samples received"
-                end
-        @inspectors[tab].draw(frame, content, "#{title} · #{freshness(tab.jobs? ? @jobs_received : @received)}", empty, highlighter(tab))
-      end
-      frame.text(1, frame.height - 2, searching? ? "/ #{query}▏" : "#{query.empty? ? @notice : "filter: #{query}"} · telemetry #{freshness(@received)}", Token::Muted, max: frame.width - 2)
-      shortcuts = @read_only ? "Ctrl-P menu  b sidebar  j/k select  Tab pane  / search  q disconnect" : "Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit"
-      shortcuts = "Ctrl-P menu  Enter run  Alt-Enter newline  Ctrl-O interpreter  Esc back" if tab.console?
-      shortcuts = "Ctrl-P menu  ↑/↓ select  Enter run  y confirm  PgUp/PgDn output  q quit" if tab.commands?
-      frame.text(1, frame.height - 1, shortcuts, Token::Cyan, max: frame.width - 2)
-      draw_menu(frame) if menu_open?
-      @composer.view(frame) if @composer.active?
-    end
-
-    private def highlighter(section : Tab) : Proc(String, Array(Seg))?
-      return SQL_COLOR if section.sql?
-      return LOG_COLOR if section.logs? || section.server?
-      nil
-    end
-
-    private def draw_menu(frame : Frame) : Nil
-      width = Math.min(64, frame.width - 4)
-      height = Math.min(16, frame.height - 4)
-      box = Rect.new((frame.width - width) // 2, (frame.height - height) // 2, width, height)
-      style = frame.style(bg: Token::Backplate)
-      box.y.upto(box.bottom - 1) { |y| box.x.upto(box.right - 1) { |x| frame.put(x, y, ' ', style) } }
-      inner = frame.card(box, "Navigate · Enter opens · Esc closes", border: Token::Cyan)
-      frame.text(inner.x, inner.y, "> #{@menu_query}▏", Token::Cyan, max: inner.w)
-      _, list = inner.split_top(2)
-      labels = menu_items.map_with_index { |item, index| "#{index == @menu_selected ? '›' : ' '} #{item[0]}  [#{item[1]}]" }
-      @menu_viewport.configure(labels.size, list.h)
-      @menu_viewport.reveal(@menu_selected)
-      @menu_viewport.draw(frame, list, labels, @menu_selected)
-    end
-
-    private def dashboard(frame : Frame, area : Rect) : Nil
-      metrics, body = area.split_top(4)
-      requests = field(@snapshot, "requests")
-      sql = field(@snapshot, "sql")
-      pool = field(sql, "pool")
-      values = { {"Requests/s", text(requests, "rps")}, {"P95 ms", text(requests, "p95_ms")},
-                {"Processing", @jobs.try { |sample| sample.error ? "unavailable" : sample.queues.sum(&.processing).to_s } || "--"},
-                {"DB pool", "#{text(pool, "in_flight")}/#{text(pool, "max")}"} }
-      metrics.columns(4, 1).each_with_index do |rect, index|
-        inner = frame.card(rect, values[index][0])
-        frame.text(inner.x, inner.y, values[index][1], Token::Cyan, Attr::Bold, max: inner.w)
-      end
-      top, bottom = body.split_top(body.h // 2)
-      { {Tab::Server, Tab::Jobs}, {Tab::SQL, Tab::Auth} }.each_with_index do |tabs, row|
-        (row == 0 ? top : bottom).columns(2, 1).each_with_index do |rect, column|
-          section = tabs[column]
-          badge = freshness(section.jobs? ? @jobs_received : @received)
-          badge = "unavailable" if section.jobs? && @jobs.try(&.error)
-          badge = "adapter needed" if section.auth? && field(@snapshot, "auth").try(&.as_h?).nil?
-          inner = frame.card(rect, section.to_s, badge)
-          items = @inspectors[section].items
-          lines = items.empty? ? ["No samples · #{section.value + 1} opens inspector"] : items.map(&.label)
-          Viewport.new.draw(frame, inner, lines, highlight: highlighter(section))
-        end
-      end
-    end
   end
 end
+
+require "./workspace_layout"

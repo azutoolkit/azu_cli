@@ -39,6 +39,9 @@ module AzuCLI
       getter sql_tab = SQLTab.new
       getter tab = Tab::Overview
       getter state = State::Starting
+      getter port : String
+      getter environment : String
+      getter pid : Int64?
       getter rebuilds = 0
       getter crashes = 0
       getter restarts = 0
@@ -49,7 +52,6 @@ module AzuCLI
       @last_build_seconds : Float64?
       @build_history = [] of Float64
       @changed = [] of String
-      @pid : Int64?
       @app_started : Time::Instant?
       @session_started = Time.instant
       @rss : Int64?

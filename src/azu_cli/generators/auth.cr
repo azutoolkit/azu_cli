@@ -24,10 +24,14 @@ module AzuCLI
       getter app_module : String
       getter app_dir : String
 
+      def auth_telemetry_source : String
+        {{ read_file("#{__DIR__}/../integrations/auth_telemetry.cr") }}
+      end
+
       # Why authentication cannot be generated into `root`, if it cannot: something it would write
       # exists already (a second run, or a `User` made by a scaffold), or the app file has no place for the handler.
       def self.conflict(root : String = ".") : String?
-        existing = ["src/models/user.cr", "src/initializers/session.cr", "src/services/auth_throttle.cr", "spec/services/auth_throttle_spec.cr", "src/endpoints/sessions", "src/endpoints/registrations", "src/endpoints/account"]
+        existing = ["src/models/user.cr", "src/initializers/session.cr", "src/services/auth_throttle.cr", "src/services/auth_telemetry.cr", "spec/services/auth_throttle_spec.cr", "src/endpoints/sessions", "src/endpoints/registrations", "src/endpoints/account"]
           .select { |path| File.exists?(File.join(root, path)) }
         existing.concat(Dir.glob(File.join(root, AzuCLI::Config::Paths::MIGRATIONS, "*_create_users.cr")).map { |path| path.sub("#{root}/", "") })
         unless existing.empty?

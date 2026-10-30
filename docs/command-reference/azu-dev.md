@@ -6,14 +6,15 @@ description: Run your app in development, rebuilding and restarting it on every 
 
 ## Workspace HUD
 
-`azu dev` opens the workspace rail, Ctrl-P navigation palette,
+`azu dev` opens the full-height workspace rail, bottom-right Ctrl-P palette,
 SQL/log syntax highlighting and responsive list/detail panes. Press `b` to collapse
 the rail, `/` to filter, `c` for the existing console, and Esc to return from it.
 `--ui rich` and `--ui mission` are aliases for this same interface; the old
 dashboard is no longer selectable. Build (`d`), Errors (`e`), Commands (`?`),
 Console (`c`) and Config (`v`) stay inside the workspace. Ctrl-P navigates even
-while the console is accepting input; Esc returns from the console. Auth and
-schema views require application adapters;
+while the console is accepting input; Esc returns from the console. Generated
+authentication includes the Auth adapter; existing apps need the integration below
+for verified outcomes. Schema views require an application adapter;
 see the [architecture and integration plan](../architecture/mission-control.md).
 
 The SQL tab accepts both `sql.recent` and the `sql.slowest` snapshots emitted by
@@ -22,6 +23,23 @@ available sample rather than a complete query stream. If no SQL samples arrive,
 verify that the application loads `azu/cql`, attaches its schema with
 `Azu::CQL.attach`, and executes queries while development telemetry is enabled.
 An active search can hide rows; **Esc** clears the filter.
+
+The **Auth** tab (`6`) shows explicit sign-in, sign-out and sign-up outcomes in
+apps created with the updated `azu generate auth`. Older apps show observed
+POST/DELETE requests to common authentication routes, labeled **outcome unknown**.
+A 303 redirect cannot distinguish successful authentication from a rejected form.
+For verified outcomes in an existing app, follow
+[Auth integration](../architecture/mission-control.md#auth-integration).
+When there is no producer, the tab explains how to enable it; a connected producer
+with no events shows “No authentication events yet.” `azu connect` does not export
+authentication events.
+
+The Overview combines request/job/pool/auth cards, chronological highlighted logs,
+a selected SQL preview and a queue table. **Tab** cycles its three panes; **j/k**
+selects rows, **Enter** opens the focused inspector, and **f** resumes log following.
+**PageUp/PageDown** scroll long SQL. Short terminals show one main pane at a time.
+The rail includes **Schema** (`4`) and read-only **Migrations** (`m`); migration
+history requires an application adapter.
 
 ### Run commands inside the HUD
 

@@ -1,24 +1,24 @@
- ╭─ ▲ AZU / storefront · SAMPLE DATA / Dashboard ─────────────────── running ─╮
- │ d build · c console · e errors · ? commands · v config                     │
+ PREVIEW · SAMPLE DATA
+ storefront / Observe / Overview  |  ● running  pid 48231 :4000
+ ──────────────────────────────────────────────────────────────────────────────
+ ╭─ Requests ─────────────────────────╮ ╭─ JoobQ ─────────────────────────────╮
+ │ 1284 req/s                         │ │ 10 processing                       │
+ │ p95 8.4ms                          │ │ 31 waiting                          │
+ ╰────────────────────────────────────╯ ╰─────────────────────────────────────╯
+ ╭─ CQL pool ─────────────────────────╮ ╭─ Auth ──────────────────────────────╮
+ │ 6 / 20 in use                      │ │ 2 recent events                     │
+ │ idle 14                            │ │ application events                  │
+ ╰────────────────────────────────────╯ ╰─────────────────────────────────────╯
+ ╭─ Live logs · following ──────────────────────────────────────────── focus ─╮
+ │  14:32:08.421 INFO  HTTP   POST /checkout        200 18.1ms req_8f41     ░ │
+ │  14:32:08.448 DEBUG DB     transaction commit             3.7ms          ░ │
+ │  14:32:08.512 INFO  HTTP   GET /orders           200 5.9ms req_8f42      ░ │
+ │  14:32:08.639 INFO  CQL    cache.hit                      0.4ms          ░ │
+ │  14:32:08.771 INFO  JoobQ  job.started                    mailer job_4a1e░ │
+ │  14:32:08.904 WARN  Auth   rate limit approaching         85/100         █ │
+ │  14:32:09.112 INFO  HTTP   GET /customers/42     200 3.9ms req_8f43      █ │
+ │  14:32:09.331 DEBUG CQL    query.complete                 1.1ms          █ │
+ │ ›14:32:09.487 INFO  HTTP   GET /products/1       200 4.4ms req_8f44      █ │
  ╰────────────────────────────────────────────────────────────────────────────╯
- Dashboard  /  Ctrl-P navigate
-
- ╭─ Requests/s ───╮ ╭─ P95 ms ───────╮ ╭─ Processing ───╮ ╭─ DB pool ─────────╮
- │ 1284           │ │ 8.4            │ │ 10             │ │ 6/20              │
- │                │ │                │ │                │ │                   │
- ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰───────────────────╯
- ╭─ Server ─────────────── connected ─╮ ╭─ Jobs ────────────────── connected ─╮
- │  GET /products  200  4.8ms         │ │ default  wait 24  processing 8  fa  │
- │  POST /checkout  200  18.1ms       │ │ mailers  wait 7  processing 2  fai  │
- │                                    │ │ reports  wait 0  processing 0  fai  │
- │                                    │ │                                     │
- ╰────────────────────────────────────╯ ╰─────────────────────────────────────╯
- ╭─ SQL ────────────────── connected ─╮ ╭─ Auth ────────────────── connected ─╮
- │   2.3 ms product_repository.cr:41  │ │ 14:32:08 sign-in accepted           │
- │   0.8 ms cart_repository.cr:28 S…  │ │ 14:31:42 rate-limit applied         │
- │                                    │ │                                     │
- │                                    │ │                                     │
- │                                    │ │                                     │
- ╰────────────────────────────────────╯ ╰─────────────────────────────────────╯
- d build · c console · e errors · ? commands · v config · telemetry connected
- Ctrl-P menu  : command  g generate  b sidebar  j/k select  / search  q quit
+ ──────────────────────────────────────────────────────────────────────────────
+  [Ctrl-P] navigate  [/] filter  [Tab] pane  [j/k] select  [c] console  [g] ge

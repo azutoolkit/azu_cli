@@ -1,4 +1,5 @@
 require "crypto/bcrypt/password"
+require "../../services/auth_telemetry"
 
 module <%= app_module %>
   struct Registrations::CreateEndpoint
@@ -19,12 +20,17 @@ module <%= app_module %>
         return email_taken
       end
 
+      AzuAuthTelemetry.record("sign-up", "accepted")
       Session.session.flash["notice"] = "Account created: sign in"
       redirect to: "/login", status: 303
+    rescue ex : Azu::Response::RateLimitError
+      AzuAuthTelemetry.record("sign-up", "throttled")
+      raise ex
     end
 
     # Saying so reveals which emails are registered; that is accepted here for a usable form.
     private def email_taken : Azu::Response::Empty
+      AzuAuthTelemetry.record("sign-up", "rejected")
       Session.session.flash["error"] = "That email is already registered"
       redirect to: "/register", status: 303
     end

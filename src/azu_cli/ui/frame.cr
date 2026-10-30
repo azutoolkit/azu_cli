@@ -159,7 +159,7 @@ module AzuCLI
 
       # A card: a rounded border, a title in the top edge, an optional badge at its right end. Returns the inside
       # (one column of padding on each side).
-      def card(rect : Rect, title : String, badge : String? = nil, border : Token = Token::Faint, title_color : Token = Token::Purple, badge_color : Token = Token::Muted) : Rect
+      def card(rect : Rect, title : String, badge : String? = nil, border : Token = Token::Border, title_color : Token = Token::Purple, badge_color : Token = Token::Muted) : Rect
         return rect if rect.w < 4 || rect.h < 2
 
         edge = style(border)

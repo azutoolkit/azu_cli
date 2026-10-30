@@ -37,7 +37,8 @@ module AzuCLI::UI
             index += 1
           end
           word = chars[start...index].join
-          color = SQL_WORDS.includes?(word.upcase) ? Token::Pink : Token::Blue
+          color = SQL_WORDS.includes?(word.upcase) ? Token::Purple : Token::Cyan
+          color = Token::Amber if {"TRUE", "FALSE", "NULL"}.includes?(word.upcase)
         elsif char.ascii_number? || char == '$' || char == '?'
           index += 1
           while (next_char = chars[index]?) && (next_char.ascii_number? || next_char == '.')
@@ -61,9 +62,15 @@ module AzuCLI::UI
                 when "INFO", "GET", "POST", "PUT", "PATCH", "DELETE" then Token::Blue
                 when "200", "201", "204", "OK"                       then Token::Green
                 else
-                  if word.matches?(/\A\d\d:\d\d:\d\d/)
+                  if word.ends_with?(".failed") || word.ends_with?("Error:")
+                    Token::Red
+                  elsif word == "N+1"
+                    Token::Amber
+                  elsif word.matches?(/\A\d\d:\d\d:\d\d/)
                     Token::Muted
-                  elsif word.ends_with?("ms") || word.starts_with?("req_")
+                  elsif word.starts_with?("req_") || word.starts_with?("job_") || word.matches?(/\.(cr|ecr):\d+/)
+                    Token::Purple
+                  elsif word.ends_with?("ms") || {"Azu", "HTTP", "CQL", "JoobQ", "Auth", "DB"}.includes?(word)
                     Token::Cyan
                   else
                     Token::Text

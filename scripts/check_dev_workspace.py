@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory(prefix="azu-workspace-route-") as directory:
         try:
             fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 136, 0, 0))
             collect(1.0)
-            assert b"Workspace" in output and b"Ctrl-P" in output, f"mode {flags} did not open workspace"
+            assert b"Overview" in output and b"Ctrl-P" in output, f"mode {flags} did not open workspace"
             os.write(master, b"d")
             collect(0.3)
             assert b"intentional test build failure" in output, "build errors were not accessible"

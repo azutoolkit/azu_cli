@@ -27,7 +27,7 @@ not a claim that every ecosystem service now emits every metric shown in the con
 
 ## Realistic output
 
-<figure><img src="../assets/terminal-ui/mission-control/sql-theme-preview.png" alt="Actual SQL inspector frame with illustrative data"><figcaption><p>The native SQL inspector, rendered with sample data using the documentation cover palette.</p></figcaption></figure>
+<figure><img src="../assets/terminal-ui/mission-control/menu-theme-preview.png" alt="Actual reference-style overview with navigation launcher and illustrative data"><figcaption><p>The native overview and command launcher, rendered with sample data using the Azu reference palette.</p></figcaption></figure>
 
 ```mermaid
 flowchart LR
@@ -51,21 +51,23 @@ separate read-only connection and metrics allowlist, not the development socket.
 
 ## Visual direction
 
-Match the [Azu documentation](https://azutopia.gitbook.io/azu) cover artwork:
-near-black `#0B0E14`, silver `#E6EDF3`, cyan `#22D3EE`, violet `#A78BFA`,
-blue `#60A5FA`, mint `#34D399`, and pink `#F472B6`. These values come from the
-page's Azu cover image, rather than GitBook's surrounding light/dark chrome.
-The terminal retains amber `#FBBF24` and coral `#F87171` for warnings and errors.
-Borders stay quiet (`#2A313C`); the Azu wordmark runs cyan to violet, with cyan
-navigation focus. SQL keywords are pink, identifiers blue, strings mint and
-placeholders/numbers amber. Logs distinguish timestamps, severity, HTTP status,
-methods and durations.
+The reference screen uses an Azu-inspired cyan/violet palette on near-black
+`#080F14`: silver `#E6EDF3`, cyan `#00D7EF`, violet `#BA83FF`, mint `#00DFB2`,
+and muted blue `#91AAC6`. Thin steel-blue borders (`#3D6077`) and dark cyan
+selection bands (`#082C3E`) separate panes without large filled backgrounds.
+SQL keywords are violet, identifiers cyan, strings mint and literals amber.
+Logs distinguish timestamps, severity, status, sources, timings and trace IDs.
+The full-height brand rail sits beside a breadcrumb/status header. Four compact
+metric cards lead into live logs and selected SQL, with a queue table below;
+the command launcher opens at the bottom right. Auth counts are captured events,
+not estimated sessions. Charts use received request samples, pool occupancy,
+processing versus waiting jobs, and each queue's share of waiting jobs. Missing
+telemetry stays explicitly unavailable; no throughput or capacity is invented.
 Color is supplementary: severity names, status codes and a selection marker remain
 visible with `NO_COLOR`.
 
-Navigation groups are Observe, Data & Access, and Develop; shorter windows omit
-group labels to preserve the navigation items. The workspace has twelve sections,
-a collapsible rail with numbered shortcuts, breadcrumbs, and a searchable
+Navigation groups are Observe, Data & Access, and Develop. The workspace has
+thirteen sections, a collapsible scrollable rail, breadcrumbs, and a searchable
 Ctrl-P palette. Build, Errors, Commands, Console and Config reuse stateful
 components inside the workspace; they do not switch to a separate dashboard.
 The navigation viewport keeps the active section visible in short terminals.
@@ -74,27 +76,26 @@ screen displays a resize message. `azu dev` itself retains its existing 60x16
 interactive-mode threshold and plain-output fallback.
 
 ```text
-╭─ ▲ AZU / storefront / Dashboard ───────────────────── running ─╮
-│ development · localhost:4000                       sample data │
-╰───────────────────────────────────────────────────────────────╯
-╭─ Workspace ─╮ ╭─ Requests/s ─╮ ╭─ P95 ─╮ ╭─ Jobs ─╮ ╭─ Pool ─╮
-│ ▌ Dashboard │ │ 1,284       │ │ 8.4ms │ │ 10     │ │ 6/20   │
-│   Server    │ ╰─────────────╯ ╰───────╯ ╰────────╯ ╰────────╯
-│   Jobs      │ ╭─ Server / traces ──────╮ ╭─ JoobQ / queues ────╮
-│   DB        │ │ GET /products 200     │ │ default 24 / busy 8 │
-│   SQL       │ │ POST /checkout 200    │ │ mailers  7 / fail 1 │
-│   Auth      │ ╰───────────────────────╯ ╰─────────────────────╯
-│   Logs      │ ╭─ SQL ─────────────────╮ ╭─ Auth ──────────────╮
-│             │ │ SELECT p.id, p.name   │ │ sign-in accepted    │
-│             │ │ FROM products AS p   │ │ rate-limit applied  │
-╰─────────────╯ ╰───────────────────────╯ ╰─────────────────────╯
- Ctrl-P menu · b sidebar · j/k select · Tab pane · / filter · q quit
-
-                    ╭─ Navigate ─────────────────────╮
-                    │ > sql▏                         │
-                    │ › Open SQL                     │
-                    │ ↑↓ choose · Enter open · Esc    │
-                    ╰────────────────────────────────╯
+ ▲ AZU       │ storefront / Observe / Overview  ● running  :4000
+ storefront  ├──────────────────────────────────────────────────────
+ development │ ╭─ Requests ─╮ ╭─ JoobQ ─╮ ╭─ CQL pool ─╮ ╭─ Auth ─╮
+             │ │ 1284 req/s│ │10 busy  │ │ 6 / 20     │ │2 events│
+ OBSERVE     │ ╰───────────╯ ╰─────────╯ ╰────────────╯ ╰────────╯
+ ▌ Overview  │ ╭─ Live logs · following ────╮ ╭─ SQL · selected ─╮
+ ▷ Server    │ │ INFO HTTP GET /products   │ │ SELECT p.id       │
+ ▷ Jobs      │ │ DEBUG CQL query.complete  │ │ FROM products p   │
+ ▤ SQL       │ │ WARN CQL N+1 detected     │ │ WHERE active=TRUE │
+ ▧ Logs      │ │ ERROR JoobQ mailer.failed │ │ Duration: 2.3 ms  │
+             │ ╰──────────────────────────╯ ╰───────────────────╯
+ DATA & ACCESS│╭─ Queues & activity ─────────────────────────────╮
+ ▣ Schema    │ │ default   24 waiting   8 processing              │
+ ≈ Migrations│ │ mailers    7 waiting   2 processing              │
+ ◇ Auth      │ ╰─────────────────────────╭─ Navigate ────────────╮
+             │                           │ > sql                 │
+ DEVELOP     │                           │ › Open SQL inspector  │
+ >_ Console  │                           │ Inspect N+1 SQL queries│
+ ≡ Commands  │                           ╰───────────────────────╯
+ Ctrl-P navigate · Tab pane · j/k select · f follow logs · q quit
 ```
 
 Actual text/ANSI frames generated from the code live in
@@ -103,6 +104,8 @@ Actual text/ANSI frames generated from the code live in
 ```sh
 crystal run scripts/render_mission_control.cr
 crystal run scripts/render_mission_control.cr -- --interactive
+# With Playwright and Chromium installed for Node:
+node scripts/render_mission_control_preview.js
 ```
 
 ## Native architecture
@@ -125,6 +128,11 @@ Ctrl-P opens a navigation palette; its query is separate from `/` filtering.
 Enter changes section; Esc closes the palette or returns from the console.
 `j/k`, arrows, PageUp/PageDown and Tab reuse the viewport manager. `l` opens logs;
 logs follow new records until navigation pauses them, and `f` resumes following.
+In Overview, Tab cycles logs, SQL and queues; Enter opens the focused inspector.
+PageUp/PageDown scroll long SQL and j/k selects recent queries. The Schema view
+accepts `database.tables`; Migrations (`m`) accepts optional `database.migrations`
+rows with `version`, `name`, `status` and `applied_at`. It shows an unavailable
+state without this adapter and performs no database mutations.
 The palette also opens the local command composer: `g` starts a generator and `:`
 accepts a supported Azu command. Enter reviews the argv and directory; `y` submits
 to the serialized runner. See [command behavior](../command-reference/azu-dev.md).
@@ -175,7 +183,7 @@ child process that writes arbitrary output.
 | Azu | Existing `AZU_TELEMETRY_SOCKET` snapshots: requests, latency, recent requests, SQL and errors; process/build lifecycle and logs. | Versioned per-endpoint rate buckets and distributed trace IDs; do not infer true rates from a bounded recent list. |
 | JoobQ | Existing dev queue sampler; standalone `azu joobq` process agent for workers, workflows and DLQ. | Share `ProcessSource` behind a controller with this shell; expose exact engine/lease counters and replay capabilities. Processing counts are not global Crystal-fiber counts. |
 | CQL | Existing SQL snapshots with normalized statements, duration, caller/model and pool data. | Application-side, dialect-aware schema snapshot and migration history; expose the optional `database` contract below. |
-| Authly/session | A view for an optional redacted `auth` snapshot. | Instrument application authentication/session lifecycle callbacks, aggregate counters and emit events. Cookie sessions and bearer tokens do not inherently provide an enumerable list of active sessions. |
+| Authly/session | Generated session auth emits bounded, explicit outcomes; older apps show common login/logout HTTP activity with unknown outcomes. | Custom Authly flows need explicit callbacks (below). Cookie sessions and bearer tokens do not inherently provide an enumerable list of active sessions. |
 
 Optional snapshot fields accepted by the prototype:
 
@@ -191,7 +199,8 @@ Optional snapshot fields accepted by the prototype:
 }
 ```
 
-These fields are extension contracts, not existing Authly/CQL APIs. The CLI
+These fields are extension contracts, not existing Authly/CQL APIs. Generated
+authentication implements the `auth` contract using the helper below. The CLI
 allowlists fields for display and tolerates missing/incorrect types. The producer
 must redact credentials, cookies, tokens, SQL bind values and personal data before
 writing to the socket. Generic app logs can still contain sensitive data; display
@@ -199,6 +208,49 @@ sanitization is not secret redaction. Use a private local socket, restrictive fi
 permissions, bounded payloads and deadlines. Remote access uses the separate
 `azu connect` capability and a stricter metrics-only allowlist; it does not forward
 this local development socket or its raw payloads.
+
+### Auth integration
+
+`azu generate auth` now writes `src/services/auth_telemetry.cr` and records
+`sign-in`, `sign-out` and `sign-up` with `accepted`, `rejected` or `throttled`
+outcomes at the relevant authentication boundary. It does not label a successful
+HTTP response as a successful login. “Accepted” means the application accepted
+the operation; it cannot prove that a browser received or retained its cookie.
+
+Existing apps are not overwritten. Copy
+[`src/azu_cli/integrations/auth_telemetry.cr`](https://github.com/azutoolkit/azu_cli/blob/codex/mission-control-hud/src/azu_cli/integrations/auth_telemetry.cr)
+from this CLI version into your app as `src/services/auth_telemetry.cr`. Require
+it from your session endpoints and add these calls at the indicated boundaries:
+
+```crystal
+require "../../services/auth_telemetry" # from src/endpoints/sessions/
+
+# Only after validating credentials AND creating/regenerating the session:
+AzuAuthTelemetry.record("sign-in", "accepted")
+# On an invalid-credentials branch, before returning its response:
+AzuAuthTelemetry.record("sign-in", "rejected")
+# After deleting the session:
+AzuAuthTelemetry.record("sign-out", "accepted")
+```
+
+For custom Authly/token flows, invoke the same callbacks after authentication
+succeeds or fails. No route-name guessing is used to determine an accepted
+outcome. The helper accepts only the fixed event/outcome names above, never users,
+emails, passwords, tokens, cookies or request parameters.
+
+Restart `azu dev`, sign in, and open **Auth** (`6`). The helper activates only
+when `AZU_TELEMETRY_SOCKET` is supplied and `CRYSTAL_ENV` is not `production`.
+It sends an independent `{v: 1, stream: "auth", auth: {...}}` snapshot every
+second over the private socket; ordinary request/SQL snapshots cannot erase it.
+Both a missing adapter and a connected adapter awaiting its first event have
+distinct empty states. Auth freshness is independent of request traffic.
+
+Request fibers append to a mutex-protected ring of 200 events; one reporter
+fiber handles I/O with a 250 ms write timeout and reconnects after disconnection.
+Only the latest 200 events are retained, and restarting the app clears the view.
+This is development telemetry, not a durable security audit trail. There is no
+active-session estimate: cookie stores cannot enumerate active sessions reliably.
+The production monitor continues to exclude this stream entirely.
 
 Use JoobQ's supported operator APIs for DLQ replay, not guessed Redis writes. The
 agent already supports timeout handling and capability checks. A timeout is an
