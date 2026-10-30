@@ -223,14 +223,14 @@ targets:
 dependencies:
   azu:
     github: azutoolkit/azu
-    version: ~> 0.10.1
+    version: ~> 1.0.4
   cql:
     github: azutoolkit/cql
-    version: 0.0.604          # exact on purpose
+    version: ~> 1.0.1
   session:
     github: azutoolkit/session
     version: ~> 1.1
-  # with JoobQ: joobq ~> 0.4.2 and redis
+  # with JoobQ: joobq ~> 0.5.0 and redis
   topia:
     github: azutoolkit/topia
   sqlite3:                    # pg ~> 0.31.0 or mysql ~> 0.18.0 for the other databases
