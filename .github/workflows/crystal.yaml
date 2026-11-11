@@ -1,6 +1,6 @@
 name: Crystal CI
 
-# Pushes to master, by hand, and weekly (the Crystal `latest` legs float, so a week with no push can still break).
+# Pushes to master, by hand, and nightly (the Crystal `latest` legs float, so a day with no push can still break).
 # A push that touches only documentation, design notes or assistant configuration skips this workflow; docs.yaml
 # checks the docs. Editing a workflow, a script, a spec or a template always runs it.
 on:
@@ -18,7 +18,7 @@ on:
       - "scripts/check_docs.py"
       - "LICENSE"
   schedule:
-    - cron: "17 4 * * 1"
+    - cron: "17 4 * * *"
   workflow_dispatch:
 
 permissions:
