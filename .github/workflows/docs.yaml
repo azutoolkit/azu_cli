@@ -4,9 +4,7 @@ on:
   push:
     branches: [master]
     paths: ["docs/**", "scripts/check_docs.py", "src/azu_cli/cli.cr", ".gitbook.yaml"]
-  pull_request:
-    branches: [master]
-    paths: ["docs/**", "scripts/check_docs.py", "src/azu_cli/cli.cr", ".gitbook.yaml"]
+  workflow_dispatch:
 
 permissions:
   contents: read
